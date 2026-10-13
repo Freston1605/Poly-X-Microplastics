@@ -1,0 +1,51 @@
+# Lint-de-test masa minima: instalar las versiones exactas del proyecto
+# (el pin numpy==1.26.4 es fragil: sube numpy o ultralytics y hay que saberlo
+# aqui, no en la maquina del estudio), correr el pytest completo sin ventanas.
+#
+# No hay lint ni build a proposito: no hay linter configurado y la app es
+# de escritorio; anadir etapas huecas solo gasta minutos del runner.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un empujon nuevo a la misma ref cancela la corrida anterior: los
+# resultados viejos ya no dicen nada.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # La suite importa PySide6 (theme, report_html) hasta con QT
+      # offscreen: Qt gui necesita estas librerias compartidas aunque no
+      # haya pantalla.
+      - name: Qt runtime libs (headless CI)
+        run: sudo apt-get update && sudo apt-get install -y
+             libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      # requirements.txt ENTERO: valida la combinacion exacta de pins
+      # (numpy/ultralytics/PySide6), que es justo donde el proyecto es
+      # fragil. pytest no vive en requirements.txt y se agrega a mano.
+      - name: Install pinned requirements
+        run: pip install -r requirements.txt pytest
+
+      # offscreen: la suite no abre ventanas pero PySide6 pide una
+      # plataforma. MPLCONFIGDIR: matplotlib quiere un config dir
+      # escribible en un runner recien creado.
+      - name: Run test suite
+        run: >-
+          QT_QPA_PLATFORM=offscreen
+          MPLCONFIGDIR=/tmp/mplconfig
+          python -m pytest -q
