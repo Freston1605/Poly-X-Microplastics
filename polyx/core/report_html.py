@@ -14,12 +14,26 @@ Contenido:
 from __future__ import annotations
 import base64
 import io
+from html import escape as _escape_html
 import math
 import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+
+def _e(valor) -> str:
+    """HTML-escape de texto cuyo origen no es el propio programa.
+
+    El informe llega al navegador del usuario con nombres de archivo, alias
+    de modelo y datos crudos de checkpoints interpolados en el HTML. A quien
+    analiza carpetas compartidas basta bautizar una imagen como
+    ``<img src=x onerror=alert(1)>.png``; sin escape, eso se ejecuta con el
+    reporte abierto. Todo texto ajeno pasa por aqui antes de entrar en el
+    documento (quote=True: sirve en texto y en atributos).
+    """
+    return _escape_html(str(valor))
 
 import numpy as np
 
@@ -227,10 +241,10 @@ def _tabla_conteo(manual: Optional[Counter], detectado: Counter,
             man = manual.get(c, 0)
             dif = det - man
             css = "dif-pos" if dif > 0 else ("dif-neg" if dif < 0 else "")
-            filas += (f"<tr><td>{tr(c)}</td><td>{man}</td><td>{det}</td>"
+            filas += (f"<tr><td>{tr(c) if c == _e(c) else _e(c)}</td><td>{man}</td><td>{det}</td>"
                       f"<td class='{css}'>{dif:+d}</td></tr>")
         else:
-            filas += f"<tr><td>{tr(c)}</td><td>{det}</td></tr>"
+            filas += f"<tr><td>{tr(c) if c == _e(c) else _e(c)}</td><td>{det}</td></tr>"
 
     tot_det = sum(detectado.get(c, 0) for c in clases)
     if hay_manual:
@@ -344,7 +358,7 @@ def _entrenamiento_de(peso: Path) -> Optional[Dict]:
 
 def _seccion_equipo(active) -> str:
     """Tabla de componentes y de como se entreno cada modelo cargado."""
-    filas_eq = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in _equipo())
+    filas_eq = "".join(f"<tr><td>{_e(k)}</td><td>{_e(v)}</td></tr>" for k, v in _equipo())
     html = (f"<h3>@@N@@.1 {tr('Equipo de cómputo')}</h3>"
             f"<table class='data'><tr>{tr('<th>Componente</th><th>Detalle</th>')}</tr>"
             f"{filas_eq}</table>")
@@ -365,9 +379,9 @@ def _seccion_equipo(active) -> str:
     filas = ""
     for alias, i in entrenos:
         filas += (
-            f"<tr><td>{alias}</td><td>{i['base']}</td>"
+            f"<tr><td>{_e(alias)}</td><td>{_e(i['base'])}</td>"
             f"<td class='r'>{i['imgsz']}</td><td class='r'>{i['batch']}</td>"
-            f"<td class='r'>{i['epocas']}</td><td>{i['optimizador']}</td>"
+            f"<td class='r'>{i['epocas']}</td><td>{_e(i['optimizador'])}</td>"
             f"<td class='r'>{_n(i['precision'])}</td><td class='r'>{_n(i['recall'])}</td>"
             f"<td class='r'>{_n(i['map50'])}</td><td class='r'>{_n(i['map'])}</td></tr>")
 
@@ -1406,12 +1420,12 @@ def _seccion_conteo(resultados: Dict[int, list], state, active,
     filas_img = []
     for r in rs:
         muestra = _muestra_de(r.image_path)
-        etiqueta = r.image_path.name
+        etiqueta = _e(r.image_path.name)
         if muestra:
             estacion, tramo, placa = muestra
-            etiqueta = (f"{r.image_path.name}<br>"
+            etiqueta = (f"{_e(r.image_path.name)}<br>"
                         f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                        f"{estacion} &middot; tramo {tramo} &middot; placa {placa}</span>")
+                        f"{_e(estacion)} &middot; tramo {tramo} &middot; placa {_e(placa)}</span>")
         filas_img.append((etiqueta,
                           _conteo_por_clase(r.gt) if r.has_gt else Counter(),
                           _conteo_por_clase(r.predictions)))
@@ -1477,7 +1491,7 @@ def _seccion_conteo(resultados: Dict[int, list], state, active,
            "La columna <em>manual</em> es la anotación humana (Ground Truth) y la "
            "columna <em>modelo</em> son todas las detecciones de "
            "<strong>{alias}</strong>{coletilla}</p>").format(
-               alias=active[0].alias, coletilla=coletilla)
+               alias=_e(active[0].alias), coletilla=coletilla)
         + tr("<p><strong>Léase como conteo, no como evaluación.</strong> La "
              "columna del modelo no descuenta falsos positivos ni empareja caja a caja: "
              "es cuántas partículas de cada polímero reportó. Coincidir en el total no "
@@ -1613,7 +1627,7 @@ def generate_report(state, output_path: Path,
         for cid, name in zip(cls_ids, cls_names):
             cm_ = per_class_metrics[cid]
             rows += (
-                f"<tr><td>{name}</td>"
+                f"<tr><td>{_e(name)}</td>"
                 f"<td class='r'>{cm_.tp}</td><td class='r'>{cm_.fp}</td><td class='r'>{cm_.fn}</td>"
                 f"<td class='r'>{cm_.precision:.3f}</td><td class='r'>{cm_.recall:.3f}</td>"
                 f"<td class='r'>{cm_.f1:.3f}</td></tr>"
@@ -1639,7 +1653,7 @@ def generate_report(state, output_path: Path,
         
         <h3>@@N@@.1 {tr('Matriz de confusión')}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{tr('Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).').format(modelo=active[0].alias, iou=state.params.iou_tp)}</div></div>
+            <div class='caption'>{tr('Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).').format(modelo=_e(active[0].alias), iou=state.params.iou_tp)}</div></div>
         <h3>@@N@@.2 {tr('Precisión / Recall / F1 por clase')}</h3>
         <table class='data'><tr>{tr('<th>Clase</th>')}<th>{LABEL_TP}</th><th>{LABEL_FP}</th><th>{LABEL_FN}</th>
         {tr('<th>Precisión</th><th>Recall</th><th>F1</th>')}</tr>{rows}</table>
@@ -1681,7 +1695,7 @@ def generate_report(state, output_path: Path,
         c_loc = f"{f1_loc:.3f}" if hay_gt else "—"
         c_cls = f"{f1_cls:.3f}" if hay_gt else "—"
         rows_models += (
-            f"<tr><td>{slot.alias}</td><td class='r'>{n_img}</td><td class='r'>{n_det}</td>"
+            f"<tr><td>{_e(slot.alias)}</td><td class='r'>{n_img}</td><td class='r'>{n_det}</td>"
             f"<td class='r'>{avg_cf:.3f}</td>"
             f"<td class='r'>{tp}</td><td class='r'>{fp}</td><td class='r'>{fn}</td>"
             f"<td class='r'>{mc}</td>"
@@ -1729,7 +1743,7 @@ def generate_report(state, output_path: Path,
             g_alias, g_act, g_mej = resumen[0]
             texto = tr("<p><strong>Mejor desempeño: {alias}</strong>, con F1 {f1} "
                        "al umbral {umbral} (P {p} · R {r}).</p>").format(
-                           alias=g_alias, f1=f"{g_mej[3]:.3f}", umbral=f"{g_mej[0]:.2f}",
+                           alias=_e(g_alias), f1=f"{g_mej[3]:.3f}", umbral=f"{g_mej[0]:.2f}",
                            p=f"{g_mej[1]:.3f}", r=f"{g_mej[2]:.3f}")
             if len(resumen) > 1:
                 p_alias, _, p_mej = resumen[-1]
@@ -1739,7 +1753,7 @@ def generate_report(state, output_path: Path,
                     "un solo entrenamiento por arquitectura, una diferencia pequeña no "
                     "distingue el diseño de la red del azar de inicialización: haría "
                     "falta repetir con distintas semillas para afirmar que una es "
-                    "superior.</p>").format(otro=p_alias, d=f"{d:.3f}")
+                    "superior.</p>").format(otro=_e(p_alias), d=f"{d:.3f}")
 
             veredicto_html = texto
 
@@ -1760,7 +1774,7 @@ def generate_report(state, output_path: Path,
         cab = "<tr><th>Imagen</th>"
         for mi in activos:
             alias = state.model_slots[mi].alias
-            cab += (f"<th>{alias}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>")
+            cab += (f"<th>{_e(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>")
             if hay_gt:
                 cab += (f"<th><span style='font-weight:400;font-size:8.5pt'>"
                         f"{LABEL_TP}/{LABEL_FP}/{LABEL_FN}</span></th>")
@@ -1768,7 +1782,7 @@ def generate_report(state, output_path: Path,
 
         filas = ""
         for ruta in sorted(por_foto):
-            filas += f"<tr><td>{Path(ruta).name}</td>"
+            filas += f"<tr><td>{_e(Path(ruta).name)}</td>"
             for mi in activos:
                 r = por_foto[ruta].get(mi)
                 if r is None:
@@ -1803,7 +1817,7 @@ def generate_report(state, output_path: Path,
             veredicto = tr(
                 "<p><b>Mejor F1 de localización:</b> {alias} ({f1}) — encontrar la "
                 "partícula, sin exigir que acierte el polímero. El veredicto con clase "
-                "está más arriba.</p>").format(alias=mejor, f1=f"{mejor_f1:.3f}")
+                "está más arriba.</p>").format(alias=_e(mejor), f1=f"{mejor_f1:.3f}")
         else:
             veredicto = ("<p class='caption' style='text-align:left'>"
                          + tr("Sin ground truth no se puede declarar un ganador: un "
@@ -1943,7 +1957,7 @@ def generate_report(state, output_path: Path,
                     continue
                 left = (
                     f"<figure><img src='{_uri_galeria(pred_bytes)}' />"
-                    f"<figcaption>{tr('Predicción del modelo')} · {slot.alias}"
+                    f"<figcaption>{tr('Predicción del modelo')} · {_e(slot.alias)}"
                     f"<span class='sub'>"
                     + tr("{n} detección(es) por YOLO").format(n=len(r.predictions))
                     + "</span>"
@@ -1974,10 +1988,10 @@ def generate_report(state, output_path: Path,
                 donde = ""
                 if muestra:
                     estacion, tramo, placa = muestra
-                    donde = (f" &nbsp;<span class='tag'>{estacion} · tramo {tramo} "
-                             f"· placa {placa}</span>")
-                meta = (f"<strong>{r.image_path.name}</strong>{donde}"
-                        f"&nbsp;<span class='tag'>modelo: {slot.alias}</span>")
+                    donde = (f" &nbsp;<span class='tag'>{_e(estacion)} · tramo {tramo} "
+                             f"· placa {_e(placa)}</span>")
+                meta = (f"<strong>{_e(r.image_path.name)}</strong>{donde}"
+                        f"&nbsp;<span class='tag'>modelo: {_e(slot.alias)}</span>")
 
                 # Tabla de la foto: partículas por polímero. Los aciertos y
                 # fallos emparejados caja a caja son otra pregunta y viven en
@@ -2047,7 +2061,7 @@ def generate_report(state, output_path: Path,
         else:
             um_px_txt = "—"
     methods_rows = [
-        (tr("Modelos cargados"), ", ".join(s.alias for s in active) or "—"),
+        (tr("Modelos cargados"), _e(", ".join(s.alias for s in active)) or "—"),
         (tr("Confianza mínima"), f"{p.conf:g}"),
         ("IoU NMS", f"{p.iou_nms:g}"),
         (tr("IoU para emparejar Verdaderos Positivos"), f"{p.iou_tp:g}"),
@@ -2089,7 +2103,7 @@ def generate_report(state, output_path: Path,
         + tr("La detección automatizada se realizó con el modelo YOLO «{modelos}» "
              "(Ultralytics {ul}) a una resolución de entrada de {imgsz} px, umbral de "
              "confianza {conf} y supresión de no-máximos con IoU {iou}. ").format(
-                 modelos=_model_names, ul=_ul_ver, imgsz=p.imgsz,
+                 modelos=_e(_model_names), ul=_ul_ver, imgsz=p.imgsz,
                  conf=f"{p.conf:g}", iou=f"{p.iou_nms:g}")
         + (tr("Las métricas de error se calcularon contra anotación manual "
               "independiente, emparejando predicciones y etiquetas con IoU ≥ {iou}. "
@@ -2136,8 +2150,8 @@ def generate_report(state, output_path: Path,
                         "indice": tr("heredada del recorte (índice de calibración)"),
                         "manual": tr("introducida a mano en Parámetros")}
             filas = "".join(
-                f"<tr><td>{etiqueta.get(o, o)}</td>"
-                f"<td>{k} {tr('imágenes') if k != 1 else tr('imagen')}</td></tr>"
+                f"<tr><td>{_e(etiqueta.get(o, o))}</td>"
+                f"<td>{_e(k)} {tr('imágenes') if k != 1 else tr('imagen')}</td></tr>"
                 for o, k in sorted(res["origenes"].items()))
             aviso = ""
             if res["variacion"] > 1.05:
@@ -2292,11 +2306,11 @@ def generate_report(state, output_path: Path,
                 return f"{v:.{dec}f}" if v else "—"
 
             def _fila(rotulo, d, ruta):
-                return (f"<tr><td><strong>{rotulo}</strong></td><td>{d.class_name}</td>"
+                return (f"<tr><td><strong>{rotulo}</strong></td><td>{_e(d.class_name)}</td>"
                         f"<td>{_num(d.largo_um)}</td><td>{_num(d.ancho_um)}</td>"
                         f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspecto, 1)}</td>"
                         f"<td>{_num(d.curvatura, 2)}</td><td>{_morfotipo(d.morfotipo)}</td>"
-                        f"<td style='font-size:9pt'>{Path(ruta).name}</td></tr>")
+                        f"<td style='font-size:9pt'>{_e(Path(ruta).name)}</td></tr>")
 
             tablas = f"""
 <h3>{NUM}.4 {tr('Partícula mayor y menor')}</h3>
@@ -2332,7 +2346,7 @@ def generate_report(state, output_path: Path,
                     continue
                 nf = sum(1 for d, _r in con_talla
                          if d.class_name == cls and d.morfotipo == "fibra")
-                filas_cls += (f"<tr><td>{cls}</td><td>{len(v)}</td>"
+                filas_cls += (f"<tr><td>{_e(cls)}</td><td>{len(v)}</td>"
                               f"<td>{v[0]:.0f}</td><td>{v[len(v) // 2]:.0f}</td>"
                               f"<td>{v[-1]:.0f}</td><td>{nf}</td></tr>")
             if filas_cls:
@@ -2602,17 +2616,17 @@ def generate_report(state, output_path: Path,
                 if getattr(d, "revisar", False):
                     alerta = (
                         f"<div style='font-size:8.5pt;color:{T.DOC.WARN};margin-top:3px'>"
-                        f"⚠ {d.aviso_forma or tr('la máscara se salía de la caja y se recortó a ella')}</div>")
+                        f"⚠ {_e(d.aviso_forma) if d.aviso_forma else tr('la máscara se salía de la caja y se recortó a ella')}</div>")
                 tarjetas += (
                     f"<div style='display:inline-block;vertical-align:top;margin:0 14px 18px 0;"
                     f"max-width:290px'>"
-                    f"<div style='font-weight:700'>#{d.numero} · {d.class_name} · "
+                    f"<div style='font-weight:700'>#{d.numero} · {_e(d.class_name)} · "
                     f"<span style='color:{color}'>{etiqueta_morfo}</span></div>"
                     f"<img src='data:image/png;base64,{_img_b64(buf.tobytes())}' style='max-width:100%'>"
                     f"<div style='font-size:9pt;color:#656d76'>{cuenta}<br>"
                     f"{' · '.join(detalle)}</div>{alerta}</div>")
             if tarjetas:
-                piezas.append(f"<h3>{Path(ruta).name}</h3>{tarjetas}")
+                piezas.append(f"<h3>{_e(Path(ruta).name)}</h3>{tarjetas}")
         if piezas:
             # Se declara COMO se eligio la muestra. Sin esto, un lector podria
             # tomarla por representativa del lote y no lo es: esta sesgada a
@@ -2735,7 +2749,7 @@ def generate_report(state, output_path: Path,
   <div class='kicker'>Poly-X · {tr('Informe de detección')}</div>
   <h1>{tr('Informe de detección de microplásticos')}<br>{tr('por fluorescencia Nile Red')}</h1>
   <p class='meta'><strong>{tr('Autor:')}</strong> Cristofher Ferrada &middot;
-    <strong>{tr('Modelos:')}</strong> {', '.join(s.alias for s in active) or '—'}</p>
+    <strong>{tr('Modelos:')}</strong> {_e(', '.join(s.alias for s in active)) or '—'}</p>
 </header>
 
 <div class='toc'>
