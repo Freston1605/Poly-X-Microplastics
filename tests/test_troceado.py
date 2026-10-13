@@ -65,3 +65,9 @@ def test_una_foto_pequeña_forzada_sigue_troceandose(umbral):
         assert plan is not None
     else:
         assert plan is None, "por debajo del umbral se pasa entera, sin trocear"
+
+
+# Prueba rota a proposito para verificar que CI la cacha. NO MERGEAR:
+# se borra en cuanto la corrida se pone roja.
+def test_sabotaje_verificacion_ci():
+    assert 1 == 2, "sabotaje deliberado: CI deberia fallar aqui"
