@@ -8,7 +8,7 @@ opencv-python==4.10.0.84
 # numpy 2.x el entrenamiento corre bien y muere al validar la primera epoca, que
 # es el peor momento para descubrirlo. Si se sube ultralytics, revisar esto.
 numpy==1.26.4
-Pillow==10.4.0
+Pillow==12.3.0
 matplotlib==3.9.2
 pyqtgraph==0.13.7
 PyYAML==6.0.2
