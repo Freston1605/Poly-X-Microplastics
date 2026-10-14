@@ -13,6 +13,7 @@ guardado en `.polyx_version` por el instalador y por el propio actualizador.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import urllib.request
 from pathlib import Path
@@ -21,6 +22,7 @@ from PySide6.QtCore import QObject, Signal
 
 from .paths import ROOT
 from .plataforma import nombre_actualizador
+from .observabilidad import logger_para, evento
 
 REPO = "CrissFerrada/Poly-X-Microplastics"
 RAMA = "main"
@@ -65,14 +67,25 @@ class BuscadorActualizaciones(QObject):
         hilo.start()
 
     def _trabajo(self) -> None:
+        log = logger_para("updates")
         local = version_instalada()
         # Sin marca local no se puede comparar. Pasa en instalaciones de
         # desarrollo (clon de git): ahi el aviso sobra, se actualiza con git.
         if not local:
+            evento(log, "update.skipped", razon="sin_version_instalada")
             return
         remota = version_remota()
-        if remota and remota != local:
+        if not remota:
+            # version_remota traga todos los errores: aqui se registra AL MENOS
+            # que la comprobacion no pudo resolver, con un motivo generico.
+            evento(log, "update.error", level=logging.WARNING,
+                   razon="sin_respuesta_remota", local=local)
+            return
+        if remota != local:
+            evento(log, "update.available", remoto=remota[:7], local=local)
             self.hay_version_nueva.emit(remota[:7])
+        else:
+            evento(log, "update.ok", local=local)
 
 
 def puede_actualizar() -> bool:

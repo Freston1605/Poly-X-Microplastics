@@ -4,6 +4,7 @@ Hero con kicker, título 'Poly-X analytics', subtítulo, 4 KPI chips,
 y 4 tarjetas grandes de módulo (Detector, Entrenador, Etiquetador, Visor).
 """
 from __future__ import annotations
+import logging
 import math
 import random
 import sys
@@ -29,6 +30,73 @@ from .core.widgets import LogoBadge, HLine
 from .core.updates import ACTUALIZADOR, BuscadorActualizaciones, puede_actualizar
 from .core.plataforma import abrir_en_el_sistema, lanzar_actualizador
 from . import __version__
+
+# ──────────────────────────────────────────────────────────────────────
+# Arranque instrumentado: el launcher deja rastro JSONL en app.jsonl.
+# Los imports de observabilidad van perezosos, dentro de las funciones,
+# para que una falla suya no impida ni retrase el arranque de la ventana.
+# ──────────────────────────────────────────────────────────────────────
+
+
+def _registrar_arranque() -> None:
+    """Emite ``bootstrap.finish`` con version, python y sistema en app.jsonl.
+
+    Nunca lanza: si HOME es read-only o el directorio de logs no se puede
+    crear, el launcher abre igual que siempre. La observabilidad no puede
+    ser peor que no tenerla.
+    """
+    try:
+        from polyx.core import observabilidad
+        from polyx.core.plataforma import nombre_sistema
+        log = observabilidad.logger_para("app")
+        observabilidad.evento(
+            log,
+            "bootstrap.finish",
+            version=__version__,
+            python=sys.version.split()[0],
+            sistema=nombre_sistema(),
+        )
+    except Exception:
+        pass
+
+
+def _spawn_module(dotted: str) -> bool:
+    """Lanza el modulo en un proceso aparte; True si arranco, False si no.
+
+    Devuelve en vez de lanzar: asi la ventana decide como avisar al usuario
+    y el arrastre de observabilidad (module.launch / module.launch.error en
+    app.jsonl) no puede convertirse en un crash de la interfaz.
+    """
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec(dotted)
+        if spec is None:
+            return False
+        subprocess.Popen(
+            [sys.executable, "-m", dotted],
+            cwd=str(Path(__file__).resolve().parents[1]),
+        )
+    except Exception as e:
+        try:
+            from polyx.core import observabilidad
+            observabilidad.evento(
+                observabilidad.logger_para("app"),
+                "module.launch.error",
+                level=logging.WARNING,
+                modulo=dotted,
+                error=str(e),
+            )
+        except Exception:
+            pass
+        return False
+    try:
+        from polyx.core import observabilidad
+        observabilidad.evento(
+            observabilidad.logger_para("app"), "module.launch", modulo=dotted
+        )
+    except Exception:
+        pass
+    return True
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -826,20 +894,13 @@ class LauncherWindow(QMainWindow):
     def open_viewer(self):   self._launch_module("polyx.visor")
 
     def _launch_module(self, dotted: str, fallback: str = ""):
-        """Lanza el módulo en un proceso aparte para no bloquear el launcher."""
-        try:
-            # Verificar que existe sin importarlo (evita errores de Qt)
-            import importlib.util
-            spec = importlib.util.find_spec(dotted)
-            if spec is None:
-                self._toast(fallback or f"Módulo {dotted} no encontrado")
-                return
-            subprocess.Popen(
-                [sys.executable, "-m", dotted],
-                cwd=str(Path(__file__).resolve().parents[1]),
-            )
-        except Exception as e:
-            self._toast(f"Error al abrir: {e}")
+        """Lanza el módulo en un proceso aparte para no bloquear el launcher.
+
+        Delega en _spawn_module, que no lanza: False significa que el módulo
+        no existe o que su proceso no arrancó, y aquí toca avisar al usuario.
+        """
+        if not _spawn_module(dotted):
+            self._toast(fallback or f"No se pudo abrir el módulo {dotted}")
 
     def open_manual(self):
         manual = Path(__file__).resolve().parents[1] / "Manual_PolyX.html"
@@ -866,6 +927,8 @@ def main():
     # Antes del primer show(): el boton de la barra de tareas se crea
     # con la identidad que haya en ese momento.
     marca.identificar(app, "launcher")
+    # Rastro JSONL del arranque (app.jsonl); nunca impide abrir la ventana.
+    _registrar_arranque()
     w = LauncherWindow()
     w.show()
     sys.exit(app.exec())

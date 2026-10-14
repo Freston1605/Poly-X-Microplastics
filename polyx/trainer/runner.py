@@ -6,6 +6,8 @@ from typing import Optional
 
 from PySide6.QtCore import QThread, Signal
 
+from ..core import observabilidad as obs
+
 from .state import TrainerState, EpochMetrics
 from .dominio import elegir_mejor_en_real
 
@@ -81,6 +83,7 @@ class TrainerRunner(QThread):
         self.log_line.emit("=" * 60)
 
     def run(self):
+        _t0 = __import__("time").perf_counter()
         try:
             import torch
             from ultralytics import YOLO
@@ -98,6 +101,12 @@ class TrainerRunner(QThread):
             if not ds.yaml_path or not Path(ds.yaml_path).exists():
                 self.failed.emit("Falta data.yaml. Cárgalo en la pestaña Dataset.")
                 return
+            log = self._log()
+            obs.set_run_id(mdl.base_weights_name())
+            obs.evento(log, "train.config", modelo=mdl.nombre, dataset=str(ds.yaml_path),
+                       epochs=p.epochs, batch=p.batch, imgsz=p.imgsz,
+                       device=getattr(p, "device", None),
+                       optimizador=getattr(p, "optimizer", None))
 
             # ── Diagnóstico explícito de hardware ──
             cuda_ok = torch.cuda.is_available()
@@ -321,10 +330,17 @@ class TrainerRunner(QThread):
             if len(comparativa) > 1:
                 self._informar_comparacion(comparativa, p)
 
+            obs.evento(log, "train.finish", ms=int((__import__("time").perf_counter() - _t0) * 1000),
+                       weights=str(ultimo_best))
             self.finished_ok.emit(ultimo_best)
 
         except KeyboardInterrupt:
             self.aborted.emit()
+            obs.evento(self._log(), "train.aborted")
         except Exception as e:
             import traceback
             self.failed.emit(f"{type(e).__name__}: {e}\n\n{traceback.format_exc()}")
+            obs.evento_error(self._log(), "train.error", e)
+
+    def _log(self):
+        return obs.logger_para("trainer")

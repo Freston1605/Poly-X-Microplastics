@@ -5,9 +5,12 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 import os
 
+import logging
+
 import numpy as np
 import cv2
 
+from .observabilidad import logger_para, evento
 
 @dataclass
 class Detection:
@@ -81,6 +84,11 @@ def _cuda_empty_cache() -> None:
         torch.cuda.empty_cache()
     except Exception:
         pass
+
+
+def _log():
+    """Logger del modulo, resuelto tarde para no exigir escritura al importar."""
+    return logger_para("detector")
 
 
 class YoloModel:
@@ -179,6 +187,12 @@ class YoloModel:
             except Exception as e:
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
                     raise
+                evento(_log(), "imgsz.fallback", level=logging.WARNING,
+                       alias=self.alias, archivo=str(image_path),
+                       intento_previo=sz,
+                       imgsz_siguiente=(sizes[i + 1]
+                                        if i + 1 < len(sizes) else None),
+                       razon="gpu_oom")
                 _cuda_empty_cache()
         out: List[Detection] = []
         if not res:

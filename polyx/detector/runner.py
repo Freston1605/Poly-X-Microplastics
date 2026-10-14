@@ -20,6 +20,7 @@ from ..core.calibracion import (resolver, cargar_indice, buscar_indice,
 from ..core.morfologia import aplicar_a_deteccion
 from ..core import theme as T
 from .state import DetectorState, ImageResult
+from ..core import observabilidad as obs
 
 
 def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarray:
@@ -98,11 +99,22 @@ class DetectorRunner(QThread):
         self.state = state
 
     def run(self):
+        # Logica de observabilidad: el run_id arranca None y se fija cuando la
+        # carpeta del run existe; evento_error deja el traceback que antes
+        # se perdia bajo pythonw.
+        _log = obs.logger_para("detector")
+        obs.set_run_id(None)
         try:
             state = self.state
             params = state.params
             slots = state.active_models()
             inicio = datetime.now()
+            obs.evento(_log, "run.config", placas=len(state.images),
+                       modelos=[s.alias for s in slots],
+                       conf=params.conf, iou=params.iou_nms,
+                       imgsz=params.imgsz, device=params.device,
+                       medir_forma=params.medir_forma,
+                       um_por_px=params.um_per_px)
             # Lo que de verdad se uso, imagen por imagen, frente a lo que se
             # pidio en Parametros: el auto-fallback puede haber bajado el imgsz
             # por falta de VRAM y el troceado depende del tamano de cada foto.
@@ -134,12 +146,20 @@ class DetectorRunner(QThread):
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             state.run_dir = run_dir / f"detect_{stamp}"
             state.run_dir.mkdir(parents=True, exist_ok=True)
+            obs.set_run_id(stamp)
 
             # Cargar modelos
             for s in slots:
                 if s.loaded is None:
                     s.loaded = YoloModel(str(s.path), alias=s.alias)
-                s.loaded.load()
+                try:
+                    s.loaded.load()
+                    obs.evento(_log, "model.loaded", alias=s.alias,
+                               archivo=str(s.path))
+                except Exception as exc:
+                    obs.evento_error(_log, "model.error", exc,
+                                     alias=s.alias, archivo=str(s.path))
+                    raise
 
             # Resetear resultados
             state.results = {i: [] for i in range(len(state.model_slots))}
@@ -154,6 +174,8 @@ class DetectorRunner(QThread):
                 # Cargar imagen una vez para GT/anotación
                 img_bgr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), cv2.IMREAD_COLOR)
                 if img_bgr is None:
+                    obs.evento(_log, "image.undecodable", level=logging.WARNING,
+                               archivo=str(img_path))
                     done += len(slots)
                     self.progress.emit(done, total, img_path.name)
                     continue
@@ -170,6 +192,10 @@ class DetectorRunner(QThread):
                                distancia_camara_mm=params.distancia_camara_mm)
                 state.calibraciones[img_path.name] = cal
                 um_px = cal.um_por_px if cal.valida else None
+                if not cal.valida:
+                    obs.evento(_log, "calibration.invalid", level=logging.WARNING,
+                               archivo=str(img_path),
+                               razon=getattr(cal, "razon", None))
 
                 # Cargar GT si existe (usa nombres del primer modelo si está disponible)
                 names_first = slots[0].loaded.names if slots[0].loaded else {}
@@ -351,10 +377,22 @@ class DetectorRunner(QThread):
                     done += 1
                     self.progress.emit(done, total, img_path.name)
 
-            self._escribir_resumen(state, slots, inicio, ejecucion, sin_forma)
+            ms = int((datetime.now() - inicio).total_seconds() * 1000)
+            obs.evento(_log, "run.finish", ms=ms,
+                       placas=len(state.images),
+                       imgsz_usados=sorted({int(s) for reg in ejecucion.values()
+                                            for s in reg.get("imgsz_usados", [])}),
+                       sin_forma=dict(sin_forma))
+            # Un lote con muchas particulas sin forma merece mirarse: puede ser
+            # el modelo, el umbral o fotos fuera de foco, y no se ve en la UI.
+            peor = max(sin_forma.items(), key=lambda kv: kv[1], default=())
+            if peor and peor[1] > 0:
+                obs.evento(_log, "run.shapeless_high", level=logging.WARNING,
+                           modelo=peor[0], sin_forma=peor[1])
             self.finished_ok.emit()
         except Exception as e:
             self.failed.emit(f"{type(e).__name__}: {e}")
+            obs.evento_error(_log, "run.error", e)
 
     def _escribir_resumen(self, state, slots, inicio=None, ejecucion=None,
                           sin_forma=None) -> None:
