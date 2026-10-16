@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from polyx.core import morfologia as M  # noqa: E402
 
 import capturar_fixtures_geodesia as CFG  # noqa: E402
+import generar_fixtures_geodesia as GFG  # noqa: E402
 
 
 # ── helpers: foto sintetica y layout de run en miniatura ─────────────────
@@ -277,3 +278,36 @@ def test_sufijo_recursivo_y_stem_de_label(tmp_path):
                            fotos=tmp_path / "fotos", destino=destino)
     assert resumen["serializadas"] == 1, (
         "debe encontrar la foto aun con mayusculas y subcarpetas")
+
+
+def test_generador_fixtures_reproducible(tmp_path):
+    """El generador sintetico crea las 8 clases canonicas y es idempotente."""
+    destino = tmp_path / "fixtures"
+    resumen1 = GFG.generar_fixtures(destino=destino, reforzar=False)
+    assert resumen1["serializadas"] == 8
+    assert resumen1["reutilizadas"] == 0
+
+    esperados = [
+        "y11n__fibra_curva__000.npy",
+        "y11n__fibra_recta__000.npy",
+        "y11n__fibra_sinuosa__000.npy",
+        "y11n__fragmento_circular__000.npy",
+        "y11n__fragmento_irregular__000.npy",
+        "y11n__fragmento_rugoso__000.npy",
+        "y11n__particula_alargada_diagonal__000.npy",
+        "y11n__particula_bifurcada__000.npy",
+    ]
+    generados = sorted(f.name for f in destino.glob("*.npy"))
+    assert generados == sorted(esperados)
+
+    for nombre in esperados:
+        arr = np.load(destino / nombre, allow_pickle=False)
+        assert arr.ndim == 2 and arr.dtype == np.uint8
+        assert np.isin(arr, [0, 255]).all()
+        assert (arr > 0).any()
+
+    # Segunda corrida sin reforzar: idempotente
+    resumen2 = GFG.generar_fixtures(destino=destino, reforzar=False)
+    assert resumen2["serializadas"] == 0
+    assert resumen2["reutilizadas"] == 8
+

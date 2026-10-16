@@ -9,11 +9,11 @@ Aqui se centralizan las tres piezas que hacen usable el diagnostico a las 2 AM:
 
  - LOGS: un JSONL por modulo en ``~/.polyx/logs/`` (o ``POLYX_LOG_DIR``), con
    rotacion por tamano (5 MB x 3 copias por modulo) y poda del total del
-   directorio con techo de ``TAMANO_TOTAL`` (200 MB): si el directorio entero
-   pasa del techo se borra el archivo mas viejo primero (los backups rotados
-   incluidos) y nunca el archivo activo de los loggers abiertos. El sobre
-   lleva ts/level/module/pid/thread y, dentro de un run, ``run_id``. Nunca
-   stderr.
+   directorio con techo de ``TAMANO_TOTAL`` (200 MB, configurable via
+   ``POLYX_LOG_TOTAL_CAP_MB``): si el directorio entero pasa del techo se
+   borra el archivo mas viejo primero (los backups rotados incluidos) y
+   nunca el archivo activo de los loggers abiertos. El sobre lleva
+   ts/level/module/pid/thread y, dentro de un run, ``run_id``. Nunca stderr.
  - CORRELACION: run_id en un threading.local; set_run_id / clear_run_id
    alrededor de la corrida (QThread + pools comparten el contexto por hilo).
    Los nombres de evento son verbo.objeto Y EN INGLES: convencion de la
@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import stat
 import threading
@@ -111,6 +112,56 @@ class _SobreFormateador(logging.Formatter):
                                "event": "log.format_error"}, ensure_ascii=False)
 
 
+def _techo_poda_bytes() -> int:
+    """Devuelve el techo maximo de la carpeta de logs en bytes.
+
+    Lee ``POLYX_LOG_TOTAL_CAP_MB`` desde el entorno. Si no esta definido,
+    esta vacio, no es numerico, es infinito/NaN o <= 0, recurre a ``TAMANO_TOTAL``
+    (leido dinamicamente del modulo para respetar configuraciones de prueba).
+    """
+    crudo = os.environ.get("POLYX_LOG_TOTAL_CAP_MB", "").strip()
+    if not crudo:
+        return TAMANO_TOTAL
+    try:
+        mb = float(crudo)
+    except ValueError:
+        return TAMANO_TOTAL
+    if not math.isfinite(mb) or mb <= 0:
+        return TAMANO_TOTAL
+    techo = int(mb * 1024 * 1024)
+    return techo if techo > 0 else TAMANO_TOTAL
+
+
+def _cerrar_loggers() -> None:
+    """Cierra y remueve los handlers de todos los loggers y vacia el cache _loggers.
+
+    Nunca lanza: util para aislar pruebas o reconfigurar directorios de log.
+    """
+    try:
+        with _loggers_lock:
+            loggers_a_cerrar = list(_loggers.values())
+            try:
+                for name, lg in getattr(logging.Logger.manager, "loggerDict", {}).items():
+                    if isinstance(lg, logging.Logger) and (name == "polyx" or name.startswith("polyx.")):
+                        if lg not in loggers_a_cerrar:
+                            loggers_a_cerrar.append(lg)
+            except Exception:
+                pass
+            for lg in loggers_a_cerrar:
+                for h in list(lg.handlers):
+                    try:
+                        lg.removeHandler(h)
+                    except Exception:
+                        pass
+                    try:
+                        h.close()
+                    except Exception:
+                        pass
+            _loggers.clear()
+    except Exception:
+        pass
+
+
 def logger_para(modulo: str) -> logging.Logger:
     """Logger file-only para un modulo, con rotacion de tamano.
 
@@ -125,6 +176,17 @@ def logger_para(modulo: str) -> logging.Logger:
         logger = logging.getLogger(f"polyx.{modulo}")
         logger.setLevel(_nivel_desde_entorno())
         logger.propagate = False
+
+        for h in list(logger.handlers):
+            try:
+                logger.removeHandler(h)
+            except Exception:
+                pass
+            try:
+                h.close()
+            except Exception:
+                pass
+
         try:
             carpeta = carpeta_logs()
             carpeta.mkdir(parents=True, exist_ok=True)
@@ -144,7 +206,7 @@ def logger_para(modulo: str) -> logging.Logger:
 
 
 def podar(carpeta: Path | None = None, activo: Path | str | None = None) -> None:
-    """Poda el directorio de logs por tamano TOTAL: techo ``TAMANO_TOTAL``.
+    """Poda el directorio de logs por tamano TOTAL: techo ``TAMANO_TOTAL`` (o ``POLYX_LOG_TOTAL_CAP_MB``).
 
     Suma el tamano de los archivos del directorio (con ``lstat``: un symlink
     cuenta solo su enlace, nunca el destino, y no se sigue fuera de la
@@ -152,8 +214,10 @@ def podar(carpeta: Path | None = None, activo: Path | str | None = None) -> None
     mtime hasta quedar debajo. Los backups rotados entran en la lista igual
     que los log activos. Nunca se borra el destino de escritura activo: los
     ``baseFilename`` de los handlers abiertos en cache mas ``activo``, que es
-    el archivo del logger que acaba de arrancar. Nunca lanza: borrar log no
-    puede tumbar nada, filosofia de ``evento()``.
+    el archivo del logger que acaba de arrancar. El techo de 200 MB
+    (``TAMANO_TOTAL``) puede ser sobreescrito mediante la variable de entorno
+    ``POLYX_LOG_TOTAL_CAP_MB``. Nunca lanza: borrar log no puede tumbar nada,
+    filosofia de ``evento()``.
     """
     try:
         carpeta = carpeta_logs() if carpeta is None else Path(carpeta)
@@ -181,11 +245,12 @@ def podar(carpeta: Path | None = None, activo: Path | str | None = None) -> None
             ruta = os.path.normcase(os.path.abspath(str(entrada)))
             if ruta not in activos:
                 candidatos.append((st.st_mtime, entrada.name, st.st_size, ruta))
-        if total <= TAMANO_TOTAL:
+        techo = _techo_poda_bytes()
+        if total <= techo:
             return
         candidatos.sort()                # mas viejo primero (mtime, nombre)
         for _mtime, _nombre, tamano, ruta in candidatos:
-            if total <= TAMANO_TOTAL:
+            if total <= techo:
                 break
             try:
                 os.unlink(ruta)

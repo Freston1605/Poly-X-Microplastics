@@ -33,11 +33,12 @@ def log_dir(tmp_path, monkeypatch):
     carpeta.mkdir()      # la poda crea archivos antes que el primer logger
     # limpiar cache de loggers: cada prueba tiene su carpeta propria
     import polyx.core.observabilidad as ob
-    ob._loggers.clear()
+    monkeypatch.delenv("POLYX_LOG_TOTAL_CAP_MB", raising=False)
+    ob._cerrar_loggers()
     monkeypatch.delenv("POLYX_LOG", raising=False)
     ob._run_local.__dict__.pop("run_id", None)
     yield carpeta
-    ob._loggers.clear()
+    ob._cerrar_loggers()
 
 
 def test_sobre_minimo_con_campo_fijos(log_dir):
@@ -251,3 +252,102 @@ def test_fallo_de_escritura_posterior_no_revienta(log_dir, monkeypatch):
     with ob.cronometro(log, "prueba.late"):        # el cuerpo corre igual
         ejecutado.append(True)
     assert ejecutado == [True], "el bloque del cronometro no debio saltarse"
+
+
+def test_techo_poda_por_defecto_y_entorno(log_dir, monkeypatch):
+    from polyx.core import observabilidad as ob
+    # Por defecto (sin variable) es TAMANO_TOTAL = 200 MB
+    assert ob._techo_poda_bytes() == ob.TAMANO_TOTAL == 200 * 1024 * 1024
+
+    # Entorno con 1.5 MB
+    monkeypatch.setenv("POLYX_LOG_TOTAL_CAP_MB", "1.5")
+    assert ob._techo_poda_bytes() == int(1.5 * 1024 * 1024)
+
+    # Entorno con 0.5 MB (524,288 bytes) y poda real
+    monkeypatch.setenv("POLYX_LOG_TOTAL_CAP_MB", "0.5")
+    t = 4_000_000.0
+    for i in range(5):
+        _crear_falso(log_dir, f"modulo.jsonl.{i + 1}", 300_000, t + i * 10)
+    ob.podar(carpeta=log_dir)
+    sobrantes = sorted(p.name for p in log_dir.iterdir())
+    assert sobrantes == ["modulo.jsonl.5"]
+    assert _total_carpeta(log_dir) <= 524_288
+
+
+def test_techo_poda_entorno_invalido_cae_al_defecto(log_dir, monkeypatch):
+    from polyx.core import observabilidad as ob
+    valores_invalidos = ["", "   ", "abc", "0", "-5", "nan", "inf", "-inf", "1e-12"]
+    for val in valores_invalidos:
+        monkeypatch.setenv("POLYX_LOG_TOTAL_CAP_MB", val)
+        assert ob._techo_poda_bytes() == ob.TAMANO_TOTAL
+
+    monkeypatch.setenv("POLYX_LOG_TOTAL_CAP_MB", "invalido")
+    _crear_falso(log_dir, "m1.jsonl", 300_000, 100.0)
+    _crear_falso(log_dir, "m2.jsonl", 300_000, 200.0)
+    ob.podar(carpeta=log_dir)
+    sobrantes = sorted(p.name for p in log_dir.iterdir())
+    assert sobrantes == ["m1.jsonl", "m2.jsonl"]
+
+
+def test_cambio_de_carpeta_cierra_handler_anterior(tmp_path, monkeypatch):
+    from polyx.core import observabilidad as ob
+    dir_a = tmp_path / "logs_a"
+    dir_b = tmp_path / "logs_b"
+
+    monkeypatch.setenv("POLYX_LOG_DIR", str(dir_a))
+    ob._cerrar_loggers()
+    log_a = ob.logger_para("detector")
+    ob.evento(log_a, "run.a")
+
+    ob._loggers.clear()
+    monkeypatch.setenv("POLYX_LOG_DIR", str(dir_b))
+    log_b = ob.logger_para("detector")
+    ob.evento(log_b, "run.b")
+
+    handlers_b = [h for h in log_b.handlers if hasattr(h, "baseFilename")]
+    assert len(handlers_b) == 1
+    assert Path(handlers_b[0].baseFilename) == dir_b / "detector.jsonl"
+
+    recs_a = [r["event"] for r in _leer_jsonl(dir_a, "detector")]
+    recs_b = [r["event"] for r in _leer_jsonl(dir_b, "detector")]
+    assert recs_a == ["run.a"]
+    assert recs_b == ["run.b"]
+
+
+def test_conftest_aisla_polyx_log_dir_fuera_de_home(tmp_path):
+    from polyx.core import observabilidad as ob
+    assert ob.carpeta_logs() == tmp_path / "_polyx_logs"
+    assert Path.home() / ".polyx" / "logs" != ob.carpeta_logs()
+
+
+def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
+    import cv2
+    import numpy as np
+
+    from polyx.core import report_html
+    from polyx.core.yolo_wrap import Detection
+    from polyx.detector.state import DetectorState, ImageResult, ModelSlot
+
+    img = np.full((260, 320, 3), 18, np.uint8)
+    cv2.circle(img, (160, 130), 20, (60, 210, 240), -1)
+    is_ok, buf = cv2.imencode(".png", img)
+    assert is_ok
+    ruta = tmp_path / "foto.png"
+    ruta.write_bytes(buf.tobytes())
+
+    d = Detection(class_id=0, class_name="PET", conf=0.90,
+                  x1=140, y1=110, x2=180, y2=150)
+    st = DetectorState()
+    st.model_slots[0] = ModelSlot(alias="m1", path=tmp_path / "fake.pt")
+    st.results = {0: [ImageResult(image_path=ruta, model_idx=0,
+                                  predictions=[d], gt=[], has_gt=False)]}
+
+    salida = tmp_path / "out.html"
+    report_html.generate_report(st, salida, secciones=["resumen"])
+
+    log_file = tmp_path / "_polyx_logs" / "detector.jsonl"
+    assert log_file.is_file()
+    eventos = [r["event"] for r in _leer_jsonl(tmp_path / "_polyx_logs", "detector")]
+    assert "report.start" in eventos
+    assert "report.finish" in eventos
+
