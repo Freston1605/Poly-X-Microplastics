@@ -20,6 +20,7 @@ from ...core.dataset_audit import (
     audit_dataset, LEVEL_OK, LEVEL_WARN, LEVEL_ERROR,
 )
 from ...core.i18n import tr
+from ..state import validate_training_config
 
 
 def _load_yaml(path: Path) -> dict:
@@ -231,6 +232,7 @@ class DatasetPage(TrainerPage):
             tr("Split val con imágenes"),
             "Labels encontradas (≥ 80 %)",
             "Clases definidas en YAML",
+            tr("Parámetros de entrenamiento válidos"),
         ]
         val_grid = QGridLayout(); val_grid.setSpacing(6)
         for i, name in enumerate(val_checks_names):
@@ -267,6 +269,15 @@ class DatasetPage(TrainerPage):
         self.audit_list.setWordWrap(True)
         l5.addWidget(self.audit_list)
         self.body.addWidget(c5)
+
+        # ── Reactividad (M003/T03) ────────────────────────────────
+        # Cambios de parámetros, modelo o augmentación revalidan la fila de
+        # configuración en caliente (modo barato: no toca el disco). Un cambio
+        # de dataset (nuevo data.yaml) dispara la auditoría completa.
+        self.state.params_changed.connect(self._on_config_changed)
+        self.state.aug_changed.connect(self._on_config_changed)
+        self.state.model_changed.connect(self._on_config_changed)
+        self.state.dataset_changed.connect(self._on_dataset_changed)
 
     # ──────────────────────────────────────────
     def _browse(self):
@@ -325,7 +336,6 @@ class DatasetPage(TrainerPage):
             + ", ".join(self.state.dataset.class_names[:20])
         )
         self._refresh_preview()
-        self._validate_dataset()
 
     def _refresh_preview(self):
         yaml_path = self.state.dataset.yaml_path
@@ -447,11 +457,13 @@ class DatasetPage(TrainerPage):
         yaml_path = self.state.dataset.yaml_path
         if not yaml_path or not yaml_path.exists():
             self._set_check(0, False, "No hay data.yaml cargado.")
+            self._validar_config_rapida()
             return
         try:
             d = _load_yaml(yaml_path)
         except Exception as e:
             self._set_check(0, False, str(e))
+            self._validar_config_rapida()
             return
         self._set_check(0, True)
 
@@ -492,6 +504,29 @@ class DatasetPage(TrainerPage):
 
         # Análisis profundo (distribución de clases, validación por clase, etc.)
         self._run_deep_audit(yaml_path)
+        self._validar_config_rapida()
+
+    # ── Validación reactiva ─────────────────────────────────────
+    def _on_config_changed(self):
+        """Revalidación barata al cambiar parámetros, modelo o augmentación.
+
+        Corre en el hilo de la UI pero es O(1): no toca el disco. La
+        auditoría completa del dataset corre en ``_on_dataset_changed``.
+        """
+        self._validar_config_rapida()
+
+    def _on_dataset_changed(self):
+        """Revalidación completa cuando cambia el dataset (nuevo data.yaml)."""
+        self._validate_dataset()
+
+    def _validar_config_rapida(self):
+        """Fila 6: modelo y parámetros dentro de rango, sin auditar el disco."""
+        ok, msgs = validate_training_config(self.state, con_dataset=False)
+        if ok:
+            self._set_check(5, True,
+                            tr("Modelo, hiperparámetros y augmentación dentro de rango."))
+        else:
+            self._set_check(5, False, "\n".join(msgs))
 
     def _run_deep_audit(self, yaml_path):
         """Ejecuta la auditoría profunda y vuelca los hallazgos al panel."""

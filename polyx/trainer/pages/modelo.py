@@ -195,7 +195,7 @@ class ModeloPage(TrainerPage):
                 "Se entrenará solo <b>{}</b>. "
                 "Marca la casilla para entrenar también la otra familia y "
                 "compararlas en igualdad de condiciones.").format(
-                    mdl.base_weights_name()))
+                    mdl.base_weights_name))
 
     def _on_custom(self):
         t = self.ed_custom.text().strip()

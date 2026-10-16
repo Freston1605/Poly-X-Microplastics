@@ -102,8 +102,8 @@ class TrainerRunner(QThread):
                 self.failed.emit("Falta data.yaml. Cárgalo en la pestaña Dataset.")
                 return
             log = self._log()
-            obs.set_run_id(mdl.base_weights_name())
-            obs.evento(log, "train.config", modelo=mdl.nombre, dataset=str(ds.yaml_path),
+            obs.set_run_id(mdl.base_weights_name)
+            obs.evento(log, "train.config", modelo=mdl.name, dataset=str(ds.yaml_path),
                        epochs=p.epochs, batch=p.batch, imgsz=p.imgsz,
                        device=getattr(p, "device", None),
                        optimizador=getattr(p, "optimizer", None))
@@ -166,7 +166,9 @@ class TrainerRunner(QThread):
 
             # Los callbacks se registran una vez pero sirven a varias corridas,
             # asi que leen el nombre desde aqui en vez de capturarlo por cierre.
-            run_actual = {"nombre": base_name}
+            # "abortado" se enciende desde el callback de época cuando el usuario
+            # pide detener: la familia actual termina y las restantes no arrancan.
+            run_actual = {"nombre": base_name, "abortado": False}
 
             # Callback: progreso por época
             def _on_train_epoch_end(trainer):
@@ -191,6 +193,21 @@ class TrainerRunner(QThread):
                         st.epochs_no_improve += 1
                     self.epoch_metrics.emit(em)
                     self.progress.emit(ep, p.epochs)
+                    # Telemetria por epoca: un registro por epoca para que
+                    # trainer.jsonl permita seguir una corrida en curso.
+                    # obs.evento nunca lanza, es seguro dentro del callback.
+                    obs.evento(log, "train.progress", epoca=ep, total=p.epochs,
+                               map50=round(em.map50, 4), precision=round(em.precision, 4),
+                               recall=round(em.recall, 4), caja=round(em.box_loss, 4))
+                    # Detención pedida por el usuario: cortamos en la frontera de
+                    # época (no a mitad) para no dejar checkpoints a medias.
+                    # consume_abort() consume la bandera una sola vez.
+                    if st.consume_abort():
+                        trainer.stop = True
+                        run_actual["abortado"] = True
+                        self.log_line.emit(
+                            "[INFO] Solicitud de detención recibida: "
+                            "se parará al final de esta época.")
                 except Exception as e:
                     self.log_line.emit(f"[WARN] callback error: {e}")
 
@@ -256,6 +273,10 @@ class TrainerRunner(QThread):
             ultimo_best = ""
 
             for i, familia in enumerate(familias, start=1):
+                # Si el usuario abortó en la familia anterior, no arrancamos más
+                # arquitecturas: el aborto es de toda la corrida, no por familia.
+                if run_actual["abortado"]:
+                    break
                 if usa_custom:
                     weights = str(mdl.custom_weights)
                 else:
@@ -327,11 +348,21 @@ class TrainerRunner(QThread):
                     "f1_real": f1_real,
                 })
 
+            # Aborto del usuario: NO es una terminación. No se emite el evento
+            # de completado ni finished_ok (eso le diría a la UI que hubo pesos
+            # finales cuando solo hay un entrenamiento truncado).
+            if run_actual["abortado"]:
+                obs.evento(log, "train.aborted",
+                           ms=int((__import__("time").perf_counter() - _t0) * 1000),
+                           familias_completadas=len(comparativa))
+                self.aborted.emit()
+                return
+
             if len(comparativa) > 1:
                 self._informar_comparacion(comparativa, p)
 
-            obs.evento(log, "train.finish", ms=int((__import__("time").perf_counter() - _t0) * 1000),
-                       weights=str(ultimo_best))
+            obs.evento(log, "train.complete", ms=int((__import__("time").perf_counter() - _t0) * 1000),
+                       weights=str(ultimo_best), familias=len(comparativa))
             self.finished_ok.emit(ultimo_best)
 
         except KeyboardInterrupt:

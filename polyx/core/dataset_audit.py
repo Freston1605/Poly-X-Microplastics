@@ -169,7 +169,7 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     else:
         root = yaml_dir
 
-    names = data.get("names", [])
+    names = data.get("names") or []
     if isinstance(names, dict):
         names = [names[k] for k in sorted(names.keys(), key=lambda x: int(x))]
     audit.class_names = [str(n) for n in names]
@@ -181,8 +181,15 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     for split in ("train", "val", "test"):
         split_value = data.get(split)
         resolved = _resolve_split(yaml_dir, data, split_value)
+        # Clave train/val ausente: no es una ruta movida, es un dataset que no
+        # se puede ni entrenar ni validar. Sin este chequeo el audit salía «ok»
+        # con un data.yaml que solo tenía 'names'.
+        if not split_value and split in ("train", "val"):
+            audit.add(LEVEL_ERROR, f"Sin split {split} declarado",
+                      f"El data.yaml no tiene clave '{split}'. Ultralytics la "
+                      "necesita para entrenar y medir métricas.")
         # Ruta declarada pero inexistente → casi siempre un data.yaml movido de PC
-        if split_value and (resolved is None or not resolved.exists()):
+        elif split_value and (resolved is None or not resolved.exists()):
             lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
             audit.add(lvl, f"Ruta de {split} no existe",
                       f"El data.yaml apunta a «{resolved}», que no existe en este equipo. "

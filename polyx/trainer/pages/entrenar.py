@@ -13,6 +13,7 @@ from ...core import theme as T
 from ...core import iconos
 from ...core.widgets import KPICard
 from ..runner import TrainerRunner
+from ..state import validate_training_config
 from ...core.i18n import tr
 from ...core.plataforma import abrir_en_el_sistema
 
@@ -276,8 +277,19 @@ class EntrenarPage(TrainerPage):
     def _start(self):
         if self.state.is_running():
             return
-        if not self.state.dataset.yaml_path:
-            QMessageBox.warning(self, tr("Falta dataset"), tr("Carga data.yaml en la pestaña Dataset."))
+        # ── Gate pre-vuelo (M003/T03) ─────────────────────────────
+        # La validación corre ANTES de crear el runner: un fallo a mitad del
+        # run pierde el trabajo y la GPU, y el usuario no entiende qué pasó.
+        # Cubre el chequeo anterior de «data.yaml cargado» con un diálogo
+        # que además enumera TODOS los problemas de una vez.
+        ok, problemas = validate_training_config(self.state)
+        if not ok:
+            detalle = "\n".join(f"• {m}" for m in problemas)
+            QMessageBox.warning(
+                self,
+                tr("No se puede entrenar"),
+                tr("Corrige estos problemas antes de iniciar el entrenamiento:\n\n") + detalle,
+            )
             return
         # Reset
         self.state.history.clear()

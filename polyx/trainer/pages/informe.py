@@ -88,7 +88,13 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
         def col(*names):
             for n in names:
                 if n in header:
-                    return rows[-1][header.index(n)]
+                    idx = header.index(n)
+                    # Una ultima fila truncada (corrida cortada a mitad) tiene
+                    # menos celdas que el encabezado: sin esta guarda el
+                    # indice se sale del rango y el reporte revienta.
+                    if idx < len(rows[-1]):
+                        return rows[-1][idx]
+                    return None
             return None
         last_epoch = int(col("epoch") or len(rows))
         map50 = col("metrics/mAP50(B)", "metrics/mAP_0.5")
@@ -144,7 +150,7 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     doc = f"""<!doctype html>
 <html lang='es'><head><meta charset='utf-8'>
-<title>Reporte de entrenamiento · {run_dir.name}</title>
+<title>Reporte de entrenamiento · {html.escape(run_dir.name)}</title>
 <style>{CSS}</style>
 </head><body><div class='container'>
 <header class='cover'>

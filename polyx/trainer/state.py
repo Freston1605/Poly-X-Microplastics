@@ -3,10 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Optional
+import re
 
 from PySide6.QtCore import QObject, Signal
 
 from ..core.plataforma import dispositivo_disponible
+from ..core.dataset_audit import audit_dataset, LEVEL_ERROR, LEVEL_WARN
+
+# Device aceptado por Ultralytics: «cpu», «mps», «cuda[:N]» o «N[,N...]» (GPU por
+# índice). Cualquier otra cosa hace fallar el run a mitad de camino.
+_DEVICE_RE = re.compile(r"^(cpu|mps|cuda(:\d+)?|\d+(,\d+)*)$", re.IGNORECASE)
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -72,8 +78,14 @@ class ModelConfig:
         fam = familia.lstrip("v") if familia != "v8" else familia
         return f"yolo{fam}{self.size}.pt"
 
+    @property
+    def name(self) -> str:
+        """Nombre corto del modelo, sin extensión: «yolov8m», «yolo11n»."""
+        return self.peso_de(self.family).removesuffix(".pt")
+
+    @property
     def base_weights_name(self) -> str:
-        """Nombre del peso base tal como lo publica Ultralytics.
+        """Nombre del peso base tal como lo publica Ultralytics (con extensión).
 
         Ojo con la nomenclatura, que es inconsistente y no perdona: la familia 8
         lleva "v" (yolov8m.pt) y la 11 no (yolo11m.pt). Construir el nombre
@@ -205,3 +217,133 @@ class TrainerState(QObject):
         self.params_changed.emit()
         self.aug_changed.emit()
         self.model_changed.emit()
+
+
+# ────────────────────────────────────────────────────────────────────
+# Validación pre-vuelo: dataset + parámetros antes de entrenar
+# ────────────────────────────────────────────────────────────────────
+def _num(valor) -> Optional[float]:
+    """float(valor) o None si no es numérico (None, str vacío, texto)."""
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return None
+
+
+def _en_rango(valor, lo: float, hi: float) -> bool:
+    """True si valor es numérico y lo <= valor <= hi. No numérico = fuera."""
+    v = _num(valor)
+    return v is not None and lo <= v <= hi
+
+
+def validate_training_config(state: TrainerState, *, con_dataset: bool = True) -> tuple[bool, list[str]]:
+    """Validación pre-vuelo estricta antes de lanzar un entrenamiento.
+
+    Devuelve (ok, mensajes). ok=False si algo impide o compromete el run:
+    data.yaml ausente/corrupto, splits o labels faltantes, o hiperparámetros
+    fuera de rango. Reutiliza audit_dataset() para la parte de dataset (la
+    misma auditoría profunda que muestra la pestaña Dataset) y chequea aparte
+    los límites de parámetros, que Ultralytics valida tarde o con un error de
+    una línea a mitad del run.
+
+    ``con_dataset=False`` es el modo barato de la reactividad de la UI: sigue
+    exigiendo un data.yaml cargado y valida todos los parámetros, pero omite
+    la auditoría de disco (que lee un .txt por imagen). Las páginas lo usan
+    cuando cambian parámetros, modelo o augmentación, para no escanear el
+    dataset en cada tecla; la auditoría completa corre cuando llega
+    ``dataset_changed`` y siempre antes de arrancar el runner.
+    """
+    msgs: List[str] = []
+    ok = True
+
+    def _error(msg: str) -> None:
+        nonlocal ok
+        ok = False
+        msgs.append(msg)
+
+    # ── 1) Modelo ──
+    if state.model.family not in ("v8", "v11"):
+        _error(f"Familia de modelo desconocida: «{state.model.family}» (use «v8» o «v11»).")
+    if state.model.size not in ("n", "s", "m", "l", "x"):
+        _error(f"Tamaño de modelo desconocido: «{state.model.size}» (use n, s, m, l o x).")
+
+    # ── 2) Hiperparámetros ──
+    p = state.params
+    if not _en_rango(p.epochs, 1, 10000):
+        _error(f"Épocas fuera de rango: {p.epochs} (use un entero ≥ 1).")
+    if not _en_rango(p.batch, 1, 512):
+        _error(f"Batch fuera de rango: {p.batch} (use un entero ≥ 1).")
+    try:
+        imgsz = int(p.imgsz)
+    except (TypeError, ValueError):
+        imgsz = -1
+    if not (32 <= imgsz <= 8192) or imgsz % 32 != 0:
+        _error(f"imgsz fuera de rango: {p.imgsz} (use un múltiplo de 32 entre 32 y 8192).")
+    if not _DEVICE_RE.match((p.device or "").strip()):
+        _error(f"Device inválido: «{p.device}» (use «cpu», «mps», «0» o «cuda:0»).")
+    if not _en_rango(p.lr0, 1e-9, 1.0):
+        _error(f"lr0 fuera de rango: {p.lr0} (use un valor > 0).")
+    if not _en_rango(p.weight_decay, 0.0, 1.0):
+        _error(f"weight_decay fuera de rango: {p.weight_decay} (use un valor en [0, 1]).")
+    if not _en_rango(p.momentum, 0.0, 1.0):
+        _error(f"momentum fuera de rango: {p.momentum} (use un valor en [0, 1]).")
+    if not _en_rango(p.warmup_epochs, 0, 10**6):
+        _error(f"warmup_epochs fuera de rango: {p.warmup_epochs} (use un entero ≥ 0).")
+    if not _en_rango(p.close_mosaic, 0, 10**6):
+        _error(f"close_mosaic fuera de rango: {p.close_mosaic} (use un entero ≥ 0).")
+    ls = _num(p.label_smoothing)
+    if ls is None or not (0.0 <= ls < 1.0):
+        _error(f"label_smoothing fuera de rango: {p.label_smoothing} (use un valor en [0, 1)).")
+    if not _en_rango(p.patience, 0, 10**6):
+        _error(f"patience fuera de rango: {p.patience} (use un entero ≥ 0).")
+    if p.save_period != -1 and not _en_rango(p.save_period, 1, 10**6):
+        _error(f"save_period fuera de rango: {p.save_period} (use -1 o un entero ≥ 1).")
+    if not _en_rango(p.workers, 0, 64):
+        _error(f"workers fuera de rango: {p.workers} (use un entero entre 0 y 64).")
+    cache = p.cache
+    if not (isinstance(cache, bool)
+            or (isinstance(cache, str) and cache.strip().lower() in ("ram", "disk", "true", "false"))):
+        _error(f"cache inválido: {cache!r} (use «disk», «ram», «true» o «false»).")
+
+    a = state.aug
+    for nombre, valor in (("hsv_h", a.hsv_h), ("hsv_s", a.hsv_s), ("hsv_v", a.hsv_v),
+                         ("fliplr", a.fliplr), ("mosaic", a.mosaic),
+                         ("mixup", a.mixup), ("copy_paste", a.copy_paste)):
+        if not _en_rango(valor, 0.0, 1.0):
+            _error(f"{nombre} fuera de rango: {valor} (use un valor en [0, 1]).")
+
+    # ── 3) Dataset: integridad del YAML, presencia de splits y labels ──
+    yaml_path = state.dataset.yaml_path
+    if yaml_path is None:
+        _error("No hay data.yaml cargado (ve a la pestaña Dataset).")
+        return ok, msgs
+    if not con_dataset:
+        # Modo barato: el dataset está cargado y su estructura se audita aparte
+        # (dataset_changed / «Validar ahora» / el gate de arranque). Aquí solo
+        # reporta lo que acaba de cambiar: los parámetros.
+        return ok, msgs
+    if not Path(yaml_path).exists():
+        _error(f"data.yaml no encontrado: {yaml_path}")
+        return ok, msgs
+
+    try:
+        audit = audit_dataset(yaml_path)
+    except Exception as e:  # la auditoría no debe tumbar el pre-flight
+        _error(f"No se pudo analizar el dataset: {e}")
+        return ok, msgs
+
+    for f in audit.findings:
+        texto = f"{f.title}. {f.detail}".strip()
+        if f.level == LEVEL_ERROR:
+            _error(texto)
+        elif f.level == LEVEL_WARN:
+            msgs.append(f"[aviso] {texto}")
+    # Train sin ninguna etiqueta válida: el modelo aprendería solo fondo. La
+    # auditoría lo marca como aviso por imagen; aquí es bloqueante.
+    etiquetas_train = sum(audit.per_class.get("train", {}).values())
+    if audit.ok and etiquetas_train == 0:
+        _error("No hay etiquetas válidas en train: el modelo aprendería solo fondo.")
+    elif audit.ok:
+        msgs.append("Dataset válido: splits, labels y clases correctos.")
+
+    return ok, msgs
