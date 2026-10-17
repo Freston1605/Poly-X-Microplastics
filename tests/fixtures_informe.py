@@ -37,7 +37,7 @@ from typing import Optional, Sequence, Union
 import cv2
 import numpy as np
 
-from polyx.core.yolo_wrap import Detection
+from polyx.model.yolo_wrap import Detection
 
 # ---------------------------------------------------------------------------
 # Constantes de los datos sinteticos
@@ -89,7 +89,7 @@ def deteccion_medida(img: "np.ndarray") -> Detection:
     """Build the measured Detection (disc fit to the synthetic frame)."""
     d = Detection(class_id=0, class_name="PET", conf=0.9,
                   x1=138, y1=108, x2=182, y2=152)
-    from polyx.core import morfologia
+    from polyx.model import morfologia
     morfologia.aplicar_a_deteccion(d, img, 30.0)
     return d
 
@@ -112,7 +112,7 @@ def _construir_estado(directorio: Path,
     morfologia at 30.0 um/px, and one ImageResult published on each model
     slot. Multiple versions only differ in the injected strings.
     """
-    from polyx.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     directorio.mkdir(parents=True, exist_ok=True)
     if escribir_foto:

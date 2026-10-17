@@ -1,6 +1,6 @@
 """El ciclo de vida del TrainerRunner con torch y ultralytics falsos.
 
-``TrainerRunner`` (``polyx/trainer/runner.py``) es el unico punto donde el
+``TrainerRunner`` (``polyx/gui/trainer/runner.py``) es el unico punto donde el
 Entrenador arranca de verdad un entrenamiento Ultralytics: emite los eventos
 ``train.config`` / ``train.progress`` / ``train.complete`` / ``train.aborted`` /
 ``train.error`` a ``trainer.jsonl`` y traduce una solicitud de detencion del
@@ -35,17 +35,17 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from polyx.trainer import runner as runner_mod
-from polyx.trainer.runner import TrainerRunner
-from polyx.trainer.state import TrainerState
+from polyx.gui.trainer import runner as runner_mod
+from polyx.gui.trainer.runner import TrainerRunner
+from polyx.gui.trainer.state import TrainerState
 
 # Las páginas son QWidgets y TrainerRunner es un QThread: sin display real las
 # pruebas corren «offscreen».
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # El runner deriva el directorio de runs de su propia ubicación:
-# Path(__file__).resolve().parents[2] / "runs_train".
-RAIZ_PROYECTO = Path(runner_mod.__file__).resolve().parents[2]
+# Path(__file__).resolve().parents[3] / "runs_train".
+RAIZ_PROYECTO = Path(runner_mod.__file__).resolve().parents[3]
 RUNS_ENTRENAMIENTO = RAIZ_PROYECTO / "runs_train"
 
 

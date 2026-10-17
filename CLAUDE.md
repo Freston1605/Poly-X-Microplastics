@@ -23,47 +23,67 @@ Integra todo el flujo: **entrenamiento → etiquetado → detección → reporte
 ```
 polyx/                    # Código fuente
 ├── __init__.py           # v2.0.0
-├── launcher.py           # Módulo 1: Menú principal (hero + 4 cards)
-├── core/                 # Núcleo compartido
-│   ├── theme.py          # Paleta de colores (Segoe UI, Nile Red RGB)
+├── launcher.py           # Shim Qt-free del entry point histórico
+├── core/                 # Shim temporal de re-export (se elimina al cerrar M005)
+├── model/                # Motor puro, sin Qt
 │   ├── paths.py          # Rutas (models/, runs/, data/, assets/)
 │   ├── yolo_wrap.py      # Wrapper YOLO (Detection, YoloModel)
 │   ├── metrics.py        # TP/FP/FN, IoU, matriz de confusión
-│   ├── widgets.py        # LogoBadge, HLine, custom widgets
-│   └── report_html.py    # Generador reporte (base64, paper-quality)
-├── detector/             # Módulo 2: Análisis en lote
-│   ├── __main__.py
-│   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-│   ├── state.py          # DetectorState (modelos, imágenes, params)
-│   ├── runner.py         # Lógica de ejecución (batch inference)
-│   └── pages/
-│       ├── _base.py      # BasePage (herencia)
-│       ├── modelos.py    # Carga hasta 3 modelos .pt
-│       ├── imagenes.py   # Selecciona carpeta de imágenes
-│       ├── parametros.py # Conf, IoU, um/px, device (CPU/GPU)
-│       ├── gt_manual.py  # Anota ground truth manual
-│       ├── ejecutar.py   # Botón ▶ run + progreso
-│       ├── resultados.py # Tabla: imagen, clase, conf, tamaño
-│       ├── errores.py    # Matriz confusión, galería FP/FN
-│       ├── comparar.py   # Compara runs (curvas P/R/F1)
-│       └── reporte.py    # Genera HTML + abre navegador
-├── trainer/              # Módulo 3: Entrenamiento YOLO
-│   ├── __main__.py
-│   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-│   ├── state.py          # TrainerState (config, runs, checkpoints)
-│   ├── runner.py         # Lógica de entrenamiento
-│   ├── hw.py             # Detección GPU, hardware info
-│   └── pages/
-│       ├── _base.py
-│       ├── modelo.py     # YOLO v8/v11, tamaño (nano-xlarge)
-│       ├── dataset.py    # Dataset YAML + split (train/val/test)
-│       ├── parametros.py # Epochs, batch, imgsz, optimizer
-│       ├── augmentacion.py # Flip, rotation, mosaic, etc.
-│       ├── entrenar.py   # Lanzar training + loss curves en vivo
-│       ├── evaluar.py    # Métricas mAP, P, R, F1 por clase
-│       ├── comparar.py   # Comparar múltiples runs
-│       ├── exportar.py   # Export PT→ONNX/TensorRT/CoreML
-│       └── informe.py    # Reporte entrenamiento
+│   ├── morfologia.py     # Segmentación y tallas sobre la máscara
+│   ├── calibracion.py    # Calibración μm/píxel
+│   ├── asignacion.py     # Abstención: detectar ≠ identificar
+│   ├── dataset_audit.py  # Auditoría de dataset
+│   ├── observabilidad.py # Logs JSONL (logger_para, set_run_id)
+│   ├── procedencia.py    # Trazabilidad de la corrida
+│   ├── plataforma.py     # Diferencias entre sistemas operativos
+│   ├── i18n.py           # tr(), idioma()
+│   └── traducciones_en.py
+└── gui/                  # Presentación: todo lo que toca Qt
+    ├── __main__.py       # python -m polyx.gui
+    ├── launcher.py       # Módulo 1: Menú principal (hero + 4 cards)
+    ├── theme.py          # Paleta de colores (Segoe UI, Nile Red RGB)
+    ├── iconos.py         # Iconos vectoriales (QPainterPath, 40 iconos)
+    ├── marca.py          # Identidad por ventana (logo + nombre)
+    ├── widgets.py        # LogoBadge, HLine, custom widgets
+    ├── preferencias.py   # Diálogo de preferencias (tema, idioma)
+    ├── pdf_export.py     # HTML → PDF
+    ├── updates.py        # Buscador de actualizaciones
+    ├── report_html.py    # Generador reporte (base64, paper-quality)
+    ├── detector/         # Módulo 2: Análisis en lote
+    │   ├── __main__.py
+    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
+    │   ├── state.py          # DetectorState (modelos, imágenes, params)
+    │   ├── runner.py         # Lógica de ejecución (batch inference)
+    │   └── pages/
+    │       ├── _base.py      # BasePage (herencia)
+    │       ├── modelos.py    # Carga hasta 3 modelos .pt
+    │       ├── imagenes.py   # Selecciona carpeta de imágenes
+    │       ├── parametros.py # Conf, IoU, um/px, device (CPU/GPU)
+    │       ├── gt_manual.py  # Anota ground truth manual
+    │       ├── ejecutar.py   # Botón ▶ run + progreso
+    │       ├── resultados.py # Tabla: imagen, clase, conf, tamaño
+    │       ├── errores.py    # Matriz confusión, galería FP/FN
+    │       ├── comparar.py   # Compara runs (curvas P/R/F1)
+    │       └── reporte.py    # Genera HTML + abre navegador
+    ├── trainer/          # Módulo 3: Entrenamiento YOLO
+    │   ├── __main__.py
+    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
+    │   ├── state.py          # TrainerState (config, runs, checkpoints)
+    │   ├── runner.py         # Lógica de entrenamiento
+    │   ├── hw.py             # Detección GPU, hardware info
+    │   └── pages/
+    │       ├── _base.py
+    │       ├── modelo.py     # YOLO v8/v11, tamaño (nano-xlarge)
+    │       ├── dataset.py    # Dataset YAML + split (train/val/test)
+    │       ├── parametros.py # Epochs, batch, imgsz, optimizer
+    │       ├── augmentacion.py # Flip, rotation, mosaic, etc.
+    │       ├── entrenar.py   # Lanzar training + loss curves en vivo
+    │       ├── evaluar.py    # Métricas mAP, P, R, F1 por clase
+    │       ├── comparar.py   # Comparar múltiples runs
+    │       ├── exportar.py   # Export PT→ONNX/TensorRT/CoreML
+    │       └── informe.py    # Reporte entrenamiento
+    ├── visor/            # Inspección con calibración μm/píxel
+    └── etiquetador/      # Anotación YOLO manual
 
 legacy/                   # Versiones anteriores, en la RAIZ (no dentro de polyx/)
 ├── Detector_Microplastico.py
@@ -126,11 +146,11 @@ data/                     # Otros datasets
 **Hardware:**
 - Windows 10/11 · macOS 11 Big Sur o posterior
 - 8 GB RAM mínimo
-- Aceleración: se elige sola en `core/plataforma.py` → **CUDA** (NVIDIA) →
+- Aceleración: se elige sola en `model/plataforma.py` → **CUDA** (NVIDIA) →
   **MPS** (GPU integrada de los Mac con Apple Silicon) → **CPU**
 
 **Portabilidad.** Todo lo que difiere entre sistemas está concentrado en
-`polyx/core/plataforma.py`, no repartido por el código:
+`polyx/model/plataforma.py`, no repartido por el código:
 
 | Antes (solo Windows) | Ahora |
 |---|---|
@@ -151,7 +171,7 @@ data/                     # Otros datasets
 
 ---
 
-## 🎨 Temas y paleta (theme.py)
+## 🎨 Temas y paleta (polyx/gui/theme.py)
 
 **Cuatro temas**, elegibles en *Preferencias* (o con `POLYX_TEMA`):
 
@@ -167,9 +187,9 @@ resuelve cuál está activo y sus valores se publican como atributos del módulo
 así que el resto del programa sigue escribiendo `T.INK` sin saber que existen
 los temas.
 
-> **Por eso `from .core.theme import INK` está prohibido.** Ese import se queda
+> **Por eso `from polyx.gui.theme import INK` está prohibido.** Ese import se queda
 > con el color que hubiera al arrancar y no vuelve a cambiar. Hay que importar
-> el módulo (`from .core import theme as T`) y leer `T.INK` en el punto de uso.
+> el módulo (`from polyx.gui import theme as T`) y leer `T.INK` en el punto de uso.
 
 ### Tokens
 
@@ -221,7 +241,7 @@ animaciones apagadas el panel dibuja un fotograma fijo, no desaparece.
 
 ### Iconos
 
-`core/iconos.py` dibuja **40 iconos** con `QPainterPath` sobre una rejilla de
+`polyx/gui/iconos.py` dibuja **40 iconos** con `QPainterPath` sobre una rejilla de
 24×24, con el trazo proporcional al tamaño pedido.
 
 **No se usan emoji como iconos.** Un emoji lo dibuja la fuente del sistema:
@@ -230,7 +250,7 @@ puede teñirse con el acento del tema— y mezcla estilos, unos planos y otros c
 degradado, algo que se nota en cuanto hay cuatro juntos en una rejilla.
 
 ```python
-from ..core import iconos
+from polyx.gui import iconos
 lbl.setPixmap(iconos.pixmap("detector", 26, T.ACCENT))
 btn.setIcon(iconos.icono("guardar", 15, T.INK2))
 ```
@@ -435,7 +455,7 @@ sobre la placa completa sin volver al Etiquetador.
 
 ## 🔑 Clases clave
 
-### `Detection` (yolo_wrap.py)
+### `Detection` (polyx/model/yolo_wrap.py)
 ```python
 @dataclass
 class Detection:
@@ -456,7 +476,7 @@ class Detection:
 sobreestima el área **1.87×**, y una fibra tumbada en diagonal tiene caja
 **cuadrada** — con lo que se reportaba como fragmento.
 
-`morfologia.py` segmenta dentro de cada caja (Otsu sobre el canal de mayor
+`polyx/model/morfologia.py` segmenta dentro de cada caja (Otsu sobre el canal de mayor
 contraste, componente conexa del centro, recortada a la caja) y mide sobre la
 máscara. **El largo sale de dos medidas estándar y se reporta la mayor:**
 
@@ -492,14 +512,14 @@ Coste 5.9 ms por partícula. Solo cv2 y numpy: `scipy` **no** está en
 `requirements.txt` —llega de rebote con ultralytics— y apoyarse en él rompería
 la instalación el día que ultralytics deje de traerlo.
 
-### `YoloModel` (yolo_wrap.py)
+### `YoloModel` (polyx/model/yolo_wrap.py)
 Wrapper lazy-loading de Ultralytics YOLO:
 ```python
 model = YoloModel("bestdetectormedium.pt")
 detections = model.predict("image.jpg", conf=0.25, device="0")
 ```
 
-### `DetectorState` (detector/state.py)
+### `DetectorState` (polyx/gui/detector/state.py)
 Estado global del Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Hasta 3 modelos
@@ -508,7 +528,7 @@ state.params: InferenceParams           # conf, IoU, um_per_px
 state.results: Dict[int, List[ImageResult]]  # Resultados por modelo
 ```
 
-### `ImageResult` (detector/state.py)
+### `ImageResult` (polyx/gui/detector/state.py)
 Resultado de una imagen:
 ```python
 image_path: Path
@@ -518,7 +538,7 @@ tp, fp, fn, miscls: int
 annotated_png: Optional[bytes]  # PNG anotado en base64
 ```
 
-### `MatchResult` (metrics.py)
+### `MatchResult` (polyx/model/metrics.py)
 Matching pred vs GT (IoU ≥ 0.5):
 ```python
 tp: int          # True Positives (conf y clase correcta)
@@ -609,7 +629,7 @@ conf_asignacion: float = 0.0  # Confianza mínima para atribuir polímero (0 = o
 
 ### Abstención: detectar ≠ identificar
 
-`core/asignacion.py`. Por debajo de `conf_asignacion` la partícula **sigue
+`polyx/model/asignacion.py`. Por debajo de `conf_asignacion` la partícula **sigue
 contando** como partícula detectada, pero se reporta como **«no asignable»** en
 vez de atribuirle un polímero. El informe declara en Métodos qué porcentaje del
 lote quedó sin asignar.

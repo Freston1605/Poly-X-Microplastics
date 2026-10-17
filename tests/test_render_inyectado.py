@@ -28,7 +28,7 @@ a proposito: pathlib la partiria en componentes y el '<' de apertura se
 perderia de Path.name (P001).
 
 El idioma se fija a 'en' con la misma mecanica del fixture autouse de
-tests/test_render_reporte_benigno.py: polyx.core.i18n cachea el idioma al
+tests/test_render_reporte_benigno.py: polyx.model.i18n cachea el idioma al
 importar (env -> ~/.polyx_idioma.json -> locale del sistema) y sin forzarlo
 los conteos dependen de la maquina. Los anclajes estructurales de los
 sumideros (td, strong, h3, comillas «») salen de las plantillas del informe
@@ -100,7 +100,7 @@ def _idioma_y_logs_muertos(tmp_path):
     logger_para. Los estados de fixture no usan QObjects y no emiten
     eventos: no se pierde nada al silenciar.
     """
-    import polyx.core.i18n as i18n
+    import polyx.model.i18n as i18n
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     previo_log_dir = os.environ.get("POLYX_LOG_DIR")
@@ -108,9 +108,9 @@ def _idioma_y_logs_muertos(tmp_path):
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
-    import polyx.core.observabilidad as obs
+    import polyx.model.observabilidad as obs
 
     logger = obs.logger_para("detector")
     handlers_previos = logger.handlers[:]
@@ -138,7 +138,7 @@ def _render_hostil(tmp_path: Path) -> str:
     el conjunto completo de secciones: la prueba es sobre el render, no
     sobre fixtures recortados.
     """
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")

@@ -1,7 +1,7 @@
 """Launcher → trainer subprocess integration tests.
 
 The launcher is the entry point that spawns the trainer subprocess via
-``_spawn_module('polyx.trainer')``.  These tests exercise the full
+``_spawn_module('polyx.gui.trainer')``.  These tests exercise the full
 launcher-to-trainer wiring chain — ``open_trainer`` → ``_launch_module`` →
 ``_spawn_module`` → ``subprocess.Popen`` — with Popen mocked so no real
 process is ever spawned.
@@ -20,11 +20,11 @@ from pathlib import Path
 
 import pytest
 
-# Offscreen platform BEFORE importing polyx.launcher (which pulls in Qt).
+# Offscreen platform BEFORE importing polyx.gui.launcher (which pulls in Qt).
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-import polyx.launcher as launcher                               # noqa: E402
-from polyx.launcher import LauncherWindow                        # noqa: E402
+import polyx.gui.launcher as launcher                               # noqa: E402
+from polyx.gui.launcher import LauncherWindow                        # noqa: E402
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -67,21 +67,21 @@ def qapp():
     yield app
 
 
-# ── 1. Success path: _spawn_module("polyx.trainer") ─────────────────
+# ── 1. Success path: _spawn_module("polyx.gui.trainer") ─────────────────
 
 class TestSpawnModuleTrainerExitoso:
     def test_spawn_module_trainer_exitoso(self, tmp_path, monkeypatch):
-        """_spawn_module('polyx.trainer') returns True and emits module.launch."""
+        """_spawn_module('polyx.gui.trainer') returns True and emits module.launch."""
         monkeypatch.setattr(launcher.subprocess, "Popen", _FakePopen)
 
-        resultado = launcher._spawn_module("polyx.trainer")
+        resultado = launcher._spawn_module("polyx.gui.trainer")
 
         assert resultado is True
         # Popen was called with the right argv
         assert len(_FakePopen.llamadas) == 1
         args, kwargs = _FakePopen.llamadas[0]
-        assert args == [sys.executable, "-m", "polyx.trainer"]
-        assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[1])
+        assert args == [sys.executable, "-m", "polyx.gui.trainer"]
+        assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[2])
 
     def test_spawn_module_emite_module_launch_en_app_jsonl(
         self, tmp_path, monkeypatch
@@ -89,7 +89,7 @@ class TestSpawnModuleTrainerExitoso:
         """The module.launch record has the English core schema."""
         monkeypatch.setattr(launcher.subprocess, "Popen", _FakePopen)
 
-        launcher._spawn_module("polyx.trainer")
+        launcher._spawn_module("polyx.gui.trainer")
 
         eventos = _leer_app_jsonl(tmp_path)
         launches = [e for e in eventos if e["event"] == "module.launch"]
@@ -100,7 +100,7 @@ class TestSpawnModuleTrainerExitoso:
         assert rec["level"] == "INFO"
         assert rec["module"] == "polyx.app"
         assert "run_id" in rec
-        assert rec["data"]["modulo"] == "polyx.trainer"
+        assert rec["data"]["modulo"] == "polyx.gui.trainer"
 
 
 # ── 2. Module-not-found path ────────────────────────────────────────
@@ -130,7 +130,7 @@ class TestSpawnModulePopenFalla:
 
         monkeypatch.setattr(launcher.subprocess, "Popen", reventar)
 
-        resultado = launcher._spawn_module("polyx.trainer")
+        resultado = launcher._spawn_module("polyx.gui.trainer")
 
         assert resultado is False
 
@@ -143,14 +143,14 @@ class TestSpawnModulePopenFalla:
 
         monkeypatch.setattr(launcher.subprocess, "Popen", reventar)
 
-        launcher._spawn_module("polyx.trainer")
+        launcher._spawn_module("polyx.gui.trainer")
 
         eventos = _leer_app_jsonl(tmp_path)
         errores = [e for e in eventos if e["event"] == "module.launch.error"]
         assert len(errores) == 1
         rec = errores[0]
         assert rec["level"] == "WARNING"
-        assert rec["data"]["modulo"] == "polyx.trainer"
+        assert rec["data"]["modulo"] == "polyx.gui.trainer"
         assert "no hay ejecutable" in rec["data"]["error"]
 
 
@@ -158,7 +158,7 @@ class TestSpawnModulePopenFalla:
 
 class TestOpenTrainerWiring:
     def test_open_trainer_lanza_modulo_trainer(self, qapp, monkeypatch):
-        """open_trainer() calls _launch_module with 'polyx.trainer'."""
+        """open_trainer() calls _launch_module with 'polyx.gui.trainer'."""
         window = LauncherWindow()
         llamadas: list[str] = []
 
@@ -168,7 +168,7 @@ class TestOpenTrainerWiring:
         monkeypatch.setattr(window, "_launch_module", capturar)
         window.open_trainer()
 
-        assert llamadas == ["polyx.trainer"]
+        assert llamadas == ["polyx.gui.trainer"]
         window.deleteLater()
 
     def test_launch_module_avisa_en_fallo(self, qapp, monkeypatch):
@@ -186,9 +186,9 @@ class TestOpenTrainerWiring:
             lambda parent, title, msg: avisos.append((title, msg))
         )
 
-        window._launch_module("polyx.trainer")
+        window._launch_module("polyx.gui.trainer")
 
         assert len(avisos) == 1
         title, msg = avisos[0]
-        assert "polyx.trainer" in msg
+        assert "polyx.gui.trainer" in msg
         window.deleteLater()

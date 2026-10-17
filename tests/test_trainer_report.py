@@ -1,6 +1,6 @@
 """build_training_report end-to-end tests.
 
-``build_training_report`` (``polyx/trainer/pages/informe.py``) is the deliverable
+``build_training_report`` (``polyx/gui/trainer/pages/informe.py``) is the deliverable
 that proves a training run succeeded: it turns a runner-structured run directory
 (Ultralytics ``results.csv`` + figure PNGs + ``weights/best.pt``) into a
 self-contained HTML report with KPIs, embedded base64 figures and bibliography.
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from polyx.trainer.pages.informe import build_training_report
+from polyx.gui.trainer.pages.informe import build_training_report
 
 # A 1x1 transparent PNG — small valid PNG bytes for figure fixtures.
 # Written with Path.write_bytes, never cv2.imwrite (fails silently on

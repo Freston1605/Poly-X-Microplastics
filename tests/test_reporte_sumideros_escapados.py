@@ -37,7 +37,7 @@ _escape es blindaje por capas, verificado por el test de identidad de bytes del
 render benigno (tests/test_render_reporte_benigno.py), no por inyeccion.
 
 El idioma se fija a 'en' y el logger del pipeline a NullHandler con la misma
-mecanica de tests/test_render_reporte_benigno.py: polyx.core.i18n cachea el
+mecanica de tests/test_render_reporte_benigno.py: polyx.model.i18n cachea el
 idioma al importar y sin POLYX_IDIOMA los anclajes de este archivo dependen de
 la maquina; el logger 'polyx.detector' queda cacheado por logger_para con un
 RotatingFileHandler a carpeta_logs() y sin POLYX_LOG_DIR la suite escribiria en
@@ -62,7 +62,7 @@ from pathlib import Path
 
 import pytest
 
-from polyx.core.report_html import (
+from polyx.gui.report_html import (
     _tabla_ancha,
     _tabla_conteo,
     _figura_calibracion,
@@ -101,8 +101,8 @@ def rh(tmp_path, monkeypatch):
     plantilla en el idioma del render; sin fuerza, el resultado dependia de
     la maquina. POLYX_LOG_DIR va a tmp_path antes del primer logger_para.
     """
-    import polyx.core.i18n as i18n
-    import polyx.core.observabilidad as obs
+    import polyx.model.i18n as i18n
+    import polyx.model.observabilidad as obs
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     previo_log_dir = os.environ.get("POLYX_LOG_DIR")
@@ -110,7 +110,7 @@ def rh(tmp_path, monkeypatch):
     monkeypatch.setenv("POLYX_LOG_DIR", str(tmp_path / "logs"))
 
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
 
     logger = obs.logger_para("detector")
@@ -259,7 +259,7 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
                      "precision": 0.9, "recall": 0.8, "map50": 0.7, "map": 0.6}
     monkeypatch.setattr(rh, "_entrenamiento_de", lambda peso: entrenamiento)
 
-    from polyx.detector.state import ModelSlot
+    from polyx.gui.detector.state import ModelSlot
     slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("peso_falso.pt"))
     html = _seccion_equipo([slot])
 
@@ -273,7 +273,7 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
 
 def test_seccion_equipo_sin_checkpoint_no_nombra_al_modelo():
     """Sin datos de .pt el sink de entrenamiento no se emite en absoluto."""
-    from polyx.detector.state import ModelSlot
+    from polyx.gui.detector.state import ModelSlot
     slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("vacio.pt"))
     html = _seccion_equipo([slot])
     assert ALIAS_HOSTIL not in html
@@ -289,7 +289,7 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
 
     La clave de calibracion ES el nombre de archivo; el fix lo renderiza en
     la brecha monoespaciada del rotulo, escapado."""
-    from polyx.core.calibracion import Calibracion, ORIGEN_PLACA
+    from polyx.model.calibracion import Calibracion, ORIGEN_PLACA
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")

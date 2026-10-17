@@ -427,19 +427,19 @@ O directamente desde terminal:
 ```bat
 REM Windows
 .venv\Scripts\python.exe -m polyx.launcher
-.venv\Scripts\python.exe -m polyx.detector
-.venv\Scripts\python.exe -m polyx.trainer
-.venv\Scripts\python.exe -m polyx.etiquetador
-.venv\Scripts\python.exe -m polyx.visor
+.venv\Scripts\python.exe -m polyx.gui.detector
+.venv\Scripts\python.exe -m polyx.gui.trainer
+.venv\Scripts\python.exe -m polyx.gui.etiquetador
+.venv\Scripts\python.exe -m polyx.gui.visor
 ```
 
 ```bash
 # macOS
 .venv/bin/python -m polyx.launcher
-.venv/bin/python -m polyx.detector
-.venv/bin/python -m polyx.trainer
-.venv/bin/python -m polyx.etiquetador
-.venv/bin/python -m polyx.visor
+.venv/bin/python -m polyx.gui.detector
+.venv/bin/python -m polyx.gui.trainer
+.venv/bin/python -m polyx.gui.etiquetador
+.venv/bin/python -m polyx.gui.visor
 ```
 
 ## Actualizar
@@ -512,7 +512,7 @@ construir_app_macOS.command  # 🍎 Empaquetar Poly-X.app (opcional)
 ```
 
 Las diferencias entre sistemas —abrir carpetas, lanzar el actualizador, elegir el
-dispositivo de cómputo— están concentradas en `polyx/core/plataforma.py`, no
+dispositivo de cómputo— están concentradas en `polyx/model/plataforma.py`, no
 repartidas por el código.
 
 ---

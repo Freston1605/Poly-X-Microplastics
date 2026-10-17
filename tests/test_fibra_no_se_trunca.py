@@ -26,7 +26,7 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core import morfologia as M
+from polyx.model import morfologia as M
 
 
 # Cuanto se queda corta la caja del detector por cada extremo de una fibra.
@@ -165,7 +165,7 @@ def test_el_aviso_llega_a_la_deteccion():
     la caja lo protege, no hay inflacion, y entonces no hay nada que avisar
     -- que es justamente el comportamiento correcto.
     """
-    from polyx.core.yolo_wrap import Detection
+    from polyx.model.yolo_wrap import Detection
 
     img = np.full((200, 260, 3), 18, np.uint8)
     # La barra sobresale por AMBOS lados de la caja: es el caso real, el
@@ -181,7 +181,7 @@ def test_el_aviso_llega_a_la_deteccion():
 
 def test_una_particula_sana_no_se_marca():
     """Si se marcara todo, el aviso dejaria de significar algo."""
-    from polyx.core.yolo_wrap import Detection
+    from polyx.model.yolo_wrap import Detection
 
     img = np.full((200, 200, 3), 18, np.uint8)
     cv2.circle(img, (100, 100), 25, (60, 210, 240), -1)
@@ -235,7 +235,7 @@ def test_la_fuga_se_declara_aunque_se_haya_acotado():
     Lo que queda medido es el trozo de dentro de la caja, que puede quedarse
     corto si la particula seguia de verdad. El informe tiene que poder decirlo,
     asi que la Detection sale marcada."""
-    from polyx.core.yolo_wrap import Detection
+    from polyx.model.yolo_wrap import Detection
 
     img, caja = _trozo_del_medio_de_algo_largo()
     d = Detection(class_id=0, class_name="PET", conf=0.9,

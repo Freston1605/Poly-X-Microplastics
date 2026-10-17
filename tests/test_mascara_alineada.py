@@ -20,9 +20,9 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core import morfologia as M
-from polyx.core.report_html import _ficha_particula
-from polyx.core.yolo_wrap import Detection
+from polyx.model import morfologia as M
+from polyx.gui.report_html import _ficha_particula
+from polyx.model.yolo_wrap import Detection
 
 
 def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
@@ -101,7 +101,7 @@ def test_el_margen_del_recorte_es_el_mismo_en_los_dos_sitios(lado_x, lado_y):
     distintas, que es donde min y max se separan.
     """
     import inspect
-    from polyx.core import report_html
+    from polyx.gui import report_html
 
     fuente = inspect.getsource(report_html._ficha_particula)
     assert "margen_de_caja(" in fuente, (

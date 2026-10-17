@@ -10,7 +10,7 @@ Estas pruebas fijan el reparto para que no se pierda al editar el informe.
 """
 from __future__ import annotations
 
-from polyx.core.report_html import elegir_fichas
+from polyx.gui.report_html import elegir_fichas
 
 
 class _Det:

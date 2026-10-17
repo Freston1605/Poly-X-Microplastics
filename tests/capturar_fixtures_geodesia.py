@@ -9,7 +9,7 @@ sobre la foto origen, exactamente como lo hace ``morfologia.medir_deteccion``
 en el pipeline (mismo margen por defecto, misma caja), de modo que cada
 fixture es literalmente lo que el pipeline midio.
 
-Layout que lee (el que escribe ``polyx/detector/runner.py``)::
+Layout que lee (el que escribe ``polyx/gui/detector/runner.py``)::
 
     <runs>/<alias>/labels/NNNN_<imgstem>.txt   # YOLO: class cx cy w h conf
                                               # normalizado a la foto completa
@@ -49,8 +49,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morfologia  # noqa: E402
-from polyx.core.yolo_wrap import read_yolo_txt  # noqa: E402
+from polyx.model import morfologia  # noqa: E402
+from polyx.model.yolo_wrap import read_yolo_txt  # noqa: E402
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.

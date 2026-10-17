@@ -42,7 +42,7 @@ BASELINE_SHA = BASELINE / "informe.sha256"
 def _idioma_del_baseline_y_logs_muertos(tmp_path):
     """Fuerza el idioma del baseline (en) y revierte el logger a NullHandler.
 
-    polyx.core.i18n resuelve y cachea el idioma al importar (env ->
+    polyx.model.i18n resuelve y cachea el idioma al importar (env ->
     ~/.polyx_idioma.json -> locale del sistema); sin forzar la variable el
     test depende de la maquina y el compare de bytes seria una loteria. Se
     recarga i18n con POLYX_IDIOMA=en -- el idioma que de verdad tiene el
@@ -62,8 +62,8 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     abriria contra el HOME real; con la variable ya puesta el archivo queda
     dentro de tmp_path aunque pytest lo borre despues.
     """
-    import polyx.core.i18n as i18n
-    import polyx.core.observabilidad as obs
+    import polyx.model.i18n as i18n
+    import polyx.model.observabilidad as obs
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     previo_log_dir = os.environ.get("POLYX_LOG_DIR")
@@ -73,7 +73,7 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
 
     logger = obs.logger_para("detector")
@@ -102,7 +102,7 @@ def test_el_baseline_existe(tmp_path):
     mensaje no diria que el problema es del fixture; aqui el fallo nombra el
     archivo que falta.
     """
-    import polyx.core.report_html as rh  # el fixture ya valido el reload
+    import polyx.gui.report_html as rh  # el fixture ya valido el reload
     assert rh is not None
     assert BASELINE_HTML.is_file(), f"falta el baseline: {BASELINE_HTML}"
     assert BASELINE_SHA.is_file(), f"falta el sha256 del baseline: {BASELINE_SHA}"
@@ -111,7 +111,7 @@ def test_el_baseline_existe(tmp_path):
 def test_render_benigno_es_byte_identico_al_baseline(tmp_path):
     """El render por el pipeline real, con TODAS las secciones, reproduce el
     baseline pre-fix byte a byte."""
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     from tests.fixtures_informe import estado_benigno
 
     st = estado_benigno(directorio=tmp_path / "fotos")
@@ -129,7 +129,7 @@ def test_render_benigno_es_byte_identico_al_baseline(tmp_path):
 def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
     """El digest persistido en informe.sha256 delimita que parte muto: si el
     compare de bytes falla, este segundo arbol da el valor exacto a buscar."""
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     from tests.fixtures_informe import estado_benigno
 
     st = estado_benigno(directorio=tmp_path / "fotos")

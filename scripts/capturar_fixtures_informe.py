@@ -2,7 +2,7 @@
 """Capture the pre-fix baseline reports (benign and hostile) of the real pipeline.
 
 Builds the two shared DetectorState fixtures from tests/fixtures_informe.py
-and renders each one through polyx.core.report_html.generate_report exactly
+and renders each one through polyx.gui.report_html.generate_report exactly
 as the app does (all sections, real pipeline, cronometro wrapper included).
 The resulting HTML files are the pre-fix golden snapshots used by T04
 (byte-identity of the benign render) and T06/T07 (dead injection).
@@ -39,7 +39,7 @@ def capturar() -> dict[str, str]:
     Returns a dict variant -> sha256 hex digest, printed at the end so the
     benign pre-fix baseline hash lands in the task record.
     """
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
 
     estados = {
         "benigna": estado_benigno(),

@@ -6,7 +6,7 @@ fiel (la mascara guardada TIENE que ser la misma que midio el pipeline) y de
 que el script nunca pise por debajo lo ya capturado.
 
 Aqui queda probado, contra un layout ``runs/detect_*`` en miniatura montado en
-``tmp_path`` (la forma exacta que escribe ``polyx/detector/runner.py``):
+``tmp_path`` (la forma exacta que escribe ``polyx/gui/detector/runner.py``):
 
   * encuentra la foto origen por stem (busqueda recursiva, sin importar el
     caso del nombre),
@@ -32,7 +32,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from polyx.core import morfologia as M  # noqa: E402
+from polyx.model import morfologia as M  # noqa: E402
 
 import capturar_fixtures_geodesia as CFG  # noqa: E402
 import generar_fixtures_geodesia as GFG  # noqa: E402

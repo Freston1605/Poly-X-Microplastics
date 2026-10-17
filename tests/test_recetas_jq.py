@@ -26,7 +26,7 @@ def log_env(tmp_path, monkeypatch):
     carpeta = tmp_path / "polyx_logs"
     carpeta.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("POLYX_LOG_DIR", str(carpeta))
-    import polyx.core.observabilidad as ob
+    import polyx.model.observabilidad as ob
     ob._cerrar_loggers()
     monkeypatch.delenv("POLYX_LOG", raising=False)
     ob._run_local.__dict__.pop("run_id", None)
@@ -36,7 +36,7 @@ def log_env(tmp_path, monkeypatch):
 
 def _simular_lote_10_placas(log_env: Path) -> str:
     """Simula una corrida de 10 placas en detector, reporte y trainer."""
-    from polyx.core import observabilidad as ob
+    from polyx.model import observabilidad as ob
 
     run_id = "batch-test-10-plates-2026"
     ob.set_run_id(run_id)
@@ -159,7 +159,7 @@ def test_q5_missing_jq_fallback_handling(log_env):
 
 def test_q6_10x_load_profile_batch(log_env):
     """Q6: Valida rendimiento y estabilidad bajo carga de 10x (100 placas simuladas)."""
-    from polyx.core import observabilidad as ob
+    from polyx.model import observabilidad as ob
 
     run_id = "batch-100-plates-load"
     ob.set_run_id(run_id)

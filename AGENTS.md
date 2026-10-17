@@ -17,8 +17,8 @@ convención. **No dupliques contenido aquí.**
 
 - **Comentarios y variables en español**; docstrings en inglés.
 - **Rutas siempre con `pathlib.Path`**, nunca strings.
-- **Colores desde `polyx/core/theme.py`** (`T.ACCENT`, `T.OK`…), nunca a mano.
-- **Nada específico de un sistema operativo fuera de `polyx/core/plataforma.py`.**
+- **Colores desde `polyx/gui/theme.py`** (`T.ACCENT`, `T.OK`…), nunca a mano.
+- **Nada específico de un sistema operativo fuera de `polyx/model/plataforma.py`.**
 - Imágenes con `cv2.imdecode`/`imencode` sobre `np.fromfile`, no `imread`/`imwrite`:
   en Windows estos fallan en silencio con rutas acentuadas.
 - Los tests se corren con `.venv\Scripts\python.exe -m pytest -q` y **pasan los

@@ -2,7 +2,7 @@
 """Demo auto-verificada de la capa de observabilidad (S03-T04).
 
 Simula UN lote correlacionado de 10 placas a traves de las costuras REALES
-de ``polyx.core.observabilidad`` — ``logger_para``, ``set_run_id``,
+de ``polyx.model.observabilidad`` — ``logger_para``, ``set_run_id``,
 ``cronometro``, ``evento`` — sin torch, sin ventana: el mismo camino que
 reescriben detector/reporte/trainer en una corrida real. Al terminar,
 vuelve a leer los JSONL y chequea SOLO el tramo que esta corrida appendeo:
@@ -38,7 +38,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import observabilidad as ob
+from polyx.model import observabilidad as ob
 
 CAMPOS_NUCLEO = ("ts", "level", "module", "event")
 FALSOS = []            # ruta absoluta de cada mensaje de falla, para el resumen

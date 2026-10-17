@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from polyx.core import theme as T
+from polyx.gui import theme as T
 
 
 # ────────────────────────────────────────────────────────────────────

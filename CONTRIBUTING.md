@@ -10,7 +10,7 @@
 - Los eventos son `verbo.objeto` en inglés (run.finish, imgsz.fallback,
   report.error, train.error, update.available). Los fallos van a nivel
   ERROR y llevan el traceback en `exc`.
-- Más detalle: `POLYX_LOG=debug python -m polyx.detector`
+- Más detalle: `POLYX_LOG=debug python -m polyx.gui.detector`
 - Las señales que deben alertar: `imgsz.fallback` (el lote corrió a menos
   resolución de la pedida), `run.sin_forma_alta` (muchas partículas sin
   medir), y cualquier evento `*.error`.

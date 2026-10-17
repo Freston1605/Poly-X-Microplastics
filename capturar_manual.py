@@ -23,30 +23,30 @@ from PySide6.QtWidgets import QApplication
 
 # (nombre_archivo, modulo, clase, (w,h), tab, espera_ms)
 CAPTURAS = [
-    ("01_launcher",            "polyx.launcher",    "LauncherWindow", (1180, 820), None, 1200),
+    ("01_launcher",            "polyx.gui.launcher",    "LauncherWindow", (1180, 820), None, 1200),
 
-    ("02_det_modelos",         "polyx.detector",    "DetectorWindow", (1360, 860), 0, 700),
-    ("03_det_imagenes",        "polyx.detector",    "DetectorWindow", (1360, 860), 1, 700),
-    ("04_det_gt_manual",       "polyx.detector",    "DetectorWindow", (1360, 860), 2, 700),
-    ("05_det_parametros",      "polyx.detector",    "DetectorWindow", (1360, 860), 3, 700),
-    ("06_det_ejecutar",        "polyx.detector",    "DetectorWindow", (1360, 860), 4, 700),
-    ("07_det_resultados",      "polyx.detector",    "DetectorWindow", (1360, 860), 5, 700),
-    ("08_det_errores",         "polyx.detector",    "DetectorWindow", (1360, 860), 6, 700),
-    ("09_det_comparar",        "polyx.detector",    "DetectorWindow", (1360, 860), 7, 700),
-    ("10_det_reporte",         "polyx.detector",    "DetectorWindow", (1360, 860), 8, 900),
+    ("02_det_modelos",         "polyx.gui.detector",    "DetectorWindow", (1360, 860), 0, 700),
+    ("03_det_imagenes",        "polyx.gui.detector",    "DetectorWindow", (1360, 860), 1, 700),
+    ("04_det_gt_manual",       "polyx.gui.detector",    "DetectorWindow", (1360, 860), 2, 700),
+    ("05_det_parametros",      "polyx.gui.detector",    "DetectorWindow", (1360, 860), 3, 700),
+    ("06_det_ejecutar",        "polyx.gui.detector",    "DetectorWindow", (1360, 860), 4, 700),
+    ("07_det_resultados",      "polyx.gui.detector",    "DetectorWindow", (1360, 860), 5, 700),
+    ("08_det_errores",         "polyx.gui.detector",    "DetectorWindow", (1360, 860), 6, 700),
+    ("09_det_comparar",        "polyx.gui.detector",    "DetectorWindow", (1360, 860), 7, 700),
+    ("10_det_reporte",         "polyx.gui.detector",    "DetectorWindow", (1360, 860), 8, 900),
 
-    ("11_ent_modelo",          "polyx.trainer",     "TrainerWindow",  (1360, 880), 0, 700),
-    ("12_ent_dataset",         "polyx.trainer",     "TrainerWindow",  (1360, 880), 1, 700),
-    ("13_ent_parametros",      "polyx.trainer",     "TrainerWindow",  (1360, 880), 2, 700),
-    ("14_ent_augmentacion",    "polyx.trainer",     "TrainerWindow",  (1360, 880), 3, 700),
-    ("15_ent_entrenar",        "polyx.trainer",     "TrainerWindow",  (1360, 880), 4, 700),
-    ("16_ent_evaluar",         "polyx.trainer",     "TrainerWindow",  (1360, 880), 5, 700),
-    ("17_ent_comparar",        "polyx.trainer",     "TrainerWindow",  (1360, 880), 6, 700),
-    ("18_ent_exportar",        "polyx.trainer",     "TrainerWindow",  (1360, 880), 7, 700),
-    ("19_ent_informe",         "polyx.trainer",     "TrainerWindow",  (1360, 880), 8, 700),
+    ("11_ent_modelo",          "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 0, 700),
+    ("12_ent_dataset",         "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 1, 700),
+    ("13_ent_parametros",      "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 2, 700),
+    ("14_ent_augmentacion",    "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 3, 700),
+    ("15_ent_entrenar",        "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 4, 700),
+    ("16_ent_evaluar",         "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 5, 700),
+    ("17_ent_comparar",        "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 6, 700),
+    ("18_ent_exportar",        "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 7, 700),
+    ("19_ent_informe",         "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 8, 700),
 
-    ("20_etiquetador",         "polyx.etiquetador", "LabelerWindow",  (1420, 900), None, 1000),
-    ("21_visor",               "polyx.visor",       "VisorWindow",    (1440, 920), None, 1000),
+    ("20_etiquetador",         "polyx.gui.etiquetador", "LabelerWindow",  (1420, 900), None, 1000),
+    ("21_visor",               "polyx.gui.visor",       "VisorWindow",    (1440, 920), None, 1000),
 ]
 
 

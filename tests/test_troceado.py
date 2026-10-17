@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from polyx.core.yolo_wrap import politica_troceado
+from polyx.model.yolo_wrap import politica_troceado
 
 # La foto tipica del estudio y el imgsz con que se entreno.
 ANCHO, ALTO, IMGSZ = 4096, 3072, 2080

@@ -18,9 +18,9 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from polyx.core import calibracion as C
-from polyx.core import morfologia as M
-from polyx.core.yolo_wrap import Detection
+from polyx.model import calibracion as C
+from polyx.model import morfologia as M
+from polyx.model.yolo_wrap import Detection
 
 
 # ── El anillo de la placa ──────────────────────────────────────────────

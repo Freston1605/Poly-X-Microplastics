@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import polyx.core.observabilidad as ob   # noqa: E402  (despues del path hack)
+import polyx.model.observabilidad as ob   # noqa: E402  (despues del path hack)
 
 
 def _leer_jsonl(carpeta: Path, modulo: str) -> list[dict]:
@@ -30,7 +30,7 @@ def _leer_jsonl(carpeta: Path, modulo: str) -> list[dict]:
 def log_dir(tmp_path, monkeypatch):
     """Carpeta de logs propia por prueba y cache de loggers limpia.
 
-    QT_QPA_PLATFORM=offscreen se fija ANTES de importar polyx.launcher (el
+    QT_QPA_PLATFORM=offscreen se fija ANTES de importar polyx.gui.launcher (el
     import lo hacen las pruebas, despues del fixture), para que Qt no necesite
     pantalla aunque algo se inicialice al importar. No se crea QApplication:
     solo se prueban funciones a nivel de modulo.
@@ -48,7 +48,7 @@ def log_dir(tmp_path, monkeypatch):
 
 
 def test_bootstrap_registra_evento(log_dir):
-    import polyx.launcher as launcher
+    import polyx.gui.launcher as launcher
     launcher._registrar_arranque()
     recs = _leer_jsonl(log_dir, "app")
     assert len(recs) == 1, "el arranque deja exactamente un rastro"
@@ -64,7 +64,7 @@ def test_bootstrap_registra_evento(log_dir):
 
 def test_bootstrap_no_revienta_sin_carpeta(tmp_path, monkeypatch):
     """POLYX_LOG_DIR dentro de un archivo: el arranque sigue sin lanzar."""
-    import polyx.launcher as launcher
+    import polyx.gui.launcher as launcher
     ob._loggers.clear()
     destino_archivo = tmp_path / "archivo"
     destino_archivo.write_text("x")
@@ -75,7 +75,7 @@ def test_bootstrap_no_revienta_sin_carpeta(tmp_path, monkeypatch):
 
 def test_lanzar_modulo_registra_module_launch(log_dir, monkeypatch):
     """Popen con el MISMO argv y cwd de siempre + module.launch en app.jsonl."""
-    import polyx.launcher as launcher
+    import polyx.gui.launcher as launcher
     llamadas = []
 
     class FakePopen:
@@ -83,21 +83,21 @@ def test_lanzar_modulo_registra_module_launch(log_dir, monkeypatch):
             llamadas.append((args, kwargs))
 
     monkeypatch.setattr(launcher.subprocess, "Popen", FakePopen)
-    assert launcher._spawn_module("polyx.detector") is True
+    assert launcher._spawn_module("polyx.gui.detector") is True
     assert len(llamadas) == 1
     args, kwargs = llamadas[0]
-    assert args == [sys.executable, "-m", "polyx.detector"], \
+    assert args == [sys.executable, "-m", "polyx.gui.detector"], \
         "no se puede cambiar como se lanzan los procesos"
-    assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[1])
+    assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[2])
     recs = _leer_jsonl(log_dir, "app")
     eventos = [r for r in recs if r["event"] == "module.launch"]
     assert len(eventos) == 1
-    assert eventos[0]["data"] == {"modulo": "polyx.detector"}
+    assert eventos[0]["data"] == {"modulo": "polyx.gui.detector"}
 
 
 def test_lanzar_modulo_inexistente_devuelve_false(log_dir, monkeypatch,):
     """find_spec None: False y nada escrito; la ventana decide el aviso."""
-    import polyx.launcher as launcher
+    import polyx.gui.launcher as launcher
     lanzadas = []
 
     class FakePopen:
@@ -115,7 +115,7 @@ def test_lanzar_modulo_inexistente_devuelve_false(log_dir, monkeypatch,):
 
 def test_lanzar_modulo_con_error_emite_y_no_revienta(log_dir, monkeypatch):
     """Popen que revienta: _spawn_module devuelve False y deja el rastro."""
-    import polyx.launcher as launcher
+    import polyx.gui.launcher as launcher
 
     def reventar(*args, **kwargs):
         raise OSError("no hay ejecutable")
@@ -123,10 +123,10 @@ def test_lanzar_modulo_con_error_emite_y_no_revienta(log_dir, monkeypatch):
     monkeypatch.setattr(launcher.subprocess, "Popen", reventar)
     # Contrato elegido: _spawn_module NUNCA lanza (True/False), porque el
     # modulo Python lo llama la ventana; el error queda solo como evento.
-    assert launcher._spawn_module("polyx.detector") is False
+    assert launcher._spawn_module("polyx.gui.detector") is False
     recs = _leer_jsonl(log_dir, "app")
     errores = [r for r in recs if r["event"] == "module.launch.error"]
     assert len(errores) == 1
     assert errores[0]["level"] == "WARNING"
-    assert errores[0]["data"]["modulo"] == "polyx.detector"
+    assert errores[0]["data"]["modulo"] == "polyx.gui.detector"
     assert "no hay ejecutable" in errores[0]["data"]["error"]

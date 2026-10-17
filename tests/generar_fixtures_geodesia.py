@@ -11,7 +11,7 @@ de particulas:
   - particula_alargada_diagonal: particula alargada orientada a 45 grados
   - particula_bifurcada: particula con ramificacion en Y
 
-Construye una estructura de corrida mock compatible con ``polyx/detector/runner.py``
+Construye una estructura de corrida mock compatible con ``polyx/gui/detector/runner.py``
 (layout ``runs/<alias>/labels/NNNN_<stem>.txt`` y ``<alias>/classes.txt``) y fotos
 sinteticas BGR con fondo oscuro y particula brillante con contraste superior a
 ``CONTRASTE_MINIMO``.

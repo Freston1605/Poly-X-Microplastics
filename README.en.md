@@ -357,19 +357,19 @@ That opens the **Launcher** → pick a module. Or straight from a terminal:
 ```bat
 REM Windows
 .venv\Scripts\python.exe -m polyx.launcher
-.venv\Scripts\python.exe -m polyx.detector
-.venv\Scripts\python.exe -m polyx.trainer
-.venv\Scripts\python.exe -m polyx.etiquetador
-.venv\Scripts\python.exe -m polyx.visor
+.venv\Scripts\python.exe -m polyx.gui.detector
+.venv\Scripts\python.exe -m polyx.gui.trainer
+.venv\Scripts\python.exe -m polyx.gui.etiquetador
+.venv\Scripts\python.exe -m polyx.gui.visor
 ```
 
 ```bash
 # macOS
 .venv/bin/python -m polyx.launcher
-.venv/bin/python -m polyx.detector
-.venv/bin/python -m polyx.trainer
-.venv/bin/python -m polyx.etiquetador
-.venv/bin/python -m polyx.visor
+.venv/bin/python -m polyx.gui.detector
+.venv/bin/python -m polyx.gui.trainer
+.venv/bin/python -m polyx.gui.etiquetador
+.venv/bin/python -m polyx.gui.visor
 ```
 
 ---
@@ -420,7 +420,7 @@ construir_app_macOS.command  # 🍎 Build Poly-X.app (optional)
 ```
 
 Everything that differs between systems — opening folders, launching the updater,
-picking the compute device — lives in `polyx/core/plataforma.py` rather than being
+picking the compute device — lives in `polyx/model/plataforma.py` rather than being
 scattered across the code.
 
 ---

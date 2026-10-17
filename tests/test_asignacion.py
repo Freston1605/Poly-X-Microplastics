@@ -4,10 +4,10 @@ Lo que se fija aquí es que abstenerse NO pierde partículas. El estudio informa
 por número de partículas, así que una que no se puede atribuir a un polímero
 tiene que seguir contando en el total; lo único que cambia es bajo qué etiqueta.
 """
-from polyx.core.asignacion import (
+from polyx.model.asignacion import (
     NO_ASIGNABLE, clase_reportada, conteo_reportado, marcar_asignables, resumir,
 )
-from polyx.core.yolo_wrap import Detection
+from polyx.model.yolo_wrap import Detection
 
 
 def _det(clase: str, conf: float, cid: int = 0) -> Detection:
@@ -86,8 +86,8 @@ def test_el_informe_declara_lo_que_no_pudo_asignar(tmp_path):
     import cv2
     import numpy as np
 
-    from polyx.core import report_html as rh
-    from polyx.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.gui import report_html as rh
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (110, 130), 20, (60, 210, 240), -1)

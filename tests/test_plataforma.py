@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 
-import polyx.core.plataforma as P
+import polyx.model.plataforma as P
 
 
 def _recargar_como(plataforma: str, maquina: str = "x86_64"):

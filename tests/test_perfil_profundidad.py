@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from polyx.core import report_html as R
+from polyx.gui import report_html as R
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +31,7 @@ def _en_español():
 
     previo = os.environ.get("POLYX_IDIOMA")
     os.environ["POLYX_IDIOMA"] = "es"
-    import polyx.core.i18n as i18n
+    import polyx.model.i18n as i18n
     importlib.reload(i18n)
     importlib.reload(R)
     yield

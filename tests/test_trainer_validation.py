@@ -21,9 +21,9 @@ import pytest
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from polyx.trainer.state import ModelConfig, TrainerState, validate_training_config
-from polyx.trainer.pages.dataset import DatasetPage
-from polyx.trainer.pages.entrenar import EntrenarPage
+from polyx.gui.trainer.state import ModelConfig, TrainerState, validate_training_config
+from polyx.gui.trainer.pages.dataset import DatasetPage
+from polyx.gui.trainer.pages.entrenar import EntrenarPage
 
 # Las páginas son QWidgets: sin display real las pruebas corren «offscreen».
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -193,7 +193,7 @@ def test_yaml_no_utf8_se_rechaza(tmp_path):
 def test_fallo_inesperado_de_auditoria_se_reporta_sin_excepcion(monkeypatch, dataset_valido):
     """Si audit_dataset explota (p. ej. disco desconectado), el pre-flight
     devuelve ok=False con un mensaje, en vez de propagar la excepción."""
-    import polyx.trainer.state as state_mod
+    import polyx.gui.trainer.state as state_mod
 
     def boom(_yaml):
         raise RuntimeError("disco desconectado")
@@ -414,7 +414,7 @@ def _parchear_runner(monkeypatch) -> list:
         def start(self):
             llamadas.append(("arrancado", None))
 
-    monkeypatch.setattr("polyx.trainer.pages.entrenar.TrainerRunner", RunnerFalso)
+    monkeypatch.setattr("polyx.gui.trainer.pages.entrenar.TrainerRunner", RunnerFalso)
     return llamadas
 
 

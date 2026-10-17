@@ -19,7 +19,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 
-from polyx.core.traducciones_en import EN, NO_TRADUCIR  # noqa: E402
+from polyx.model.traducciones_en import EN, NO_TRADUCIR  # noqa: E402
 
 
 def cadenas_tr(archivo: Path) -> list[str]:
