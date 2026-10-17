@@ -37,6 +37,13 @@ BASELINE = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
 BASELINE_HTML = BASELINE / "informe.html"
 BASELINE_SHA = BASELINE / "informe.sha256"
 
+# Tamano en bytes del baseline benigno congelado para M004 (re-verificado en
+# vivo pre-refactor durante la planificacion de M004/S01): segundo arbol de
+# decision junto al sha256 -- el digest localiza QU bytes cambiaron, este pin
+# da el tamano esperado sin abrir el archivo. La procedencia completa esta en
+# tests/fixtures/baseline_informe/README.md.
+TAMANO_BASELINE = 139512
+
 
 @pytest.fixture(autouse=True)
 def _idioma_del_baseline_y_logs_muertos(tmp_path):
@@ -157,3 +164,22 @@ def test_el_propio_baseline_coincide_con_su_registro():
     assert digest == esperado, (
         f"el baseline esta corrupto: su sha256 es {digest} y el archivo "
         f"informe.sha256 dice {esperado}")
+
+
+def test_el_baseline_pesa_exactamente_lo_registrado():
+    """Pin del tamano en bytes del baseline benigno congelado para M004.
+
+    Tercera prueba de autoconsistencia del fixture y segundo arbol de
+    decision del gate de refactor: si el sha256 diverge, este test delimita
+    si el cambio fue una edicion puntual (mismo tamano) o una regeneracion
+    completa (otro tamano) sin tener que abrir los 139 KB del HTML.
+
+    El valor debe coincidir con lo documentado en
+    tests/fixtures/baseline_informe/README.md; el baseline NO se regenera
+    durante M004 (S02/S03), se arregla el codigo que lo diverge.
+    """
+    tamano_real = len(BASELINE_HTML.read_bytes())
+    assert tamano_real == TAMANO_BASELINE, (
+        f"el baseline benigno pesa {tamano_real} B y el registro de M004/S01 "
+        f"dice {TAMANO_BASELINE} B: informe.html fue editado o regenerado -- "
+        f"el baseline esta congelado para M004, no hay que recapturarlo")

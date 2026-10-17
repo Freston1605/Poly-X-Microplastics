@@ -1545,110 +1545,103 @@ PRESETS = {
 NUM = "@@N@@"
 
 
-def _generate_report_impl(state, output_path: Path,
-                    include_refs: bool = True,
-                    include_gallery: bool = True,
-                    max_gallery: int = 60,
-                    max_fichas: int = 12,
-                    solo_imagenes=None,
-                    secciones=None) -> Path:
-    """Genera el reporte HTML. `state` es un DetectorState con resultados.
+# ── Constructores de secciones del informe ──
+# M004/S02: _generate_report_impl era una funcion de 1200+ lineas que
+# construcia cada seccion inline. Cada bloque se extrae a un builder
+# module-level que devuelve SOLO el cuerpo HTML, sin su <h2>: el titulo y el
+# numero los sigue poniendo el ensamblador (NUM -> "N"), que es el unico que
+# sabe que secciones sobrevivieron al filtro. La identidad de bytes del render
+# contra el baseline congelado (tests/fixtures/baseline_informe/) es contrato
+# del slice: cambiar un literal, un tr(), un _esc o el orden de calculo rompe
+# tests/test_render_reporte_benigno.py.
 
-    ``max_gallery`` limita cuántas imágenes se incrustan en la galería. Las
-    imágenes van en base64 dentro del propio HTML, de modo que sin tope un lote
-    grande generaba un archivo inabrible (14.5 MB con solo 4 imágenes).
 
-    ``solo_imagenes`` acota el informe a un conjunto de rutas. Con ``None`` entra
-    el trabajo completo. El filtro se aplica antes de calcular nada, de forma que
-    los totales, los gráficos y la matriz de confusión describan exactamente el
-    mismo subconjunto que se muestra; si se filtrara solo la galería, las cifras
-    de arriba hablarían de un lote y las imágenes de otro.
+def _pr_f1(tp: int, fp: int, fn: int):
+    """Precision, recall y F1 a partir de los contadores tp/fp/fn."""
+    p = tp / (tp + fp) if (tp + fp) else 0.0
+    r = tp / (tp + fn) if (tp + fn) else 0.0
+    return p, r, (2 * p * r / (p + r) if (p + r) else 0.0)
 
-    ``secciones`` es el conjunto de identificadores de :data:`SECCIONES` que se
-    quieren incluir; ``None`` las incluye todas. Una sección pedida que no tenga
-    contenido -- errores sin ground truth, por ejemplo -- se omite igualmente:
-    marcarla no inventa datos que no existen.
+
+def _seccion_resumen(total_imgs: int, total_dets: int, avg_conf: float,
+                     avg_size: float, active, any_gt: bool) -> str:
+    """Body of the 'resumen' section: KPI cards plus the abstract paragraph.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number.
     """
-    pedidas = set(IDS_SECCIONES if secciones is None else secciones)
-    # Las dos casillas antiguas siguen mandando si se pasan en False, para no
-    # cambiar el significado de las llamadas que ya existian.
-    if not include_refs:
-        pedidas.discard("referencias")
-    if not include_gallery:
-        pedidas.discard("galeria")
-    out_path = Path(output_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Fuera de la f-string del parrafo: lleva un plural y un formato numerico,
+    # y anidarlos dentro de {tr(...)} pediria comillas del mismo tipo.
+    _resumen_parrafo = tr(
+        "Se analizaron <strong>{imgs} imágenes</strong> con <strong>{n} {modelos}</strong> "
+        "YOLO entrenado para detectar microplásticos de PET, PP y LDPE bajo "
+        "fluorescencia Nile Red (254 nm). El total de detecciones fue "
+        "<strong>{dets}</strong> con una confianza media de <strong>{conf}</strong>."
+    ).format(imgs=total_imgs, n=len(active),
+             modelos=tr("modelos") if len(active) != 1 else tr("modelo"),
+             dets=total_dets, conf=f"{avg_conf:.3f}")
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    active = state.active_models()
+    return f"""
+<div class='kpis'>
+  <div class='kpi'><div class='l'>{tr('Imágenes')}</div><div class='v'>{total_imgs}</div><div class='b' style='background:var(--accent)'></div></div>
+  <div class='kpi'><div class='l'>{tr('Detecciones')}</div><div class='v'>{total_dets}</div><div class='b' style='background:var(--accent)'></div></div>
+  <div class='kpi'><div class='l'>{tr('Conf. media')}</div><div class='v'>{avg_conf:.3f}</div><div class='b' style='background:var(--vio)'></div></div>
+  <div class='kpi'><div class='l'>{tr('Tamaño medio (μm)')}</div><div class='v'>{(f"{avg_size:.1f}" if avg_size else "—")}</div><div class='b' style='background:var(--warn)'></div></div>
+</div>
+<p>{_resumen_parrafo}
+{tr("Se incluyó análisis de errores con Ground Truth (Verdaderos Positivos, Falsos Positivos, Falsos Negativos y Mal Clasificados).") if any_gt else tr("No se aportó Ground Truth, por lo que no se reportan métricas de error.")}
+</p>"""
 
-    if solo_imagenes is None:
-        resultados = dict(state.results)
-    else:
-        elegidas = {Path(p) for p in solo_imagenes}
-        resultados = {mi: [r for r in rs if Path(r.image_path) in elegidas]
-                      for mi, rs in state.results.items()}
 
-    all_results = [r for rs in resultados.values() for r in rs]
-    total_imgs = len({r.image_path for r in all_results})
-    total_dets = sum(len(r.predictions) for r in all_results)
-    confs = [p.conf for r in all_results for p in r.predictions]
-    sizes = [p.diam_um for r in all_results for p in r.predictions if p.diam_um]
-    avg_conf = sum(confs)/len(confs) if confs else 0
-    avg_size = sum(sizes)/len(sizes) if sizes else 0
-    any_gt = any(r.has_gt for r in all_results)
+def _seccion_errores(state, resultados, active, any_gt: bool) -> str:
+    """Body of the 'errores' section: confusion matrix plus per-class metrics.
 
-    clases_lote = _clases_vistas(all_results)
+    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when there is no
+    ground truth or no active model: the assembler omits a section with no
+    content rather than inventing data.
+    """
+    if not (any_gt and active):
+        return ""
+    main_mi = state.model_slots.index(active[0])
+    rs = resultados.get(main_mi, [])
+    gts_only = [r.gt for r in rs if r.has_gt]
+    preds_only = [r.predictions for r in rs if r.has_gt]
+    cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
+    cls_names = []
+    for cid in cls_ids:
+        name = next((d.class_name for lst in gts_only + preds_only for d in lst if d.class_id == cid), str(cid))
+        cls_names.append(name)
+    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
+    per_class_metrics = aggregate_per_class(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
 
-    # ── Distribución por clase ──
-    per_class = Counter()
-    for r in all_results:
-        for p in r.predictions:
-            per_class[p.class_name] += 1
+    cm_img = _fig_confusion_matrix(cm, cls_names)
+    rows = ""
+    for cid, name in zip(cls_ids, cls_names):
+        cm_ = per_class_metrics[cid]
+        rows += (
+            f"<tr><td>{name}</td>"
+            f"<td class='r'>{cm_.tp}</td><td class='r'>{cm_.fp}</td><td class='r'>{cm_.fn}</td>"
+            f"<td class='r'>{cm_.precision:.3f}</td><td class='r'>{cm_.recall:.3f}</td>"
+            f"<td class='r'>{cm_.f1:.3f}</td></tr>"
+        )
+    # Las clases que el modelo conoce pero que no aparecen ni en el GT ni en
+    # las predicciones se quedan fuera de la tabla, porque no tienen metrica
+    # que calcular. Se declaran igual: un informe que anuncia PET/PP/LDPE y
+    # luego muestra dos filas parece roto, y el lector no puede distinguir
+    # "ausente del lote" de "se perdio por el camino".
+    conocidas = dict(getattr(getattr(active[0], "loaded", None), "names", {}) or {})
+    ausentes = [n for cid, n in sorted(conocidas.items()) if cid not in set(cls_ids)]
+    nota_ausentes = ""
+    if ausentes:
+        nota_ausentes = (
+            "<p class='caption' style='text-align:left'>"
+            + tr("Sin fila para {clases}: no aparece ni en la anotación manual ni "
+                 "entre las predicciones de este lote, de modo que no hay métrica "
+                 "que informar. El modelo sí está entrenado para esa clase.").format(
+                     clases=_esc(", ".join(ausentes)))
+            + "</p>")
 
-    # ── Análisis de errores: matriz + métricas por clase (modelo principal) ──
-    err_section = ""
-    if any_gt and active:
-        main_mi = state.model_slots.index(active[0])
-        rs = resultados.get(main_mi, [])
-        gts_only = [r.gt for r in rs if r.has_gt]
-        preds_only = [r.predictions for r in rs if r.has_gt]
-        cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
-        cls_names = []
-        for cid in cls_ids:
-            name = next((d.class_name for lst in gts_only + preds_only for d in lst if d.class_id == cid), str(cid))
-            cls_names.append(name)
-        cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
-        per_class_metrics = aggregate_per_class(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
-
-        cm_img = _fig_confusion_matrix(cm, cls_names)
-        rows = ""
-        for cid, name in zip(cls_ids, cls_names):
-            cm_ = per_class_metrics[cid]
-            rows += (
-                f"<tr><td>{name}</td>"
-                f"<td class='r'>{cm_.tp}</td><td class='r'>{cm_.fp}</td><td class='r'>{cm_.fn}</td>"
-                f"<td class='r'>{cm_.precision:.3f}</td><td class='r'>{cm_.recall:.3f}</td>"
-                f"<td class='r'>{cm_.f1:.3f}</td></tr>"
-            )
-        # Las clases que el modelo conoce pero que no aparecen ni en el GT ni en
-        # las predicciones se quedan fuera de la tabla, porque no tienen metrica
-        # que calcular. Se declaran igual: un informe que anuncia PET/PP/LDPE y
-        # luego muestra dos filas parece roto, y el lector no puede distinguir
-        # "ausente del lote" de "se perdio por el camino".
-        conocidas = dict(getattr(getattr(active[0], "loaded", None), "names", {}) or {})
-        ausentes = [n for cid, n in sorted(conocidas.items()) if cid not in set(cls_ids)]
-        nota_ausentes = ""
-        if ausentes:
-            nota_ausentes = (
-                "<p class='caption' style='text-align:left'>"
-                + tr("Sin fila para {clases}: no aparece ni en la anotación manual ni "
-                     "entre las predicciones de este lote, de modo que no hay métrica "
-                     "que informar. El modelo sí está entrenado para esa clase.").format(
-                         clases=_esc(", ".join(ausentes)))
-                + "</p>")
-
-        err_section = f"""
+    return f"""
         
         <h3>@@N@@.1 {tr('Matriz de confusión')}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
@@ -1659,8 +1652,13 @@ def _generate_report_impl(state, output_path: Path,
         {nota_ausentes}
         """
 
-    # ── Resumen por modelo (tabla comparativa) ──
-    #
+
+def _seccion_modelos(state, resultados, all_results, any_gt: bool) -> str:
+    """Body of the 'modelos' section: per-model comparison table plus F1 note.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title (header table included:
+    the builder owns the complete section body the assembler used to compose).
+    """
     # Se reportan DOS F1, y la diferencia entre ambos no es un detalle:
     #
     #   localizacion  tp/(tp+fp) y tp/(tp+fn). Las cajas bien situadas pero con
@@ -1671,11 +1669,6 @@ def _generate_report_impl(state, output_path: Path,
     #
     # Publicar solo el primero sobreestima el desempeno, y ademas contradice la
     # tabla por clase, que si penaliza la confusion. Se declaran los dos.
-    def _pr_f1(tp: int, fp: int, fn: int):
-        p = tp / (tp + fp) if (tp + fp) else 0.0
-        r = tp / (tp + fn) if (tp + fn) else 0.0
-        return p, r, (2 * p * r / (p + r) if (p + r) else 0.0)
-
     rows_models = ""
     total_mc = 0
     for mi, slot in enumerate(state.model_slots):
@@ -1725,9 +1718,20 @@ def _generate_report_impl(state, output_path: Path,
                 pc=f"{p_cls:.3f}", rc=f"{r_cls:.3f}", fc=f"{f_cls:.3f}",
                 mc=total_mc)
 
-    # ── Veredicto y barrido de confianza ──
-    veredicto_html = ""
-    if any_gt:
+    return f"""
+<table class='data'><tr>{tr('<th>Modelo</th><th>Imágenes</th><th>Detecciones</th><th>Conf. media</th>')}
+<th>{LABEL_TP}</th><th>{LABEL_FP}</th><th>{LABEL_FN}</th>
+<th>{LABEL_MISCLS}</th><th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('localización')}</span></th>
+<th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('con clase')}</span></th></tr>{rows_models}</table>
+{nota_miscls}"""
+
+
+def _seccion_veredicto(resultados, state) -> str:
+    """Body of the 'veredicto' section: best model by F1-with-class, from the
+    confidence sweep. Arguments are the precomputed locals the inline block
+    consumed before extraction."""
+    texto = ""
+    if any(r.has_gt for rs in resultados.values() for r in rs):
         barrido = _barrido_confianza(resultados, state, state.params.iou_tp,
                                      state.params.conf)
         if barrido:
@@ -1754,8 +1758,14 @@ def _generate_report_impl(state, output_path: Path,
                     "falta repetir con distintas semillas para afirmar que una es "
                     "superior.</p>").format(otro=_esc(p_alias), d=f"{d:.3f}")
 
-            veredicto_html = texto
+            return texto
+    return texto
 
+
+def _seccion_comparacion(state, resultados) -> str:
+    """Body of the 'comparacion' section: per-photo model table, F1 de
+    localización note and the comparison figures. Arguments are the
+    precomputed locals the inline block consumed before extraction."""
     # ── Comparación entre modelos, foto por foto ──
     # La tabla global de arriba dice cual modelo gana en total; esta dice en
     # cuales fotos gana. Con lotes desiguales como los del Loa, donde un tramo
@@ -1922,7 +1932,17 @@ def _generate_report_impl(state, output_path: Path,
                         + tr("Solo se ejecutó un modelo, así que no hay comparación. "
                              "Carga un segundo modelo en la pestaña Modelos para "
                              "compararlos sobre las mismas imágenes.") + "</p>")
+    return compare_html
 
+
+def _seccion_galeria(resultados: Dict[int, list], state, clases_lote,
+                     max_gallery: int = 60, include_gallery: bool = True) -> str:
+    """Body of the 'galeria' section: side-by-side prediction vs Ground Truth.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number. Empty when the gallery is disabled or no
+    candidate image has prediction bytes.
+    """
     # ── Galería comparativa: Predicción vs Ground Truth (lado a lado) ──
     gallery_html = ""
     omitidas = 0
@@ -2022,7 +2042,16 @@ def _generate_report_impl(state, output_path: Path,
                    "visualmente dónde acertó o falló el modelo.</p>")
                 + nota + "".join(blocks)
             )
+    return gallery_html
 
+
+def _seccion_resultados(per_class: Dict[str, int], confs: List[float],
+                        sizes: List[float]) -> str:
+    """Body of the 'resultados' section: aggregate figures plus captions.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number. Empty when no figure was produced.
+    """
     # ── Figuras agregadas ──
     fig_classes = _fig_class_distribution(dict(per_class))
     fig_conf = _fig_confidence_hist(confs)
@@ -2035,7 +2064,18 @@ def _generate_report_impl(state, output_path: Path,
         figures_html += f"<div class='fig'><img src='data:image/png;base64,{fig_conf}' /><div class='caption'>{tr('Figura. Histograma de confianza.')}</div></div>"
     if fig_size:
         figures_html += f"<div class='fig'><img src='data:image/png;base64,{fig_size}' /><div class='caption'>{tr('Figura. Distribución de tamaños (diámetro equivalente en μm).')}</div></div>"
+    return figures_html
 
+
+def _seccion_metodos(state, active, all_results, total_imgs: int,
+                     total_dets: int, any_gt: bool) -> tuple:
+    """Body of the 'metodos' section: parameters table, team and redacted paragraph.
+
+    Returns ``(methods_html, equipo_html, methods_para)`` — the three pieces
+    the assembler's ``metodos`` entry composes — WITHOUT any ``<h2>`` title.
+    The ``import ultralytics`` stays lazy inside this body: it must not load
+    at module import time (S01 laziness gate).
+    """
     # ── Métodos ──
     p = state.params
     # Cuando la calibracion es por foto (medir_placa) no hay UN valor de
@@ -2113,9 +2153,15 @@ def _generate_report_impl(state, output_path: Path,
              ).format(imgs=total_imgs, dets=total_dets)
         + "</blockquote>"
     )
+    return methods_html, equipo_html, methods_para
 
-    conteo_html = _seccion_conteo(resultados, state, active, clases_lote)
 
+def _seccion_referencias(include_refs: bool = True) -> str:
+    """Body of the 'referencias' section: static list of cited papers.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the section
+    is not included, so the assembler drops it like it does today.
+    """
     refs_html = ""
     if include_refs:
         refs_html = """
@@ -2133,11 +2179,23 @@ def _generate_report_impl(state, output_path: Path,
               <a href='https://doi.org/10.4067/s0717-97072024000106082'>https://doi.org/10.4067/s0717-97072024000106082</a></li>
         </ol>
         """
+    return refs_html
 
+
+def _seccion_calibracion(state) -> str:
+    """Body of the 'calibracion' section: scale provenance and per-photo calibration.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the state has
+    no calibraciones and no manual scale, so the assembler drops the section
+    like it does today. The ``polyx.model.calibracion`` import stays lazy
+    inside this body: it must not load at module import time (S01 laziness
+    gate).
+    """
     # ── Calibración de escala ──
     # Se reporta la procedencia, no solo el número: un tamaño en µm sin decir
     # contra qué patrón se midió no es verificable. Si no hay calibración la
     # sección no se emite, en vez de mostrar un "—" que parece un dato.
+    p = state.params
     calib_html = ""
     cals = getattr(state, "calibraciones", None) or {}
     if cals:
@@ -2195,14 +2253,21 @@ def _generate_report_impl(state, output_path: Path,
             "de modo que este factor no está trazado a un patrón de longitud y "
             "cualquier variación en la distancia de disparo entre fotos queda sin "
             "corregir.</p>").format(um=f"{p.um_per_px:g}")
+    return calib_html
 
-    # ── Forma y talla ──
-    # Se separa de "Resultados" porque responde otra pregunta: no cuantas
-    # particulas hay, sino que forma tienen. El morfotipo y la curvatura son
-    # variables que la literatura de microplasticos reporta y que la caja del
-    # detector no puede dar.
-    forma_html = ""
 
+def _formas_de_lote(state, all_results):
+    """Detections with a measured shape, minus the ones over the plate ring.
+
+    Returns ``(formas, n_en_el_aro, n_sin_forma)``: the (detection, image
+    path) pairs whose shape was measured and did not fall on the ring, how
+    many detections were set apart for falling on the ring, and how many
+    predictions could not be segmented at all. The depth profile, the forma
+    section and the particle fichas all read the same list, so this runs
+    exactly once per report. The ``polyx.model.calibracion`` import stays
+    lazy inside this body: it must not load at module import time (S01
+    laziness gate).
+    """
     # ── Lo que cae sobre el anillo de la placa no es muestra ──
     # El aro es una banda brillante y continua, y el detector la confunde con
     # material. Como ademas sale enorme, entraba entre las mayores: en un
@@ -2228,14 +2293,109 @@ def _generate_report_impl(state, output_path: Path,
     n_en_el_aro = len(_con_forma) - len(formas)
     n_sin_forma = sum(1 for r in all_results for p_ in r.predictions
                       if getattr(p_, "aspecto", None) is None)
+    return formas, n_en_el_aro, n_sin_forma
+
+
+def _talla_por_carpeta(con_talla):
+    """Body of the 'talla_carpetas' section: size by folder, then by photo.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title, with the ``{NUM}.N``
+    sub-header placeholders intact. Empty when fewer than two folders hold
+    measured particles, so the assembler drops the section like it does
+    today.
+    """
+    # ── {tr('Talla por carpeta')}, y por foto dentro de cada carpeta ──
+    # Generaliza la comparacion "por estacion/tramo" del pipeline del
+    # paper (que dependia de un patron de nombre de archivo especifico
+    # de un estudio) a lo unico que CUALQUIER lote tiene: de que
+    # carpeta vino cada foto. Sirve para comparar sitios de muestreo,
+    # tratamientos, o cualquier otra agrupacion que el usuario haya
+    # expresado como carpetas al elegir las imagenes.
+    por_carpeta_html = ""
+    grupos_carpeta: Dict[str, List[float]] = {}
+    for d, ruta in con_talla:
+        carpeta = Path(ruta).parent.name or str(Path(ruta).parent)
+        grupos_carpeta.setdefault(carpeta, []).append(d.largo_um)
+
+    if len(grupos_carpeta) >= 2:
+        fig_carpeta = _fig_boxplot_grupos(
+            grupos_carpeta, tr("Talla por carpeta"), tr("carpeta de origen"))
+        veredicto_carpeta = _texto_kruskal(
+            _kruskal_wallis(list(grupos_carpeta.values())), len(grupos_carpeta))
+        por_carpeta_html = (
+            f"<h3>{NUM}.1 {tr('Talla por carpeta')}</h3>"
+            + tr("<p>Compara la talla entre las carpetas del lote analizado: "
+                 "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
+                 "es un sitio de muestreo, una estación o una condición.</p>")
+            + f"<img src='data:image/png;base64,{fig_carpeta}' style='max-width:100%'>"
+            f"<p>{veredicto_carpeta}</p>")
+
+        # -- Por foto, dentro de las carpetas con mas de una imagen --
+        piezas_foto = []
+        for carpeta in sorted(grupos_carpeta, key=lambda c: -len(grupos_carpeta[c])):
+            if len(piezas_foto) >= _MAX_CARPETAS_POR_FOTO:
+                break
+            fotos_de_carpeta: Dict[str, List[float]] = {}
+            for d, ruta in con_talla:
+                if Path(ruta).parent.name == carpeta:
+                    fotos_de_carpeta.setdefault(Path(ruta).name, []).append(d.largo_um)
+            if len(fotos_de_carpeta) < 2:
+                continue
+            fig_foto = _fig_boxplot_grupos(
+                fotos_de_carpeta,
+                tr("Talla por foto — {carpeta}").format(carpeta=carpeta),
+                tr("foto"),
+                max_grupos=20)
+            veredicto_foto = _texto_kruskal(
+                _kruskal_wallis(list(fotos_de_carpeta.values())), len(fotos_de_carpeta))
+            piezas_foto.append(
+                f"<p><strong>{_esc(carpeta)}</strong> "
+                + tr("({n} fotos)").format(n=len(fotos_de_carpeta)) + "</p>"
+                f"<img src='data:image/png;base64,{fig_foto}' style='max-width:100%'>"
+                f"<p>{veredicto_foto}</p>")
+        if piezas_foto:
+            n_carpetas_con_fotos = sum(
+                1 for c in grupos_carpeta
+                if len({Path(r).name for d, r in con_talla if Path(r).parent.name == c}) >= 2)
+            nota_tope = (tr(" Se muestran las {n} carpetas con más partículas "
+                            "de las {total} que tienen más de una foto.").format(
+                                n=_MAX_CARPETAS_POR_FOTO,
+                                total=n_carpetas_con_fotos)
+                         if n_carpetas_con_fotos > _MAX_CARPETAS_POR_FOTO else "")
+            por_carpeta_html += (
+                f"<h3>{NUM}.2 {tr('Talla por foto, dentro de cada carpeta')}</h3>"
+                + tr("<p>Compara la talla entre las fotos individuales de una "
+                     "misma carpeta: por ejemplo, si el tamaño cambia con la "
+                     "profundidad o el momento de muestreo dentro de un mismo "
+                     "sitio.{nota}</p>").format(nota=nota_tope)
+                + "".join(piezas_foto))
+    return por_carpeta_html
+
+
+def _seccion_forma(state, formas, n_en_el_aro, n_sin_forma):
+    """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
+
+    Returns ``(forma_html, por_carpeta_html)``, both WITHOUT their ``<h2>``
+    titles (the assembler owns them; the ``{NUM}.N`` sub-header placeholders
+    stay intact). ``por_carpeta_html`` is built in the same pass because it
+    shares the per-class size grouping computed here, but it is its own
+    optional section in the report (see SECCIONES) and never lands inside
+    ``forma_html``. ``formas`` arrives precomputed from
+    :func:`_formas_de_lote` because the depth profile and the particle
+    fichas read the same list.
+    """
     ficha_mayor = None
     ficha_menor = None
     tabla_morfotipo = tablas = recuento = metodo = ejemplo = ""
+    # Un lote sin particulas medidas no tiene cuerpo de forma: con esta
+    # inicializacion la seccion queda vacia y el ensamblador la suelta, en
+    # vez de reventar con UnboundLocalError en el return de abajo. Mismo
+    # sentido que la de por_carpeta_html: es su propia seccion opcional.
+    forma_html = ""
     # Independiente de "forma": es su propia seccion opcional en el informe
     # (ver SECCIONES mas abajo), asi que no entra en forma_html.
     por_carpeta_html = ""
-    # El perfil por profundidad solo existe si los nombres llevan el tramo.
-    profundidad_html = seccion_profundidad(formas, all_results) if formas else ""
+
     if formas:
         con_talla = [(d, ruta) for d, ruta in formas if d.largo_um]
         fibras = sum(1 for d, _ in formas if d.morfotipo == "fibra")
@@ -2371,77 +2531,12 @@ def _generate_report_impl(state, output_path: Path,
                 Path(ruta_menor).name)
             um_menor = cal_menor.um_por_px if cal_menor and cal_menor.valida else None
             ficha_menor = (menor, ruta_menor, um_menor)
-
-            # ── {tr('Talla por carpeta')}, y por foto dentro de cada carpeta ──
-            # Generaliza la comparacion "por estacion/tramo" del pipeline del
-            # paper (que dependia de un patron de nombre de archivo especifico
-            # de un estudio) a lo unico que CUALQUIER lote tiene: de que
-            # carpeta vino cada foto. Sirve para comparar sitios de muestreo,
-            # tratamientos, o cualquier otra agrupacion que el usuario haya
-            # expresado como carpetas al elegir las imagenes.
-            grupos_carpeta: Dict[str, List[float]] = {}
-            for d, ruta in con_talla:
-                carpeta = Path(ruta).parent.name or str(Path(ruta).parent)
-                grupos_carpeta.setdefault(carpeta, []).append(d.largo_um)
-
-            if len(grupos_carpeta) >= 2:
-                fig_carpeta = _fig_boxplot_grupos(
-                    grupos_carpeta, tr("Talla por carpeta"), tr("carpeta de origen"))
-                veredicto_carpeta = _texto_kruskal(
-                    _kruskal_wallis(list(grupos_carpeta.values())), len(grupos_carpeta))
-                por_carpeta_html = (
-                    f"<h3>{NUM}.1 {tr('Talla por carpeta')}</h3>"
-                    + tr("<p>Compara la talla entre las carpetas del lote analizado: "
-                         "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
-                         "es un sitio de muestreo, una estación o una condición.</p>")
-                    + f"<img src='data:image/png;base64,{fig_carpeta}' style='max-width:100%'>"
-                    f"<p>{veredicto_carpeta}</p>")
-
-                # -- Por foto, dentro de las carpetas con mas de una imagen --
-                piezas_foto = []
-                for carpeta in sorted(grupos_carpeta, key=lambda c: -len(grupos_carpeta[c])):
-                    if len(piezas_foto) >= _MAX_CARPETAS_POR_FOTO:
-                        break
-                    fotos_de_carpeta: Dict[str, List[float]] = {}
-                    for d, ruta in con_talla:
-                        if Path(ruta).parent.name == carpeta:
-                            fotos_de_carpeta.setdefault(Path(ruta).name, []).append(d.largo_um)
-                    if len(fotos_de_carpeta) < 2:
-                        continue
-                    fig_foto = _fig_boxplot_grupos(
-                        fotos_de_carpeta,
-                        tr("Talla por foto — {carpeta}").format(carpeta=carpeta),
-                        tr("foto"),
-                        max_grupos=20)
-                    veredicto_foto = _texto_kruskal(
-                        _kruskal_wallis(list(fotos_de_carpeta.values())), len(fotos_de_carpeta))
-                    piezas_foto.append(
-                        f"<p><strong>{_esc(carpeta)}</strong> "
-                        + tr("({n} fotos)").format(n=len(fotos_de_carpeta)) + "</p>"
-                        f"<img src='data:image/png;base64,{fig_foto}' style='max-width:100%'>"
-                        f"<p>{veredicto_foto}</p>")
-                if piezas_foto:
-                    n_carpetas_con_fotos = sum(
-                        1 for c in grupos_carpeta
-                        if len({Path(r).name for d, r in con_talla if Path(r).parent.name == c}) >= 2)
-                    nota_tope = (tr(" Se muestran las {n} carpetas con más partículas "
-                                    "de las {total} que tienen más de una foto.").format(
-                                        n=_MAX_CARPETAS_POR_FOTO,
-                                        total=n_carpetas_con_fotos)
-                                 if n_carpetas_con_fotos > _MAX_CARPETAS_POR_FOTO else "")
-                    por_carpeta_html += (
-                        f"<h3>{NUM}.2 {tr('Talla por foto, dentro de cada carpeta')}</h3>"
-                        + tr("<p>Compara la talla entre las fotos individuales de una "
-                             "misma carpeta: por ejemplo, si el tamaño cambia con la "
-                             "profundidad o el momento de muestreo dentro de un mismo "
-                             "sitio.{nota}</p>").format(nota=nota_tope)
-                        + "".join(piezas_foto))
+            por_carpeta_html = _talla_por_carpeta(con_talla)
 
         # ── Recuento fibra/fragmento por foto ──
-    # Va dentro de la seccion de forma: responde "cuantas fibras y cuantos
-    # fragmentos hay en cada placa", que es la pregunta que se le hace a la
-    # tabla cuando se revisa foto por foto.
-    if formas:
+        # Va dentro de la seccion de forma: responde "cuantas fibras y cuantos
+        # fragmentos hay en cada placa", que es la pregunta que se le hace a la
+        # tabla cuando se revisa foto por foto.
         por_img: Dict[str, list] = {}
         for d, ruta in formas:
             por_img.setdefault(Path(ruta).name, []).append(d)
@@ -2538,13 +2633,22 @@ def _generate_report_impl(state, output_path: Path,
             ejemplo += _ficha_particula(
                 *ficha_menor, f"3 {tr('Un ejemplo: la partícula menor, medida')}")
 
-    # Orden de la sección: primero cómo se mide, luego un caso medido, y al
-    # final las cifras. Al revés, las tablas llegan antes de que nada haya
-    # explicado qué significa aquí "largo".
-    if formas:
+        # Orden de la sección: primero cómo se mide, luego un caso medido, y al
+        # final las cifras. Al revés, las tablas llegan antes de que nada haya
+        # explicado qué significa aquí "largo".
         forma_html = metodo + ejemplo + tabla_morfotipo + tablas + recuento
+    return forma_html, por_carpeta_html
 
-    # ── Ficha de cada partícula ──
+
+def _seccion_fichas(state, formas: List[tuple], max_fichas: int = 12) -> str:
+    """Body of the 'fichas' section: one annotated card per sampled particle.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number. Empty when there are no measured particles
+    or the cap is zero. The ``cv2`` / ``morfologia`` / ``calibracion`` imports
+    stay lazy inside this body, exactly as lazy as when the block was inline
+    (S01 fresh-interpreter laziness gate).
+    """
     # Una entrada por partícula, con su número, su recorte y la medida dibujada
     # encima. Es lo que permite comprobar partícula a partícula que la talla que
     # se reporta se corresponde con lo que hay en la foto, en vez de tener que
@@ -2662,83 +2766,80 @@ def _generate_report_impl(state, output_path: Path,
                      "una muestra representativa del lote</strong>, sino la selección "
                      "que permite comprobar el método donde más puede fallar.</p>")
                 + "".join(piezas))
+    return fichas_html
 
-    # ── Ensamblar HTML ──
-    # Cada bloque es (id, cuerpo). El cuerpo NO lleva su <h2>: el titulo y el
-    # numero los pone el ensamblador, que es el unico que sabe que secciones
-    # sobrevivieron al filtro y por tanto que numero le toca a cada una.
-    # Fuera de la f-string del resumen: lleva un plural y un formato numerico,
-    # y anidarlos dentro de {tr(...)} pediria comillas del mismo tipo.
-    _resumen_parrafo = tr(
-        "Se analizaron <strong>{imgs} imágenes</strong> con <strong>{n} {modelos}</strong> "
-        "YOLO entrenado para detectar microplásticos de PET, PP y LDPE bajo "
-        "fluorescencia Nile Red (254 nm). El total de detecciones fue "
-        "<strong>{dets}</strong> con una confianza media de <strong>{conf}</strong>."
-    ).format(imgs=total_imgs, n=len(active),
-             modelos=tr("modelos") if len(active) != 1 else tr("modelo"),
-             dets=total_dets, conf=f"{avg_conf:.3f}")
 
-    cuerpos = {
-        "resumen": f"""
-<div class='kpis'>
-  <div class='kpi'><div class='l'>{tr('Imágenes')}</div><div class='v'>{total_imgs}</div><div class='b' style='background:var(--accent)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Detecciones')}</div><div class='v'>{total_dets}</div><div class='b' style='background:var(--accent)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Conf. media')}</div><div class='v'>{avg_conf:.3f}</div><div class='b' style='background:var(--vio)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Tamaño medio (μm)')}</div><div class='v'>{(f"{avg_size:.1f}" if avg_size else "—")}</div><div class='b' style='background:var(--warn)'></div></div>
-</div>
-<p>{_resumen_parrafo}
-{tr("Se incluyó análisis de errores con Ground Truth (Verdaderos Positivos, Falsos Positivos, Falsos Negativos y Mal Clasificados).") if any_gt else tr("No se aportó Ground Truth, por lo que no se reportan métricas de error.")}
-</p>""",
-        "metodos": f"""
-<table class='data'><tr>{tr('<th>Parámetro</th><th>Valor</th>')}</tr>{methods_html}</table>
-{equipo_html}
-{methods_para}""",
-        "calibracion": calib_html,
-        "forma": forma_html,
-        "talla_carpetas": por_carpeta_html,
-        "profundidad": profundidad_html,
-        "fichas": fichas_html,
-        "resultados": figures_html,
-        "modelos": f"""
-<table class='data'><tr>{tr('<th>Modelo</th><th>Imágenes</th><th>Detecciones</th><th>Conf. media</th>')}
-<th>{LABEL_TP}</th><th>{LABEL_FP}</th><th>{LABEL_FN}</th>
-<th>{LABEL_MISCLS}</th><th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('localización')}</span></th>
-<th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('con clase')}</span></th></tr>{rows_models}</table>
-{nota_miscls}""",
-        "errores": err_section,
-        "comparacion": f"{veredicto_html}\n{compare_html}",
-        "galeria": gallery_html,
-        "conteo": conteo_html,
-        "referencias": refs_html,
-    }
+def _metricas_de_lote(state, solo_imagenes):
+    """Compute the batch-wide inputs every section builder consumes.
 
-    # Un id en ``pedidas`` con cuerpo vacio se cae aqui: se marco la casilla pero
-    # no habia con que llenarla (errores sin ground truth, conteo sin muestras).
-    # Nombres de ancla heredados, para no romper enlaces a informes ya
-    # repartidos. Una seccion nueva NO tiene que aparecer aqui: su propio id ya
-    # sirve de ancla. Este diccionario era una segunda lista que mantener en
-    # sincronia con SECCIONES, y al añadir "profundidad" reventaba con
-    # KeyError -- justo lo que SECCIONES evita al ser lista unica.
-    _ANCLAS = {"resumen": "abstract", "metodos": "methods", "calibracion": "calib",
-               "resultados": "results", "modelos": "models", "errores": "errors",
-               "comparacion": "compare", "galeria": "gallery", "referencias": "refs"}
+    Verbatim hoist (S03/T01) of the precomputation block that used to live
+    inline in ``_generate_report_impl``: same empty-set filter semantics,
+    same computation order, same ``Counter`` loops. Returns a plain tuple —
+    no :class:`~typing.NamedTuple` and no new imports, so the lazy-import
+    gate (``test_importes_diferidos_informe.py``) sees nothing new and no
+    heavy module (``ultralytics``/``cv2``/``morfologia``/``calibracion``)
+    gets touched at module level.
+    """
+    if solo_imagenes is None:
+        resultados = dict(state.results)
+    else:
+        elegidas = {Path(p) for p in solo_imagenes}
+        resultados = {mi: [r for r in rs if Path(r.image_path) in elegidas]
+                      for mi, rs in state.results.items()}
 
-    def ancla_de(sid: str) -> str:
-        return _ANCLAS.get(sid, sid)
-    # tr() sobre el titulo: SECCIONES guarda la version en espanol, que es la
-    # clave del diccionario. La interfaz ya lo traducia para sus casillas; el
-    # documento no, y salia con los titulos en espanol aunque el resto no.
-    vivas = [(sid, tr(titulo), cuerpos.get(sid, ""))
-             for sid, titulo in SECCIONES
-             if sid in pedidas and (cuerpos.get(sid) or "").strip()]
+    all_results = [r for rs in resultados.values() for r in rs]
+    total_imgs = len({r.image_path for r in all_results})
+    total_dets = sum(len(r.predictions) for r in all_results)
+    confs = [p.conf for r in all_results for p in r.predictions]
+    sizes = [p.diam_um for r in all_results for p in r.predictions if p.diam_um]
+    avg_conf = sum(confs)/len(confs) if confs else 0
+    avg_size = sum(sizes)/len(sizes) if sizes else 0
+    any_gt = any(r.has_gt for r in all_results)
 
+    clases_lote = _clases_vistas(all_results)
+
+    # ── Distribución por clase ──
+    per_class = Counter()
+    for r in all_results:
+        for p in r.predictions:
+            per_class[p.class_name] += 1
+
+    return (resultados, all_results, total_imgs, total_dets, confs, sizes,
+            avg_conf, avg_size, any_gt, clases_lote, per_class)
+
+
+# Nombres de ancla heredados, para no romper enlaces a informes ya
+# repartidos. Una seccion nueva NO tiene que aparecer aqui: su propio id ya
+# sirve de ancla. Este diccionario era una segunda lista que mantener en
+# sincronia con SECCIONES, y al añadir "profundidad" reventaba con
+# KeyError -- justo lo que SECCIONES evita al ser lista unica.
+_ANCLAS = {"resumen": "abstract", "metodos": "methods", "calibracion": "calib",
+           "resultados": "results", "modelos": "models", "errores": "errors",
+           "comparacion": "compare", "galeria": "gallery", "referencias": "refs"}
+
+
+def ancla_de(sid: str) -> str:
+    """Anchor name for a section id: legacy alias if any, the id itself otherwise."""
+    return _ANCLAS.get(sid, sid)
+
+
+def _documento_html(vivas, active) -> str:
+    """Assemble the final document: cover header, TOC, numbered sections, footer.
+
+    ``vivas`` arrives as (id, translated title, body) tuples in SECCIONES
+    order, already filtered to the requested sections that have content.
+    The enumeration (SECCIONES order, start=1), the ``<h2>`` titles and the
+    ``{NUM}`` placeholder substitution all live here because this helper is
+    the only place that knows the final order; moving or reordering them is
+    byte-visible in the frozen render (MEM090).
+    """
     toc_html = "".join(
         f"<li><a href='#{ancla_de(sid)}'>{titulo}</a></li>" for sid, titulo, _ in vivas)
     secciones_html = "".join(
         f"<h2 id='{ancla_de(sid)}'>{i}. {titulo}</h2>\n{cuerpo.replace(NUM, str(i))}\n"
         for i, (sid, titulo, cuerpo) in enumerate(vivas, start=1))
 
-    html = f"""<!doctype html>
+    return f"""<!doctype html>
 <html lang='{idioma()}'><head><meta charset='utf-8'>
 <title>{tr('Informe de detección')} · Poly-X</title>
 <style>{REPORT_CSS}</style></head><body>
@@ -2763,6 +2864,133 @@ def _generate_report_impl(state, output_path: Path,
 </footer>
 </div></body></html>
 """
+
+
+def _generate_report_impl(state, output_path: Path,
+                    include_refs: bool = True,
+                    include_gallery: bool = True,
+                    max_gallery: int = 60,
+                    max_fichas: int = 12,
+                    solo_imagenes=None,
+                    secciones=None) -> Path:
+    """Genera el reporte HTML. `state` es un DetectorState con resultados.
+
+    ``max_gallery`` limita cuántas imágenes se incrustan en la galería. Las
+    imágenes van en base64 dentro del propio HTML, de modo que sin tope un lote
+    grande generaba un archivo inabrible (14.5 MB con solo 4 imágenes).
+
+    ``solo_imagenes`` acota el informe a un conjunto de rutas. Con ``None`` entra
+    el trabajo completo. El filtro se aplica antes de calcular nada, de forma que
+    los totales, los gráficos y la matriz de confusión describan exactamente el
+    mismo subconjunto que se muestra; si se filtrara solo la galería, las cifras
+    de arriba hablarían de un lote y las imágenes de otro.
+
+    ``secciones`` es el conjunto de identificadores de :data:`SECCIONES` que se
+    quieren incluir; ``None`` las incluye todas. Una sección pedida que no tenga
+    contenido -- errores sin ground truth, por ejemplo -- se omite igualmente:
+    marcarla no inventa datos que no existen.
+    """
+    pedidas = set(IDS_SECCIONES if secciones is None else secciones)
+    # Las dos casillas antiguas siguen mandando si se pasan en False, para no
+    # cambiar el significado de las llamadas que ya existian.
+    if not include_refs:
+        pedidas.discard("referencias")
+    if not include_gallery:
+        pedidas.discard("galeria")
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    active = state.active_models()
+
+    # ── Métricas del lote ──
+    # El bloque de precalculo vive ahora en _metricas_de_lote; el impl solo
+    # desempaca. El orden del tuple es el orden en que el ensamblador los
+    # consume, de modo que el desempaque nombra las mismas variables de
+    # siempre.
+    (resultados, all_results, total_imgs, total_dets, confs, sizes,
+     avg_conf, avg_size, any_gt, clases_lote, per_class) = _metricas_de_lote(
+        state, solo_imagenes)
+
+    # ── Análisis de errores: matriz + métricas por clase (modelo principal) ──
+    err_section = _seccion_errores(state, resultados, active, any_gt)
+
+    # ── Veredicto y barrido de confianza ──
+    veredicto_html = _seccion_veredicto(resultados, state)
+
+    # ── Comparación entre modelos, foto por foto ──
+    compare_html = _seccion_comparacion(state, resultados)
+
+    # ── Galería comparativa: Predicción vs Ground Truth (lado a lado) ──
+    gallery_html = _seccion_galeria(resultados, state, clases_lote,
+                                    max_gallery=max_gallery,
+                                    include_gallery=include_gallery)
+
+    # ── Figuras agregadas ──
+    figures_html = _seccion_resultados(per_class, confs, sizes)
+
+    # ── Métodos ──
+    methods_html, equipo_html, methods_para = _seccion_metodos(
+        state, active, all_results, total_imgs, total_dets, any_gt)
+
+    conteo_html = _seccion_conteo(resultados, state, active, clases_lote)
+
+    refs_html = _seccion_referencias(include_refs)
+
+    # ── Calibración de escala ──
+    calib_html = _seccion_calibracion(state)
+
+    # ── Forma y talla ──
+    # Se separa de "Resultados" porque responde otra pregunta: no cuantas
+    # particulas hay, sino que forma tienen. El morfotipo y la curvatura son
+    # variables que la literatura de microplasticos reporta y que la caja del
+    # detector no puede dar. `formas` se calcula una sola vez porque el perfil
+    # de profundidad y las fichas tambien la consumen.
+    formas, n_en_el_aro, n_sin_forma = _formas_de_lote(state, all_results)
+    # El perfil por profundidad solo existe si los nombres llevan el tramo.
+    profundidad_html = seccion_profundidad(formas, all_results) if formas else ""
+    forma_html, por_carpeta_html = _seccion_forma(state, formas, n_en_el_aro,
+                                                  n_sin_forma)
+    # ── Ficha de cada partícula ──
+    fichas_html = _seccion_fichas(state, formas, max_fichas)
+
+    # ── Ensamblar HTML ──
+    # Cada bloque es (id, cuerpo). El cuerpo NO lleva su <h2>: el titulo y el
+    # numero los pone el ensamblador, que es el unico que sabe que secciones
+    # sobrevivieron al filtro y por tanto que numero le toca a cada una.
+    cuerpos = {
+        "resumen": _seccion_resumen(total_imgs, total_dets, avg_conf, avg_size,
+                                    active, any_gt),
+        "metodos": f"""
+<table class='data'><tr>{tr('<th>Parámetro</th><th>Valor</th>')}</tr>{methods_html}</table>
+{equipo_html}
+{methods_para}""",
+        "calibracion": calib_html,
+        "forma": forma_html,
+        "talla_carpetas": por_carpeta_html,
+        "profundidad": profundidad_html,
+        "fichas": fichas_html,
+        "resultados": figures_html,
+        "modelos": _seccion_modelos(state, resultados, all_results, any_gt),
+        "errores": err_section,
+        "comparacion": f"{veredicto_html}\n{compare_html}",
+        "galeria": gallery_html,
+        "conteo": conteo_html,
+        "referencias": refs_html,
+    }
+
+    # Un id en ``pedidas`` con cuerpo vacio se cae aqui: se marco la casilla pero
+    # no habia con que llenarla (errores sin ground truth, conteo sin muestras).
+    # tr() sobre el titulo: SECCIONES guarda la version en espanol, que es la
+    # clave del diccionario. La interfaz ya lo traducia para sus casillas; el
+    # documento no, y salia con los titulos en espanol aunque el resto no.
+    vivas = [(sid, tr(titulo), cuerpos.get(sid, ""))
+             for sid, titulo in SECCIONES
+             if sid in pedidas and (cuerpos.get(sid) or "").strip()]
+
+    # Portada, indice, numerado de secciones y pie viven en _documento_html:
+    # el impl queda como la lista ordenada de llamadas que alimenta cuerpos.
+    html = _documento_html(vivas, active)
     out_path.write_text(html, encoding="utf-8")
     return out_path
 
