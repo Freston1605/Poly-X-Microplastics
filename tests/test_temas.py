@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from polyx.core import theme as T
+from polyx.gui import theme as T
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ PARES_DE_TEXTO = [
 ]
 
 
-@pytest.mark.parametrize("tema", sorted(T.PALETAS))
+@pytest.mark.parametrize("tema", sorted(T.PALETTES))
 @pytest.mark.parametrize("frente,fondo", PARES_DE_TEXTO)
 def test_texto_cumple_wcag_aa(tema: str, frente: str, fondo: str) -> None:
     """Todo texto de la interfaz llega a 4.5:1 en los cuatro temas.
@@ -51,7 +51,7 @@ def test_texto_cumple_wcag_aa(tema: str, frente: str, fondo: str) -> None:
     Es la razon de que cada estado tenga dos variantes: el tono que da 5:1 con
     blanco encima queda en 3.7:1 leido como texto sobre fondo oscuro.
     """
-    p = T.PALETAS[tema]
+    p = T.PALETTES[tema]
     razon = contraste(p[frente], p[fondo])
     assert razon >= 4.5, (
         f"{tema}: {frente} sobre {fondo} da {razon:.2f}:1, por debajo de 4.5:1")
@@ -66,8 +66,8 @@ def test_todas_las_paletas_tienen_los_mismos_tokens() -> None:
     Se comprueba aqui y no en tiempo de ejecucion porque el fallo aparece en un
     `paintEvent` cualquiera, lejos del tema que lo causo.
     """
-    referencia = set(T.PALETAS[T.TEMA_POR_DEFECTO])
-    for nombre, tokens in T.PALETAS.items():
+    referencia = set(T.PALETTES[T.DEFAULT_THEME])
+    for nombre, tokens in T.PALETTES.items():
         faltan = referencia - set(tokens)
         sobran = set(tokens) - referencia
         assert not faltan, f"a '{nombre}' le faltan tokens: {sorted(faltan)}"
@@ -75,11 +75,11 @@ def test_todas_las_paletas_tienen_los_mismos_tokens() -> None:
 
 
 def test_cada_tema_tiene_nombre_visible() -> None:
-    assert set(T.NOMBRES_TEMA) == set(T.PALETAS)
+    assert set(T.NAMES_THEME) == set(T.PALETTES)
 
 
 def test_los_colores_son_hex_de_seis_digitos() -> None:
-    for nombre, tokens in T.PALETAS.items():
+    for nombre, tokens in T.PALETTES.items():
         for token, valor in tokens.items():
             assert valor.startswith("#") and len(valor) == 7, (
                 f"{nombre}.{token} = {valor!r}: se espera #rrggbb")
@@ -96,32 +96,32 @@ def test_cambiar_tema_republica_tokens_y_rehace_el_qss() -> None:
     eso dejaba la hoja global con los colores del tema de arranque mientras el
     resto de la interfaz ya usaba los nuevos.
     """
-    original = T.tema()
+    original = T.theme()
     try:
-        T.set_tema("claro")
+        T.set_theme("claro")
         qss_claro, ink_claro = T.GLOBAL_QSS, T.INK
-        T.set_tema("oscuro")
+        T.set_theme("oscuro")
         assert T.INK != ink_claro
         assert T.GLOBAL_QSS != qss_claro
         assert T.INK in T.GLOBAL_QSS
     finally:
-        T.set_tema(original)
+        T.set_theme(original)
 
 
 def test_tema_desconocido_no_hace_nada() -> None:
-    original = T.tema()
-    T.set_tema("no-existe")
-    assert T.tema() == original
+    original = T.theme()
+    T.set_theme("no-existe")
+    assert T.theme() == original
 
 
 def test_es_oscuro_coincide_con_la_declaracion() -> None:
-    original = T.tema()
+    original = T.theme()
     try:
-        for nombre in T.PALETAS:
-            T.set_tema(nombre)
-            assert T.es_oscuro() == (nombre in T.OSCUROS)
+        for nombre in T.PALETTES:
+            T.set_theme(nombre)
+            assert T.is_dark() == (nombre in T.DARK)
     finally:
-        T.set_tema(original)
+        T.set_theme(original)
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -133,15 +133,15 @@ def test_los_informes_no_siguen_el_tema() -> None:
     Un informe se imprime y se archiva: si cambiara con la preferencia de quien
     lo genero, dos informes del mismo analisis no se parecerian.
     """
-    original = T.tema()
+    original = T.theme()
     try:
         antes = (T.DOC.BG, T.DOC.INK, T.DOC.ACCENT)
-        for nombre in T.PALETAS:
-            T.set_tema(nombre)
+        for nombre in T.PALETTES:
+            T.set_theme(nombre)
             assert (T.DOC.BG, T.DOC.INK, T.DOC.ACCENT) == antes
-        assert T.DOC.BG == T.PALETAS["claro"]["BG"]
+        assert T.DOC.BG == T.PALETTES["claro"]["BG"]
     finally:
-        T.set_tema(original)
+        T.set_theme(original)
 
 
 def test_los_colores_de_polimero_no_siguen_el_tema() -> None:
@@ -150,14 +150,14 @@ def test_los_colores_de_polimero_no_siguen_el_tema() -> None:
     Si cambiaran de tono con el tema, dos capturas del mismo analisis dejarian
     de ser comparables.
     """
-    original = T.tema()
+    original = T.theme()
     try:
         esperado = dict(T.CLASS_COLOR_HEX)
-        for nombre in T.PALETAS:
-            T.set_tema(nombre)
+        for nombre in T.PALETTES:
+            T.set_theme(nombre)
             assert T.CLASS_COLOR_HEX == esperado
     finally:
-        T.set_tema(original)
+        T.set_theme(original)
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -166,29 +166,29 @@ def test_los_colores_de_polimero_no_siguen_el_tema() -> None:
 def test_se_guarda_tema_y_animaciones_juntos(tmp_path, monkeypatch) -> None:
     """Las dos preferencias comparten archivo: son la misma decision."""
     destino = tmp_path / "prefs.json"
-    monkeypatch.setattr(T, "_ARCHIVO", destino)
-    original = T.tema()
+    monkeypatch.setattr(T, "_FILE", destino)
+    original = T.theme()
     try:
-        T.set_tema("azul")
-        T.set_animaciones(False)
+        T.set_theme("azul")
+        T.set_animations(False)
         guardado = json.loads(destino.read_text(encoding="utf-8"))
         assert guardado == {"tema": "azul", "animaciones": False}
     finally:
-        T.set_tema(original)
-        T.set_animaciones(True)
+        T.set_theme(original)
+        T.set_animations(True)
 
 
 def test_utilidades_de_color() -> None:
-    assert T.mezclar("#000000", "#ffffff", 0.0) == "#000000"
-    assert T.mezclar("#000000", "#ffffff", 1.0) == "#ffffff"
-    assert T.mezclar("#000000", "#ffffff", 0.5) == "#808080"
-    assert T.con_alfa("#ff0000", 128).alpha() == 128
+    assert T.mingle("#000000", "#ffffff", 0.0) == "#000000"
+    assert T.mingle("#000000", "#ffffff", 1.0) == "#ffffff"
+    assert T.mingle("#000000", "#ffffff", 0.5) == "#808080"
+    assert T.with_alpha("#ff0000", 128).alpha() == 128
     # sobre_fondo mezcla contra BG, no contra blanco: en un tema oscuro mezclar
     # hacia blanco daria un pastel que no pertenece a la paleta.
-    original = T.tema()
+    original = T.theme()
     try:
-        T.set_tema("oscuro")
-        tenue = T.sobre_fondo(T.ACCENT, 0.10)
+        T.set_theme("oscuro")
+        tenue = T.on_background(T.ACCENT, 0.10)
         assert contraste(tenue, T.BG) < 1.6, "el fondo tenue debe quedar cerca de BG"
     finally:
-        T.set_tema(original)
+        T.set_theme(original)

@@ -1,24 +1,25 @@
-# Contribuir a Poly-X
+# Contributing to Poly-X
 
-## Qué hace el CI
+## What the CI does
 
-Un único job en GitHub Actions (`.github/workflows/ci.yml`) que corre en
-**cada PR** y en cada push a `main`:
+A single GitHub Actions job (`.github/workflows/ci.yml`) runs on **every PR** and
+on every push to `main`:
 
-1. Instala las librerías de Qt que hacen falta sin pantalla (`libegl1`,
-   `libgl1`, `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`).
-2. Instala `requirements.txt` **con los pins exactos** (`numpy==1.26.4`,
-   `ultralytics==8.3.40`, `PySide6==6.7.2`, …) sobre Python 3.11. Así, si
-   alguien sube una dependencia, el CI avisa aquí y no en el estudio.
-3. Corre la suite completa: `python -m pytest -q` con `QT_QPA_PLATFORM=offscreen`
-   (la suite no abre ventanas; PySide6 es lo único que pide plataforma).
+1. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
+   `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`).
+2. Installs `requirements.txt` **with the exact pins** (`numpy==1.26.4`,
+   `ultralytics==8.3.40`, `PySide6==6.7.2`, …) on Python 3.11. If someone bumps a
+   dependency, CI flags it here, not in the lab.
+3. Runs the full suite: `python -m pytest -q` with `QT_QPA_PLATFORM=offscreen`
+   (the suite opens no windows; PySide6 is the only thing that asks for a
+   platform).
 
-No hay etapa de lint (no hay linter configurado) ni de build (la app es de
-escritorio y los instaladores son scripts del propio repo).
+There is no lint stage (no linter is configured) and no build stage (the app is
+desktop and the installers are the repo's own scripts).
 
-## Cómo correr las mismas pruebas en local
+## Running the same tests locally
 
-### Windows (la máquina de desarrollo)
+### Windows (the development machine)
 
 ```batch
 .venv\Scripts\python.exe -m pytest -q
@@ -27,32 +28,51 @@ escritorio y los instaladores son scripts del propio repo).
 ### macOS / Linux
 
 ```bash
-python -m pytest -q          # dentro del .venv del proyecto
+python -m pytest -q          # inside the project .venv
 ```
 
-- La suite resuelve idioma al arrancar y usa **español** salvo que pongas
-  `POLYX_IDIOMA` (ver `tests/conftest.py`). Si el informe sale en inglés y
-  falla un test que lee texto del informe, no toques el test: eso ya está
-  fijado.
-- No hace falta modelo, GPU ni dataset: los pesos `.pt` y las imágenes no
-  entran en la suite (están en .gitignore).
+- The suite resolves the language at startup and uses **Spanish** unless you set
+  `POLYX_IDIOMA` (see `tests/conftest.py`). If the report comes out in English
+  and a test that reads report text fails, do not touch the test: it is pinned on
+  purpose.
+- No model, GPU or dataset is needed: the `.pt` weights and images are not part
+  of the suite (they are in .gitignore).
 
-## Depurar un build rojo
+## Debugging a red build
 
-1. Abre el PR fallido en GitHub y mira el step que está en rojo:
-   - `Install pinned requirements` → alguien cambió un pin. El error de pip
-     dice cuál. **No** relajes el pin: `numpy>=2` rompe la validación de
-     ultralytics 8.3.40 (le quitaron `np.trapz`), y subir `PySide6` puede
-     cambiar el comportamiento de los diálogos Qt.
-   - `Run test suite` → la prueba fallida se imprime con su aserción. La
-     suite es determinista: si pasa en local, debería pasar en CI; si falla
-     solo en CI, revisa el idioma (`POLYX_IDIOMA`) y el locale.
-2. Reproduce en local con el mismo comando del step (Linux arriba).
-3. Sube la corrección a la misma rama: el job se vuelve a correr solo, y el
-   push nuevo cancela la corrida anterior.
+1. Open the failed PR on GitHub and look at the red step:
+   - `Install pinned requirements` → someone changed a pin. pip's error says
+     which one. **Do not** relax the pin: `numpy>=2` breaks ultralytics 8.3.40
+     validation (they removed `np.trapz`), and bumping `PySide6` can change Qt
+     dialog behaviour.
+   - `Run test suite` → the failing test is printed with its assertion. The
+     suite is deterministic: if it passes locally it should pass in CI; if it
+     fails only in CI, check the language (`POLYX_IDIOMA`) and the locale.
+2. Reproduce locally with the same command as the step (Linux above).
+3. Push the fix to the same branch: the job re-runs on its own, and the new push
+   cancels the previous run.
 
-## Antes de abrir un PR
+## Before opening a PR
 
-- La suite completa pasa en local (`pytest -q`, cero fallos).
-- Los comentarios y el código en español, docstrings en inglés (ver
-  `AGENTS.md` y `CLAUDE.md`).
+- The full suite passes locally (`pytest -q`, zero failures).
+- Comments, docstrings and identifiers are in English; Spanish survives only as
+  the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
+  `CLAUDE.md`).
+
+---
+
+## The 2 AM diagnostic (observability)
+
+- Every module keeps a JSONL journal in `~/.polyx/logs/<module>.jsonl`
+  (`POLYX_LOG_DIR` redirects it). Rotation: 5 MB × 3 copies.
+- Read it with jq:
+  ```bash
+  jq -r '"\(.ts) \(.level) \(.event) \(.data)"' ~/.polyx/logs/detector.jsonl | tail -40
+  ```
+- Event names are English `verb.object` pairs (run.finish, imgsz.fallback,
+  report.error, train.error, update.available). Failures go at level
+  ERROR and carry the traceback in `exc`.
+- More detail: `POLYX_LOG=debug python -m polyx.gui.detector`
+- The signals that should raise an alarm: `imgsz.fallback` (the batch ran
+  at less resolution than requested), `run.sin_forma_alta` (many particles
+  left unmeasured), and any `*.error` event.

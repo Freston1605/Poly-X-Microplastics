@@ -1,69 +1,89 @@
-# Poly-X — Suite de detección de microplásticos
+# Poly-X — Microplastics Detection Suite
 
-**Estado:** Reconstrucción en curso (mayo 2026)  
-**Autor:** Cristofher Ferrada · Dr (c) en Ciencias mención Química · PUCV  
-**Versión:** 2.0.0  
+**Status:** Ongoing rebuild (May 2026)  
+**Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV  
+**Version:** 2.0.0  
 **GitHub:** https://github.com/CrissFerrada/Poly-X-Microplastics
 
-## 🎯 Propósito
+## 🎯 Purpose
 
-Plataforma de **detección automatizada y clasificación** de microplásticos (PET, PP, LDPE) por fluorescencia Nile Red bajo luz UV (254 nm) usando modelos YOLO v8/v11 (deep learning).
+Platform for **automated detection and classification** of microplastics (PET, PP, LDPE) by Nile Red fluorescence under UV light (254 nm) using YOLO v8/v11 models (deep learning).
 
-Integra todo el flujo: **entrenamiento → etiquetado → detección → reporte HTML paper-quality**.
+It integrates the whole pipeline: **training → labelling → detection → paper-quality HTML report**.
 
-### Publicaciones
+### Publications
 
 - **Pérez M, Parra S, Ferrada C, Bravo M, Pérez PA, Quiroz W (2024).** Development of a new methodology for the determination of PET microplastics in sediment, based on microwave-assisted acid digestion. PLoS ONE 19(12): e0314520. https://doi.org/10.1371/journal.pone.0314520
 - **Ferrada C, Pérez M, Parra S, Salas E, Sepúlveda F, Bravo MA, Quiroz W (2024).** Evaluation of microwave-assisted acid/oxidant digestion method for the detection of polyethylene microplastics in Merluccius gayi fish by Nile Red fluorescent staining and image analysis. J. Chil. Chem. Soc. 69(1): 6082-6085. https://doi.org/10.4067/s0717-97072024000106082
 
 ---
 
-## 📦 Estructura
+## 📦 Structure
 
 ```
 polyx/                    # Código fuente
 ├── __init__.py           # v2.0.0
-├── launcher.py           # Módulo 1: Menú principal (hero + 4 cards)
-├── core/                 # Núcleo compartido
-│   ├── theme.py          # Paleta de colores (Segoe UI, Nile Red RGB)
+├── launcher.py           # Shim Qt-free del entry point histórico
+├── core/                 # Shim temporal de re-export (se elimina al cerrar M005)
+├── model/                # Motor puro, sin Qt
 │   ├── paths.py          # Rutas (models/, runs/, data/, assets/)
 │   ├── yolo_wrap.py      # Wrapper YOLO (Detection, YoloModel)
 │   ├── metrics.py        # TP/FP/FN, IoU, matriz de confusión
-│   ├── widgets.py        # LogoBadge, HLine, custom widgets
-│   └── report_html.py    # Generador reporte (base64, paper-quality)
-├── detector/             # Módulo 2: Análisis en lote
-│   ├── __main__.py
-│   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-│   ├── state.py          # DetectorState (modelos, imágenes, params)
-│   ├── runner.py         # Lógica de ejecución (batch inference)
-│   └── pages/
-│       ├── _base.py      # BasePage (herencia)
-│       ├── modelos.py    # Carga hasta 3 modelos .pt
-│       ├── imagenes.py   # Selecciona carpeta de imágenes
-│       ├── parametros.py # Conf, IoU, um/px, device (CPU/GPU)
-│       ├── gt_manual.py  # Anota ground truth manual
-│       ├── ejecutar.py   # Botón ▶ run + progreso
-│       ├── resultados.py # Tabla: imagen, clase, conf, tamaño
-│       ├── errores.py    # Matriz confusión, galería FP/FN
-│       ├── comparar.py   # Compara runs (curvas P/R/F1)
-│       └── reporte.py    # Genera HTML + abre navegador
-├── trainer/              # Módulo 3: Entrenamiento YOLO
-│   ├── __main__.py
-│   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-│   ├── state.py          # TrainerState (config, runs, checkpoints)
-│   ├── runner.py         # Lógica de entrenamiento
-│   ├── hw.py             # Detección GPU, hardware info
-│   └── pages/
-│       ├── _base.py
-│       ├── modelo.py     # YOLO v8/v11, tamaño (nano-xlarge)
-│       ├── dataset.py    # Dataset YAML + split (train/val/test)
-│       ├── parametros.py # Epochs, batch, imgsz, optimizer
-│       ├── augmentacion.py # Flip, rotation, mosaic, etc.
-│       ├── entrenar.py   # Lanzar training + loss curves en vivo
-│       ├── evaluar.py    # Métricas mAP, P, R, F1 por clase
-│       ├── comparar.py   # Comparar múltiples runs
-│       ├── exportar.py   # Export PT→ONNX/TensorRT/CoreML
-│       └── informe.py    # Reporte entrenamiento
+│   ├── morfologia.py     # Segmentación y tallas sobre la máscara
+│   ├── calibracion.py    # Calibración μm/píxel
+│   ├── asignacion.py     # Abstención: detectar ≠ identificar
+│   ├── dataset_audit.py  # Auditoría de dataset
+│   ├── observabilidad.py # Logs JSONL (logger_for, set_run_id)
+│   ├── procedencia.py    # Trazabilidad de la corrida
+│   ├── plataforma.py     # Diferencias entre sistemas operativos
+│   ├── i18n.py           # tr(), idioma()
+│   └── traducciones_en.py
+└── gui/                  # Presentación: todo lo que toca Qt
+    ├── __main__.py       # python -m polyx.gui
+    ├── launcher.py       # Módulo 1: Menú principal (hero + 4 cards)
+    ├── theme.py          # Paleta de colores (Segoe UI, Nile Red RGB)
+    ├── iconos.py         # Iconos vectoriales (QPainterPath, 40 iconos)
+    ├── marca.py          # Identidad por ventana (logo + nombre)
+    ├── widgets.py        # LogoBadge, HLine, custom widgets
+    ├── preferencias.py   # Diálogo de preferencias (tema, idioma)
+    ├── pdf_export.py     # HTML → PDF
+    ├── updates.py        # Buscador de actualizaciones
+    ├── report_html.py    # Generador reporte (base64, paper-quality)
+    ├── detector/         # Módulo 2: Análisis en lote
+    │   ├── __main__.py
+    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
+    │   ├── state.py          # DetectorState (modelos, imágenes, params)
+    │   ├── runner.py         # Lógica de ejecución (batch inference)
+    │   └── pages/
+    │       ├── _base.py      # BasePage (herencia)
+    │       ├── modelos.py    # Carga hasta 3 modelos .pt
+    │       ├── imagenes.py   # Selecciona carpeta de imágenes
+    │       ├── parametros.py # Conf, IoU, um/px, device (CPU/GPU)
+    │       ├── gt_manual.py  # Anota ground truth manual
+    │       ├── ejecutar.py   # Botón ▶ run + progreso
+    │       ├── resultados.py # Tabla: imagen, clase, conf, tamaño
+    │       ├── errores.py    # Matriz confusión, galería FP/FN
+    │       ├── comparar.py   # Compara runs (curvas P/R/F1)
+    │       └── reporte.py    # Genera HTML + abre navegador
+    ├── trainer/          # Módulo 3: Entrenamiento YOLO
+    │   ├── __main__.py
+    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
+    │   ├── state.py          # TrainerState (config, runs, checkpoints)
+    │   ├── runner.py         # Lógica de entrenamiento
+    │   ├── hw.py             # Detección GPU, hardware info
+    │   └── pages/
+    │       ├── _base.py
+    │       ├── modelo.py     # YOLO v8/v11, tamaño (nano-xlarge)
+    │       ├── dataset.py    # Dataset YAML + split (train/val/test)
+    │       ├── parametros.py # Epochs, batch, imgsz, optimizer
+    │       ├── augmentacion.py # Flip, rotation, mosaic, etc.
+    │       ├── entrenar.py   # Lanzar training + loss curves en vivo
+    │       ├── evaluar.py    # Métricas mAP, P, R, F1 por clase
+    │       ├── comparar.py   # Comparar múltiples runs
+    │       ├── exportar.py   # Export PT→ONNX/TensorRT/CoreML
+    │       └── informe.py    # Reporte entrenamiento
+    ├── visor/            # Inspección con calibración μm/píxel
+    └── etiquetador/      # Anotación YOLO manual
 
 legacy/                   # Versiones anteriores, en la RAIZ (no dentro de polyx/)
 ├── Detector_Microplastico.py
@@ -110,66 +130,65 @@ data/                     # Otros datasets
 
 ---
 
-## 🔧 Tecnología
+## 🔧 Technology
 
-| Componente | Versión | Propósito |
+| Component | Version | Purpose |
 |---|---|---|
 | **Python** | 3.11.x | Runtime |
 | **PySide6** | 6.7.2 | GUI (Qt) |
 | **Ultralytics** | 8.3.40 | YOLO inference + training |
-| **OpenCV** | 4.10.0.84 | Lectura/anotación imágenes |
-| **NumPy** | 1.26.4 | Cálculos |
-| **Pillow** | 10.4.0 | Procesamiento PNG/JPEG |
-| **Matplotlib** | 3.9.2 | Gráficas (reportes) |
-| **pyqtgraph** | 0.13.7 | Plots en vivo (trainer) |
+| **OpenCV** | 4.10.0.84 | Image reading/annotation |
+| **NumPy** | 1.26.4 | Computations |
+| **Pillow** | 10.4.0 | PNG/JPEG processing |
+| **Matplotlib** | 3.9.2 | Plots (reports) |
+| **pyqtgraph** | 0.13.7 | Live plots (trainer) |
 
 **Hardware:**
-- Windows 10/11 · macOS 11 Big Sur o posterior
-- 8 GB RAM mínimo
-- Aceleración: se elige sola en `core/plataforma.py` → **CUDA** (NVIDIA) →
-  **MPS** (GPU integrada de los Mac con Apple Silicon) → **CPU**
+- Windows 10/11 · macOS 11 Big Sur or later
+- 8 GB RAM minimum
+- Acceleration: picked automatically in `model/plataforma.py` → **CUDA** (NVIDIA) →
+  **MPS** (integrated GPU of Apple Silicon Macs) → **CPU**
 
-**Portabilidad.** Todo lo que difiere entre sistemas está concentrado en
-`polyx/core/plataforma.py`, no repartido por el código:
+**Portability.** Everything that differs between operating systems is concentrated in
+`polyx/model/plataforma.py`, not scattered across the code:
 
-| Antes (solo Windows) | Ahora |
+| Before (Windows only) | Now |
 |---|---|
-| `os.startfile` (11 sitios) | `abrir_en_el_sistema()` → `startfile` / `open` / `xdg-open` |
+| `os.startfile` (11 sites) | `abrir_en_el_sistema()` → `startfile` / `open` / `xdg-open` |
 | `cmd /c start` | `lanzar_actualizador()` |
-| `device = "0"` (CUDA fija) | `dispositivo_disponible()` |
-| `actualizar.bat` fijo | `nombre_actualizador()` |
+| `device = "0"` (fixed CUDA) | `dispositivo_disponible()` |
+| hardcoded `actualizar.bat` | `nombre_actualizador()` |
 
-> **Mac Intel:** PyTorch dejó de publicar ruedas x86_64 para macOS desde la 2.3;
-> el instalador fija **2.2.2**, la última que existe. Sin MPS (requiere Apple
-> Silicon), así que corre en CPU.
+> **Intel Macs:** PyTorch stopped publishing x86_64 wheels for macOS with version 2.3;
+> the installer pins **2.2.2**, the last one that exists. No MPS (it requires Apple
+> Silicon), so it runs on CPU.
 
-> **`.gitattributes` no es cosmético:** fuerza LF en `*.command` y `*.sh`. Con
-> `core.autocrlf=true` en Windows y sin él, el script llega al Mac con CRLF y
-> bash lo rechaza con `/bin/bash^M: bad interpreter`, un síntoma que no se
-> parece en nada a su causa. Los `.command` van con modo `100755`: sin el bit
-> de ejecución el doble clic en Finder no hace nada.
+> **`.gitattributes` is not cosmetic:** it forces LF on `*.command` and `*.sh`. With
+> `core.autocrlf=true` on Windows and without it, the script reaches the Mac with CRLF
+> and bash rejects it with `/bin/bash^M: bad interpreter`, a symptom that looks nothing
+> like its cause. The `.command` files ship with mode `100755`: without the executable
+> bit, double-clicking in Finder does nothing.
 
 ---
 
-## 🎨 Temas y paleta (theme.py)
+## 🎨 Themes and palette (polyx/gui/theme.py)
 
-**Cuatro temas**, elegibles en *Preferencias* (o con `POLYX_TEMA`):
+**Four themes**, selectable in *Preferences* (or via `POLYX_TEMA`):
 
-| Tema | Para qué |
+| Theme | What it is for |
 |---|---|
-| `claro` | El de siempre. Por defecto, y el que muestra el manual |
-| `oscuro` | Trabajar de noche y junto a fotos de UV |
-| `azul` | Azul profundo, acento más frío |
-| `contraste` | AAA. Para proyector y para vista cansada |
+| `claro` | The usual one. Default, and the one shown in the manual |
+| `oscuro` | Working at night and next to UV photos |
+| `azul` | Deep blue, a colder accent |
+| `contraste` | AAA. For projector and tired-eye viewing |
 
-Cada tema es un diccionario de **tokens** en `PALETAS`. Al importar el módulo se
-resuelve cuál está activo y sus valores se publican como atributos del módulo,
-así que el resto del programa sigue escribiendo `T.INK` sin saber que existen
-los temas.
+Each theme is a dictionary of **tokens** in `PALETTES`. On module import the active
+one is resolved and its values are published as module attributes, so the rest of
+the program keeps writing `T.INK` without knowing the themes exist.
 
-> **Por eso `from .core.theme import INK` está prohibido.** Ese import se queda
-> con el color que hubiera al arrancar y no vuelve a cambiar. Hay que importar
-> el módulo (`from .core import theme as T`) y leer `T.INK` en el punto de uso.
+> **That is why `from polyx.gui.theme import INK` is forbidden.** That import keeps
+> whatever colour was active at startup and never changes again. Import the module
+> (`from polyx.gui import theme as T`) and read `T.INK` at the point of use.
 
 ### Tokens
 
@@ -186,74 +205,73 @@ FIELD_1 / FIELD_2 / RING    # campo del microscopio del launcher
 TIP_BG / TIP_FG             # tooltip
 ```
 
-**Por qué cada estado tiene dos versiones.** El tono que da 5:1 con texto blanco
-encima es demasiado apagado para leerse *como* texto sobre un fondo oscuro. Un
-solo valor no puede cumplir las dos cosas: elegir uno dejaba media interfaz por
-debajo de 4.5:1. En los temas claros ambos coinciden. Todos los pares
-texto/fondo de los cuatro temas pasan **4.5:1**.
+**Why each state has two versions.** The tone that gives 5:1 with white text on top
+is too dull to be read *as* text on a dark background. A single value cannot do both
+jobs: choosing one left half the interface below 4.5:1. In the light themes both
+coincide. All text/background pairs across the four themes pass **4.5:1**.
 
-### Lo que NO sigue al tema
+### What does NOT follow the theme
 
-- **`CLASS_COLOR_HEX`** (PET/PP/LDPE) — son datos del dominio. Si cambiaran con
-  el tema, dos capturas del mismo análisis no serían comparables.
-- **`T.DOC`** — paleta congelada (la clara) para los **informes HTML**. Un
-  informe se imprime, se adjunta y se archiva: que saliera oscuro porque quien
-  lo generó trabaja de noche gastaría tinta y haría que dos informes del mismo
-  análisis no se parecieran. `report_html.py` e `informe.py` usan `T.DOC.*`.
+- **`CLASS_COLOR_HEX`** (PET/PP/LDPE) — these are domain data. If they changed with
+  the theme, two screenshots of the same analysis would not be comparable.
+- **`T.DOC`** — frozen palette (the light one) for the **HTML reports**. A report
+  gets printed, attached and archived: if it came out dark because whoever generated
+  it works at night, it would waste ink and two reports of the same analysis would
+  not look alike. `report_html.py` and `informe.py` use `T.DOC.*`.
 
-### Cómo se aplica un cambio de tema
+### How a theme change is applied
 
-| Dónde | Cuándo |
+| Where | When |
 |---|---|
-| Launcher | **Al instante** — se reconstruye solo (`_construir_ui`) |
-| Módulos ya abiertos | No cambian: son procesos aparte con el color incrustado |
-| Módulos que se abran después | Ya salen con el tema nuevo |
+| Launcher | **Instantly** — it rebuilds itself (`_construir_ui`) |
+| Modules already open | They do not change: they are separate processes with the colour baked in |
+| Modules opened afterwards | They already come up with the new theme |
 
-Es el mismo contrato que el idioma. Preferencias se guardan en
-`~/.polyx_tema.json` (tema + animaciones) y `~/.polyx_idioma.json`.
+It is the same contract as the language. Preferences are stored in
+`~/.polyx_tema.json` (theme + animations) and `~/.polyx_idioma.json`.
 
-### Animación
+### Animation
 
-`theme.animaciones()` gobierna el panel del microscopio del launcher. Apagarlo
-no es solo estético: el movimiento continuo molesta a quien tiene sensibilidad
-vestibular, y en un equipo sin GPU ahorra 30 cuadros por segundo. Con las
-animaciones apagadas el panel dibuja un fotograma fijo, no desaparece.
+`theme.animaciones()` governs the launcher's microscope panel. Turning it off is not
+just aesthetic: continuous movement bothers people with vestibular sensitivity, and
+on a machine without a GPU it saves 30 frames per second. With animations off the
+panel draws a fixed frame; it does not disappear.
 
-### Iconos
+### Icons
 
-`core/iconos.py` dibuja **40 iconos** con `QPainterPath` sobre una rejilla de
-24×24, con el trazo proporcional al tamaño pedido.
+`polyx/gui/iconos.py` draws **40 icons** with `QPainterPath` on a 24×24 grid, with
+the stroke proportional to the requested size.
 
-**No se usan emoji como iconos.** Un emoji lo dibuja la fuente del sistema:
-cambia de forma entre Windows 10, 11 y macOS, llega en color fijo —así que no
-puede teñirse con el acento del tema— y mezcla estilos, unos planos y otros con
-degradado, algo que se nota en cuanto hay cuatro juntos en una rejilla.
+**Emoji are not used as icons.** An emoji is drawn by the system font: it changes
+shape between Windows 10, 11 and macOS, arrives in fixed colour —so it cannot be
+tinted with the theme accent— and mixes styles, some flat and some with gradients,
+something that shows as soon as four of them sit together in a grid.
 
 ```python
-from ..core import iconos
+from polyx.gui import iconos
 lbl.setPixmap(iconos.pixmap("detector", 26, T.ACCENT))
-btn.setIcon(iconos.icono("guardar", 15, T.INK2))
+btn.setIcon(iconos.icon("guardar", 15, T.INK2))
 ```
 
-Para un botón `checkable` —los de la barra lateral— hay
-`icono_conmutable(nombre, tam, color_off, color_on)`: Qt guarda un mapa por
-estado dentro del propio `QIcon`, de modo que el icono de la página activa se
-tiñe de acento junto con su texto, sin escuchar el `toggled`.
+For a `checkable` button —the sidebar ones— there is
+`switchable_icon(nombre, tam, color_off, color_on)`: Qt stores a per-state map
+inside the `QIcon` itself, so the active page's icon is tinted with the accent along
+with its text, without listening to `toggled`.
 
-Dónde se usan: barras laterales del Detector y del Entrenador
-(`SIDEBAR_ITEMS`), cabeceras de página (`PAGE_ICON`), cabeceras de tarjeta
-(segundo argumento de `card()`) y los botones de acción de los cuatro módulos.
+Where they are used: Detector and Trainer sidebars
+(`SIDEBAR_ITEMS`), page headers (`PAGE_ICON`), card
+headers (second argument of `card()`) and the action buttons of the four modules.
 
-> **Se conservan como texto** las marcas tipográficas que forman parte de una
-> frase: `✓ ✗ ⚠ → ←`. No son iconos, son puntuación, y sustituirlas por
-> pictogramas dentro de un `QLabel` obligaría a partir el texto en tres widgets.
+> **Typographic marks that are part of a sentence are kept as text:** `✓ ✗ ⚠ → ←`.
+> They are not icons, they are punctuation, and replacing them with pictograms
+> inside a `QLabel` would force splitting the text into three widgets.
 
-> **Cuidado al reescribir archivos con un script.** `Path.write_text()` traduce
-> `\n` a `\r\n` en Windows: sobre un archivo que ya venía con CRLF, un barrido
-> línea a línea le mete una línea en blanco por cada línea y dobla el archivo.
-> Hay que leer y escribir con `newline=""`.
+> **Be careful rewriting files with a script.** `Path.write_text()` translates
+> `\n` to `\r\n` on Windows: over a file that already came with CRLF, a
+> line-by-line sweep inserts a blank line for every line and doubles the file.
+> You have to read and write with `newline=""`.
 
-### Valores del tema claro
+### Light theme values
 
 ```python
 INK = "#1f2328"          # Texto principal
@@ -274,30 +292,30 @@ CLASS_COLOR_HEX = {
 }
 ```
 
-**Fuente:** Segoe UI (Windows-native)
+**Font:** Segoe UI (Windows-native)
 
-### Fluorescencia real de cada polímero
+### Real fluorescence of each polymer
 
-No confundir con los colores de interfaz de arriba. Medido sobre el interior de
-las cajas del dataset de entrenamiento (media RGB, n=30 por clase):
+Do not confuse with the interface colours above. Measured over the interior of
+the boxes of the training dataset (mean RGB, n=30 per class):
 
-| Clase | R | G | B | Aspecto |
+| Class | R | G | B | Appearance |
 |---|---|---|---|---|
-| PET | 116 | 58 | 65 | rojo–salmón |
-| PP | 122 | **125** | 32 | **amarillo verdoso, apagado** |
-| LDPE | 181 | 162 | 57 | amarillo franco, brillante |
+| PET | 116 | 58 | 65 | red–salmon |
+| PP | 122 | **125** | 32 | **dull yellowish green** |
+| LDPE | 181 | 162 | 57 | plain yellow, bright |
 
-**PP y LDPE comparten tono y se separan por brillo** (R 122 frente a 181), más el
-matiz verdoso del PP. Es la confusión dominante al anotar y explica que el recall
-por clase se hunda ahí: PET 0.98 · PP 0.70 · LDPE 0.54.
+**PP and LDPE share hue and are separated by brightness** (R 122 versus 181), plus the
+greenish tinge of PP. It is the dominant confusion when annotating and it explains why
+per-class recall sinks there: PET 0.98 · PP 0.70 · LDPE 0.54.
 
-La documentación decía que PP era «naranjo», lo que no corresponde a la emisión
-observada. Corregido en agosto de 2026 a partir de la medición y de la
-observación del autor.
+The documentation used to say PP was "orange", which does not match the observed
+emission. Corrected in August 2026 from the measurement and the author's
+observation.
 
 ---
 
-## 🚀 Instalación y uso
+## 🚀 Installation and usage
 
 ### 🪟 Windows
 
@@ -316,126 +334,125 @@ actualizar_macOS.command   # traer lo nuevo de GitHub
 construir_app_macOS.command  # empaquetar Poly-X.app (opcional)
 ```
 
-Clic **derecho** → Abrir la primera vez (Gatekeeper bloquea los scripts
-descargados sin firma de Apple).
+**Right** click → Open the first time (Gatekeeper blocks scripts
+downloaded without Apple's signature).
 
-Instalador y lanzador van en **un solo archivo** a propósito: en macOS cada
-`.command` exige su propia aprobación de seguridad la primera vez, y separarlos
-obligaría a pasar dos veces por ese aviso — la segunda, con el programa ya
-instalado, es cuando más parece que algo se rompió.
+The installer and launcher are in **a single file** on purpose: on macOS each
+`.command` requires its own security approval the first time, and separating them
+would mean going through that prompt twice — the second time, with the program
+already installed, is when it most looks like something broke.
 
-Abre **Launcher** → selecciona módulo.
+Open the **Launcher** → pick a module.
 
 ---
 
-## 📊 Módulos principales
+## 📊 Main modules
 
 ### 🔬 Detector (Module 1)
-**Propósito:** Análisis en lote de imágenes con modelo entrenado.
+**Purpose:** Batch analysis of images with a trained model.
 
-**Flujo típico:**
-1. **Modelos** → Cargar hasta 3 modelos `.pt` (compara en paralelo)
-2. **Imágenes** → Seleccionar carpeta (recursivo)
-3. **GT manual** (opcional) → Anotar ground truth manualmente
-4. **Parámetros** → conf=0.25, IoU=0.45, um/px=2.5 (calibración)
-5. **Ejecutar** → Batch inference con progreso
-6. **Resultados** → Tabla (clase, conf, tamaño)
-7. **Errores** → Matriz confusión + galería FP/FN
-8. **Comparar** → Compara runs (curvas P/R/F1)
-9. **Reporte** → HTML self-contained + navegador
+**Typical flow:**
+1. **Models** → Load up to 3 `.pt` models (compared in parallel)
+2. **Images** → Pick a folder (recursive)
+3. **Manual GT** (optional) → Annotate ground truth manually
+4. **Parameters** → conf=0.25, IoU=0.45, um/px=2.5 (calibration)
+5. **Run** → Batch inference with progress
+6. **Results** → Table (class, conf, size)
+7. **Errors** → Confusion matrix + FP/FN gallery
+8. **Compare** → Compare runs (P/R/F1 curves)
+9. **Report** → Self-contained HTML + browser
 
 **Output:**
-- `runs/YYYYMMDD_HHMMSS/images/*.png` — Imágenes anotadas
+- `runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
 - `runs/.../centroids.csv` — class, x, y, conf, diam_um
-- `runs/.../metrics.json` — TP/FP/FN por clase
-- `runs/.../report.html` — Reporte paper-quality (base64)
+- `runs/.../metrics.json` — TP/FP/FN per class
+- `runs/.../report.html` — Paper-quality report (base64)
 
-### 🎯 Entrenador (Module 2)
-**Propósito:** Entrenar modelos YOLO v8/v11 desde cero o fine-tuning.
+### 🎯 Trainer (Module 2)
+**Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
 
-**Flujo:**
-1. **Modelo** → YOLO v8/v11, tamaño (nano, small, medium, large, xlarge)
+**Flow:**
+1. **Model** → YOLO v8/v11, size (nano, small, medium, large, xlarge)
 2. **Dataset** → Dataset.yaml (train/val/test split)
-3. **Parámetros** → Epochs, batch, imgsz, optimizer (SGD, Adam)
-4. **Augmentación** → Flip, rotation, mosaic, HSV, etc.
-5. **Entrenar** → Lanzar entrenamiento + loss curves en vivo
-6. **Evaluar** → mAP, P, R, F1 por clase (validación)
-7. **Comparar** → Compara múltiples runs
-8. **Exportar** → PT → ONNX/TensorRT/CoreML
-9. **Informe** → Reporte de entrenamiento
+3. **Parameters** → Epochs, batch, imgsz, optimizer (SGD, Adam)
+4. **Augmentation** → Flip, rotation, mosaic, HSV, etc.
+5. **Train** → Launch training + live loss curves
+6. **Evaluate** → mAP, P, R, F1 per class (validation)
+7. **Compare** → Compare multiple runs
+8. **Export** → PT → ONNX/TensorRT/CoreML
+9. **Report** → Training report
 
 **Output:**
-- `runs/detect/trainN/weights/best.pt` — Modelo óptimo
-- `runs/detect/trainN/results.csv` — Métricas por época
-- `runs/detect/trainN/confusion_matrix.png` — Matriz confusión
+- `runs/detect/trainN/weights/best.pt` — Best model
+- `runs/detect/trainN/results.csv` — Per-epoch metrics
+- `runs/detect/trainN/confusion_matrix.png` — Confusion matrix
 
-### 🏷 Etiquetador (Module 3, funcional)
-Anotación YOLO manual con pre-anotación automática opcional.
+### 🏷 Labeller (Module 3, working)
+Manual YOLO annotation with optional automatic pre-labelling.
 
-**Verificado con 552 recortes** (agosto 2026). Arranque 0.25 s, interfaz
-responde en 0.06 s.
+**Verified with 552 crops** (August 2026). Startup 0.25 s, interface
+responds in 0.06 s.
 
-**Seguimiento del avance.** La lista distingue tres estados, y se recupera del
-disco al abrir la carpeta, así que el conteo puede repartirse en varias sesiones:
+**Progress tracking.** The list distinguishes three states, and it is recovered from
+disk when the folder is opened, so the count can be spread over several sessions:
 
-| Marca | Significado |
+| Mark | Meaning |
 |---|---|
-| `✓ nombre (n)` | revisada, con n partículas |
-| `· nombre (0)` | revisada, sin partículas — **es un dato** |
-| `○ nombre` | todavía sin revisar |
+| `✓ name (n)` | reviewed, with n particles |
+| `· name (0)` | reviewed, no particles — **that is data** |
+| `○ name` | not yet reviewed |
 
-Un `.txt` **solo** se escribe al marcar la imagen como revisada o al dibujar una
-caja. Pasar de largo no crea archivo: registrar como "revisada con cero" una
-imagen apenas ojeada falsearía el censo.
+A `.txt` file is written **only** when the image is marked as reviewed or when a box
+is drawn. Skimming past does not create a file: recording an image that was barely
+glanced at as "reviewed with zero" would falsify the census.
 
-**Atajos:** `Espacio` marca revisada y avanza · `Tab` salta a la siguiente sin
-revisar · `F` reencuadra · `1-9` clase activa · `←/→` navegar · `Supr` borra la
-caja seleccionada · `Ctrl+Z/Y` deshacer/rehacer · rueda zoom · botón medio pan.
+**Shortcuts:** `Espacio` marks reviewed and moves on · `Tab` jumps to the next
+unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Supr` deletes the
+selected box · `Ctrl+Z/Y` undo/redo · wheel zoom · middle-button pan.
 
-**Lado mínimo de caja: 2 px** (`BboxCanvas.LADO_MINIMO_PX`). Estaba en 5 px y
-descartaba **en silencio** marcas legítimas: las partículas más pequeñas del
-estudio miden ~8 px de lado. Ahora, si una caja se rechaza, se avisa en la barra
-de estado.
+**Minimum box side: 2 px** (`BboxCanvas.SIDE_MINIMUM_PX`). It was 5 px and it silently
+discarded legitimate marks: the study's smallest particles measure ~8 px per side.
+Now, if a box is rejected, the status bar says so.
 
-El zoom se conserva entre imágenes (casilla en el panel derecho), con tolerancia
-de tamaño: los recortes de una rejilla difieren en 1 px por redondeo y exigir
-igualdad exacta hacía perder el zoom en cada cambio.
+Zoom is kept between images (checkbox in the right panel), with size tolerance:
+crops from a grid differ by 1 px due to rounding, and demanding exact equality
+used to lose the zoom on every change.
 
-### 📐 Visor (Module 4, funcional)
-Inspección de una imagen con calibración μm/píxel, detección y exportación.
+### 📐 Viewer (Module 4, working)
+Single-image inspection with μm/pixel calibration, detection and export.
 
-**Calibración interactiva.** Dos modos: **línea** (2 clics + longitud real) y
-**círculo** (3 clics sobre un borde circular + diámetro real). El diálogo del
-círculo viene con 100000 μm por defecto, que es la placa Petri del estudio.
+**Interactive calibration.** Two modes: **line** (2 clicks + real length) and
+**circle** (3 clicks over a circular edge + real diameter). The circle dialog
+ships with 100000 μm as default, which is the study's Petri dish.
 
-> Estuvo inutilizable hasta agosto 2026: `QInputDialog.getDouble()` se llamaba
-> con `min=`/`max=`, que PySide6 no acepta como palabras clave, y lanzaba
-> `AttributeError` al completar los puntos. La matemática siempre estuvo bien;
-> el diálogo reventaba antes de llegar a ella. **Los argumentos deben ir
-> posicionales:** `(parent, title, label, value, minValue, maxValue, decimals)`.
+> It was unusable until August 2026: `QInputDialog.getDouble()` was called
+> with `min=`/`max=`, which PySide6 does not accept as keywords, and it raised
+> `AttributeError` when the points were completed. The maths was always right;
+> the dialog blew up before reaching it. **The arguments must go
+> positional:** `(parent, title, label, value, minValue, maxValue, decimals)`.
 
-**Detección.** `imgsz` configurable (320–8192, por defecto 2080) y GPU si está
-disponible. Antes forzaba `device="cpu"` e `imgsz` por defecto 640: con
-partículas de ~12 px en fotos de 4096 px, a 640 colapsan a ~2 px y **no se
-detecta nada**. Si la GPU se queda sin memoria, se explica cómo bajar `imgsz` en
-vez de mostrar la excepción cruda.
+**Detection.** Configurable `imgsz` (320–8192, default 2080) and GPU when
+available. It used to force `device="cpu"` and default `imgsz` 640: with
+particles of ~12 px in 4096 px photos, at 640 they collapse to ~2 px and **nothing
+is detected**. If the GPU runs out of memory, it explains how to lower `imgsz`
+instead of showing the raw exception.
 
-**Cargar etiquetas (.txt).** Muestra las anotaciones YOLO que acompañan a la
-imagen, con las tallas ya convertidas a μm. Sirve para revisar el conteo manual
-sobre la placa completa sin volver al Etiquetador.
+**Load labels (.txt).** Shows the YOLO annotations that accompany the
+image, with sizes already converted to μm. Useful for reviewing the manual count
+over the full plate without going back to the Labeller.
 
-**Exportación** a `visor_<imagen>_<ts>/`: PNG anotado, `detecciones.csv`
-(una fila por partícula, con diam_px, diam_um y area_um2) y `resumen.json`.
+**Export** to `visor_<imagen>_<ts>/`: annotated PNG, `detecciones.csv`
+(one row per particle, with diam_px, diam_um and area_um2) and `resumen.json`.
 
-> Lectura y escritura de imágenes con `cv2.imdecode`/`imencode` sobre
-> `np.fromfile`, no `imread`/`imwrite`: en Windows estos fallan con rutas que
-> llevan acentos y devuelven `None` sin avisar.
+> Image reading and writing with `cv2.imdecode`/`imencode` over
+> `np.fromfile`, not `imread`/`imwrite`: on Windows these fail with paths that
+> carry accents and return `None` without warning.
 
 ---
 
-## 🔑 Clases clave
+## 🔑 Key classes
 
-### `Detection` (yolo_wrap.py)
+### `Detection` (polyx/model/yolo_wrap.py)
 ```python
 @dataclass
 class Detection:
@@ -452,55 +469,55 @@ class Detection:
     morfotipo: Optional[str]    # "fibra" | "fragmento"
 ```
 
-**La caja no describe la forma.** Medido sobre 7.129 partículas anotadas: la caja
-sobreestima el área **1.87×**, y una fibra tumbada en diagonal tiene caja
-**cuadrada** — con lo que se reportaba como fragmento.
+**The box does not describe the shape.** Measured over 7.129 annotated particles: the box
+overestimates the area **1.87×**, and a fibre lying diagonally has a **square**
+box — which is why it was reported as a fragment.
 
-`morfologia.py` segmenta dentro de cada caja (Otsu sobre el canal de mayor
-contraste, componente conexa del centro, recortada a la caja) y mide sobre la
-máscara. **El largo sale de dos medidas estándar y se reporta la mayor:**
+`polyx/model/morfologia.py` segments inside each box (Otsu on the highest-contrast
+channel, the central connected component, clipped to the box) and measures over the
+mask. **The length comes from two standard measures and the larger one is reported:**
 
-| Medida | Qué es | Falla en |
+| Measure | What it is | Fails on |
 |---|---|---|
-| **Feret máximo** | mayor distancia entre dos puntos del borde | fibras curvas (da la cuerda: −34.6 % en un arco de 180°) |
-| **Diámetro geodésico** | camino más largo *dentro* de la partícula | partículas gruesas (rodea las concavidades) |
+| **Maximum Feret** | greatest distance between two boundary points | curved fibres (it gives the chord: −34.6 % on a 180° arc) |
+| **Geodesic diameter** | longest path *inside* the particle | thick particles (it rounds the concavities) |
 
-El geodésico solo se usa si la partícula cumple **dos** condiciones, y cada una
-viene de un fallo observado:
+The geodesic is used only if the particle meets **two** conditions, and each one
+comes from an observed failure:
 
-| Condición | Constante | Por qué |
+| Condition | Constant | Why |
 |---|---|---|
-| **Delgada**, `largo/grosor ≥ 4` | `DELGADEZ_PARA_GEODESICO` | en una gruesa el camino rodea las concavidades: un grumo real de 44 px recibía 73 |
-| **No convexa**, `solidez < 0.90` | `SOLIDEZ_CONVEXA` | en un convexo geodésico y Feret coinciden por definición; una barra girada medía 200 px a 0° y 45° pero **208 a 15°, 30° y 60°** |
+| **Slender**, `largo/grosor ≥ 4` | `THINNESS_FOR_GEODESIC` | on a thick particle the path rounds the concavities: a real 44 px clump got 73 |
+| **Non-convex**, `solidez < 0.90` | `SOLIDITY_CONVEX` | on a convex shape geodesic and Feret coincide by definition; a rotated bar measured 200 px at 0° and 45° but **208 at 15°, 30° and 60°** |
 
-Contra formas sintéticas de talla conocida: **error mediano 0.6 %, peor caso
-4.7 %**. Fijado en `tests/test_morfologia.py`.
+Against synthetic shapes of known size: **median error 0.6 %, worst case
+4.7 %**. Pinned in `tests/test_morfologia.py`.
 
-**El rectángulo equivalente `L = (P + √(P²−16A))/4` NO es una talla** y no debe
-usarse como tal. Depende del perímetro, así que un borde dentado lo infla
-(+22.5 % en una recta con dientes de sierra), y solo está definido si P² ≥ 16A
-—un círculo da P² = 4πA y el discriminante sale negativo—. Se conserva en
-`largo_rect_eq` como descriptor: comparado con los otros dos delata bordes
-irregulares.
+**The equivalent rectangle `L = (P + √(P²−16A))/4` is NOT a size** and must not
+be used as one. It depends on the perimeter, so a jagged edge inflates it
+(+22.5 % on a straight line with saw teeth), and it is only defined if P² ≥ 16A
+—a circle gives P² = 4πA and the discriminant comes out negative—. It is kept in
+`largo_rect_eq` as a descriptor: compared with the other two it betrays irregular
+edges.
 
-> **Corrección de agosto 2026.** Se reportó que el material tenía «22 % de fibras
-> y aspecto hasta 21.1». Era un artefacto de usar `rect_eq` como largo. Medido
-> con Feret/geodésico sobre 6.638 partículas: **aspecto mediano 1.58, máximo 8.7,
-> y 1.1 % de fibras**. El material es mayoritariamente fragmentos compactos.
+> **August 2026 correction.** The material was reported to have "22 % of fibres
+> and aspect up to 21.1". It was an artefact of using `rect_eq` as length. Measured
+> with Feret/geodesic over 6.638 particles: **median aspect 1.58, maximum 8.7,
+> and 1.1 % of fibres**. The material is mostly compact fragments.
 
-Coste 5.9 ms por partícula. Solo cv2 y numpy: `scipy` **no** está en
-`requirements.txt` —llega de rebote con ultralytics— y apoyarse en él rompería
-la instalación el día que ultralytics deje de traerlo.
+Cost 5.9 ms per particle. Only cv2 and numpy: `scipy` is **not** in
+`requirements.txt` —it arrives as a transitive dependency of ultralytics— and
+relying on it would break the install the day ultralytics stops shipping it.
 
-### `YoloModel` (yolo_wrap.py)
-Wrapper lazy-loading de Ultralytics YOLO:
+### `YoloModel` (polyx/model/yolo_wrap.py)
+Lazy-loading wrapper for Ultralytics YOLO:
 ```python
 model = YoloModel("bestdetectormedium.pt")
 detections = model.predict("image.jpg", conf=0.25, device="0")
 ```
 
-### `DetectorState` (detector/state.py)
-Estado global del Detector (Qt signals):
+### `DetectorState` (polyx/gui/detector/state.py)
+Global state of the Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Hasta 3 modelos
 state.images: List[Path]                # Imágenes a analizar
@@ -508,8 +525,8 @@ state.params: InferenceParams           # conf, IoU, um_per_px
 state.results: Dict[int, List[ImageResult]]  # Resultados por modelo
 ```
 
-### `ImageResult` (detector/state.py)
-Resultado de una imagen:
+### `ImageResult` (polyx/gui/detector/state.py)
+Result of one image:
 ```python
 image_path: Path
 predictions: List[Detection]
@@ -518,8 +535,8 @@ tp, fp, fn, miscls: int
 annotated_png: Optional[bytes]  # PNG anotado en base64
 ```
 
-### `MatchResult` (metrics.py)
-Matching pred vs GT (IoU ≥ 0.5):
+### `MatchResult` (polyx/model/metrics.py)
+Prediction vs GT matching (IoU ≥ 0.5):
 ```python
 tp: int          # True Positives (conf y clase correcta)
 fp: int          # False Positives (sin GT)
@@ -529,7 +546,7 @@ miscls: int      # Bien localizado pero clase incorrecta
 
 ---
 
-## 🔄 Flujo de datos
+## 🔄 Data flow
 
 ### Detector
 ```
@@ -569,32 +586,34 @@ runs/detect/trainN/
 
 ---
 
-## 📝 Convenciones
+## 📝 Conventions
 
-- **Español:** Todos los comentarios, variables locales, UI en español
-- **Inglés:** Docstrings en inglés (excepto clase/método si es muy específico)
+- **English:** Comments, docstrings and identifiers in English. Spanish
+  survives only inside the `tr()` layer and the UI strings it wraps.
+- **Spanish:** Runtime UI strings and `tr()` dictionary keys remain Spanish;
+  they are the translation layer, not developer-facing text.
 - **Qt Signals:** `models_changed`, `run_started`, `run_finished`, etc.
-- **Rutas:** Siempre `Path` de pathlib, nunca strings
-- **Colores:** Usar `T.ACCENT`, `T.OK`, etc., nunca hardcodes. Como
-  **texto**, la variante `_TX` (`T.OK_TX`); como **fondo** de botón
-  relleno, la base. En informes HTML, siempre `T.DOC.*`
-- **Métodos:** `_` privado (widget, signal callback)
+- **Paths:** Always pathlib `Path`, never strings
+- **Colors:** Use `T.ACCENT`, `T.OK`, etc., never hardcodes. As
+  **text**, the `_TX` variant (`T.OK_TX`); as **background** of a filled
+  button, the base one. In HTML reports, always `T.DOC.*`
+- **Methods:** `_` private (widget, signal callback)
 
 ---
 
-## 🔗 Dependencias clave
+## 🔗 Key dependencies
 
 - **Ultralytics YOLO** → Inference, training, export
-- **OpenCV** → `cv2.rectangle()`, anotación, lectura imágenes
-- **NumPy** → Cálculos de bbox, IoU
-- **Matplotlib** → Gráficas en reportes (en modo Agg, no interactivo)
+- **OpenCV** → `cv2.rectangle()`, annotation, image reading
+- **NumPy** → Bbox, IoU computations
+- **Matplotlib** → Plots in reports (in Agg mode, non-interactive)
 - **PySide6/Qt** → GUI (signals/slots, QObject)
 
 ---
 
-## ⚙️ Parámetros comunes
+## ⚙️ Common parameters
 
-### Inferencia (DetectorState.params)
+### Inference (DetectorState.params)
 ```python
 conf: float = 0.25          # Umbral confianza
 iou_nms: float = 0.45       # IoU para NMS
@@ -607,30 +626,31 @@ size_max_um: float = 0.0    # Filtro superior
 conf_asignacion: float = 0.0  # Confianza mínima para atribuir polímero (0 = off)
 ```
 
-### Abstención: detectar ≠ identificar
+### Abstention: detecting ≠ identifying
 
-`core/asignacion.py`. Por debajo de `conf_asignacion` la partícula **sigue
-contando** como partícula detectada, pero se reporta como **«no asignable»** en
-vez de atribuirle un polímero. El informe declara en Métodos qué porcentaje del
-lote quedó sin asignar.
+`polyx/model/asignacion.py`. Below `conf_asignacion` the particle **still
+counts** as a detected particle, but it is reported as **"unassignable"** instead
+of attributing a polymer to it. The report declares in Methods what percentage of
+the batch went unassigned.
 
-El motivo es químico, no de ingeniería: el Nile Red es **solvatocrómico** y su
-emisión responde a la **polaridad** del entorno, no a la identidad del polímero.
-El PET —poliéster— se separa limpio (recall 0.98); el PP y el LDPE son las dos
-poliolefinas apolares, comparten tono y solo difieren en brillo, que depende de
-exposición, foco y espesor. De ahí que su recall se hunda a 0.70 y 0.54.
+The reason is chemical, not engineering: Nile Red is **solvatochromic** and its
+emission responds to the **polarity** of the environment, not to the polymer's
+identity. PET —a polyester— separates cleanly (recall 0.98); PP and LDPE are the
+two apolar polyolefins, they share hue and differ only in brightness, which
+depends on exposure, focus and thickness. That is why their recall sinks to
+0.70 and 0.54.
 
-**No es una clase del modelo, y no debe serlo.** Una clase `desconocido`
-entrenada se define por la duda de quien anota y no por lo que se ve: la misma
-partícula acabaría LDPE un día y desconocido otro, y ese ruido caería justo
-sobre las dos clases ya más débiles.
+**It is not a model class, and it must not become one.** A trained `unknown`
+class is defined by the doubt of whoever annotates and not by what is seen: the
+same particle would end up LDPE one day and unknown the next, and that noise
+would land exactly on the two already weakest classes.
 
-**Tampoco usa el margen entre las dos clases más probables**, que sería mejor
-criterio: tras el NMS, YOLO devuelve una sola confianza y una sola clase por
-caja, y las puntuaciones del resto se pierden ahí. Recuperarlas obliga a
-interceptar el tensor crudo de la cabeza, frágil entre versiones de ultralytics.
+**It does not use the margin between the two most probable classes either**, which
+would be a better criterion: after NMS, YOLO returns a single confidence and a
+single class per box, and the scores of the rest are lost there. Recovering them
+requires intercepting the raw head tensor, fragile across ultralytics versions.
 
-### Entrenamiento
+### Training
 ```python
 epochs: int = 100
 batch: int = 16             # Menor si OOM
@@ -644,53 +664,53 @@ lr0: float = 0.01
 
 ## 🐛 Troubleshooting
 
-| Problema | Solución |
+| Problem | Solution |
 |---|---|
-| "No module named tkinter" | Reinstalar Python, marcar tcl/tk |
-| "CUDA not available" | Normal, solo CPU funciona (más lento) |
-| Detector no detecta nada | Bajar conf a 0.10 en Parámetros |
-| OOM en entrenamiento | Bajar batch a 4-8, imgsz a 512-576 |
-| Reporte no abre | Revisar Manual_PolyX.html manualmente |
+| "No module named tkinter" | Reinstall Python, tick tcl/tk |
+| "CUDA not available" | Normal, CPU only works (slower) |
+| Detector finds nothing | Lower conf to 0.10 in Parameters |
+| OOM during training | Lower batch to 4-8, imgsz to 512-576 |
+| Report does not open | Check Manual_PolyX.html manually |
 
 ---
 
-## 📚 Archivos generados automáticamente
+## 📚 Automatically generated files
 
-- **Manual_PolyX.html / Manual_PolyX.en.html** (+ sus PDF) — los arma
-  `generar_manual.py` desde cero: texto, figuras, índice y hoja de estilo.
-- **manual_texto_es.py / manual_texto_en.py** — el texto del manual. Solo
-  contenido; el motor está en `generar_manual.py`.
-- **manual_screenshots/** — capturas que empotra el manual, una carpeta por
-  origen: `es/` y `en/` (interfaz, un idioma cada una), más `web/` y `win/`.
+- **Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) — built from
+  scratch by `generar_manual.py`: text, figures, index and stylesheet.
+- **manual_texto_es.py / manual_texto_en.py** — the manual's text. Content
+  only; the engine is in `generar_manual.py`.
+- **manual_screenshots/** — screenshots the manual embeds, one folder per
+  source: `es/` and `en/` (interface, one language each), plus `web/` and `win/`.
 
-Para regenerar (capturas primero, manual después):
+To regenerate (screenshots first, manual after):
 ```bash
 .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/es
 set POLYX_IDIOMA=en && .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/en
 .venv\Scripts\python.exe generar_manual.py --pdf
 ```
 
-> El generador anterior reemplazaba figuras *por posición* dentro de un HTML ya
-> escrito. Se retiró en septiembre de 2026 —queda en el historial de git— porque
-> con el manual actual descolocaría las imágenes sin avisar.
+> The previous generator replaced figures *by position* inside an already written
+> HTML. It was retired in September 2026 —it lives in the git history— because
+> with the current manual it would misplace the images without warning.
 
 ---
 
-## 🔮 Próximas mejoras (en construcción)
+## 🔮 Next improvements (under construction)
 
-- ✅ Detector: Funcional, reporte HTML
-- ✅ Entrenador: Funcional, curvas en vivo
-- ✅ Etiquetador: Funcional, verificado con 552 recortes (ago 2026)
-- ✅ Visor: Funcional, calibración reparada y verificada (ago 2026)
-- 📋 Validación de dataset (duplicados, outliers)
-- 🤖 Recomendaciones automáticas de parámetros
+- ✅ Detector: Working, HTML report
+- ✅ Trainer: Working, live curves
+- ✅ Labeller: Working, verified with 552 crops (Aug 2026)
+- ✅ Viewer: Working, calibration repaired and verified (Aug 2026)
+- 📋 Dataset validation (duplicates, outliers)
+- 🤖 Automatic parameter recommendations
 
 ---
 
-## 📞 Contacto
+## 📞 Contact
 
 **Cristofher Ferrada**  
-Dr (c) en Ciencias mención Química — Pontificia Universidad Católica de Valparaíso  
+PhD (c) in Chemistry — Pontificia Universidad Católica de Valparaíso  
 2026
 
 **Repo:** https://github.com/CrissFerrada/Poly-X-Microplastics

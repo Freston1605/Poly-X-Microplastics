@@ -1,141 +1,143 @@
-# Poly-X en macOS
+# Poly-X on macOS
 
-Suite de detección de microplásticos por fluorescencia Nile Red.
-Cristofher Ferrada · Dr (c) en Ciencias mención Química · PUCV
-
----
-
-## Instalación (una sola vez)
-
-1. Descarga el proyecto y descomprímelo donde quieras (por ejemplo, en Documentos).
-2. **Clic derecho** sobre `Lanzar_macOS.command` → **Abrir** → **Abrir**.
-3. Espera 10-15 minutos. Se instala todo solo.
-
-A partir de ahí, doble clic normal en `Lanzar_macOS.command` cada vez que quieras usarlo.
-
-Al terminar la instalación te ofrece dejar un **`Poly-X.app` en el Escritorio**:
-acéptalo y usa ese para el día a día, que abre sin ventana de Terminal.
+A Nile Red fluorescence microplastics detection suite.
+Cristofher Ferrada · PhD (c) in Science, Chemistry · PUCV
 
 ---
 
-## Abrir sin la ventana negra de Terminal
+## Installation (only once)
 
-`Lanzar_macOS.command` deja **siempre** una ventana de Terminal abierta detrás
-del programa. No es un fallo: un `.command` es, por definición, un script que
-Finder le entrega a la Terminal, y esa ventana vive mientras viva el programa.
-Si la cierras, cierras Poly-X.
+1. Download the project and unzip it wherever you like (for example, in Documents).
+2. **Right-click** on `Lanzar_macOS.command` → **Open** → **Open**.
+3. Wait 10-15 minutes. Everything installs by itself.
 
-Para abrirlo sin ella, doble clic en **`crear_icono_macOS.command`**. Crea un
-`Poly-X.app` —Escritorio, Aplicaciones o junto al programa, tú eliges— y a
-partir de ahí abres desde ese icono. Es el equivalente de `Poly-X.vbs` en
-Windows.
+From then on, just double-click `Lanzar_macOS.command` every time you want to use it.
 
-- Tarda **un segundo** y pesa unos KB: no empaqueta nada, solo llama al
-  entorno que ya está instalado. Nada que ver con `construir_app_macOS.command`.
-- Al crearse **en tu propio Mac** no lleva la marca de cuarentena, así que
-  Gatekeeper no protesta: doble clic normal desde la primera vez.
-- Sin consola no hay dónde leer los errores, así que todo lo que el programa
-  escriba queda en `~/Library/Logs/Poly-X.log`.
-- La ruta del programa va escrita dentro del `.app`. **Si mueves la carpeta de
-  Poly-X, vuelve a ejecutar `crear_icono_macOS.command`** desde donde quedó.
+When installation ends it offers to leave **`Poly-X.app` on the Desktop**:
+accept it and use that icon for day-to-day work — it opens without a Terminal window.
 
-Conserva `Lanzar_macOS.command`: es el que hay que abrir cuando algo falla,
-porque enseña el error en pantalla en vez de esconderlo en el registro.
+---
 
-### ⚠️ «No se puede abrir porque es de un desarrollador no identificado»
+## Opening without the black Terminal window
 
-Es lo esperable y **no significa que esté roto**. macOS bloquea por defecto
-cualquier script descargado de internet que no venga firmado por un
-desarrollador registrado en Apple.
+`Lanzar_macOS.command` **always** leaves a Terminal window open behind the
+program. It is not a bug: a `.command` is, by definition, a script that
+Finder hands over to Terminal, and that window lives as long as the program
+lives. If you close it, you close Poly-X.
 
-**Solución:** clic **derecho** sobre el archivo → **Abrir** → confirmar **Abrir**
-en el diálogo. Solo hace falta la primera vez; después el doble clic funciona.
+To open it without that window, double-click **`crear_icono_macOS.command`**. It
+creates a `Poly-X.app` —Desktop, Applications or next to the program, your
+choice— and from then on you open from that icon. It is the equivalent of
+`Poly-X.vbs` on Windows.
 
-Si aun así se resiste, en Terminal:
+- Takes **one second** and weighs a few KB: it bundles nothing, it just calls
+  the environment that is already installed. Nothing to do with
+  `construir_app_macOS.command`.
+- Because it is created **on your own Mac**, it carries no quarantine mark, so
+  Gatekeeper never complains: normal double-click from the very first time.
+- With no console there is nowhere to read errors, so everything the program
+  writes goes to `~/Library/Logs/Poly-X.log`.
+- The program's path is written inside the `.app`. **If you move the Poly-X
+  folder, run `crear_icono_macOS.command` again** from its new location.
+
+Keep `Lanzar_macOS.command` around: it is the one to open when something
+breaks, because it shows the error on screen instead of hiding it in a log.
+
+### ⚠️ `No se puede abrir porque es de un desarrollador no identificado`
+
+That is expected and **does not mean it is broken**. macOS blocks, by
+default, any script downloaded from the internet that is not signed by a
+developer registered with Apple.
+
+**Fix:** right-click the file → **Open** → confirm **Open** in the dialog.
+Only needed the first time; after that the double-click works.
+
+If it still resists, in Terminal:
 
 ```bash
 xattr -d com.apple.quarantine Lanzar_macOS.command
 ```
 
-### Requisito previo
+### Prerequisite
 
-**Python 3.9 o superior.** Compruébalo en Terminal con `python3 --version`.
-Si no lo tienes, descárgalo de [python.org/downloads](https://www.python.org/downloads/).
+**Python 3.9 or newer.** Check it in Terminal with `python3 --version`.
+If you do not have it, download it from [python.org/downloads](https://www.python.org/downloads/).
 
 ---
 
-## Rendimiento: qué esperar
+## Performance: what to expect
 
-Depende del procesador del Mac, y la diferencia es grande.
+Depends on the Mac's processor, and the difference is big.
 
-| Mac | Aceleración | Detección |
+| Mac | Speed-up | Detection |
 |---|---|---|
-| **Apple Silicon** (M1, M2, M3, M4) | GPU integrada vía MPS | Rápida |
-| **Intel** | Solo CPU | Lenta: cuenta ~1 min por foto en lotes con troceo |
+| **Apple Silicon** (M1, M2, M3, M4) | Built-in GPU through MPS | Fast |
+| **Intel** | CPU only | Slow: counts ~1 min per photo in batches with tiling |
 
-El instalador detecta cuál tienes y configura el dispositivo solo. No hay que
-tocar nada, pero conviene saberlo antes de lanzar un lote de 500 fotos en un
-Mac Intel.
+The installer detects which one you have and configures the device by
+itself. There is nothing to touch, but it is worth knowing before launching
+a batch of 500 photos on an Intel Mac.
 
-> **Nota para Mac Intel:** PyTorch dejó de publicar versiones para procesadores
-> Intel después de la 2.2.2, así que el instalador fija esa versión. Es la
-> última que existe para esa arquitectura y funciona correctamente.
-
----
-
-## Actualizar
-
-Doble clic en `actualizar_macOS.command`. Descarga la versión nueva de GitHub y
-sobrescribe solo los archivos del programa: **tus modelos, resultados y datos no
-se tocan**.
-
-También aparece un botón «Actualizar» dentro de Poly-X cuando hay versión nueva.
+> **Note for Intel Macs:** PyTorch stopped shipping releases for Intel
+> processors after 2.2.2, so the installer pins that version. It is the last
+> one that exists for that architecture and it works correctly.
 
 ---
 
-## Empaquetar con PyInstaller (opcional, y casi nunca necesario)
+## Updating
 
-`construir_app_macOS.command` mete PyTorch, ultralytics y el intérprete entero
-dentro de un `.app` autocontenido, para llevarlo a un Mac que no tenga nada
-instalado.
+Double-click `actualizar_macOS.command`. It downloads the new release from
+GitHub and overwrites only the program files: **your models, results and
+data are left untouched**.
 
-> No lo confundas con `crear_icono_macOS.command`, que es lo que quieres si
-> solo buscas abrir sin Terminal: aquel tarda un segundo, este entre 15 y 40
-> minutos.
-
-**No hace falta para usar Poly-X**, y tiene inconvenientes reales:
-
-- Tarda 15-40 minutos y ocupa 2-5 GB (PyTorch va dentro del bundle).
-- Sin firma de Apple (USD 99/año) Gatekeeper lo bloquea igual en otro Mac, así
-  que **no evita** el aviso de «desarrollador no identificado».
-- Empaquetar PyTorch con PyInstaller es frágil.
-
-La vía recomendada es `Lanzar_macOS.command`.
+Poly-X also shows an `Actualizar` button inside it when a new release exists.
 
 ---
 
-## Si algo falla
+## Bundling with PyInstaller (optional, and almost never needed)
 
-| Síntoma | Qué pasa |
+`construir_app_macOS.command` packs PyTorch, ultralytics and the whole
+interpreter into a self-contained `.app`, to carry over to a Mac with
+nothing installed.
+
+> Do not confuse it with `crear_icono_macOS.command`, which is what you want
+> if you only want to open without Terminal: that one takes a second, this
+> one 15 to 40 minutes.
+
+**You do not need it to use Poly-X**, and it has real downsides:
+
+- Takes 15-40 minutes and weighs 2-5 GB (PyTorch goes inside the bundle).
+- Without an Apple signature (USD 99/year) Gatekeeper blocks it just the
+  same on another Mac, so it **does not avoid** the
+  "unidentified developer" warning either.
+- Packing PyTorch with PyInstaller is fragile.
+
+The recommended way is `Lanzar_macOS.command`.
+
+---
+
+## If something fails
+
+| Symptom | What happens |
 |---|---|
-| `bad interpreter: /bin/bash^M` | El archivo llegó con finales de línea de Windows. Descárgalo otra vez desde GitHub, no lo copies por WhatsApp/correo. |
-| Doble clic y no pasa nada | Falta el permiso de ejecución: `chmod +x Lanzar_macOS.command` en Terminal. |
-| El `Poly-X.app` rebota en el Dock y se cierra | Abre `~/Library/Logs/Poly-X.log`: ahí está el error que la Terminal habría mostrado. |
-| El `.app` avisa de que no encuentra la instalación | Moviste la carpeta del programa. Vuelve a ejecutar `crear_icono_macOS.command` desde su ubicación nueva. |
-| «Python 3.9+ no encontrado» | Instálalo desde python.org/downloads. |
-| Falla al instalar PyTorch | Suele ser la conexión. Vuelve a ejecutar el lanzador: retoma desde donde iba. |
-| La detección no encuentra nada | Baja la confianza a 0.10 en Parámetros. |
+| `bad interpreter: /bin/bash^M` | The file arrived with Windows line endings. Download it again from GitHub, do not copy it through WhatsApp/email. |
+| Double-click and nothing happens | The executable permission is missing: `chmod +x Lanzar_macOS.command` in Terminal. |
+| The `Poly-X.app` bounces in the Dock and quits | Open `~/Library/Logs/Poly-X.log`: the error the Terminal would have shown is there. |
+| The `.app` reports that it cannot find the installation | You moved the program folder. Run `crear_icono_macOS.command` again from its new location. |
+| `No se encontró Python 3.9 o superior` | Install it from python.org/downloads. |
+| PyTorch fails to install | Usually the connection. Run the launcher again: it resumes from where it left off. |
+| Detection finds nothing | Lower confidence to 0.10 in `Parámetros`. |
 
 ---
 
-## Qué se ha probado y qué no
+## What has been tested and what has not
 
-Honestidad sobre el estado de esta versión:
+Being honest about the state of this release:
 
-- **Verificado en Windows:** toda la lógica compartida — la app, el informe, la
-  medición de partículas, los 49 tests automáticos.
-- **Escrito para macOS pero pendiente de probar en un Mac:** los lanzadores, el
-  actualizador, la detección de MPS y el empaquetado `.app`.
+- **Verified on Windows:** all the shared logic — the app, the report, the
+  particle measurement, the automated test suite.
+- **Written for macOS but still untested on a Mac:** the launchers, the
+  updater, MPS detection and the `.app` bundling.
 
-Si encuentras un fallo, anota el mensaje exacto de la ventana de Terminal: es lo
-que permite arreglarlo.
+If you find a bug, write down the exact message from the Terminal window:
+that is what makes it fixable.

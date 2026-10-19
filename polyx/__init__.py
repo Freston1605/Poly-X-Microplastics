@@ -1,4 +1,4 @@
-"""Poly-X — Suite de detección de microplásticos."""
+"""Poly-X — Microplastics detection suite."""
 import os as _os
 import sys as _sys
 
@@ -6,36 +6,37 @@ __version__ = "2.0.0"
 __author__ = "Cristofher Ferrada"
 
 
-def _asegurar_salida_estandar() -> None:
-    """Garantiza que sys.stdout y sys.stderr existan.
+def _ensure_standard_output() -> None:
+    """Guarantees that sys.stdout and sys.stderr exist.
 
-    Cuando Poly-X se abre desde el acceso directo del Escritorio, arranca con
-    ``pythonw.exe`` para no dejar una consola negra abierta. pythonw deja
-    ``sys.stdout`` y ``sys.stderr`` en ``None``, y el launcher lanza cada modulo
-    con ``sys.executable``, asi que los hijos heredan lo mismo.
+    When Poly-X is opened from the Desktop shortcut, it starts under
+    ``pythonw.exe`` so no black console window is left open. pythonw leaves
+    ``sys.stdout`` and ``sys.stderr`` as ``None``, and the launcher starts each
+    module with ``sys.executable``, so the children inherit the same.
 
-    Eso mata el entrenamiento: Ultralytics dibuja una barra ``tqdm`` al cachear
-    las etiquetas y tqdm escribe en ``sys.stderr``, con lo que salta
+    That kills training: Ultralytics draws a ``tqdm`` bar while caching the
+    labels and tqdm writes to ``sys.stderr``, which raises
     ``AttributeError: 'NoneType' object has no attribute 'write'``.
 
-    El fallo solo aparece la **primera** vez que se usa un dataset, porque en las
-    siguientes ya existe el ``.cache`` y esa barra no se dibuja. De ahi que pase
-    inadvertido en la maquina donde se desarrolla y reviente en una limpia.
+    The failure only shows up the **first** time a dataset is used, because on
+    later runs the ``.cache`` already exists and that bar is never drawn. That
+    is why it goes unnoticed on the development machine and blows up on a
+    clean one.
 
-    Se redirige a ``os.devnull``: sin consola no hay donde mostrar ese texto, y
-    las metricas del entrenamiento llegan a la interfaz por callbacks, no por la
-    salida estandar.
+    They are redirected to ``os.devnull``: with no console there is nowhere to
+    show that text, and training metrics reach the interface through
+    callbacks, not through standard output.
     """
-    for nombre in ("stdout", "stderr"):
-        if getattr(_sys, nombre, None) is None:
+    for name in ("stdout", "stderr"):
+        if getattr(_sys, name, None) is None:
             try:
-                destino = open(_os.devnull, "w", encoding="utf-8", errors="replace")
+                destination = open(_os.devnull, "w", encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            setattr(_sys, nombre, destino)
-            # Algunas librerias miran los originales en vez de los actuales.
-            if getattr(_sys, f"__{nombre}__", None) is None:
-                setattr(_sys, f"__{nombre}__", destino)
+            setattr(_sys, name, destination)
+            # Some libraries look at the originals instead of the current ones.
+            if getattr(_sys, f"__{name}__", None) is None:
+                setattr(_sys, f"__{name}__", destination)
 
 
-_asegurar_salida_estandar()
+_ensure_standard_output()
