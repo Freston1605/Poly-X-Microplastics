@@ -33,7 +33,9 @@ Fotos de peces y camarones/
 Fotos Placa medida/
 imagenes max/
 Microscopio/
-data/
+# Dataset local en la raiz del repo (NO coincide con polyx/core/data/, el
+# paquete de formatos del motor: ese SI va versionado)
+/data/
 datasets/
 
 # Avance / docs personales
