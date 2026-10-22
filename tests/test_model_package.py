@@ -1,6 +1,6 @@
-"""Contrato de pureza de ``polyx.ml``: el motor nunca puede arrastrar Qt.
+"""Contrato de pureza de ``polyx.core``: el motor nunca puede arrastrar Qt.
 
-El hito M005 parte Poly-X en un motor puro (``polyx.ml``) y una capa de
+El hito M005 parte Poly-X en un motor puro (``polyx.core``) y una capa de
 interfaz (``polyx.gui``). El valor de esa frontera se pierde en cuanto un
 ``import`` descuidado la cruza: basta que un modulo del motor importe
 ``PySide6`` para que el motor deje de poder correr headless en CI o en un
@@ -9,7 +9,7 @@ calculo a la ventana.
 
 Estas pruebas fijan la frontera de forma ejecutable, en tres frentes:
 
-1. Un interprete LIMPIO importa ``polyx.ml`` y comprueba que no quedo
+1. Un interprete LIMPIO importa ``polyx.core`` y comprueba que no quedo
    ningun modulo ``PySide6*`` en ``sys.modules``. Se usa un subproceso a
    proposito: el proceso de pytest puede traer PySide6 ya cargado por
    ``test_temas``, asi que comprobarlo en proceso no probaria nada.
@@ -18,7 +18,7 @@ Estas pruebas fijan la frontera de forma ejecutable, en tres frentes:
 3. El paquete de re-export del ``core`` tiene que haber DESAPARECIDO: mientras
    existiera, cualquier consumidor podia seguir importando los nombres viejos
    y la separacion entre motor y GUI era decorativa. Con el paquete borrado,
-   el unico camino al motor es ``polyx.ml``.
+   el unico camino al motor es ``polyx.core``.
 
 Sobre el escaneo relativo: el plan de la tarea pedia "todo import relativo es
 nivel 1". ``procedencia.py`` rompe esa letra a proposito y con razon, porque
@@ -106,7 +106,7 @@ def _destino_relativo(nivel: int, modulo: str | None) -> str:
     """Nombre absoluto al que apunta un import relativo escrito en el motor.
 
     ``nivel`` es el numero de puntos de ``ast.ImportFrom``: uno es el propio
-    paquete (``polyx.ml``), dos el padre (``polyx``). Devuelve cadena vacia
+    paquete (``polyx.core``), dos el padre (``polyx``). Devuelve cadena vacia
     cuando el import escapa por encima de ``polyx`` (nivel >= 3).
     """
     if nivel == 1:
@@ -143,7 +143,7 @@ def _imports_prohibidos(arbol: ast.AST) -> list[str]:
 
 
 def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
-    """Imports relativos que se salen de ``polyx.ml`` (o del propio ``polyx``).
+    """Imports relativos que se salen de ``polyx.core`` (o del propio ``polyx``).
 
     Permitido: ``from .x import ...`` (nivel 1) y ``from .. import __version__``
     (nivel 2 sin submodulo, que es el paquete ``polyx``). Todo lo demas --un
@@ -157,7 +157,6 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
         destino = _destino_relativo(nodo.level, nodo.module)
         permitido = (
             destino == "polyx"
-            or destino == "polyx.ml"
             or destino == "polyx.core"
             or destino.startswith("polyx.core.")
         )
@@ -168,7 +167,7 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
 
 # ── 1. Pureza headless en un interprete limpio ──
 def test_importar_el_motor_no_carga_ningun_modulo_qt():
-    """Un interprete nuevo importa polyx.ml sin que entre ningun PySide6.
+    """Un interprete nuevo importa polyx.core sin que entre ningun PySide6.
 
     Se lanza en subproceso porque el pytest que corre esta prueba puede tener
     PySide6 ya en sys.modules (``test_temas`` construye widgets): comprobar la
@@ -198,7 +197,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
         timeout=120,
     )
     assert resultado.returncode == 0, (
-        "importar polyx.ml arrastro Qt o fallo:\n"
+        "importar polyx.core arrastro Qt o fallo:\n"
         f"stdout: {resultado.stdout}\n"
         f"stderr: {resultado.stderr}"
     )
@@ -255,7 +254,7 @@ def test_el_escanner_detecta_violaciones_sinteticas():
 
 
 # ── 3. El paquete core ES el motor (no un re-export) ──
-# El paquete ``polyx.core`` es ahora el motor puro (antes ``polyx.model``).
+# El paquete ``polyx.core`` es ahora el motor puro (antes ``polyx.core``).
 # No debe ser un paquete de re-export vacio, sino que debe contener los
 # modulos del motor: detect, measure, quality, provenance, data, etc.
 

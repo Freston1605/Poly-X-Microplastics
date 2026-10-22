@@ -50,6 +50,16 @@ YOLO Python/
 ~$*
 PROCEDIMIENTO*.docx
 
+# Estado y artefactos internos del agente (GSD/workflows): se trabajan en el
+# worktree local y no se versionan. docs/diagnostico_sigterm.md y
+# docs/recetas_jq.md SI quedan trackeados (los exige test_docs_ingles.py);
+# el resto de docs/ (planes de takeover, revision de literatura) es interno.
+.project/
+docs/GSD_DIRECTIVES.md
+docs/TAKEOVER_PLAN.md
+docs/ENVIRONMENT_PLAN.md
+docs/literature/
+
 # Reportes generados
 reporte_paper*.html
 reporte_*.html

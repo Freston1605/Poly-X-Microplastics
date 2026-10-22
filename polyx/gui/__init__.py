@@ -11,10 +11,10 @@ the shared widgets (:mod:`polyx.gui.widgets`), the preferences dialog
 :mod:`polyx.gui.trainer`, :mod:`polyx.gui.viewer`, :mod:`polyx.gui.labeler`) and the
 launcher also belong here and already live in this package (M005).
 
-Import contract: this package is allowed to depend on ``polyx.ml`` (the
+Import contract: this package is allowed to depend on ``polyx.core`` (the
 pure engine), but the engine must never depend back on it. The legacy
 re-export package that used to accept the old ``core`` module names is gone
-(milestone M005, slice S03): consumers import from ``polyx.ml`` and
+(milestone M005, slice S03): consumers import from ``polyx.core`` and
 ``polyx.gui`` directly. This ``__init__`` deliberately imports no submodule,
 so ``import polyx.gui`` stays cheap and Qt-free.
 """
