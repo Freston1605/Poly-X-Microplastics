@@ -1,24 +1,23 @@
-"""Traduccion de la interfaz. Espanol es el idioma fuente; ingles, el destino.
+"""Interface translation. Spanish is the source language; English, the target.
 
-Por que este esquema y no el de Qt (.ts + lupdate + .qm):
+Why this scheme instead of Qt's (.ts + lupdate + .qm):
 
-    La interfaz tiene ~2350 cadenas repartidas en 55 archivos. Con el flujo de
-    Qt hay que envolver cada una en ``tr()``, ejecutar ``lupdate``, editar el
-    ``.ts`` en Linguist y compilar a ``.qm``: cuatro pasos y dos herramientas
-    externas cada vez que se toca un texto. Aqui la **cadena en espanol es la
-    clave**, asi que traducir es agregar una entrada al diccionario y nada mas.
-    Lo que no este traducido cae al espanol en vez de aparecer vacio o con la
-    clave cruda, que es el modo de fallo habitual de los sistemas por clave.
+    The interface has ~2350 strings spread over 55 files. The Qt flow requires
+    wrapping each one in ``tr()``, running ``lupdate``, editing the ``.ts`` in
+    Linguist and compiling to ``.qm``: four steps and two external tools every
+    time a text is touched. Here the **Spanish string is the key**, so
+    translating is adding an entry to the dictionary and nothing more.
+    Anything untranslated falls back to Spanish instead of showing empty or
+    showing the raw key, which is the usual failure mode of key-based systems.
 
-Uso:
+Usage:
 
     from ..core.i18n import tr
     boton = QPushButton(tr("Abrir carpeta…"))
 
-El idioma se resuelve una vez al arrancar: ``POLYX_IDIOMA`` si esta puesta, si
-no lo guardado por el usuario, si no el idioma del sistema, y a falta de todo,
-espanol.
-"""
+The language is resolved once at startup: ``POLYX_IDIOMA`` if set, otherwise
+the user's saved choice, otherwise the system language, and failing all of
+that, Spanish."""
 from __future__ import annotations
 
 import json
@@ -27,19 +26,19 @@ import os
 from pathlib import Path
 from typing import Callable
 
-from .traducciones_en import EN as _EN, NO_TRADUCIR
+from polyx.core.translations_en import EN as _EN, NO_TRANSLATE
 
-IDIOMAS = {"es": "Español", "en": "English"}
-_ARCHIVO = Path.home() / ".polyx_idioma.json"
+LANGUAGES = {"es": "Español", "en": "English"}
+_FILE = Path.home() / ".polyx_idioma.json"
 
-_idioma = "es"
-_suscriptores: list[Callable[[str], None]] = []
+_language = "es"
+_subscribers: list[Callable[[str], None]] = []
 
 
-# ── Diccionario es -> en ────────────────────────────────────────────
-# Solo texto que ve el usuario. No se traducen nombres de clase de polimero
-# (PET/PP/LDPE), unidades ni identificadores.
-TRADUCCIONES: dict[str, str] = {
+# ── es -> en dictionary ──
+# Text shown to the user only. Polymer class names are not translated
+# (PET/PP/LDPE), units or identifiers.
+TRANSLATIONS: dict[str, str] = {
     # ── Launcher ──
     "Poly-X · Suite de microplásticos": "Poly-X · Microplastics suite",
     "● PLATAFORMA DE ANÁLISIS": "● ANALYSIS PLATFORM",
@@ -81,7 +80,7 @@ TRADUCCIONES: dict[str, str] = {
         "Inspects one image at a time with interactive µm/pixel calibration "
         "(line or circle) and precise per-particle measurement.",
 
-    # ── Vocabulario compartido ──
+    # ── Shared vocabulary ──
     "Abrir carpeta…": "Open folder…",
     "Guardar": "Save",
     "Cancelar": "Cancel",
@@ -107,7 +106,7 @@ TRADUCCIONES: dict[str, str] = {
     "Informe": "Summary",
     "Augmentación": "Augmentation",
 
-    # ── Troceado automatico (Detector › Parametros) ──
+    # ── Automatic tiling (Detector › Parameters) ──
     "Troceado automático (fotos grandes)": "Automatic tiling (large photos)",
     "Cuándo trocear:": "When to tile:",
     "Umbral (lado mayor, px):": "Threshold (longest side, px):",
@@ -128,7 +127,7 @@ TRADUCCIONES: dict[str, str] = {
         "NMS — nothing has to be cut by hand and no counts have to be added up "
         "afterwards.",
 
-    # ── Entrenador › GPU y prioridades ──
+    # ── Trainer › GPU and priorities ──
     "Maximizar imgsz para mi GPU": "Maximize imgsz for my GPU",
     "Detectar GPU / VRAM": "Detect GPU / VRAM",
     "Sugerir imgsz MÁXIMO": "Suggest MAXIMUM imgsz",
@@ -147,15 +146,15 @@ TRADUCCIONES: dict[str, str] = {
     "automático": "automatic",
 }
 
-# El grueso del diccionario vive en traducciones_en.py: aqui quedan las entradas
-# que acompanan al codigo escrito en este modulo y las de uso transversal.
-TRADUCCIONES.update(_EN)
-# Lo que se deja igual a proposito se registra como identidad, no como ausencia:
-# asi el auditor distingue "no hace falta traducir" de "falta traducir".
-TRADUCCIONES.update({s: s for s in NO_TRADUCIR})
+# Most of the dictionary lives in `traducciones_en.py`: here remain the entries
+# that go with the code written in this module and those used across modules.
+TRANSLATIONS.update(_EN)
+# What is intentionally left unchanged is recorded as identity, not as absence:
+# that way the auditor distinguishes "no translation needed" from "translation missing".
+TRANSLATIONS.update({s: s for s in NO_TRANSLATE})
 
 
-def _detectar_idioma_sistema() -> str:
+def _detect_language_system() -> str:
     try:
         cod = (locale.getlocale()[0] or locale.getdefaultlocale()[0] or "")
     except Exception:
@@ -163,68 +162,69 @@ def _detectar_idioma_sistema() -> str:
     return "es" if cod.lower().startswith("es") else "en" if cod else "es"
 
 
-def cargar() -> str:
-    """Resuelve el idioma una vez, en orden de precedencia."""
-    global _idioma
+def carry() -> str:
+    """Resolves the language once, in precedence order."""
+    global _language
     env = os.environ.get("POLYX_IDIOMA", "").strip().lower()
-    if env in IDIOMAS:
-        _idioma = env
-        return _idioma
+    if env in LANGUAGES:
+        _language = env
+        return _language
     try:
-        if _ARCHIVO.exists():
-            guardado = json.loads(_ARCHIVO.read_text(encoding="utf-8")).get("idioma")
-            if guardado in IDIOMAS:
-                _idioma = guardado
-                return _idioma
+        if _FILE.exists():
+            saved = json.loads(_FILE.read_text(encoding="utf-8")).get("idioma")
+            if saved in LANGUAGES:
+                _language = saved
+                return _language
     except Exception:
         pass
-    _idioma = _detectar_idioma_sistema()
-    return _idioma
+    _language = _detect_language_system()
+    return _language
 
 
-def idioma() -> str:
-    return _idioma
+def language() -> str:
+    return _language
 
 
-def set_idioma(codigo: str) -> None:
-    """Cambia el idioma y avisa a quien se haya suscrito.
+def set_language(code: str) -> None:
+    """Changes the language and notifies whoever subscribed.
 
-    Los widgets ya construidos no se rehacen solos: el launcher pide reiniciar.
-    Reconstruir cada ventana viva seria mas fragil que un reinicio de 2 s.
+    Already-built widgets do not rebuild themselves: the launcher asks for a
+    restart. Rebuilding every live window would be more fragile than a 2 s
+    restart.
     """
-    global _idioma
-    if codigo not in IDIOMAS:
+    global _language
+    if code not in LANGUAGES:
         return
-    _idioma = codigo
+    _language = code
     try:
-        _ARCHIVO.write_text(json.dumps({"idioma": codigo}), encoding="utf-8")
+        _FILE.write_text(json.dumps({"idioma": code}), encoding="utf-8")
     except Exception:
         pass
-    for f in list(_suscriptores):
+    for f in list(_subscribers):
         try:
-            f(codigo)
+            f(code)
         except Exception:
             pass
 
 
-def al_cambiar(funcion: Callable[[str], None]) -> None:
-    _suscriptores.append(funcion)
+def when_changing(function: Callable[[str], None]) -> None:
+    _subscribers.append(function)
 
 
-def tr(texto: str) -> str:
-    """Traduce si hay entrada; si no, devuelve el original en espanol."""
-    if _idioma == "es":
-        return texto
-    return TRADUCCIONES.get(texto, texto)
+def tr(text: str) -> str:
+    """Translates when there is an entry; otherwise returns the Spanish original."""
+    if _language == "es":
+        return text
+    return TRANSLATIONS.get(text, text)
 
 
-def cobertura() -> dict:
-    """Cuantas cadenas del diccionario hay, para saber cuanto falta.
+def coverage() -> dict:
+    """How many dictionary strings there are, to know how much is left.
 
-    No mide el total de la interfaz (eso lo da `auditar_traduccion.py`), solo
-    lo ya traducido.
+    It does not measure the interface total (that is `auditar_traduccion.py`'s
+    job), only what is already translated.
     """
-    return {"traducidas": len(TRADUCCIONES), "idioma": _idioma}
+    return {"traducidas": len(TRANSLATIONS), "idioma": _language}
 
 
-cargar()
+carry()

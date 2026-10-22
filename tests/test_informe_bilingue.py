@@ -23,14 +23,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from polyx.core.yolo_wrap import Detection
+from polyx.core.detect.protocol import Instance as Detection
 
 
 def _estado_minimo(tmp_path):
     """Un DetectorState con una deteccion medida sobre una foto sintetica."""
     import cv2
-    from polyx.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.core import morfologia
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.core import morphology
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 22, (60, 210, 240), -1)
@@ -39,8 +39,8 @@ def _estado_minimo(tmp_path):
 
     d = Detection(class_id=0, class_name="PET", conf=0.9,
                   x1=138, y1=108, x2=182, y2=152)
-    morfologia.aplicar_a_deteccion(d, img, 30.0)
-    d.numero = 1
+    morphology.apply_to_detection(d, img, 30.0)
+    d.number = 1
 
     st = DetectorState()
     st.model_slots[0] = ModelSlot(alias="m1", path=Path("fake.pt"))
@@ -54,11 +54,11 @@ def _informe(tmp_path, lang):
     os.environ["POLYX_IDIOMA"] = lang
     import polyx.core.i18n as i18n
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
     salida = tmp_path / f"informe_{lang}.html"
     rh.generate_report(_estado_minimo(tmp_path), salida,
-                       secciones=list(rh.IDS_SECCIONES))
+                       sections=list(rh.IDS_SECTIONS))
     return salida.read_text(encoding="utf-8")
 
 
@@ -72,7 +72,7 @@ def _restaurar_idioma():
         os.environ["POLYX_IDIOMA"] = previo
     import polyx.core.i18n as i18n
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
 
 
@@ -134,7 +134,9 @@ def test_el_informe_en_ingles_no_arrastra_frases_en_español(tmp_path):
     es = set(_texto_visible(_informe(tmp_path, "es")))
     en = set(_texto_visible(_informe(tmp_path, "en")))
     marca = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]|\b(el|la|los|las|del|que|con|para|"
-                       r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no)\b",
+                       r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no|"
+                       r"clase|fibras|muestra|menor|mayor|mediana|verdaderos|"
+                       r"falsos|clasificados|imagen)\b",
                        re.I)
     # Los apellidos de la bibliografia son nombres propios: no se traducen.
     sospechosas = [t for t in es & en
@@ -154,7 +156,7 @@ def test_ninguna_traduccion_se_congela_al_importar():
     import ast
     from pathlib import Path as _P
 
-    ruta = _P(__file__).resolve().parents[1] / "polyx" / "core" / "report_html.py"
+    ruta = _P(__file__).resolve().parents[1] / "polyx" / "gui" / "report_html.py"
     arbol = ast.parse(ruta.read_text(encoding="utf-8"))
     dentro_de_funcion = set()
     for nodo in arbol.body:
@@ -186,8 +188,8 @@ def test_ninguna_traduccion_se_congela_al_importar():
 def _estado_completo(tmp_path):
     """Dos carpetas, tres fotos cada una, dos modelos y ground truth."""
     import cv2
-    from polyx.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.core import morfologia
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.core import morphology
 
     clases = ["PET", "PP", "LDPE"]
     st = DetectorState()
@@ -223,9 +225,9 @@ def _estado_completo(tmp_path):
                     cid = k % 3
                     d = Detection(class_id=cid, class_name=clases[cid],
                                   conf=0.6 + 0.05 * k, x1=x1, y1=y1, x2=x2, y2=y2)
-                    morfologia.aplicar_a_deteccion(d, img, escala)
+                    morphology.apply_to_detection(d, img, escala)
                     n += 1
-                    d.numero = n
+                    d.number = n
                     # El segundo modelo se salta una caja: si los dos dieran lo
                     # mismo, la comparacion no tendria nada que enseñar.
                     if not (mi == 1 and k == 0):
@@ -245,11 +247,11 @@ def _informe_completo(tmp_path, lang):
     os.environ["POLYX_IDIOMA"] = lang
     import polyx.core.i18n as i18n
     importlib.reload(i18n)
-    import polyx.core.report_html as rh
+    import polyx.gui.report_html as rh
     importlib.reload(rh)
     salida = tmp_path / f"completo_{lang}.html"
     rh.generate_report(_estado_completo(tmp_path), salida,
-                       secciones=list(rh.IDS_SECCIONES))
+                       sections=list(rh.IDS_SECTIONS))
     return salida.read_text(encoding="utf-8")
 
 
@@ -269,7 +271,9 @@ def test_en_el_lote_completo_tampoco_se_cuela_español(tmp_path):
     es = set(_texto_visible(_informe_completo(tmp_path, "es")))
     en = set(_texto_visible(_informe_completo(tmp_path, "en")))
     marca = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]|\b(el|la|los|las|del|que|con|para|"
-                       r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no)\b",
+                       r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no|"
+                       r"clase|fibras|muestra|menor|mayor|mediana|verdaderos|"
+                       r"falsos|clasificados|imagen)\b",
                        re.I)
     sospechosas = [t for t in es & en
                    if marca.search(t) and len(t) > 2 and "(2024)" not in t]

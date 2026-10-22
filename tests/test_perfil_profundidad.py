@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from polyx.core import report_html as R
+from polyx.gui import report_html as R
 
 
 @pytest.fixture(autouse=True)
@@ -78,7 +78,7 @@ def test_con_menos_de_tres_tramos_no_se_calcula():
 # ── p por permutacion ─────────────────────────────────────────────────
 
 def test_una_tendencia_perfecta_sale_significativa():
-    p = R._p_permutacion(list(range(1, 9)), [1, 2, 3, 4, 5, 6, 7, 8])
+    p = R._p_permutation(list(range(1, 9)), [1, 2, 3, 4, 5, 6, 7, 8])
     assert p is not None and p < 0.05
 
 
@@ -86,7 +86,7 @@ def test_una_serie_sin_orden_no_sale_significativa():
     rng = np.random.default_rng(7)
     x = list(range(1, 13))
     y = list(rng.normal(size=12))
-    p = R._p_permutacion(x, y)
+    p = R._p_permutation(x, y)
     assert p is not None and p > 0.05
 
 
@@ -96,14 +96,14 @@ def test_el_p_nunca_es_cero():
     De ahi el +1 en numerador y denominador. Un cero en un paper se lee como
     imposible, y lo que hubo fue un numero finito de barajadas.
     """
-    p = R._p_permutacion(list(range(1, 11)), list(range(1, 11)), n_perm=200)
+    p = R._p_permutation(list(range(1, 11)), list(range(1, 11)), n_perm=200)
     assert p is not None and p > 0
 
 
 def test_el_mismo_lote_da_el_mismo_p():
     """La semilla es fija: un informe tiene que ser reproducible."""
     x, y = [1, 2, 3, 4, 5, 6], [3, 1, 4, 1, 5, 9]
-    assert R._p_permutacion(x, y, n_perm=500) == R._p_permutacion(x, y, n_perm=500)
+    assert R._p_permutation(x, y, n_perm=500) == R._p_permutation(x, y, n_perm=500)
 
 
 def test_con_pocos_tramos_una_tendencia_debil_no_se_declara():
@@ -113,7 +113,7 @@ def test_con_pocos_tramos_una_tendencia_debil_no_se_declara():
     una tendencia. Si esto fallara, el informe estaria declarando hallazgos que
     los datos no sostienen.
     """
-    texto = R._texto_tendencia([1, 2, 3, 4], [10, 8, 12, 11], "el conteo")
+    texto = R._text_trend([1, 2, 3, 4], [10, 8, 12, 11], "el conteo")
     assert "No se detecta tendencia" in texto
     assert "n = 4 tramos" in texto
 
@@ -122,14 +122,14 @@ def test_con_pocos_tramos_una_tendencia_debil_no_se_declara():
 
 def test_la_frase_declara_rho_p_y_n():
     """Las tres cifras juntas o la afirmacion no se puede juzgar."""
-    texto = R._texto_tendencia(list(range(1, 10)), list(range(1, 10)), "el conteo")
+    texto = R._text_trend(list(range(1, 10)), list(range(1, 10)), "el conteo")
     assert "ρ = +1.00" in texto
     assert "p = " in texto or "p < " in texto
     assert "n = 9 tramos" in texto
 
 
 def test_la_frase_dice_en_que_sentido_va():
-    subida = R._texto_tendencia(list(range(1, 10)), list(range(1, 10)), "el conteo")
-    bajada = R._texto_tendencia(list(range(1, 10)), list(range(9, 0, -1)), "el conteo")
+    subida = R._text_trend(list(range(1, 10)), list(range(1, 10)), "el conteo")
+    bajada = R._text_trend(list(range(1, 10)), list(range(9, 0, -1)), "el conteo")
     assert "crece" in subida and "decrece" not in subida
     assert "decrece" in bajada

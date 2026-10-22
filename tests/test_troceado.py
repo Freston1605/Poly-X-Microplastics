@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from polyx.core.yolo_wrap import politica_troceado
+from polyx.core.detect.yolo import policy_tiling
 
 # La foto tipica del estudio y el imgsz con que se entreno.
 ANCHO, ALTO, IMGSZ = 4096, 3072, 2080
@@ -26,7 +26,7 @@ ANCHO, ALTO, IMGSZ = 4096, 3072, 2080
 
 def test_forzar_el_troceo_no_encoge_la_tesela():
     """El fallo, en una linea: la tesela tiene que ser del orden de imgsz."""
-    plan = politica_troceado(ANCHO, ALTO, IMGSZ, umbral_px=0, tile=0)
+    plan = policy_tiling(ANCHO, ALTO, IMGSZ, threshold_px=0, tile=0)
     assert plan is not None
     assert plan["tile"] >= IMGSZ // 2, (
         f"tesela de {plan['tile']} px: se reescalaria "
@@ -35,7 +35,7 @@ def test_forzar_el_troceo_no_encoge_la_tesela():
 
 def test_forzar_el_troceo_no_dispara_el_numero_de_teselas():
     """El otro sintoma. 336 teselas era una espera de minutos por foto."""
-    plan = politica_troceado(ANCHO, ALTO, IMGSZ, umbral_px=0, tile=0)
+    plan = policy_tiling(ANCHO, ALTO, IMGSZ, threshold_px=0, tile=0)
     assert plan["n_tiles"] <= 20, f"{plan['n_tiles']} teselas es inviable por foto"
 
 
@@ -45,22 +45,22 @@ def test_forzado_y_automatico_dan_una_geometria_parecida():
     Si las dos rutas dieran geometrias distintas, el numero de particulas
     dependeria de una casilla de la interfaz y no de la foto.
     """
-    forzado = politica_troceado(ANCHO, ALTO, IMGSZ, umbral_px=0, tile=0)
-    automatico = politica_troceado(ANCHO, ALTO, IMGSZ, umbral_px=2000, tile=0)
+    forzado = policy_tiling(ANCHO, ALTO, IMGSZ, threshold_px=0, tile=0)
+    automatico = policy_tiling(ANCHO, ALTO, IMGSZ, threshold_px=2000, tile=0)
     assert automatico is not None
     assert forzado["n_tiles"] == automatico["n_tiles"]
     assert abs(forzado["tile"] - automatico["tile"]) <= 0.1 * automatico["tile"]
 
 
 def test_un_tile_pedido_a_mano_se_respeta():
-    plan = politica_troceado(ANCHO, ALTO, IMGSZ, umbral_px=0, tile=1280)
+    plan = policy_tiling(ANCHO, ALTO, IMGSZ, threshold_px=0, tile=1280)
     assert plan["tile"] == 1280
 
 
 @pytest.mark.parametrize("umbral", [0, 2000])
 def test_una_foto_pequeña_forzada_sigue_troceandose(umbral):
     """Forzar tiene que forzar: con umbral 0 no hay foto que se libre."""
-    plan = politica_troceado(1200, 900, IMGSZ, umbral_px=umbral, tile=0)
+    plan = policy_tiling(1200, 900, IMGSZ, threshold_px=umbral, tile=0)
     if umbral == 0:
         assert plan is not None
     else:

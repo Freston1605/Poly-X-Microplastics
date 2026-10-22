@@ -18,29 +18,29 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from polyx.core import calibracion as C
-from polyx.core import morfologia as M
-from polyx.core.yolo_wrap import Detection
+from polyx.core import calibration as C
+from polyx.core import morphology as M
+from polyx.core.detect.yolo import Detection
 
 
 # ── El anillo de la placa ──────────────────────────────────────────────
 
 def _placa(um_por_px=33.9, cx=2054.0, cy=1534.0, radio=1471.0):
     """La calibracion real de 10.3x.jpg, que es donde se vio el fallo."""
-    return C.Calibracion(um_por_px=um_por_px, origen=C.ORIGEN_PLACA,
-                         cx=cx, cy=cy, radio_px=radio)
+    return C.Calibration(um_por_px=um_por_px, origin=C.ORIGIN_PLATE,
+                         cx=cx, cy=cy, radius_px=radio)
 
 
 def test_una_caja_sobre_el_aro_se_reconoce():
     cal = _placa()
     # A ras del borde externo, que es donde el detector engancha el aro.
-    x = cal.cx + cal.radio_px * 0.99
-    assert C.sobre_el_anillo(cal, x - 25, cal.cy - 25, x + 25, cal.cy + 25)
+    x = cal.cx + cal.radius_px * 0.99
+    assert C.about_the_ring(cal, x - 25, cal.cy - 25, x + 25, cal.cy + 25)
 
 
 def test_una_particula_del_centro_no_se_aparta():
     cal = _placa()
-    assert not C.sobre_el_anillo(cal, cal.cx - 20, cal.cy - 20,
+    assert not C.about_the_ring(cal, cal.cx - 20, cal.cy - 20,
                                  cal.cx + 20, cal.cy + 20)
 
 
@@ -52,8 +52,8 @@ def test_una_particula_pegada_al_borde_util_se_conserva():
     fallo peor que el que se estaba arreglando.
     """
     cal = _placa()
-    x = cal.cx + cal.radio_px * 0.93          # dentro del area util
-    assert not C.sobre_el_anillo(cal, x - 40, cal.cy - 40, x + 40, cal.cy + 40)
+    x = cal.cx + cal.radius_px * 0.93          # dentro del area util
+    assert not C.about_the_ring(cal, x - 40, cal.cy - 40, x + 40, cal.cy + 40)
 
 
 def test_sin_circulo_ajustado_no_se_aparta_nada():
@@ -62,9 +62,9 @@ def test_sin_circulo_ajustado_no_se_aparta_nada():
     Pasa con la escala tecleada a mano o heredada del indice: hay um/px pero no
     hay circulo. Marcar por si acaso seria inventarse un descarte.
     """
-    a_mano = C.Calibracion(um_por_px=30.0, origen=C.ORIGEN_MANUAL)
-    assert not C.sobre_el_anillo(a_mano, 0, 0, 50, 50)
-    assert C.fraccion_del_radio(a_mano, 10, 10) is None
+    a_mano = C.Calibration(um_por_px=30.0, origin=C.ORIGIN_MANUAL)
+    assert not C.about_the_ring(a_mano, 0, 0, 50, 50)
+    assert C.radius_fraction(a_mano, 10, 10) is None
 
 
 def test_el_area_util_deja_fuera_la_pared_del_anillo():
@@ -72,7 +72,7 @@ def test_el_area_util_deja_fuera_la_pared_del_anillo():
 
     El corte tiene que quedar por dentro de eso, o el aro entraria igual.
     """
-    assert C.FRACCION_AREA_UTIL < 0.960
+    assert C.FRACTION_AREA_USEFUL < 0.960
 
 
 # ── La recta de Feret en una particula concava ─────────────────────────
@@ -95,11 +95,11 @@ def _grumo_con_muesca():
 def test_la_recta_de_feret_puede_salirse_y_se_declara_cuanto():
     """No se corrige la medida: se mide cuanto sale, para poder decirlo."""
     img, d = _grumo_con_muesca()
-    _, m = M.dibujar_medicion(img, d)
+    _, m = M.draw_measurement(img, d)
     assert m is not None and m.ok
-    assert m.metodo.startswith("Feret"), (
-        f"la figura tiene que medirse por Feret para probar esto, no por {m.metodo}")
-    assert m.feret_fuera > 0.05, (
+    assert m.method.startswith("Feret"), (
+        f"la figura tiene que medirse por Feret para probar esto, no por {m.method}")
+    assert m.feret_outside > 0.05, (
         "en esta figura la cuerda cruza la muesca; deberia declararlo")
 
 
@@ -109,9 +109,9 @@ def test_en_una_particula_convexa_la_recta_no_se_sale():
     cv2.circle(img, (100, 100), 45, (60, 210, 240), -1)
     d = Detection(class_id=0, class_name="PET", conf=0.9,
                   x1=55, y1=55, x2=145, y2=145)
-    _, m = M.dibujar_medicion(img, d)
+    _, m = M.draw_measurement(img, d)
     assert m is not None and m.ok
-    assert m.feret_fuera < 0.02
+    assert m.feret_outside < 0.02
 
 
 def test_el_tramo_de_fuera_se_dibuja_a_trazos():
@@ -121,14 +121,14 @@ def test_el_tramo_de_fuera_se_dibuja_a_trazos():
     tramo se dibujara continuo habria uno por columna, y a trazos hay menos.
     """
     img, d = _grumo_con_muesca()
-    par, m = M.dibujar_medicion(img, d, zoom=1)
+    par, m = M.draw_measurement(img, d, zoom=1)
     assert par is not None
     # La mitad derecha es la que lleva las marcas.
     vis = par[:, par.shape[1] // 2:]
     # Amarillo del dibujo: (0, 210, 255) en BGR.
     amarillo = ((vis[:, :, 0] < 80) & (vis[:, :, 1] > 150) & (vis[:, :, 2] > 200))
     assert amarillo.any(), "no se dibujo la recta"
-    assert m.feret_fuera > 0.05
+    assert m.feret_outside > 0.05
 
 
 def test_el_corte_del_area_util_no_se_lleva_particulas_reales():
@@ -142,7 +142,7 @@ def test_el_corte_del_area_util_no_se_lleva_particulas_reales():
     """
     cal = _placa()
     mas_periferica = 0.828
-    x = cal.cx + cal.radio_px * mas_periferica
-    assert not C.sobre_el_anillo(cal, x - 30, cal.cy - 30, x + 30, cal.cy + 30)
-    assert C.FRACCION_AREA_UTIL > mas_periferica + 0.10, (
+    x = cal.cx + cal.radius_px * mas_periferica
+    assert not C.about_the_ring(cal, x - 30, cal.cy - 30, x + 30, cal.cy + 30)
+    assert C.FRACTION_AREA_USEFUL > mas_periferica + 0.10, (
         "el corte se acerco demasiado a la particula real mas periferica")

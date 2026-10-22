@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 
-import polyx.core.plataforma as P
+import polyx.core.platform as P
 
 
 def _recargar_como(plataforma: str, maquina: str = "x86_64"):
@@ -30,13 +30,13 @@ def _recargar_como(plataforma: str, maquina: str = "x86_64"):
         # Se devuelven los datos ya extraidos: fuera del contexto el modulo
         # se recarga al estado real y las funciones dejarian de mentir.
         return {
-            "es_mac": P.ES_MAC,
-            "es_windows": P.ES_WINDOWS,
-            "es_linux": P.ES_LINUX,
-            "arquitectura": P.arquitectura_mac(),
-            "sistema": P.nombre_sistema(),
-            "actualizador": P.nombre_actualizador(),
-            "rotulo": P.etiqueta_dispositivos(),
+            "es_mac": P.IS_MAC,
+            "es_windows": P.IS_WINDOWS,
+            "es_linux": P.IS_LINUX,
+            "arquitectura": P.architecture_mac(),
+            "sistema": P.name_system(),
+            "actualizador": P.name_updater(),
+            "rotulo": P.label_devices(),
         }
 
 
@@ -93,50 +93,50 @@ def test_el_rotulo_no_ofrece_gpu_donde_no_la_hay():
 def test_dispositivo_disponible_devuelve_algo_usable():
     """Sea cual sea la maquina, tiene que salir un valor que YOLO acepte.
     Nunca cadena vacia ni None: eso reventaria la inferencia."""
-    d = P.dispositivo_disponible()
-    assert d in (P.DISPOSITIVO_CUDA, P.DISPOSITIVO_MPS, P.DISPOSITIVO_CPU)
+    d = P.device_available()
+    assert d in (P.DEVICE_CUDA, P.DEVICE_MPS, P.DEVICE_CPU)
 
 
 def test_sin_torch_cae_a_cpu_en_vez_de_reventar():
     """Un entorno a medio instalar no debe tumbar el arranque: sin torch la
     respuesta correcta es 'cpu', no una excepcion."""
     with mock.patch.dict(sys.modules, {"torch": None}):
-        assert P.dispositivo_disponible() == P.DISPOSITIVO_CPU
+        assert P.device_available() == P.DEVICE_CPU
 
 
 def test_toda_descripcion_de_dispositivo_es_legible():
     for d in ("0", "mps", "cpu"):
-        assert P.descripcion_dispositivo(d)
-        assert d != P.descripcion_dispositivo(d), "debe explicar, no repetir"
+        assert P.description_device(d)
+        assert d != P.description_device(d), "debe explicar, no repetir"
 
 
 # ── Abrir archivos ──
 def test_abrir_algo_que_no_existe_devuelve_False_sin_lanzar():
     """Se usa tras generar un informe. Que no se abra el visor es molesto;
     que tumbe el analisis recien terminado, no es aceptable."""
-    assert P.abrir_en_el_sistema("no_existe_este_archivo_12345.txt") is False
+    assert P.open_in_system("no_existe_este_archivo_12345.txt") is False
 
 
 def test_abrir_usa_el_comando_de_cada_sistema(tmp_path):
     archivo = tmp_path / "x.txt"
     archivo.write_text("hola", encoding="utf-8")
 
-    with mock.patch.object(P, "ES_WINDOWS", False), \
-         mock.patch.object(P, "ES_MAC", True), \
+    with mock.patch.object(P, "IS_WINDOWS", False), \
+         mock.patch.object(P, "IS_MAC", True), \
          mock.patch("subprocess.Popen") as popen:
-        assert P.abrir_en_el_sistema(archivo) is True
+        assert P.open_in_system(archivo) is True
         assert popen.call_args[0][0][0] == "open"
 
-    with mock.patch.object(P, "ES_WINDOWS", False), \
-         mock.patch.object(P, "ES_MAC", False), \
+    with mock.patch.object(P, "IS_WINDOWS", False), \
+         mock.patch.object(P, "IS_MAC", False), \
          mock.patch("subprocess.Popen") as popen:
-        assert P.abrir_en_el_sistema(archivo) is True
+        assert P.open_in_system(archivo) is True
         assert popen.call_args[0][0][0] == "xdg-open"
 
 
 def test_si_el_comando_falla_devuelve_False_sin_lanzar(tmp_path):
     archivo = tmp_path / "x.txt"
     archivo.write_text("hola", encoding="utf-8")
-    with mock.patch.object(P, "ES_WINDOWS", False), \
+    with mock.patch.object(P, "IS_WINDOWS", False), \
          mock.patch("subprocess.Popen", side_effect=OSError("no hay xdg-open")):
-        assert P.abrir_en_el_sistema(archivo) is False
+        assert P.open_in_system(archivo) is False

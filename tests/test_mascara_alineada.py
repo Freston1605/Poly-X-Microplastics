@@ -20,9 +20,9 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core import morfologia as M
-from polyx.core.report_html import _ficha_particula
-from polyx.core.yolo_wrap import Detection
+from polyx.core import morphology as M
+from polyx.gui.report_html import _record_particle
+from polyx.core.detect.protocol import Instance as Detection
 
 
 def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
@@ -37,8 +37,8 @@ def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
     cv2.imwrite(str(ruta), img)
     d = Detection(class_id=0, class_name="PET", conf=0.9,
                   x1=cx - r, y1=cy - r, x2=cx + r, y2=cy + r)
-    d.numero = 1
-    M.aplicar_a_deteccion(d, img, 30.0)
+    d.number = 1
+    M.apply_to_detection(d, img, 30.0)
     return img, ruta, d
 
 
@@ -57,7 +57,7 @@ def _centroides(vis):
 
 def test_dibujar_medicion_pone_el_contorno_sobre_la_particula(tmp_path):
     img, _, d = _foto_con_particula(tmp_path)
-    par, m = M.dibujar_medicion(img, d, zoom=1)
+    par, m = M.draw_measurement(img, d, zoom=1)
     assert par is not None and m.ok
     vis = par[:, par.shape[1] // 2:]
     c_verde, c_part = _centroides(vis)
@@ -73,7 +73,7 @@ def test_la_ficha_del_informe_pone_el_contorno_sobre_la_particula(tmp_path):
     contorno salia desplazado unos 10 px sobre una particula de 68 px.
     """
     _, ruta, d = _foto_con_particula(tmp_path)
-    html = _ficha_particula(d, ruta, 30.0, "1 prueba")
+    html = _record_particle(d, ruta, 30.0, "1 prueba")
     assert html, "la ficha no se genero"
     m64 = re.search(r"data:image/png;base64,([A-Za-z0-9+/=]+)", html)
     assert m64, "la ficha no lleva imagen"
@@ -101,12 +101,12 @@ def test_el_margen_del_recorte_es_el_mismo_en_los_dos_sitios(lado_x, lado_y):
     distintas, que es donde min y max se separan.
     """
     import inspect
-    from polyx.core import report_html
+    from polyx.gui import report_html
 
-    fuente = inspect.getsource(report_html._ficha_particula)
+    fuente = inspect.getsource(report_html._record_particle)
     assert "margen_de_caja(" in fuente, (
         "la ficha volvio a calcularse su propio margen; tiene que usar "
         "margen_de_caja() o el contorno saldra corrido")
     # Y que ese margen no sea el que se usaba antes.
-    assert M.margen_de_caja(lado_x, lado_y) == int(
+    assert M.box_margin(lado_x, lado_y) == int(
         max(3, round(0.50 * max(lado_x, lado_y))))

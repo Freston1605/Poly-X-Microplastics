@@ -1,25 +1,28 @@
-# Poly-X — instrucciones para agentes
+# Poly-X — instructions for agents
 
-**Toda la documentación del proyecto está en [CLAUDE.md](CLAUDE.md).** Léelo
-antes de tocar nada: arquitectura, módulos, flujo de datos, clases clave,
-paleta, parámetros y las decisiones que ya se tomaron y por qué.
+**All project documentation is in [CLAUDE.md](CLAUDE.md).** Read it before
+touching anything: architecture, modules, data flow, key classes,
+palette, parameters, and the decisions already made and why.
 
-Este archivo existe solo porque algunas herramientas buscan `AGENTS.md` por
-convención. **No dupliques contenido aquí.**
+This file exists only because some tools look for `AGENTS.md` by
+convention. **Do not duplicate content here.**
 
-> Hasta septiembre de 2026 este archivo era una copia recortada de CLAUDE.md, y
-> se quedó atrás: seguía diciendo que el Etiquetador y el Visor estaban «en
-> construcción» —llevan cerrados desde agosto— y que el PP fluoresce naranjo,
-> cuando la medición mostró que es amarillo verdoso. Mantener dos copias del
-> mismo documento no sale gratis: una de las dos miente, y no se sabe cuál.
+> Until September 2026 this file was a trimmed copy of CLAUDE.md, and
+> it fell behind: it still said the Labeller and the Viewer were "under
+> construction" —both shipped in August— and that PP fluoresces orange,
+> when measurement showed it is yellowish-green. Keeping two copies of
+> the same document is not free: one of them lies, and you cannot tell
+> which.
 
-## Lo mínimo antes de escribir código
+## The minimum before writing code
 
-- **Comentarios y variables en español**; docstrings en inglés.
-- **Rutas siempre con `pathlib.Path`**, nunca strings.
-- **Colores desde `polyx/core/theme.py`** (`T.ACCENT`, `T.OK`…), nunca a mano.
-- **Nada específico de un sistema operativo fuera de `polyx/core/plataforma.py`.**
-- Imágenes con `cv2.imdecode`/`imencode` sobre `np.fromfile`, no `imread`/`imwrite`:
-  en Windows estos fallan en silencio con rutas acentuadas.
-- Los tests se corren con `.venv\Scripts\python.exe -m pytest -q` y **pasan los
-  128** antes de dar nada por terminado.
+- **Code comments, docstrings and identifiers in English** — Spanish
+  only survives inside the `tr()` layer and the UI strings it wraps.
+- **Paths always with `pathlib.Path`**, never bare strings.
+- **Colors from `polyx/gui/theme.py`** (`T.ACCENT`, `T.OK`…), never by hand.
+- **Nothing OS-specific outside `polyx/model/plataforma.py`.**
+- Images with `cv2.imdecode`/`imencode` over `np.fromfile`, not `imread`/`imwrite`:
+  on Windows those fail silently with accented paths.
+- Run the tests with `.venv\Scripts\python.exe -m pytest -q` and wait
+  until the **full suite passes with zero failures and zero skips**
+  before calling anything done.

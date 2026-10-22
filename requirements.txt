@@ -8,9 +8,16 @@ opencv-python==4.10.0.84
 # numpy 2.x el entrenamiento corre bien y muere al validar la primera epoca, que
 # es el peor momento para descubrirlo. Si se sube ultralytics, revisar esto.
 numpy==1.26.4
+# Pillow 12.3.0 es el pin del hardening M001: es la version sobre la que la
+# suite completa pasa verde en esta maquina y corrige los CVEs de Pillow
+# anteriores a la serie 12.
 Pillow==12.3.0
 matplotlib==3.9.2
 pyqtgraph==0.13.7
 PyYAML==6.0.2
 # El Entrenador consulta la RAM libre para decidir si el dataset cabe en cache.
 psutil==6.0.0
+# Codemod del traductor de identificadores/comentarios/docstrings (M006): los
+# tests de anglicismo y de traduccion (test_*_ingles, test_translate_*) lo
+# importan en la suite. Sin el pin el CI no recolecta esos modulos.
+libcst==1.9.0
