@@ -53,6 +53,21 @@ def capturar() -> dict[str, str]:
     """
     import polyx.gui.report_html as rh
 
+    # The report embeds a machine-equipment table (_team) whose live values
+    # (OS kernel, RAM, GPU, torch version) differ per runner. The byte
+    # baseline is captured against the PINNED stack (CI: Python 3.11 +
+    # matplotlib 3.9.2), so the equipment rows are pinned to canonical values
+    # here and in tests/test_render_reporte_benigno.py (fixture
+    # _idioma_del_baseline_y_logs_muertos). Never capture with live rows:
+    # the fixture would not reproduce them on any other machine.
+    rh._team = lambda: [
+        ("Operating system", "Linux"),
+        ("Processor", "pinned"),
+        ("RAM", "16.0 GB"),
+        ("GPU", "not available"),
+        ("PyTorch", "pinned"),
+    ]
+
     estados = {
         "benigna": estado_benigno(),
         "hostil": estado_hostil(),

@@ -17,3 +17,7 @@ pyqtgraph==0.13.7
 PyYAML==6.0.2
 # El Entrenador consulta la RAM libre para decidir si el dataset cabe en cache.
 psutil==6.0.0
+# Codemod del traductor de identificadores/comentarios/docstrings (M006): los
+# tests de anglicismo y de traduccion (test_*_ingles, test_translate_*) lo
+# importan en la suite. Sin el pin el CI no recolecta esos modulos.
+libcst==1.9.0

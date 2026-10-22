@@ -38,7 +38,7 @@ BASELINE_SHA = BASELINE / "informe.sha256"
 # arbol de decision junto al sha256 -- el digest localiza QUE bytes cambiaron,
 # este pin da el tamano esperado sin abrir el archivo. La procedencia completa
 # esta en tests/fixtures/baseline_informe/README.md.
-TAMANO_BASELINE = 139503
+TAMANO_BASELINE = 137575
 
 
 @pytest.fixture(autouse=True)
@@ -78,6 +78,20 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)
+
+    # Pin the machine-equipment table to the same canonical rows the
+    # baseline was captured with (scripts/capturar_fixtures_informe.py sets
+    # the identical lambda): the report's _team() reads live OS/RAM/GPU/
+    # torch values that differ per runner, and a byte gate cannot depend on
+    # them. Production keeps the live rows; only this fixture and the
+    # capture script override the function.
+    rh._team = lambda: [
+        ("Operating system", "Linux"),
+        ("Processor", "pinned"),
+        ("RAM", "16.0 GB"),
+        ("GPU", "not available"),
+        ("PyTorch", "pinned"),
+    ]
 
     logger = obs.logger_for("detector")
     handlers_previos = logger.handlers[:]

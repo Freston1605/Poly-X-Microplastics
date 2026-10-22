@@ -8,11 +8,12 @@ The benign report snapshot under `benigna/` is THE gate the report render
 must keep byte-identical. This README records who captured it, when it was
 re-verified or recaptured, and why it must not be regenerated casually.
 
-Current render metadata (recaptured live in M006/S05):
-    benign sha256 = bbb1c7a5f79ea0a606a96042d51669f3f87e607dc9374b9f1c7a3fd8d905edde
-    benign bytes  = 139503
-    hostile sha256 = fc175d4fdfc9f4643ce04a7be272a0cf44d3c4e514b806ad0fbc7513cf42ab0f
-    hostile bytes  = 139758
+Current render metadata (recaptured on the PINNED stack — Python 3.11,
+matplotlib 3.9.2, torch present, equipment rows pinned, see below):
+    benign sha256 = bf1cf07fb916139962e10610bdbc06015accf95baa232986e53fdb7075cd7648
+    benign bytes  = 137575
+    hostile sha256 = 7c08e6f35d27460217598ff32c88248484ac34230b6d77d54b946a06186520bb
+    hostile bytes  = 137830
 """
 ```
 
@@ -49,6 +50,22 @@ English report headings.
   with their `(µm)` units. The runtime `tr()` dictionary, the `SECTIONS`
   titles, the report prose and the `metrics.py` UI labels were not changed.
   The M004 values `bf483e...` / 139512 B are **superseded**.
+- **Recapture on the pinned stack (PR #4, refactor branch):** the gate was
+  first exercised under CI (Python 3.11 + the exact `requirements.txt` pins,
+  including `matplotlib==3.9.2`, with torch present via ultralytics), and it
+  failed: the previous snapshots were captured on the dev machine (system
+  Python 3.14, matplotlib 3.11.2, no torch), so both the embedded figure
+  PNG bytes and the live machine-equipment rows differed.
+  The snapshots were regenerated with `scripts/capturar_fixtures_informe.py`
+  on the pinned stack. The capture script and
+  `tests/test_render_reporte_benigno.py` pin the machine-equipment table
+  (`rh._team`) to the same canonical rows, so the byte gate compares an
+  environment-independent document; the figure bytes are the pinned
+  matplotlib's. **The byte-identity gate is now defined against the pinned
+  venv** (the repo's own AGENTS.md/CONTRIBUTING rule: run the suite in
+  `.venv` built from `requirements.txt`). A dev run with a different
+  matplotlib (e.g. system Python 3.14) may fail the figure-bearing byte
+  tests by design until it runs the pinned venv.
 
 ## Language contract
 
