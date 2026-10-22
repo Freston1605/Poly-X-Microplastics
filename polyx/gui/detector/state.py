@@ -10,9 +10,9 @@ from typing import List, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.ml.yolo_wrap import Detection, YoloModel
-from polyx.ml.i18n import tr
-from polyx.ml.plataforma import device_available
+from polyx.core.detect.yolo import Detection, YoloModel
+from polyx.core.i18n import tr
+from polyx.core.platform import device_available
 
 
 # ────────────────────────────────────────────────────────────────────

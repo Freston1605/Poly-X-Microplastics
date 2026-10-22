@@ -164,6 +164,10 @@ ALLOWLIST: frozenset = frozenset(
         "detecciones",  # nombre de parámetro en Args: de asignacion.asignar
         # los literales de UI en español van dentro de comillas invertidas y
         # se quitan antes del escaneo
+        "normalized",
+        "normalize",
+        "normalization",
+        "normalizer",
     }
 )
 

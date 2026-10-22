@@ -45,8 +45,8 @@ CAPTURAS = [
     ("18_ent_exportar",        "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 7, 700),
     ("19_ent_informe",         "polyx.gui.trainer",  "TrainerWindow",  (1360, 880), 8, 700),
 
-    ("20_etiquetador",         "polyx.gui.etiquetador", "LabelerWindow",  (1420, 900), None, 1000),
-    ("21_visor",               "polyx.gui.visor",       "ViewerWindow",    (1440, 920), None, 1000),
+    ("20_etiquetador",         "polyx.gui.labeler", "LabelerWindow",  (1420, 900), None, 1000),
+    ("21_visor",               "polyx.gui.viewer",       "ViewerWindow",    (1440, 920), None, 1000),
 ]
 
 

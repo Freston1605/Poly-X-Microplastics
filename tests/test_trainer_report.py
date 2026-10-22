@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from polyx.gui.trainer.pages.informe import build_training_report
+from polyx.gui.trainer.pages.summary import build_training_report
 
 # A 1x1 transparent PNG — small valid PNG bytes for figure fixtures.
 # Written with Path.write_bytes, never cv2.imwrite (fails silently on

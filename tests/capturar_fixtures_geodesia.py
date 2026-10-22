@@ -49,8 +49,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.ml import morfologia  # noqa: E402
-from polyx.ml.yolo_wrap import read_yolo_txt  # noqa: E402
+from polyx.core import morphology  # noqa: E402
+from polyx.core.detect.yolo import read_yolo_txt  # noqa: E402
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.
@@ -200,7 +200,7 @@ def capturar(runs: Path, fotos: Path, destino: Path,
             for idx, det in enumerate(dets):
                 resumen["cajas"] += 1
                 try:
-                    mascara = morfologia.segment(
+                    mascara = morphology.segment(
                         img_bgr, det.x1, det.y1, det.x2, det.y2)
                 except Exception as exc:  # noqa: BLE001
                     motivo = f"{SK_ERROR} ({type(exc).__name__})"

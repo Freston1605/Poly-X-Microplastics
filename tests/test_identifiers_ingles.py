@@ -49,8 +49,8 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is not
 # silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "polyx/model/morfologia.py",
-    "polyx/model/observabilidad.py",
+    "polyx/core/measure/morphology.py",
+    "polyx/core/provenance/observability.py",
     "polyx/gui/report_html.py",
     "polyx/gui/detector/state.py",
 ]
@@ -64,32 +64,32 @@ _UNIQUE_IDENTIFIER_FLOOR = 3000
 # must be gone from the module that defines them.
 _PUBLIC_SURFACE = [
     (
-        "polyx/model/calibracion.py",
+        "polyx/core/measure/calibration.py",
         ("Calibration",),
         ("Calibracion",),
     ),
     (
-        "polyx/model/morfologia.py",
+        "polyx/core/measure/morphology.py",
         ("Morphology", "segment", "measure"),
         ("Morfologia", "segmentar", "medir"),
     ),
     (
-        "polyx/model/observabilidad.py",
+        "polyx/core/provenance/observability.py",
         ("logger_for",),
         ("logger_para",),
     ),
     (
-        "polyx/gui/visor/window.py",
+        "polyx/gui/viewer/window.py",
         ("ViewerWindow",),
         ("VisorWindow",),
     ),
     (
-        "polyx/gui/detector/pages/comparar.py",
+        "polyx/gui/detector/pages/compare.py",
         ("ComparePage",),
         ("CompararPage",),
     ),
     (
-        "polyx/gui/detector/pages/parametros.py",
+        "polyx/gui/detector/pages/parameters.py",
         ("ParametersPage",),
         ("ParametrosPage",),
     ),

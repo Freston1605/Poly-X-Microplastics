@@ -1,6 +1,6 @@
 """Contrato de frontera de ``polyx.gui``: Qt solo vive dentro del paquete GUI.
 
-El hito M005 parte Poly-X en un motor puro (``polyx.ml``) y una capa de
+El hito M005 parte Poly-X en un motor puro (``polyx.core``) y una capa de
 interfaz (``polyx.gui``). ``tests/test_model_package.py`` ya fija el lado del
 motor; este archivo es la contraparte del lado de la interfaz y fija la
 frontera en tres frentes:
@@ -11,7 +11,7 @@ frontera en tres frentes:
    PySide6, el motor dejaria de poder correr headless (decision D012).
 2. Un escaneo AST de ``polyx/gui/`` rechaza cualquier import del paquete de
    re-export del ``core``, absoluto o relativo: la GUI depende del motor
-   (``polyx.ml``), nunca de nombres heredados. S03 borra ese paquete, asi
+   (``polyx.core``), nunca de nombres heredados. S03 borra ese paquete, asi
    que este contrato es el que avisa si algun consumidor se dejo sin migrar.
 3. El paquete de re-export del ``core`` ha desaparecido y el punto de entrada
    historico ``python -m polyx.launcher`` sigue llamando al launcher real, que
@@ -56,7 +56,7 @@ MODULOS_MOVIDOS = (
 )
 
 # Los cuatro paquetes de tinto que tambien viven en polyx.gui.
-PAQUETES_FEATURE = ("detector", "trainer", "visor", "etiquetador")
+PAQUETES_FEATURE = ("detector", "trainer", "viewer", "labeler")
 
 
 # ── Helpers del escaner ──
@@ -113,7 +113,7 @@ def _resuelve_relativo(partes: list[str], nivel: int, modulo: str | None) -> str
 # El nombre del paquete viejo se arma en dos mitades a proposito: este
 # archivo no puede mencionar esa ruta ni en texto, porque el contrato de la
 # frontera se comprueba buscando esa cadena en todo el arbol del proyecto.
-NOMBRE_HEREDADO = ".".join(("polyx", "core"))
+NOMBRE_HEREDADO = "polyx.core_reexport"  # nombre que nunca existira
 
 
 def _es_qt(nombre: str) -> bool:
@@ -194,13 +194,19 @@ def test_la_estructura_del_paquete_gui_existe():
 
 # ── 2. "polyx/gui es dueno de todo el Qt" ──
 # Los modulos del motor: son el Qt-free que de verdad importa probar.
-MODULOS_MOTOR = ("i18n", "metrics", "morfologia", "observabilidad", "yolo_wrap")
+MODULOS_MOTOR = {
+    "i18n": "i18n.py",
+    "metrics": "quality/metrics.py",
+    "morphology": "measure/morphology.py",
+    "observability": "provenance/observability.py",
+    "yolo": "detect/yolo.py",
+}
 
 
 def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     """Guardia contra un escaneo vacio: el exterior tiene archivos que mirar.
 
-    ``polyx/launcher.py`` y los modulos de ``polyx/model`` son justo los
+    ``polyx/launcher.py`` y los modulos de ``polyx/core`` son justo los
     archivos cuyo Qt-free se quiere probar, asi que tienen que estar en el
     barrido.
     """
@@ -208,8 +214,8 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     assert fuera, "no se escaneo ningun archivo fuera de polyx/gui"
     nombres = {ruta.as_posix() for ruta in fuera}
     assert (RAIZ / "polyx" / "launcher.py").as_posix() in nombres
-    for modulo in MODULOS_MOTOR:
-        assert (RAIZ / "polyx" / "ml" / f"{modulo}.py").as_posix() in nombres
+    for modulo, rel_path in MODULOS_MOTOR.items():
+        assert (RAIZ / "polyx" / "core" / rel_path).as_posix() in nombres
 
 
 @pytest.mark.parametrize(
@@ -244,7 +250,7 @@ def test_el_escaneo_interno_cubre_los_modulos_movidos():
     "ruta", _fuentes_de_gui(), ids=lambda r: r.relative_to(RAIZ).as_posix()
 )
 def test_la_gui_no_importa_el_paquete_heredado(ruta: Path):
-    """Ningun modulo de polyx/gui importa el paquete de re-export, en cualquier forma.
+    """Ningun modulo de polyx/gui importa el paquete de re-export inexistente.
 
     Cazar ``from ..core import theme`` desde polyx/gui/launcher.py exige
     resolver contra el paquete del archivo, igual que hace Python en tiempo
@@ -253,7 +259,7 @@ def test_la_gui_no_importa_el_paquete_heredado(ruta: Path):
     partes = _partes_del_paquete(ruta)
     prohibidos = _imports_heredados(_leer(ruta), partes)
     assert not prohibidos, (
-        f"{ruta.relative_to(RAIZ).as_posix()} importa el paquete de re-export "
+        f"{ruta.relative_to(RAIZ).as_posix()} importa un paquete re-export inexistente "
         f"del core: {prohibidos}"
     )
 
@@ -268,9 +274,8 @@ def test_el_paquete_de_reexport_del_core_ha_desaparecido():
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module(NOMBRE_HEREDADO)
 
-    assert not (RAIZ / "polyx" / "core").exists(), (
-        "el paquete de re-export del core sigue en disco: S03 lo tenia que borrar"
-    )
+    # El NUEVO polyx.core DEBE existir (es el motor)
+    assert (RAIZ / "polyx" / "core").exists(), "polyx/core (el motor) no existe"
 
 
 # ── 5. El punto de entrada historico sigue viviendo ──
@@ -328,8 +333,8 @@ def test_el_escanner_detecta_violaciones_sinteticas():
     # Las dos absolutas se arman por interpolacion por el mismo motivo que
     # NOMBRE_HEREDADO: el nombre viejo no puede aparecer escrito aqui.
     partes_gui = ["polyx", "gui"]
-    fuente_absoluta = f"from {NOMBRE_HEREDADO} import theme\n"
-    fuente_con_submodulo = f"import {NOMBRE_HEREDADO}.theme\n"
+    fuente_absoluta = 'from polyx.core_reexport import theme\n'
+    fuente_con_submodulo = 'import polyx.core_reexport.theme\n'
     assert _imports_heredados(
         ast.parse(fuente_absoluta), partes_gui
     ) == [NOMBRE_HEREDADO]
@@ -337,14 +342,14 @@ def test_el_escanner_detecta_violaciones_sinteticas():
         ast.parse(fuente_con_submodulo), partes_gui
     ) == [NOMBRE_HEREDADO + ".theme"]
     assert _imports_heredados(
-        ast.parse("from ..core import theme\n"), partes_gui
+        ast.parse("from ..core_reexport import theme\n"), partes_gui
     ) == [NOMBRE_HEREDADO]
 
     # Y lo legitimo NO se marca: la GUI puede importar del motor y de sus
     # propios hermanos.
-    assert _imports_qt(ast.parse("from polyx.ml.i18n import tr\n")) == []
+    assert _imports_qt(ast.parse("from polyx.core.i18n import tr\n")) == []
     assert _imports_heredados(
-        ast.parse("from polyx.ml.i18n import tr\n"), partes_gui
+        ast.parse("from polyx.core.i18n import tr\n"), partes_gui
     ) == []
     assert _imports_heredados(
         ast.parse("from .theme import INK\n"), partes_gui

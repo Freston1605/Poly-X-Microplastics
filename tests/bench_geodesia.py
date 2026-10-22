@@ -5,7 +5,7 @@ mascaras y el mismo hardware:
 
   * la referencia pre-rewrite congelada en ``tests/test_geodesia.py``
     (``_propagar_geodesico_referencia``),
-  * la implementacion viva de ``polyx.ml.morfologia``.
+  * la implementacion viva de ``polyx.core.morphology``.
 
 NO es un test de pytest: el nombre no empieza por ``test_`` a proposito,
 y ningun test lo importa. Se ejecuta a mano::
@@ -34,7 +34,7 @@ import numpy as np
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))
 
-from polyx.ml import morfologia as M  # noqa: E402
+from polyx.core import morphology as M  # noqa: E402
 from tests import test_geodesia as G  # noqa: E402
 from tests.formas import CASOS  # noqa: E402
 

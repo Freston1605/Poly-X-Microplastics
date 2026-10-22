@@ -8,7 +8,7 @@ the shared widgets (:mod:`polyx.gui.widgets`), the preferences dialog
 (:mod:`polyx.gui.report_html`), the HTML to PDF converter
 (:mod:`polyx.gui.pdf_export`) and the update checker
 (:mod:`polyx.gui.updates`). The feature modules (:mod:`polyx.gui.detector`,
-:mod:`polyx.gui.trainer`, :mod:`polyx.gui.visor`, :mod:`polyx.gui.etiquetador`) and the
+:mod:`polyx.gui.trainer`, :mod:`polyx.gui.viewer`, :mod:`polyx.gui.labeler`) and the
 launcher also belong here and already live in this package (M005).
 
 Import contract: this package is allowed to depend on ``polyx.ml`` (the

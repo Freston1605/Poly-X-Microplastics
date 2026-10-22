@@ -1,7 +1,7 @@
 """Configuracion compartida de la suite.
 
 El idioma del programa se resuelve una vez a partir del entorno (ver
-``polyx.ml.i18n``) y se cachea en el modulo, asi que varios tests que no
+``polyx.core.i18n``) y se cachea en el modulo, asi que varios tests que no
 fuercen idioma propio --p. ej. ``test_asignacion`` lee texto del informe--
 acaban dependiendo del locale de la maquina donde corra pytest. Con un
 locale en ingles el informe sale en ingles y la prueba falla; en CI el
@@ -44,7 +44,7 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
     monkeypatch.delenv("POLYX_LOG", raising=False)
     monkeypatch.delenv("POLYX_LOG_TOTAL_CAP_MB", raising=False)
 
-    import polyx.ml.observabilidad as ob
+    import polyx.core.observability as ob
 
     ob._close_loggers()
     ob.clear_run_id()
@@ -52,3 +52,13 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
     ob._close_loggers()
     ob.clear_run_id()
 
+
+
+@pytest.fixture
+def qapp():
+    """Una sola QApplication por módulo: PySide6 no permite recrearla."""
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    yield app

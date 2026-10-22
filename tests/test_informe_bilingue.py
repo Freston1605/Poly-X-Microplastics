@@ -23,14 +23,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from polyx.ml.yolo_wrap import Detection
+from polyx.core.detect.protocol import Instance as Detection
 
 
 def _estado_minimo(tmp_path):
     """Un DetectorState con una deteccion medida sobre una foto sintetica."""
     import cv2
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.ml import morfologia
+    from polyx.core import morphology
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 22, (60, 210, 240), -1)
@@ -39,7 +39,7 @@ def _estado_minimo(tmp_path):
 
     d = Detection(class_id=0, class_name="PET", conf=0.9,
                   x1=138, y1=108, x2=182, y2=152)
-    morfologia.apply_to_detection(d, img, 30.0)
+    morphology.apply_to_detection(d, img, 30.0)
     d.number = 1
 
     st = DetectorState()
@@ -52,7 +52,7 @@ def _estado_minimo(tmp_path):
 def _informe(tmp_path, lang):
     """Genera el informe con el idioma pedido y devuelve su HTML."""
     os.environ["POLYX_IDIOMA"] = lang
-    import polyx.ml.i18n as i18n
+    import polyx.core.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)
@@ -70,7 +70,7 @@ def _restaurar_idioma():
         os.environ.pop("POLYX_IDIOMA", None)
     else:
         os.environ["POLYX_IDIOMA"] = previo
-    import polyx.ml.i18n as i18n
+    import polyx.core.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)
@@ -189,7 +189,7 @@ def _estado_completo(tmp_path):
     """Dos carpetas, tres fotos cada una, dos modelos y ground truth."""
     import cv2
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.ml import morfologia
+    from polyx.core import morphology
 
     clases = ["PET", "PP", "LDPE"]
     st = DetectorState()
@@ -225,7 +225,7 @@ def _estado_completo(tmp_path):
                     cid = k % 3
                     d = Detection(class_id=cid, class_name=clases[cid],
                                   conf=0.6 + 0.05 * k, x1=x1, y1=y1, x2=x2, y2=y2)
-                    morfologia.apply_to_detection(d, img, escala)
+                    morphology.apply_to_detection(d, img, escala)
                     n += 1
                     d.number = n
                     # El segundo modelo se salta una caja: si los dos dieran lo
@@ -245,7 +245,7 @@ def _estado_completo(tmp_path):
 
 def _informe_completo(tmp_path, lang):
     os.environ["POLYX_IDIOMA"] = lang
-    import polyx.ml.i18n as i18n
+    import polyx.core.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)

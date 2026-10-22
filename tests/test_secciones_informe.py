@@ -51,14 +51,14 @@ def _idioma_del_baseline(tmp_path):
     """Fuerza el idioma del baseline (en) y recarga i18n/report_html.
 
     Misma receta que el fixture de tests/test_render_reporte_benigno.py:
-    polyx.ml.i18n cachea el idioma al importar, y los cuerpos que aqui se
+    polyx.core.i18n cachea el idioma al importar, y los cuerpos que aqui se
     comparan con texto del baseline (en ingles) saldrian en otro idioma sin
     esta recarga. Se restaura el entorno al salir para no contaminar a otros
     tests. POLYX_LOG_DIR ya lo aisla el fixture autouse de tests/conftest.py
     (decision D007); aqui no se llama a generate_report, asi que no hay
     logger que silenciar.
     """
-    import polyx.ml.i18n as i18n
+    import polyx.core.i18n as i18n
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     os.environ["POLYX_IDIOMA"] = "en"

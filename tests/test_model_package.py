@@ -25,7 +25,7 @@ nivel 1". ``procedencia.py`` rompe esa letra a proposito y con razon, porque
 usa ``from .. import __version__`` (nivel 2) para leer la version del paquete
 ``polyx`` -- metadatos puros, sin Qt. La invariante que de verdad importa es
 que el motor no salga de su propio paquete ni del ``polyx`` que lo contiene:
-se admite ``polyx.ml.*`` (nivel 1) y el ``from ..`` que apunta al propio
+se admite ``polyx.core.*`` (nivel 1) y el ``from ..`` que apunta al propio
 ``polyx``, y se rechaza cualquier relativo que nombre otro subpaquete hermano
 (``polyx.gui`` o el paquete de re-export del ``core``) o que escape por arriba
 (nivel >= 3).
@@ -42,7 +42,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[1]
-MOTOR = RAIZ / "polyx" / "ml"
+MOTOR = RAIZ / "polyx" / "core"
 
 # Enlaces de Qt que el motor puro no debe importar nunca. La raiz de cada
 # nombre es lo que se compara, asi que ``PySide6.QtWidgets`` cae en ``PySide6``.
@@ -51,27 +51,42 @@ ENLACES_QT = ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2")
 # Paquetes fuera del motor de los que el motor no puede depender.
 PAQUETES_PROHIBIDOS = ("polyx.gui",)
 
-# Los doce modulos que T01 movio a polyx.ml. Si falta alguno, el escaneo
+# Los doce modulos que T01 movio a polyx.core. Si falta alguno, el escaneo
 # AST de mas abajo quedaria vacio y pasaria por no tener nada que mirar.
 MODULOS_ESPERADOS = frozenset({
-    "yolo_wrap",
-    "morfologia",
-    "calibracion",
+    # detect/
+    "yolo",
+    "native",
+    "sam",
+    "factory",
+    "protocol",
+    # measure/
+    "morphology",
+    "calibration",
+    # quality/
     "metrics",
-    "asignacion",
+    "assignment",
     "dataset_audit",
-    "observabilidad",
-    "paths",
-    "plataforma",
-    "procedencia",
+    # provenance/
+    "observability",
+    "provenance",
+    # data/
+    "labels",
+    # root modules
     "i18n",
-    "traducciones_en",
+    "translations_en",
+    "paths",
+    "platform",
 })
 
 
 def _modulos_del_motor() -> list[Path]:
-    """Rutas de los .py del motor, ordenadas y sin __pycache__."""
-    return sorted(MOTOR.glob("*.py"))
+    """Rutas de los .py del motor, ordenadas y sin __pycache__.
+    
+    Busca recursivamente en subdirectorios (detect/, measure/, quality/, 
+    provenance/, data/).
+    """
+    return sorted(p for p in MOTOR.rglob("*.py") if "__pycache__" not in p.parts)
 
 
 def _es_qt(nombre: str) -> bool:
@@ -95,7 +110,7 @@ def _destino_relativo(nivel: int, modulo: str | None) -> str:
     cuando el import escapa por encima de ``polyx`` (nivel >= 3).
     """
     if nivel == 1:
-        partes = ["polyx", "ml"]
+        partes = ["polyx", "core"]
     elif nivel == 2:
         partes = ["polyx"]
     else:
@@ -143,7 +158,8 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
         permitido = (
             destino == "polyx"
             or destino == "polyx.ml"
-            or destino.startswith("polyx.ml.")
+            or destino == "polyx.core"
+            or destino.startswith("polyx.core.")
         )
         if not permitido:
             fuera.append(destino or f"nivel {nodo.level}")
@@ -160,7 +176,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
     """
     guion = (
         "import sys\n"
-        "import polyx.ml\n"
+        "import polyx.core\n"
         "malos = sorted(\n"
         "    m for m in sys.modules\n"
         "    if m == 'PySide6' or m.startswith('PySide6.')\n"
@@ -190,8 +206,8 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
 
 
 # ── 2. Escaneo AST de la frontera ──
-def test_el_motor_contiene_los_doce_modulos():
-    """Guardia contra un escaneo vacio: los doce modulos tienen que estar."""
+def test_el_motor_contiene_los_modulos_esperados():
+    """Guardia contra un escaneo vacio: los modulos esperados tienen que estar."""
     presentes = {ruta.stem for ruta in _modulos_del_motor()}
     faltan = MODULOS_ESPERADOS - presentes
     assert not faltan, f"faltan modulos del motor: {sorted(faltan)}"
@@ -238,23 +254,35 @@ def test_el_escanner_detecta_violaciones_sinteticas():
     assert _relativos_fuera_de_alcance(version_polyx) == []
 
 
-# ── 3. El paquete de re-export del core ha desaparecido ──
-# El nombre del paquete viejo se arma en dos mitades a proposito: este archivo
-# no puede mencionar esa ruta ni en texto, porque el contrato de la frontera se
-# comprueba buscando esa cadena en todo el arbol del proyecto.
-NOMBRE_HEREDADO = ".".join(("polyx", "core"))
+# ── 3. El paquete core ES el motor (no un re-export) ──
+# El paquete ``polyx.core`` es ahora el motor puro (antes ``polyx.model``).
+# No debe ser un paquete de re-export vacio, sino que debe contener los
+# modulos del motor: detect, measure, quality, provenance, data, etc.
 
-
-def test_el_paquete_de_reexport_del_core_ha_desaparecido():
-    """El paquete de re-export del ``core`` ya no existe: ni en disco ni en import.
-
-    Mientras viviera, un consumidor descuidado podia seguir escribiendo los
-    nombres viejos y la frontera entre motor y GUI era puro decorado: habria
-    dos rutas al mismo codigo y los parches de un lado no se verian del otro.
+def test_el_paquete_core_es_el_motor():
+    """El paquete ``polyx.core`` existe y es el motor puro.
+    
+    Debe ser importable sin Qt y contener los submodulos del motor.
     """
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module(NOMBRE_HEREDADO)
-
-    assert not (RAIZ / "polyx" / "core").exists(), (
-        "el paquete de re-export del core sigue en disco: S03 lo tenia que borrar"
-    )
+    import sys
+    # Only NEW Qt modules loaded by this import count: earlier tests in this
+    # process legitimately imported PySide6, so a whole-process sys.modules
+    # check would fail by contamination, not because polyx.core dragged Qt.
+    qt_antes = {m for m in sys.modules if m.startswith("PySide6")}
+    import polyx.core
+    # El paquete debe existir en disco
+    assert (RAIZ / "polyx" / "core").exists(), "polyx/core no existe en disco"
+    qt_nuevos = {m for m in sys.modules if m.startswith("PySide6")} - qt_antes
+    assert not qt_nuevos, f"polyx.core arrastro Qt: {sorted(qt_nuevos)}"
+    # Debe tener los submodulos esperados
+    assert hasattr(polyx.core, "detect")
+    assert hasattr(polyx.core, "measure")
+    assert hasattr(polyx.core, "quality")
+    assert hasattr(polyx.core, "provenance")
+    assert hasattr(polyx.core, "data")
+    # Debe exportar la API publica principal
+    assert hasattr(polyx.core, "Instance")
+    assert hasattr(polyx.core, "DetectionSource")
+    assert hasattr(polyx.core, "make_detector")
+    assert hasattr(polyx.core, "YoloModel")
+    assert hasattr(polyx.core, "NativeDetector")

@@ -30,10 +30,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from . import theme as T
-from polyx.ml.i18n import tr, language
-from polyx.ml.metrics import aggregate_per_class, confusion_matrix
-from polyx.ml.yolo_wrap import Detection
-from polyx.ml.asignacion import NO_ASSIGNABLE, class_id_reported, resume
+from polyx.core.i18n import tr, language
+from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
+from polyx.core.detect.yolo import Detection
+from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -407,7 +407,7 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
 
     Returns {alias: [(conf, precision, recall, f1, n_det), ...]}.
     """
-    from polyx.ml.metrics import match_image
+    from polyx.core.quality.metrics import match_image
 
     thresholds = [round(u, 2) for u in np.arange(conf_current, 0.96, 0.05)]
     output_2 = {}
@@ -1174,7 +1174,7 @@ def _figure_calibration(state) -> str:
 
     Returns "" when there is no measured plate to draw on.
     """
-    from polyx.ml.calibracion import ORIGIN_PLATE, DIAMETER_PLATE_MM
+    from polyx.core.measure.calibration import ORIGIN_PLATE, DIAMETER_PLATE_MM
 
     cals = getattr(state, "calibrations", None) or {}
     measurements = [(name_2, c) for name_2, c in cals.items()
@@ -1200,7 +1200,7 @@ def _figure_calibration(state) -> str:
 
     try:
         import cv2
-        from polyx.ml.calibracion import read_image
+        from polyx.core.measure.calibration import read_image
         bgr = read_image(path_2)
         if bgr is None:
             return ""
@@ -1261,8 +1261,8 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float],
         # cv2 is imported here and not at the top: this module does so in the rest of
         # the functions to avoid loading OpenCV when only text is requested.
         import cv2
-        from polyx.ml.calibracion import read_image
-        from polyx.ml.morfologia import box_margin, segment
+        from polyx.core.measure.calibration import read_image
+        from polyx.core.measure.morphology import box_margin, segment
         bgr = read_image(image_path_2)
         if bgr is None:
             return ""
@@ -2200,7 +2200,7 @@ def _section_calibration(state) -> str:
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the state has
     no calibraciones and no manual scale, so the assembler drops the section
-    like it does today. The ``polyx.ml.calibracion`` import stays lazy
+    like it does today. The ``polyx.core.calibration`` import stays lazy
     inside this body: it must not load at module import time (S01 laziness
     gate).
     """
@@ -2212,7 +2212,7 @@ def _section_calibration(state) -> str:
     calib_html = ""
     cals = getattr(state, "calibrations", None) or {}
     if cals:
-        from polyx.ml.calibracion import (summary_batch, ORIGIN_PLATE,
+        from polyx.core.measure.calibration import (summary_batch, ORIGIN_PLATE,
                                   THICKNESS_WALL_MM, BIAS_MAXIMUM_WALL_PCT)
         res = summary_batch(list(cals.values()))
         if res["n"]:
@@ -2277,7 +2277,7 @@ def _lot_forms(state, all_results):
     many detections were set apart for falling on the ring, and how many
     predictions could not be segmented at all. The depth profile, the forma
     section and the particle fichas all read the same list, so this runs
-    exactly once per report. The ``polyx.ml.calibracion`` import stays
+    exactly once per report. The ``polyx.core.calibration`` import stays
     lazy inside this body: it must not load at module import time (S01
     laziness gate).
     """
@@ -2291,7 +2291,7 @@ def _lot_forms(state, all_results):
     # to be asked. It is removed from the SIZE and from the cards, not from the count:
     # removing detections from the count is a study decision and not the
     # report generator's. What is done is to declare how many were set apart.
-    from polyx.ml.calibracion import about_the_ring, FRACTION_AREA_USEFUL
+    from polyx.core.measure.calibration import about_the_ring, FRACTION_AREA_USEFUL
 
     _cals = getattr(state, "calibrations", None) or {}
 
@@ -2669,7 +2669,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
     records_html = ""
     if shapes and max_records:
         import cv2
-        from polyx.ml.morfologia import draw_measurement
+        from polyx.core.measure.morphology import draw_measurement
 
         chosen = choose_records(shapes, max_records)
         n_fibers_sample = sum(1 for d, _ in chosen if d.morphotype == "fibra")
@@ -2680,7 +2680,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
         for path_2 in sorted(por_img_f):
             bgr = None
             try:
-                from polyx.ml.calibracion import read_image
+                from polyx.core.measure.calibration import read_image
                 bgr = read_image(path_2)
             except Exception:
                 bgr = None
@@ -3022,7 +3022,7 @@ def generate_report(state, output_path: Path,
     report.finish / report.error in the detector JSONL. Re-throws failures:
     the caller decides what to do, the log keeps the diagnosis.
     """
-    from polyx.ml.observabilidad import timer, logger_for
+    from polyx.core.observability import timer, logger_for
     n_results = sum(len(rs) for rs in (state.results or {}).values())
     with timer(logger_for("detector"), "report",
                     results_2=n_results, output=str(output_path),

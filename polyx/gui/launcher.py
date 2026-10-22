@@ -24,11 +24,11 @@ from PySide6.QtWidgets import (
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from polyx.gui import marca
-from polyx.ml.i18n import tr, language
+from polyx.core.i18n import tr, language
 from polyx.gui.preferencias import PreferencesDialog
 from polyx.gui.widgets import LogoBadge, HLine
 from polyx.gui.updates import UPDATER, SearchUpdates, can_update
-from polyx.ml.plataforma import open_in_system, launch_updater
+from polyx.core.platform import open_in_system, launch_updater
 from polyx import __version__
 
 # ──────────────────────────────────────────────────────────────────────
@@ -46,10 +46,10 @@ def _register_boot() -> None:
     Observability must never be worse than having none.
     """
     try:
-        from polyx.ml import observabilidad
-        from polyx.ml.plataforma import name_system
-        log = observabilidad.logger_for("app")
-        observabilidad.event(
+        from polyx.core import observability
+        from polyx.core.platform import name_system
+        log = observability.logger_for("app")
+        observability.event(
             log,
             "bootstrap.finish",
             version=__version__,
@@ -79,9 +79,9 @@ def _spawn_module(dotted: str) -> bool:
         )
     except Exception as e:
         try:
-            from polyx.ml import observabilidad
-            observabilidad.event(
-                observabilidad.logger_for("app"),
+            from polyx.core import observability
+            observability.event(
+                observability.logger_for("app"),
                 "module.launch.error",
                 level=logging.WARNING,
                 modulo=dotted,
@@ -91,9 +91,9 @@ def _spawn_module(dotted: str) -> bool:
             pass
         return False
     try:
-        from polyx.ml import observabilidad
-        observabilidad.event(
-            observabilidad.logger_for("app"), "module.launch", modulo=dotted
+        from polyx.core import observability
+        observability.event(
+            observability.logger_for("app"), "module.launch", modulo=dotted
         )
     except Exception:
         pass
@@ -893,8 +893,8 @@ class LauncherWindow(QMainWindow):
     # ── Launchers ──────────────────────────────────────────────
     def open_detector(self): self._launch_module("polyx.gui.detector")
     def open_trainer(self):  self._launch_module("polyx.gui.trainer")
-    def open_labeler(self):  self._launch_module("polyx.gui.etiquetador")
-    def open_viewer(self):   self._launch_module("polyx.gui.visor")
+    def open_labeler(self):  self._launch_module("polyx.gui.labeler")
+    def open_viewer(self):   self._launch_module("polyx.gui.viewer")
 
     def _launch_module(self, dotted: str, fallback: str = ""):
         """Spawns the module in a separate process so the launcher does not block.

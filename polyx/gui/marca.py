@@ -36,8 +36,8 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPixmap
 
 from . import iconos
-from polyx.ml import plataforma
-from polyx.ml.i18n import tr
+from polyx.core import platform
+from polyx.core.i18n import tr
 
 #: Project root (…/Microplasticos), two levels above `polyx/gui`.
 _ROOT = Path(__file__).resolve().parents[2]

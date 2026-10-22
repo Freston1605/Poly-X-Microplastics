@@ -54,7 +54,7 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is
 # not silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "polyx/model/morfologia.py",
+    "polyx/core/measure/morphology.py",
     "polyx/gui/report_html.py",
     "polyx/gui/detector/runner.py",
 ]

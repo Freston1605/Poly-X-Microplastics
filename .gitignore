@@ -153,3 +153,6 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# CodeGraph local index cache (agent tooling)
+.codegraph/

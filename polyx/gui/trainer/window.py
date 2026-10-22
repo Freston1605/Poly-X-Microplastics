@@ -12,7 +12,7 @@ from polyx.gui import marca
 from polyx.gui import iconos
 from polyx.gui.widgets import LogoBadge
 from .state import TrainerState
-from polyx.ml.i18n import tr
+from polyx.core.i18n import tr
 
 
 SIDEBAR_ITEMS = [

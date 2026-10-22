@@ -31,7 +31,7 @@ def _en_español():
 
     previo = os.environ.get("POLYX_IDIOMA")
     os.environ["POLYX_IDIOMA"] = "es"
-    import polyx.ml.i18n as i18n
+    import polyx.core.i18n as i18n
     importlib.reload(i18n)
     importlib.reload(R)
     yield

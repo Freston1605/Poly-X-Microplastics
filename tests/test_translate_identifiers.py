@@ -368,8 +368,8 @@ def test_suggestions_preserve_digits_and_never_emit_builtins_or_keywords():
 
 def test_consumer_mode_updates_imports_but_not_local_definitions():
     source = (
-        "from polyx.ml.morfologia import medir\n"
-        "from polyx.ml.morfologia import medir as medir2\n"
+        "from polyx.core.morphology import medir\n"
+        "from polyx.core.morphology import medir as medir2\n"
         "\n"
         "def medir(ruta):\n"
         "    return ruta\n"
@@ -390,7 +390,7 @@ def test_consumer_mode_updates_imports_but_not_local_definitions():
     assert "def medir(ruta):" in result
     assert "def medir2(ruta):" in result
     # The dead import is left alone because the local def shadows it.
-    assert "from polyx.ml.morfologia import medir\n" in result
+    assert "from polyx.core.morphology import medir\n" in result
     # Attribute access in the map is still updated.
     assert "medir(obj.path)" in result
 
@@ -403,7 +403,7 @@ def test_consumer_mode_consumes_polyx_imports_and_spares_local_medir(tmp_path):
     )
     import_path = _write(
         tmp_path / "test_import.py",
-        "from polyx.ml.morfologia import medir\n\nresult = medir(1)\n",
+        "from polyx.core.morphology import medir\n\nresult = medir(1)\n",
     )
     manifest = _manifest(tmp_path, {"medir": "measure", "ruta": "path"})
     assert (
@@ -421,7 +421,7 @@ def test_consumer_mode_consumes_polyx_imports_and_spares_local_medir(tmp_path):
         == 0
     )
     assert local_path.read_text(encoding="utf-8") == "def medir(ruta):\n    return ruta\n"
-    assert "from polyx.ml.morfologia import measure" in import_path.read_text(
+    assert "from polyx.core.morphology import measure" in import_path.read_text(
         encoding="utf-8"
     )
     assert "result = measure(1)" in import_path.read_text(encoding="utf-8")
@@ -429,7 +429,7 @@ def test_consumer_mode_consumes_polyx_imports_and_spares_local_medir(tmp_path):
 
 def test_consumer_mode_renames_imported_names_attributes_and_keywords():
     source = (
-        "from polyx.ml.morfologia import medir\n"
+        "from polyx.core.morphology import medir\n"
         "\n"
         "def use(obj):\n"
         "    return medir(obj.ruta, umbral=1)\n"
@@ -440,7 +440,7 @@ def test_consumer_mode_renames_imported_names_attributes_and_keywords():
         scope="consumers",
         label="test_consumer.py",
     )
-    assert "from polyx.ml.morfologia import measure" in result
+    assert "from polyx.core.morphology import measure" in result
     assert "measure(obj.path, threshold=1)" in result
     changed = {(change.old, change.new, change.kind) for change in changes}
     assert ("medir", "measure", "import") in changed
@@ -477,7 +477,7 @@ def test_consumer_mode_ignores_non_polyx_imports():
 
 
 def test_list_identifiers_enumerates_a_real_polyx_file(capsys):
-    path = REPO_ROOT / "polyx" / "ml" / "calibracion.py"
+    path = REPO_ROOT / "polyx" / "core" / "measure" / "calibration.py"
     assert tct.main(["list-identifiers", "--json", str(path)]) == 0
     entries = json.loads(capsys.readouterr().out)
     names = {entry["name"] for entry in entries}
@@ -539,7 +539,7 @@ def test_apply_writes_and_second_run_is_a_noop(tmp_path, capsys):
 def test_apply_identifiers_consumers_scope_cli(tmp_path, capsys):
     path = _write(
         tmp_path / "consumer.py",
-        "from polyx.ml.morfologia import medir\n\ndef use(obj):\n    return medir(obj.ruta)\n",
+        "from polyx.core.morphology import medir\n\ndef use(obj):\n    return medir(obj.ruta)\n",
     )
     manifest = _manifest(tmp_path, {"medir": "measure", "ruta": "path"})
     assert (
@@ -556,7 +556,7 @@ def test_apply_identifiers_consumers_scope_cli(tmp_path, capsys):
         == 0
     )
     result = path.read_text(encoding="utf-8")
-    assert "from polyx.ml.morfologia import measure" in result
+    assert "from polyx.core.morphology import measure" in result
     assert "measure(obj.path)" in result
 
 
@@ -832,20 +832,20 @@ def test_write_manifest_loads_through_the_existing_loader(tmp_path):
 def test_consumer_mode_renames_imports_inside_a_function():
     source = (
         "def use():\n"
-        "    from polyx.ml.observabilidad import cronometro\n"
+        "    from polyx.core.observability import cronometro\n"
         "    return cronometro(1)\n"
     )
     result, changes = ti.translate_source(
         source, {"cronometro": "timer"}, scope="consumers", label="nested.py"
     )
-    assert "from polyx.ml.observabilidad import timer" in result
+    assert "from polyx.core.observability import timer" in result
     assert "return timer(1)" in result
     assert any(change.kind == "import" for change in changes)
 
 
 def test_consumer_mode_keeps_argparse_namespace_attributes():
     source = (
-        "from polyx.ml.morfologia import medir\n"
+        "from polyx.core.morphology import medir\n"
         "\n"
         "def run(parser):\n"
         "    args = parser.parse_args()\n"
@@ -885,7 +885,7 @@ def test_consumer_mode_protects_non_model_polyx_module_attributes():
 
 def test_consumer_mode_renames_model_module_dynamic_attributes():
     source = (
-        "from polyx.ml import observabilidad as ob\n"
+        "from polyx.core import observability as ob\n"
         "\n"
         "monkeypatch.setattr(ob, 'TAMANO_TOTAL', 1)\n"
     )
@@ -943,7 +943,7 @@ def test_format_keyword_is_neither_renamed_nor_scanned():
 
 def test_observability_data_keys_are_neither_renamed_nor_scanned():
     source = (
-        'from polyx.ml.observabilidad import event\n'
+        'from polyx.core.observability import event\n'
         '\n'
         'def f(log):\n'
         '    event(log, "bootstrap.finish", sistema=1, modulo="m")\n'
@@ -961,7 +961,7 @@ def test_observability_data_keys_are_neither_renamed_nor_scanned():
 def test_consumer_scope_keeps_observability_data_key_keywords(tmp_path, capsys):
     path = _write(
         tmp_path / "consumer.py",
-        'from polyx.ml.observabilidad import event\n'
+        'from polyx.core.observability import event\n'
         '\n'
         'def f(log):\n'
         '    event(log, "x", sistema=1)\n',
@@ -986,14 +986,14 @@ def test_consumer_scope_keeps_observability_data_key_keywords(tmp_path, capsys):
 def test_nested_module_stem_binding_is_protected():
     source = (
         'def f():\n'
-        '    from polyx.ml import observabilidad\n'
-        '    return observabilidad.event\n'
+        '    from polyx.core import observability\n'
+        '    return observability.event\n'
     )
     stems = ti.discover_module_stems()
     names = [name for _line, name in ti.identifier_occurrences(source, stems)]
-    assert "observabilidad" not in names
+    assert "observability" not in names
     result, changes = ti.translate_source(
-        source, {"observabilidad": "observability"}, stems=stems
+        source, {"observability": "observability_2"}, stems=stems
     )
     assert result == source
     assert changes == []

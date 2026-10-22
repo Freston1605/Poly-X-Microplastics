@@ -21,9 +21,9 @@ from PySide6.QtWidgets import (
 
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.ml.yolo_wrap import Detection
+from polyx.core.detect.yolo import Detection
 from .pages.gt_manual import AnnotCanvas, DEFAULT_CLASSES
-from polyx.ml.i18n import tr
+from polyx.core.i18n import tr
 
 
 class ReviewDialog(QDialog):

@@ -32,7 +32,7 @@ def log_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("POLYX_LOG_DIR", str(carpeta))
     carpeta.mkdir()      # la poda crea archivos antes que el primer logger
     # limpiar cache de loggers: cada prueba tiene su carpeta propria
-    import polyx.ml.observabilidad as ob
+    import polyx.core.observability as ob
     monkeypatch.delenv("POLYX_LOG_TOTAL_CAP_MB", raising=False)
     ob._close_loggers()
     monkeypatch.delenv("POLYX_LOG", raising=False)
@@ -42,7 +42,7 @@ def log_dir(tmp_path, monkeypatch):
 
 
 def test_sobre_minimo_con_campo_fijos(log_dir):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.event(log, "prueba.ping", placas=3)
     recs = _leer_jsonl(log_dir, "prueba")
@@ -57,7 +57,7 @@ def test_sobre_minimo_con_campo_fijos(log_dir):
 
 
 def test_run_id_correlaciona_por_hilo(log_dir):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.set_run_id("runA")
     ob.event(log, "prueba.a")
@@ -74,7 +74,7 @@ def test_run_id_correlaciona_por_hilo(log_dir):
 
 def test_cronometro_emite_par_y_ms(log_dir):
     import time
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.set_run_id("runB")
     with ob.timer(log, "prueba.cosa", placas=2):
@@ -87,7 +87,7 @@ def test_cronometro_emite_par_y_ms(log_dir):
 
 
 def test_cronometro_en_error_relaza_y_ground_trasbazo(log_dir):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     with pytest.raises(ValueError, match="boom"):
         with ob.timer(log, "prueba.fallo", imagen="mala.png"):
@@ -100,7 +100,7 @@ def test_cronometro_en_error_relaza_y_ground_trasbazo(log_dir):
 
 def test_payload_no_serializable_no_tumba(log_dir):
     import numpy as np
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.event(log, "prueba.raro", mapa=np.zeros(3))
     recs = _leer_jsonl(log_dir, "prueba")
@@ -108,7 +108,7 @@ def test_payload_no_serializable_no_tumba(log_dir):
 
 
 def test_sin_carpeta_el_plan_no_revienta(tmp_path, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     ob._loggers.clear()
     destino_archivo = tmp_path / "archivo"
     destino_archivo.write_text("x")
@@ -121,7 +121,7 @@ def test_sin_carpeta_el_plan_no_revienta(tmp_path, monkeypatch):
 
 
 def test_nivel_por_entorno(tmp_path, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     monkeypatch.setenv("POLYX_LOG_DIR", str(tmp_path / "logs"))
     monkeypatch.setenv("POLYX_LOG", "error")
     ob._loggers.clear()
@@ -145,7 +145,7 @@ def _total_carpeta(carpeta: Path) -> int:
 
 
 def test_poda_borra_mas_viejo_primero(log_dir, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     monkeypatch.setattr(ob, "SIZE_TOTAL", 900_000)   # techo pequeño de prueba
     t = 1_000_000.0
     for i in range(5):                        # 5 archivos de 300 KB = 1.5 MB
@@ -158,7 +158,7 @@ def test_poda_borra_mas_viejo_primero(log_dir, monkeypatch):
 
 
 def test_poda_no_borra_archivo_activo(log_dir, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     monkeypatch.setattr(ob, "SIZE_TOTAL", 900_000)
     t = 2_000_000.0
     # el MAS viejo tambien es el activo: ~300 KB de JSONL valido simulado
@@ -185,7 +185,7 @@ def test_poda_no_borra_archivo_activo(log_dir, monkeypatch):
 
 
 def test_poda_mantiene_directorio_acotado_lote_simulado(log_dir, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     techo = 900_000
     monkeypatch.setattr(ob, "SIZE_TOTAL", techo)
     t = 3_000_000.0
@@ -205,7 +205,7 @@ def test_rotacion_5mb_x3(log_dir):
     maxBytes es fijo al crear el handler: la rotacion se prueba con escrituras
     reales, no con archivos falsos.
     """
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba_rot")
     bloque = "x" * (2 * 1024 * 1024)          # registros de ~2 MB
     for _ in range(8):                        # ~17 MB escritos en disco
@@ -227,7 +227,7 @@ def test_fallo_de_escritura_posterior_no_revienta(log_dir, monkeypatch):
     stream del handler vivo en memoria para que cada emit explote debajo de
     ``evento()``/``cronometro()``: la corrida tiene que seguir igual.
     """
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     log = ob.logger_for("prueba_late_fail")
     handlers = [h for h in log.handlers if hasattr(h, "baseFilename")]
     assert handlers, "el logger debio abrir su archivo antes de romperse"
@@ -255,7 +255,7 @@ def test_fallo_de_escritura_posterior_no_revienta(log_dir, monkeypatch):
 
 
 def test_techo_poda_por_defecto_y_entorno(log_dir, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     # Por defecto (sin variable) es TAMANO_TOTAL = 200 MB
     assert ob._ceiling_pruning_bytes() == ob.SIZE_TOTAL == 200 * 1024 * 1024
 
@@ -275,7 +275,7 @@ def test_techo_poda_por_defecto_y_entorno(log_dir, monkeypatch):
 
 
 def test_techo_poda_entorno_invalido_cae_al_defecto(log_dir, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     valores_invalidos = ["", "   ", "abc", "0", "-5", "nan", "inf", "-inf", "1e-12"]
     for val in valores_invalidos:
         monkeypatch.setenv("POLYX_LOG_TOTAL_CAP_MB", val)
@@ -290,7 +290,7 @@ def test_techo_poda_entorno_invalido_cae_al_defecto(log_dir, monkeypatch):
 
 
 def test_cambio_de_carpeta_cierra_handler_anterior(tmp_path, monkeypatch):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     dir_a = tmp_path / "logs_a"
     dir_b = tmp_path / "logs_b"
 
@@ -315,7 +315,7 @@ def test_cambio_de_carpeta_cierra_handler_anterior(tmp_path, monkeypatch):
 
 
 def test_conftest_aisla_polyx_log_dir_fuera_de_home(tmp_path):
-    from polyx.ml import observabilidad as ob
+    from polyx.core import observability as ob
     assert ob.folder_logs() == tmp_path / "_polyx_logs"
     assert Path.home() / ".polyx" / "logs" != ob.folder_logs()
 
@@ -325,7 +325,7 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
     import numpy as np
 
     from polyx.gui import report_html
-    from polyx.ml.yolo_wrap import Detection
+    from polyx.core.detect.protocol import Instance as Detection
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)

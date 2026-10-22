@@ -37,10 +37,10 @@ from PySide6.QtWidgets import (
 from ._base import DetectorPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.ml.yolo_wrap import (
+from polyx.core.detect.yolo import (
     Detection, read_yolo_txt, find_gt_for_image, size_image,
 )
-from polyx.ml.i18n import tr
+from polyx.core.i18n import tr
 
 
 def _qpixmap_de(path: Path) -> QPixmap:
