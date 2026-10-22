@@ -15,11 +15,11 @@ from PySide6.QtWidgets import (
 from ._base import TrainerPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.paths import IMAGE_EXTS
-from polyx.model.dataset_audit import (
+from polyx.ml.paths import IMAGE_EXTS
+from polyx.ml.dataset_audit import (
     audit_dataset, LEVEL_OK, LEVEL_WARN, LEVEL_ERROR,
 )
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 from ..state import validate_training_config
 
 

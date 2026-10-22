@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from ._base import TrainerPage
 from polyx.gui import theme as T
 from ..state import AUG_LEVELS
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 def _slider_row(label: str, value: float, max_val: float, on_change) -> tuple[QHBoxLayout, QSlider, QLabel]:

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from polyx.model.yolo_wrap import policy_tiling
+from polyx.ml.yolo_wrap import policy_tiling
 
 # La foto tipica del estudio y el imgsz con que se entreno.
 ANCHO, ALTO, IMGSZ = 4096, 3072, 2080

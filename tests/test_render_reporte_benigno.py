@@ -45,7 +45,7 @@ TAMANO_BASELINE = 139503
 def _idioma_del_baseline_y_logs_muertos(tmp_path):
     """Fuerza el idioma del baseline (en) y revierte el logger a NullHandler.
 
-    polyx.model.i18n resuelve y cachea el idioma al importar (env ->
+    polyx.ml.i18n resuelve y cachea el idioma al importar (env ->
     ~/.polyx_idioma.json -> locale del sistema); sin forzar la variable el
     test depende de la maquina y el compare de bytes seria una loteria. Se
     recarga i18n con POLYX_IDIOMA=en -- el idioma con el que se capturo el
@@ -65,8 +65,8 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     abriria contra el HOME real; con la variable ya puesta el archivo queda
     dentro de tmp_path aunque pytest lo borre despues.
     """
-    import polyx.model.i18n as i18n
-    import polyx.model.observabilidad as obs
+    import polyx.ml.i18n as i18n
+    import polyx.ml.observabilidad as obs
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     previo_log_dir = os.environ.get("POLYX_LOG_DIR")

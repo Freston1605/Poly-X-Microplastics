@@ -102,8 +102,8 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
     for the duration of the render. Environment and modules are restored
     afterwards so the module cannot contaminate other tests.
     """
-    import polyx.model.i18n as i18n
-    import polyx.model.observabilidad as obs
+    import polyx.ml.i18n as i18n
+    import polyx.ml.observabilidad as obs
 
     previous_language = os.environ.get("POLYX_IDIOMA")
     previous_log_dir = os.environ.get("POLYX_LOG_DIR")

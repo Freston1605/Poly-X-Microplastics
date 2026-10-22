@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from ._base import TrainerPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 def _runs_root() -> Path:

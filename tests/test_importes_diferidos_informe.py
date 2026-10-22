@@ -1,7 +1,7 @@
 """Laziness gate: deferred heavy imports of the report module stay deferred (M004/S01/T02).
 
 Importing polyx.gui.report_html must NOT pull in the heavy scientific stack:
-torch, ultralytics, polyx.model.morfologia and polyx.model.calibracion are all
+torch, ultralytics, polyx.ml.morfologia and polyx.ml.calibracion are all
 imported lazily inside function bodies (cv2 L283/L1192/L1253/L2554,
 torch L311/L335, psutil L305, calibracion L1167/L2144/L2216/L2566,
 morfologia L1255/L2555, ultralytics L2093) so that every consumer of the
@@ -14,7 +14,7 @@ in-process check would always pass for the wrong reason.
 
 Deliberate exception (decision D017, waiving cv2 from the laziness contract):
 cv2 MAY end up in sys.modules, because report_html imports
-``from polyx.model.yolo_wrap import Detection`` at top level and yolo_wrap
+``from polyx.ml.yolo_wrap import Detection`` at top level and yolo_wrap
 does ``import cv2`` at module level (polyx/model/yolo_wrap.py:11). That
 transitive load is pre-existing behavior of the package split, not something
 the S02/S03 section-builder refactor introduces; forcing yolo_wrap to defer
@@ -38,14 +38,14 @@ import sys
 LAZY_TARGETS = (
     "torch",
     "ultralytics",
-    "polyx.model.morfologia",
-    "polyx.model.calibracion",
+    "polyx.ml.morfologia",
+    "polyx.ml.calibracion",
 )
 
 # Contrato del gate segun la decision D017 (ver .gsd/DECISIONS.md):
 # cv2 queda expresamente fuera del contrato de laziness porque entra de forma
-# transitiva via polyx.model.yolo_wrap (import a nivel de modulo en yolo_wrap).
-MODULO_TRANSITIVO_ESPERADO = "polyx.model.yolo_wrap"
+# transitiva via polyx.ml.yolo_wrap (import a nivel de modulo en yolo_wrap).
+MODULO_TRANSITIVO_ESPERADO = "polyx.ml.yolo_wrap"
 
 
 def test_importar_informe_no_carga_los_pesados():
@@ -56,7 +56,7 @@ def test_importar_informe_no_carga_los_pesados():
             "import polyx.gui.report_html  # noqa: F401 — importa y nada mas",
             # yolo_wrap debe seguir importable: es la via transitiva declarada
             # de cv2; si desaparece, la exencion de cv2 (D017) quedo obsoleta.
-            "import polyx.model.yolo_wrap",
+            "import polyx.ml.yolo_wrap",
             "filtrados = [m for m in sys.modules if m in %r]" % (LAZY_TARGETS,),
             "print('YoloWrapImportable:ok')",
             "print('FILTRADOS:' + ','.join(filtrados))",

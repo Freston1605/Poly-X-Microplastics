@@ -23,14 +23,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from polyx.model.yolo_wrap import Detection
+from polyx.ml.yolo_wrap import Detection
 
 
 def _estado_minimo(tmp_path):
     """Un DetectorState con una deteccion medida sobre una foto sintetica."""
     import cv2
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.model import morfologia
+    from polyx.ml import morfologia
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 22, (60, 210, 240), -1)
@@ -52,7 +52,7 @@ def _estado_minimo(tmp_path):
 def _informe(tmp_path, lang):
     """Genera el informe con el idioma pedido y devuelve su HTML."""
     os.environ["POLYX_IDIOMA"] = lang
-    import polyx.model.i18n as i18n
+    import polyx.ml.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)
@@ -70,7 +70,7 @@ def _restaurar_idioma():
         os.environ.pop("POLYX_IDIOMA", None)
     else:
         os.environ["POLYX_IDIOMA"] = previo
-    import polyx.model.i18n as i18n
+    import polyx.ml.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)
@@ -189,7 +189,7 @@ def _estado_completo(tmp_path):
     """Dos carpetas, tres fotos cada una, dos modelos y ground truth."""
     import cv2
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
-    from polyx.model import morfologia
+    from polyx.ml import morfologia
 
     clases = ["PET", "PP", "LDPE"]
     st = DetectorState()
@@ -245,7 +245,7 @@ def _estado_completo(tmp_path):
 
 def _informe_completo(tmp_path, lang):
     os.environ["POLYX_IDIOMA"] = lang
-    import polyx.model.i18n as i18n
+    import polyx.ml.i18n as i18n
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
     importlib.reload(rh)

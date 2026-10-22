@@ -8,10 +8,10 @@ from PySide6.QtWidgets import (
 )
 
 from ._base import DetectorPage
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.plataforma import IS_MAC, architecture_mac, label_devices
+from polyx.ml.plataforma import IS_MAC, architecture_mac, label_devices
 
 
 def _hint(text: str) -> QLabel:
@@ -376,7 +376,7 @@ class ParametersPage(DetectorPage):
             return
         slot = models[0]
         if slot.loaded is None:
-            from polyx.model.yolo_wrap import YoloModel
+            from polyx.ml.yolo_wrap import YoloModel
             slot.loaded = YoloModel(str(slot.path), alias=slot.alias)
         device = self.state.params.device
         self.btn_probe.setEnabled(False)
@@ -440,7 +440,7 @@ class ParametersPage(DetectorPage):
         Seeing the decision before launching the batch avoids the surprise of
         discovering two hours later that everything was inferred in one piece.
         """
-        from polyx.model.yolo_wrap import size_image, policy_tiling
+        from polyx.ml.yolo_wrap import size_image, policy_tiling
         p = self.state.params
         if not self.state.images:
             self.lbl_plan.setText(tr("Selecciona imágenes para ver qué se trocearía."))

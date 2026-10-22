@@ -18,7 +18,7 @@ from ._base import TrainerPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from ..hw import detect_gpu, recommend_max_imgsz, recommend_batch, estimate_vram_gb, humanize_gb
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 # GPU detection in the background so the GUI does not freeze at startup
@@ -369,7 +369,7 @@ class ParametersPage(TrainerPage):
         the batch needs. A few images are sampled instead of walking all of
         them, which with thousands of files would cost seconds every time.
         """
-        from polyx.model.yolo_wrap import size_image
+        from polyx.ml.yolo_wrap import size_image
         yaml_path = self.state.dataset.yaml_path
         if not yaml_path or not Path(yaml_path).exists():
             return 0, 0.0

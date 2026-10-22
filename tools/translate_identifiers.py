@@ -1951,12 +1951,12 @@ def _default_heading_glossary() -> Mapping[str, str]:
     Adding the repo root and retrying is enough; the module has no logic.
     """
     try:
-        from polyx.model.traducciones_en import EN
+        from polyx.ml.traducciones_en import EN
     except ModuleNotFoundError:
         root = str(REPO_ROOT)
         if root not in sys.path:
             sys.path.insert(0, root)
-        from polyx.model.traducciones_en import EN
+        from polyx.ml.traducciones_en import EN
     return EN
 
 
@@ -1980,7 +1980,7 @@ def translate_heading_queries(
 ) -> HeadingTranslationPlan:
     """Translate report headings through the EN dictionary + cached MT.
 
-    The curated EN dictionary (``polyx.model.traducciones_en.EN``) is an
+    The curated EN dictionary (``polyx.ml.traducciones_en.EN``) is an
     exact-match glossary: a hit never calls the backend. Every other query is
     looked up in the cache under ``@heading:<query>`` and the remaining ones
     are sent to the backend in a single batch. Results are stored verbatim
@@ -2289,7 +2289,7 @@ def analyze_consumer_imports(
 ) -> ConsumerImports:
     """Collect the local bindings a consumer file gets from polyx imports.
 
-    ``from polyx.model.morfologia import medir`` binds ``medir``, so every use
+    ``from polyx.ml.morfologia import medir`` binds ``medir``, so every use
     of that binding may be renamed. A test-local ``def medir`` creates no
     import binding and therefore stays untouched. ``from ... import x as y``
     renames the imported symbol ``x`` but keeps the local alias ``y`` unless
@@ -2462,7 +2462,7 @@ def _module_stem_bindings(module: cst.Module, stems: Iterable[str]) -> Set[str]:
     ``from polyx.gui import iconos`` binds the module ``iconos``. The import
     path and the binding must both stay: the plan excludes module stems in
     import context, and renaming only the uses would break the module
-    reference. Nested imports count too: ``from polyx.model import
+    reference. Nested imports count too: ``from polyx.ml import
     observabilidad`` inside a function binds the same stem and must not be
     renamed while the import stays.
     """
@@ -2511,7 +2511,7 @@ def _collect_import_from(
     else:
         model_module = bool(
             module_name
-            and (module_name == "polyx.model" or module_name.startswith("polyx.model."))
+            and (module_name == "polyx.ml" or module_name.startswith("polyx.ml."))
         )
     if isinstance(node.names, cst.ImportStar):
         return
@@ -2566,14 +2566,14 @@ def _collect_import(
     renamable_roots: Optional[Set[str]] = None,
     callables: Optional[Set[str]] = None,
 ) -> None:
-    """Handle ``import polyx.model.morfologia as m``; the path never changes."""
+    """Handle ``import polyx.ml.morfologia as m``; the path never changes."""
     roots = renamable_roots if renamable_roots is not None else set()
     for alias in node.names:
         if alias.asname is None:
             continue
         local = alias.asname.name.value
         imported = _dotted_name(alias.name) or ""
-        model_module = imported == "polyx.model" or imported.startswith("polyx.model.")
+        model_module = imported == "polyx.ml" or imported.startswith("polyx.ml.")
         if not model_module:
             non_model_roots.add(local)
         if imported in attribute_modules:

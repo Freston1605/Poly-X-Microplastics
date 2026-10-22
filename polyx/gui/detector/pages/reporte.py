@@ -15,8 +15,8 @@ from polyx.gui import theme as T
 from polyx.gui import iconos
 from polyx.gui import pdf_export
 from polyx.gui.report_html import generate_report, SECTIONS, PRESETS
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 class ReportPage(DetectorPage):

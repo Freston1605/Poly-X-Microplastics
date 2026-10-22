@@ -12,7 +12,7 @@ from ._base import TrainerPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from polyx.gui.widgets import KPICard
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 class _EvalWorker(QThread):

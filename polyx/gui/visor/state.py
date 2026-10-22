@@ -6,7 +6,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, QPointF, Signal
 
-from polyx.model.yolo_wrap import Detection
+from polyx.ml.yolo_wrap import Detection
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
 

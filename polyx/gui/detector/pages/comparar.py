@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (
 
 from ._base import DetectorPage
 from polyx.gui import theme as T
-from polyx.model.metrics import LABEL_TP, LABEL_FP, LABEL_FN
-from polyx.model.i18n import tr
+from polyx.ml.metrics import LABEL_TP, LABEL_FP, LABEL_FN
+from polyx.ml.i18n import tr
 
 
 def _safe_div(a, b): return a / b if b else 0.0

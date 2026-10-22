@@ -37,7 +37,7 @@ _escape es blindaje por capas, verificado por el test de identidad de bytes del
 render benigno (tests/test_render_reporte_benigno.py), no por inyeccion.
 
 El idioma se fija a 'en' y el logger del pipeline a NullHandler con la misma
-mecanica de tests/test_render_reporte_benigno.py: polyx.model.i18n cachea el
+mecanica de tests/test_render_reporte_benigno.py: polyx.ml.i18n cachea el
 idioma al importar y sin POLYX_IDIOMA los anclajes de este archivo dependen de
 la maquina; el logger 'polyx.detector' queda cacheado por logger_para con un
 RotatingFileHandler a carpeta_logs() y sin POLYX_LOG_DIR la suite escribiria en
@@ -101,8 +101,8 @@ def rh(tmp_path, monkeypatch):
     plantilla en el idioma del render; sin fuerza, el resultado dependia de
     la maquina. POLYX_LOG_DIR va a tmp_path antes del primer logger_para.
     """
-    import polyx.model.i18n as i18n
-    import polyx.model.observabilidad as obs
+    import polyx.ml.i18n as i18n
+    import polyx.ml.observabilidad as obs
 
     previo_idioma = os.environ.get("POLYX_IDIOMA")
     previo_log_dir = os.environ.get("POLYX_LOG_DIR")
@@ -289,7 +289,7 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
 
     La clave de calibracion ES el nombre de archivo; el fix lo renderiza en
     la brecha monoespaciada del rotulo, escapado."""
-    from polyx.model.calibracion import Calibration, ORIGIN_PLATE
+    from polyx.ml.calibracion import Calibration, ORIGIN_PLATE
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")

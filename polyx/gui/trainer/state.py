@@ -7,8 +7,8 @@ import re
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.model.plataforma import device_available
-from polyx.model.dataset_audit import audit_dataset, LEVEL_ERROR, LEVEL_WARN
+from polyx.ml.plataforma import device_available
+from polyx.ml.dataset_audit import audit_dataset, LEVEL_ERROR, LEVEL_WARN
 
 # Device accepted by Ultralytics: `"cpu"`, `"mps"`, `"cuda[:N]"` or `"N[,N...]"` (GPU by
 # index). Anything else makes the run fail midway.

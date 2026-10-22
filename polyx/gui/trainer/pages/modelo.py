@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 from ._base import TrainerPage
 from polyx.gui import theme as T
 from ..state import PRESETS
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 SIZE_DESCRIPTIONS = [

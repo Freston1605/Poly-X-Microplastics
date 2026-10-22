@@ -12,9 +12,9 @@ from PySide6.QtWidgets import (
 from ._base import DetectorPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.paths import IMAGE_EXTS
-from polyx.model.yolo_wrap import find_gt_for_image
-from polyx.model.i18n import tr
+from polyx.ml.paths import IMAGE_EXTS
+from polyx.ml.yolo_wrap import find_gt_for_image
+from polyx.ml.i18n import tr
 
 
 class ImagesPage(DetectorPage):

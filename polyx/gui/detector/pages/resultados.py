@@ -17,9 +17,9 @@ from ._base import DetectorPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from polyx.gui.widgets import KPICard
-from polyx.model.metrics import LABEL_TP, LABEL_FP, LABEL_FN, LABEL_MISCLS, match_image
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.metrics import LABEL_TP, LABEL_FP, LABEL_FN, LABEL_MISCLS, match_image
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 class ResultsPage(DetectorPage):

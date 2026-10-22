@@ -12,9 +12,9 @@ from PySide6.QtWidgets import (
 from ._base import DetectorPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.paths import DEFAULT_MODEL
-from polyx.model.yolo_wrap import YoloModel
-from polyx.model.i18n import tr
+from polyx.ml.paths import DEFAULT_MODEL
+from polyx.ml.yolo_wrap import YoloModel
+from polyx.ml.i18n import tr
 
 
 class _ModelSlotCard(QFrame):

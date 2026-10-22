@@ -42,7 +42,7 @@ from .state import ViewerState
 
 from .canvas import ViewerCanvas
 
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 
@@ -744,7 +744,7 @@ class ViewerWindow(QMainWindow):
 
         try:
 
-            from polyx.model.yolo_wrap import YoloModel
+            from polyx.ml.yolo_wrap import YoloModel
 
             self.state.model = YoloModel(path)
 
@@ -930,7 +930,7 @@ class ViewerWindow(QMainWindow):
 
         try:
 
-            from polyx.model.yolo_wrap import read_yolo_txt
+            from polyx.ml.yolo_wrap import read_yolo_txt
 
             import cv2
 
@@ -1014,7 +1014,7 @@ class ViewerWindow(QMainWindow):
 
         import numpy as np
 
-        from polyx.model.yolo_wrap import Detection
+        from polyx.ml.yolo_wrap import Detection
 
 
 
@@ -1147,9 +1147,9 @@ class ViewerWindow(QMainWindow):
 
         try:
 
-            from polyx.model.calibracion import read_image
+            from polyx.ml.calibracion import read_image
 
-            from polyx.model.morfologia import apply_to_detection
+            from polyx.ml.morfologia import apply_to_detection
 
             bgr = read_image(path_2)
 
@@ -1253,7 +1253,7 @@ class ViewerWindow(QMainWindow):
 
         try:
 
-            from polyx.model.morfologia import draw_measurement
+            from polyx.ml.morfologia import draw_measurement
 
             img, m = draw_measurement(self._bgr_current, det, zoom=6)
 
@@ -1756,7 +1756,7 @@ class ViewerWindow(QMainWindow):
 
                 try:
 
-                    from polyx.model.yolo_wrap import YoloModel
+                    from polyx.ml.yolo_wrap import YoloModel
 
                     self.state.model = YoloModel(str(path))
 

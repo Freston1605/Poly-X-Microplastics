@@ -6,7 +6,7 @@ from typing import Optional
 
 from PySide6.QtCore import QThread, Signal
 
-from polyx.model import observabilidad as obs
+from polyx.ml import observabilidad as obs
 
 from .state import TrainerState, EpochMetrics
 from .dominio import choose_better_in_real

@@ -1,7 +1,7 @@
 """Configuracion compartida de la suite.
 
 El idioma del programa se resuelve una vez a partir del entorno (ver
-``polyx.model.i18n``) y se cachea en el modulo, asi que varios tests que no
+``polyx.ml.i18n``) y se cachea en el modulo, asi que varios tests que no
 fuercen idioma propio --p. ej. ``test_asignacion`` lee texto del informe--
 acaban dependiendo del locale de la maquina donde corra pytest. Con un
 locale en ingles el informe sale en ingles y la prueba falla; en CI el
@@ -44,7 +44,7 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
     monkeypatch.delenv("POLYX_LOG", raising=False)
     monkeypatch.delenv("POLYX_LOG_TOTAL_CAP_MB", raising=False)
 
-    import polyx.model.observabilidad as ob
+    import polyx.ml.observabilidad as ob
 
     ob._close_loggers()
     ob.clear_run_id()

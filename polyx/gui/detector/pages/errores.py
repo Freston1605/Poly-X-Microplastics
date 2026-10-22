@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (
 
 from ._base import DetectorPage
 from polyx.gui import theme as T
-from polyx.model.metrics import match_image, LABEL_FP, LABEL_FN, LABEL_MISCLS
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.metrics import match_image, LABEL_FP, LABEL_FN, LABEL_MISCLS
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 class ErrorsPage(DetectorPage):

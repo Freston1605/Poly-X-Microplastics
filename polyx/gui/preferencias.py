@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import theme as T
-from polyx.model.i18n import LANGUAGES, language, set_language, tr
+from polyx.ml.i18n import LANGUAGES, language, set_language, tr
 
 
 # ──────────────────────────────────────────────────────────────────────

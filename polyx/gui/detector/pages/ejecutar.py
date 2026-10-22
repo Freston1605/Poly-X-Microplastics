@@ -13,8 +13,8 @@ from ._base import DetectorPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from ..runner import DetectorRunner
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 class _PreviewSlot(QFrame):
@@ -70,7 +70,7 @@ class RunPage(DetectorPage):
 
     def _refresh_warning_tiling(self):
         """Summarizes whether the photos will be tiled, and how much longer it will take."""
-        from polyx.model.yolo_wrap import size_image, policy_tiling
+        from polyx.ml.yolo_wrap import size_image, policy_tiling
         p = self.state.params
         if not self.state.images:
             self.lbl_tiling.setText("")

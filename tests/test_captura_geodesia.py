@@ -32,7 +32,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from polyx.model import morfologia as M  # noqa: E402
+from polyx.ml import morfologia as M  # noqa: E402
 
 import capturar_fixtures_geodesia as CFG  # noqa: E402
 import generar_fixtures_geodesia as GFG  # noqa: E402

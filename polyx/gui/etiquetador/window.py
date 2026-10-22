@@ -18,7 +18,7 @@ from polyx.gui import iconos
 from polyx.gui.widgets import LogoBadge, HLine
 from .state import LabelerState
 from .canvas import BboxCanvas
-from polyx.model.i18n import tr
+from polyx.ml.i18n import tr
 
 
 _PRESETS: dict[str, list[str]] = {
@@ -376,7 +376,7 @@ class LabelerWindow(QMainWindow):
         if not path:
             return
         try:
-            from polyx.model.yolo_wrap import YoloModel
+            from polyx.ml.yolo_wrap import YoloModel
             self._pre_model = YoloModel(path)
             self.lbl_model.setText(Path(path).name)
             self._set_status("● Modelo cargado", T.OK)

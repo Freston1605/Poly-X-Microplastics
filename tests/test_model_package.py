@@ -1,6 +1,6 @@
-"""Contrato de pureza de ``polyx.model``: el motor nunca puede arrastrar Qt.
+"""Contrato de pureza de ``polyx.ml``: el motor nunca puede arrastrar Qt.
 
-El hito M005 parte Poly-X en un motor puro (``polyx.model``) y una capa de
+El hito M005 parte Poly-X en un motor puro (``polyx.ml``) y una capa de
 interfaz (``polyx.gui``). El valor de esa frontera se pierde en cuanto un
 ``import`` descuidado la cruza: basta que un modulo del motor importe
 ``PySide6`` para que el motor deje de poder correr headless en CI o en un
@@ -9,7 +9,7 @@ calculo a la ventana.
 
 Estas pruebas fijan la frontera de forma ejecutable, en tres frentes:
 
-1. Un interprete LIMPIO importa ``polyx.model`` y comprueba que no quedo
+1. Un interprete LIMPIO importa ``polyx.ml`` y comprueba que no quedo
    ningun modulo ``PySide6*`` en ``sys.modules``. Se usa un subproceso a
    proposito: el proceso de pytest puede traer PySide6 ya cargado por
    ``test_temas``, asi que comprobarlo en proceso no probaria nada.
@@ -18,14 +18,14 @@ Estas pruebas fijan la frontera de forma ejecutable, en tres frentes:
 3. El paquete de re-export del ``core`` tiene que haber DESAPARECIDO: mientras
    existiera, cualquier consumidor podia seguir importando los nombres viejos
    y la separacion entre motor y GUI era decorativa. Con el paquete borrado,
-   el unico camino al motor es ``polyx.model``.
+   el unico camino al motor es ``polyx.ml``.
 
 Sobre el escaneo relativo: el plan de la tarea pedia "todo import relativo es
 nivel 1". ``procedencia.py`` rompe esa letra a proposito y con razon, porque
 usa ``from .. import __version__`` (nivel 2) para leer la version del paquete
 ``polyx`` -- metadatos puros, sin Qt. La invariante que de verdad importa es
 que el motor no salga de su propio paquete ni del ``polyx`` que lo contiene:
-se admite ``polyx.model.*`` (nivel 1) y el ``from ..`` que apunta al propio
+se admite ``polyx.ml.*`` (nivel 1) y el ``from ..`` que apunta al propio
 ``polyx``, y se rechaza cualquier relativo que nombre otro subpaquete hermano
 (``polyx.gui`` o el paquete de re-export del ``core``) o que escape por arriba
 (nivel >= 3).
@@ -42,7 +42,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[1]
-MOTOR = RAIZ / "polyx" / "model"
+MOTOR = RAIZ / "polyx" / "ml"
 
 # Enlaces de Qt que el motor puro no debe importar nunca. La raiz de cada
 # nombre es lo que se compara, asi que ``PySide6.QtWidgets`` cae en ``PySide6``.
@@ -51,7 +51,7 @@ ENLACES_QT = ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2")
 # Paquetes fuera del motor de los que el motor no puede depender.
 PAQUETES_PROHIBIDOS = ("polyx.gui",)
 
-# Los doce modulos que T01 movio a polyx.model. Si falta alguno, el escaneo
+# Los doce modulos que T01 movio a polyx.ml. Si falta alguno, el escaneo
 # AST de mas abajo quedaria vacio y pasaria por no tener nada que mirar.
 MODULOS_ESPERADOS = frozenset({
     "yolo_wrap",
@@ -91,11 +91,11 @@ def _destino_relativo(nivel: int, modulo: str | None) -> str:
     """Nombre absoluto al que apunta un import relativo escrito en el motor.
 
     ``nivel`` es el numero de puntos de ``ast.ImportFrom``: uno es el propio
-    paquete (``polyx.model``), dos el padre (``polyx``). Devuelve cadena vacia
+    paquete (``polyx.ml``), dos el padre (``polyx``). Devuelve cadena vacia
     cuando el import escapa por encima de ``polyx`` (nivel >= 3).
     """
     if nivel == 1:
-        partes = ["polyx", "model"]
+        partes = ["polyx", "ml"]
     elif nivel == 2:
         partes = ["polyx"]
     else:
@@ -128,7 +128,7 @@ def _imports_prohibidos(arbol: ast.AST) -> list[str]:
 
 
 def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
-    """Imports relativos que se salen de ``polyx.model`` (o del propio ``polyx``).
+    """Imports relativos que se salen de ``polyx.ml`` (o del propio ``polyx``).
 
     Permitido: ``from .x import ...`` (nivel 1) y ``from .. import __version__``
     (nivel 2 sin submodulo, que es el paquete ``polyx``). Todo lo demas --un
@@ -142,8 +142,8 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
         destino = _destino_relativo(nodo.level, nodo.module)
         permitido = (
             destino == "polyx"
-            or destino == "polyx.model"
-            or destino.startswith("polyx.model.")
+            or destino == "polyx.ml"
+            or destino.startswith("polyx.ml.")
         )
         if not permitido:
             fuera.append(destino or f"nivel {nodo.level}")
@@ -152,7 +152,7 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
 
 # ── 1. Pureza headless en un interprete limpio ──
 def test_importar_el_motor_no_carga_ningun_modulo_qt():
-    """Un interprete nuevo importa polyx.model sin que entre ningun PySide6.
+    """Un interprete nuevo importa polyx.ml sin que entre ningun PySide6.
 
     Se lanza en subproceso porque el pytest que corre esta prueba puede tener
     PySide6 ya en sys.modules (``test_temas`` construye widgets): comprobar la
@@ -160,7 +160,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
     """
     guion = (
         "import sys\n"
-        "import polyx.model\n"
+        "import polyx.ml\n"
         "malos = sorted(\n"
         "    m for m in sys.modules\n"
         "    if m == 'PySide6' or m.startswith('PySide6.')\n"
@@ -182,7 +182,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
         timeout=120,
     )
     assert resultado.returncode == 0, (
-        "importar polyx.model arrastro Qt o fallo:\n"
+        "importar polyx.ml arrastro Qt o fallo:\n"
         f"stdout: {resultado.stdout}\n"
         f"stderr: {resultado.stderr}"
     )

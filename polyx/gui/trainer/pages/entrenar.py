@@ -14,8 +14,8 @@ from polyx.gui import iconos
 from polyx.gui.widgets import KPICard
 from ..runner import TrainerRunner
 from ..state import validate_training_config
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 class _HwProbeWorker(QThread):

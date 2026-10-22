@@ -1,6 +1,6 @@
 """Contrato de frontera de ``polyx.gui``: Qt solo vive dentro del paquete GUI.
 
-El hito M005 parte Poly-X en un motor puro (``polyx.model``) y una capa de
+El hito M005 parte Poly-X en un motor puro (``polyx.ml``) y una capa de
 interfaz (``polyx.gui``). ``tests/test_model_package.py`` ya fija el lado del
 motor; este archivo es la contraparte del lado de la interfaz y fija la
 frontera en tres frentes:
@@ -11,7 +11,7 @@ frontera en tres frentes:
    PySide6, el motor dejaria de poder correr headless (decision D012).
 2. Un escaneo AST de ``polyx/gui/`` rechaza cualquier import del paquete de
    re-export del ``core``, absoluto o relativo: la GUI depende del motor
-   (``polyx.model``), nunca de nombres heredados. S03 borra ese paquete, asi
+   (``polyx.ml``), nunca de nombres heredados. S03 borra ese paquete, asi
    que este contrato es el que avisa si algun consumidor se dejo sin migrar.
 3. El paquete de re-export del ``core`` ha desaparecido y el punto de entrada
    historico ``python -m polyx.launcher`` sigue llamando al launcher real, que
@@ -209,7 +209,7 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     nombres = {ruta.as_posix() for ruta in fuera}
     assert (RAIZ / "polyx" / "launcher.py").as_posix() in nombres
     for modulo in MODULOS_MOTOR:
-        assert (RAIZ / "polyx" / "model" / f"{modulo}.py").as_posix() in nombres
+        assert (RAIZ / "polyx" / "ml" / f"{modulo}.py").as_posix() in nombres
 
 
 @pytest.mark.parametrize(
@@ -342,9 +342,9 @@ def test_el_escanner_detecta_violaciones_sinteticas():
 
     # Y lo legitimo NO se marca: la GUI puede importar del motor y de sus
     # propios hermanos.
-    assert _imports_qt(ast.parse("from polyx.model.i18n import tr\n")) == []
+    assert _imports_qt(ast.parse("from polyx.ml.i18n import tr\n")) == []
     assert _imports_heredados(
-        ast.parse("from polyx.model.i18n import tr\n"), partes_gui
+        ast.parse("from polyx.ml.i18n import tr\n"), partes_gui
     ) == []
     assert _imports_heredados(
         ast.parse("from .theme import INK\n"), partes_gui

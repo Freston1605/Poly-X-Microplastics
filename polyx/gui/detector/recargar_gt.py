@@ -15,10 +15,10 @@ from pathlib import Path
 import numpy as np
 import cv2
 
-from polyx.model.yolo_wrap import (
+from polyx.ml.yolo_wrap import (
     find_gt_for_image, read_yolo_txt, compute_box_size_um, size_image,
 )
-from polyx.model.metrics import match_image
+from polyx.ml.metrics import match_image
 from .runner import _draw_annotated, _color_bgr_for_class
 
 

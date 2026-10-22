@@ -9,18 +9,18 @@ import numpy as np
 import cv2
 from PySide6.QtCore import QThread, Signal
 
-from polyx.model.yolo_wrap import (
+from polyx.ml.yolo_wrap import (
     YoloModel, Detection, find_gt_for_image, read_yolo_txt, compute_box_size_um,
 )
-from polyx.model.metrics import match_image
-from polyx.model.asignacion import mark_assignables
-from polyx.model.procedencia import provenance, sha256_file
-from polyx.model.calibracion import (resolver, carry_index, search_index,
+from polyx.ml.metrics import match_image
+from polyx.ml.asignacion import mark_assignables
+from polyx.ml.procedencia import provenance, sha256_file
+from polyx.ml.calibracion import (resolver, carry_index, search_index,
                                 summary_batch)
-from polyx.model.morfologia import apply_to_detection
+from polyx.ml.morfologia import apply_to_detection
 from polyx.gui import theme as T
 from .state import DetectorState, ImageResult
-from polyx.model import observabilidad as obs
+from polyx.ml import observabilidad as obs
 
 
 def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarray:

@@ -22,9 +22,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.model.paths import ROOT
-from polyx.model.plataforma import name_updater
-from polyx.model.observabilidad import logger_for, event
+from polyx.ml.paths import ROOT
+from polyx.ml.plataforma import name_updater
+from polyx.ml.observabilidad import logger_for, event
 
 REPO = "CrissFerrada/Poly-X-Microplastics"
 BRANCH = "main"

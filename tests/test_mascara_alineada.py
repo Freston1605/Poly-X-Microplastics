@@ -20,9 +20,9 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.model import morfologia as M
+from polyx.ml import morfologia as M
 from polyx.gui.report_html import _record_particle
-from polyx.model.yolo_wrap import Detection
+from polyx.ml.yolo_wrap import Detection
 
 
 def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):

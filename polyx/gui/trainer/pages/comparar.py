@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
 from ._base import TrainerPage
 from polyx.gui import theme as T
 from polyx.gui import iconos
-from polyx.model.i18n import tr
-from polyx.model.plataforma import open_in_system
+from polyx.ml.i18n import tr
+from polyx.ml.plataforma import open_in_system
 
 
 def _runs_root() -> Path:

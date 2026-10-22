@@ -24,11 +24,11 @@ from PySide6.QtWidgets import (
 from polyx.gui import theme as T
 from polyx.gui import iconos
 from polyx.gui import marca
-from polyx.model.i18n import tr, language
+from polyx.ml.i18n import tr, language
 from polyx.gui.preferencias import PreferencesDialog
 from polyx.gui.widgets import LogoBadge, HLine
 from polyx.gui.updates import UPDATER, SearchUpdates, can_update
-from polyx.model.plataforma import open_in_system, launch_updater
+from polyx.ml.plataforma import open_in_system, launch_updater
 from polyx import __version__
 
 # ──────────────────────────────────────────────────────────────────────
@@ -46,8 +46,8 @@ def _register_boot() -> None:
     Observability must never be worse than having none.
     """
     try:
-        from polyx.model import observabilidad
-        from polyx.model.plataforma import name_system
+        from polyx.ml import observabilidad
+        from polyx.ml.plataforma import name_system
         log = observabilidad.logger_for("app")
         observabilidad.event(
             log,
@@ -79,7 +79,7 @@ def _spawn_module(dotted: str) -> bool:
         )
     except Exception as e:
         try:
-            from polyx.model import observabilidad
+            from polyx.ml import observabilidad
             observabilidad.event(
                 observabilidad.logger_for("app"),
                 "module.launch.error",
@@ -91,7 +91,7 @@ def _spawn_module(dotted: str) -> bool:
             pass
         return False
     try:
-        from polyx.model import observabilidad
+        from polyx.ml import observabilidad
         observabilidad.event(
             observabilidad.logger_for("app"), "module.launch", modulo=dotted
         )
