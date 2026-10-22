@@ -68,6 +68,18 @@ def capturar() -> dict[str, str]:
         ("PyTorch", "pinned"),
     ]
 
+    # The gate compares figures by stable marker (see _normalizar_figuras in
+    # tests/test_render_reporte_benigno.py): matplotlib PNG bytes differ per
+    # renderer SO even at the same pin, so informe.sha256 registers the
+    # NORMALIZED digest -- the same value the identity test compares.
+    from tests.test_render_reporte_benigno import _normalizar_figuras
+
+    # Same environmental pins as the test fixture: ultralytics version line
+    # in the methods paragraph must not depend on which packages are
+    # importable on the capturing machine.
+    _ul_stub = type("ULStub", (), {"__version__": "8.3.40"})()
+    sys.modules["ultralytics"] = _ul_stub
+
     estados = {
         "benigna": estado_benigno(),
         "hostil": estado_hostil(),
@@ -80,8 +92,10 @@ def capturar() -> dict[str, str]:
         # Pipeline real: mismas secciones y firma que usan los tests de
         # identidad (T04) e inyeccion (T06), nada de un render recortado.
         rh.generate_report(st, destino, sections=list(rh.IDS_SECTIONS))
-        datos = destino.read_bytes()
-        digest = hashlib.sha256(datos).hexdigest()
+        datos = destino.read_text(encoding="utf-8")
+        digest = hashlib.sha256(
+            _normalizar_figuras(datos).encode("utf-8")
+        ).hexdigest()
         (directorio / "informe.sha256").write_text(digest + "\n",
                                                    encoding="utf-8")
         hashes[variante] = digest

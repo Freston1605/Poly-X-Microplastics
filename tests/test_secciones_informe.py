@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
@@ -35,6 +36,31 @@ import pytest
 # informe, actualizando sha256, pin y README juntos.
 BASELINE_HTML = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
     / "benigna" / "informe.html"
+
+# Las figuras del baseline son PNG base64 de matplotlib, cuyos bytes cambian
+# con el renderer/fuentes del SO incluso a la misma version pinneada. Los
+# tests que comparan un CUERPO DE SECCION aislado contra el baseline completo
+# normalizan las figuras a un marcador CONSTANTE (<FIG>): el cuerpo aislado
+# renumera su marcador ordinal desde 1 pero el baseline los numera desde su
+# posicion global, asi que un marcador ordinal no casa entre ambos. La
+# posicion de cada figura dentro del informe completo la cubre el gate de
+# tests/test_render_reporte_benigno.py (renders de TODAS las secciones
+# juntas, mismos ordinales en ambos lados); aqui solo se fija estructura.
+import re as _re
+
+_PNG_URI_RE_SECTION = _re.compile(r"data:image/png;base64,[A-Za-z0-9+/=]+")
+
+
+def _sin_payload_figuras(html: str) -> str:
+    """Reemplaza cada data-URI de PNG por el marcador constante <FIG>."""
+    return _PNG_URI_RE_SECTION.sub("data:image/png;base64,<FIG>", html)
+
+from tests.test_render_reporte_benigno import _normalizar_figuras  # noqa: E402,F401
+
+# El baseline ya normalizado con marcador constante (solo separa estructura):
+# unico lugar que lee el archivo. Los cuerpos de seccion se comparan contra
+# esta variante, cada uno normalizado con la misma funcion.
+BASELINE_TXT = _sin_payload_figuras(BASELINE_HTML.read_text(encoding="utf-8"))
 
 # Constructores extraidos en S02/T01-T07 mas los que ya eran de modulo.
 CONSTRUCTORES = (
@@ -141,7 +167,7 @@ def test_resumen_devuelve_cuerpo_sin_h2(tmp_path):
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     # El ensamblador inserta el cuerpo tal cual cuando no lleva {NUM}.
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
 
 
 def test_errores_queda_vacio_sin_ground_truth(tmp_path):
@@ -152,7 +178,7 @@ def test_errores_queda_vacio_sin_ground_truth(tmp_path):
     cuerpo = rh._section_errors(st, pre.resultados, pre.active, pre.any_gt)
     assert cuerpo == ""
     # Y el baseline lo confirma: la seccion no aparece en el documento.
-    assert "<h2 id='errors'>" not in BASELINE_HTML.read_text(encoding="utf-8")
+    assert "<h2 id='errors'>" not in BASELINE_TXT
 
 
 def test_modelos_nombra_al_alias(tmp_path):
@@ -164,7 +190,7 @@ def test_modelos_nombra_al_alias(tmp_path):
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     assert "m1" in cuerpo  # alias de tests/fixtures_informe.ALIAS_BENIGNO
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
 
 
 def test_veredicto_sin_modelos_que_comparar_queda_vacio(tmp_path):
@@ -183,7 +209,7 @@ def test_comparacion_devuelve_cuerpo_sin_h2(tmp_path):
     cuerpo = rh._section_comparison(st, pre.resultados)
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
 
 
 def test_galeria_sin_bytes_de_prediccion_queda_vacia(tmp_path):
@@ -199,7 +225,7 @@ def test_galeria_sin_bytes_de_prediccion_queda_vacia(tmp_path):
     cuerpo = rh._section_gallery(pre.resultados, st, pre.clases_lote,
                                  max_gallery=60, include_gallery=True)
     assert cuerpo == ""
-    assert "<h2 id='gallery'>" not in BASELINE_HTML.read_text(encoding="utf-8")
+    assert "<h2 id='gallery'>" not in BASELINE_TXT
 
 
 def test_resultados_lleva_las_figuras_agregadas(tmp_path):
@@ -211,7 +237,7 @@ def test_resultados_lleva_las_figuras_agregadas(tmp_path):
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     assert "base64," in cuerpo
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
 
 
 def test_metodos_devuelve_tres_partes_con_placeholder_num(tmp_path):
@@ -238,7 +264,7 @@ def test_referencias_con_y_sin_bandera(tmp_path):
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     assert "<ol" in cuerpo
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
     assert rh._section_references(include_refs=False) == ""
 
 
@@ -252,7 +278,7 @@ def test_calibracion_vacia_sin_calibraciones(tmp_path):
 
     st, pre = _estado_benigno(tmp_path)
     assert rh._section_calibration(st) == ""
-    assert "<h2 id='calib'>" not in BASELINE_HTML.read_text(encoding="utf-8")
+    assert "<h2 id='calib'>" not in BASELINE_TXT
 
 
 def test_conteo_por_muestra_con_placeholder_num(tmp_path):
@@ -313,7 +339,7 @@ def test_fichas_tarjetas_y_tope_de_muestra(tmp_path):
     assert "base64," in cuerpo
     # Agrupado por imagen: el nombre de la foto llega escapado en un <h3>.
     assert "<h3>placa_muestra_a.png</h3>" in cuerpo
-    assert cuerpo in BASELINE_HTML.read_text(encoding="utf-8")
+    assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
     # Fronteras: sin formas o con tope 0, vacio (y el ensamblador la suelta).
     assert rh._section_records(st, [], max_records=12) == ""
     assert rh._section_records(st, formas, max_records=0) == ""

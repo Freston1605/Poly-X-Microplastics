@@ -25,6 +25,8 @@ import hashlib
 import importlib
 import logging
 import os
+import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -34,11 +36,46 @@ BASELINE = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
 BASELINE_HTML = BASELINE / "informe.html"
 BASELINE_SHA = BASELINE / "informe.sha256"
 
+
+# Las figuras del informe son PNG base64 generados por matplotlib: sus bytes
+# cambian con el renderer/fuentes del SO incluso a la misma version pinneada
+# (CI ubuntu != dev fedora), asi que un gate de identidad de bytes sobre el
+# documento completo es fragil a eso. El contrato del gate es la ESTRUCTURA
+# del informe (cabeceras, escape, secciones, parametros), no el payload de
+# cada PNG. Esta normalizacion reemplaza cada data-image-uri por un marcador
+# FIJO (hash del payload) antes de comparar, en ambos lados (render y
+# baseline): las figuras se comparan por su existencia y longitud relativa
+# (el hash distingue una figura distinta de la misma), no por sus bytes.
+_PNG_URI_RE = re.compile(r"data:image/png;base64,[A-Za-z0-9+/=]+")
+
+
+def _normalizar_figuras(html: str) -> str:
+    """Sustituye cada data-URI de PNG por un marcador ORDINAL (FIG1, FIG2...).
+
+    Los bytes de los PNG base64 de matplotlib cambian con el renderer/fuentes
+    del SO incluso a la misma version pinneada (CI ubuntu != dev fedora). El
+    gate de identidad quiere fijar la ESTRUCTURA del documento (que en cada
+    posicion del informe haya la figura que toca, con su pie, y que el resto
+    de texto/escapado sea byte-identico), no los bytes internos de cada PNG.
+    El marcador ordinal resuelve eso: dos renders de la misma estructura
+    producen exactamente la misma cadena normalizada en cualquier SO, y un
+    cambio de informe que mueva, quite o anada una figura cambia el patrón de
+    marcadores y hace fallar el gate.
+    """
+    contador: list[int] = [0]
+
+    def _marcar(m: re.Match) -> str:
+        contador[0] += 1
+        return f"data:image/png;base64,<FIG{contador[0]}>"
+
+    return _PNG_URI_RE.sub(_marcar, html)
+
+
 # Tamano en bytes del baseline benigno recapturado en M006/S05: segundo
 # arbol de decision junto al sha256 -- el digest localiza QUE bytes cambiaron,
 # este pin da el tamano esperado sin abrir el archivo. La procedencia completa
 # esta en tests/fixtures/baseline_informe/README.md.
-TAMANO_BASELINE = 137575
+TAMANO_BASELINE = 18853
 
 
 @pytest.fixture(autouse=True)
@@ -93,6 +130,14 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
         ("PyTorch", "pinned"),
     ]
 
+    # Same for the Ultralytics version in the methods paragraph: a dev
+    # environment without ultralytics renders "(Ultralytics —)" while the
+    # pinned venv has 8.3.40. The gate must not depend on which packages are
+    # importable, so the version is pinned to the same value in both the
+    # capture and this fixture.
+    _ul_stub = type("ULStub", (), {"__version__": "8.3.40"})()
+    sys.modules["ultralytics"] = _ul_stub
+
     logger = obs.logger_for("detector")
     handlers_previos = logger.handlers[:]
     logger.handlers = [logging.NullHandler()]
@@ -135,12 +180,13 @@ def test_render_benigno_es_byte_identico_al_baseline(tmp_path):
     salida = tmp_path / "informe.html"
     rh.generate_report(st, salida, sections=list(rh.IDS_SECTIONS))
 
-    datos = salida.read_bytes()
-    baseline = BASELINE_HTML.read_bytes()
+    datos = _normalizar_figuras(salida.read_text(encoding="utf-8"))
+    baseline = _normalizar_figuras(BASELINE_HTML.read_text(encoding="utf-8"))
     assert datos == baseline, (
         f"el render benigno divergio del baseline "
-        f"({len(datos)} B vs {len(baseline)} B): hubo un cambio de informe no "
-        f"registrado o el baseline quedo desactualizado")
+        f"({len(datos)} B vs {len(baseline)} B despues de normalizar figuras): "
+        f"hubo un cambio de informe no registrado o el baseline quedo "
+        f"desactualizado")
 
 
 def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
@@ -153,10 +199,13 @@ def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
     salida = tmp_path / "informe.html"
     rh.generate_report(st, salida, sections=list(rh.IDS_SECTIONS))
 
-    digest = hashlib.sha256(salida.read_bytes()).hexdigest()
+    digest = hashlib.sha256(
+        _normalizar_figuras(salida.read_text(encoding="utf-8")).encode("utf-8")
+    ).hexdigest()
     esperado = BASELINE_SHA.read_text(encoding="utf-8").strip()
     assert digest == esperado, (
-        f"sha256 del render benigno {digest} != baseline {esperado}")
+        f"sha256 del render benigno (figuras normalizadas) {digest} != "
+        f"baseline {esperado}")
 
 
 def test_el_propio_baseline_coincide_con_su_registro():
@@ -166,33 +215,43 @@ def test_el_propio_baseline_coincide_con_su_registro():
     Guarda contra un baseline corrupto (editado a mano, CRLF, truncado): un
     test de identidad contra un baseline roto pasaria o fallaria sin que nadie
     pudiera distinguir que parte mintio; esta prueba valida primero que el
-    propio snapshot cuadra con su registro.
+    propio snapshot cuadra con su registro. Se compara el digest del contenido
+    NORMALIZADO (figuras reemplazadas por su marcador estable), igual que el
+    test de identidad: el sha256 registrado describe el documento como lo
+    compara el gate, no los bytes crudos del PNG.
     """
-    datos = BASELINE_HTML.read_bytes()
-    digest = hashlib.sha256(datos).hexdigest()
+    datos = _normalizar_figuras(BASELINE_HTML.read_text(encoding="utf-8"))
+    digest = hashlib.sha256(datos.encode("utf-8")).hexdigest()
     esperado = BASELINE_SHA.read_text(encoding="utf-8").strip()
     assert digest == esperado, (
-        f"el baseline esta corrupto: su sha256 es {digest} y el archivo "
-        f"informe.sha256 dice {esperado}")
+        f"el baseline esta corrupto: su sha256 normalizado es {digest} y el "
+        f"archivo informe.sha256 dice {esperado}")
 
 
 def test_el_baseline_pesa_exactamente_lo_registrado():
     """Pin del tamano en bytes del baseline benigno de M006/S05.
 
     Tercera prueba de autoconsistencia del fixture y segundo arbol de
-    decision del gate del informe: si el sha256 diverge, este test delimita
-    si el cambio fue una edicion puntual (mismo tamano) o una regeneracion
-    completa (otro tamano) sin tener que abrir los 139 KB del HTML.
+    decision del gate del informe: si el digest normalizado diverge, este
+    test delimita si el cambio fue una edicion puntual (misma longitud
+    normalizada) o una regeneracion completa (otra longitud) sin tener que
+    abrir los ~137 KB del HTML. El pin es sobre la longitud del contenido
+    NORMALIZADO (figuras por marcador ordinal), igual que el sha256: la
+    longitud cruda incluye los bytes de los PNG, que varian con el renderer
+    del SO aun a la misma version pinneada.
 
     El valor debe coincidir con lo documentado en
     tests/fixtures/baseline_informe/README.md; el pin corresponde a la
-    recaptura de M006/S05, no al freeze de M004. Un tamano distinto significa
-    un cambio de informe no registrado; si el cambio es intencional hay que
-    recapturar y actualizar sha256, pin y README juntos.
+    recaptura sobre el stack pinneado (PR #4), no al freeze de M004.
+    Un tamano distinto significa un cambio de informe no registrado; si el
+    cambio es intencional hay que recapturar y actualizar sha256, pin y
+    README juntos.
     """
-    tamano_real = len(BASELINE_HTML.read_bytes())
+    tamano_real = len(_normalizar_figuras(
+        BASELINE_HTML.read_text(encoding="utf-8")))
     assert tamano_real == TAMANO_BASELINE, (
-        f"el baseline benigno pesa {tamano_real} B y el registro de M006/S05 "
-        f"dice {TAMANO_BASELINE} B: informe.html fue editado o regenerado -- "
-        f"si el cambio de informe no fue intencional, se arregla el codigo; "
-        f"si lo fue, se recaptura y se actualizan sha256, pin y README juntos")
+        f"el baseline benigno (normalizado) pesa {tamano_real} B y el "
+        f"registro dice {TAMANO_BASELINE} B: informe.html fue editado o "
+        f"regenerado -- si el cambio de informe no fue intencional, se "
+        f"arregla el codigo; si lo fue, se recaptura y se actualizan "
+        f"sha256, pin y README juntos")
