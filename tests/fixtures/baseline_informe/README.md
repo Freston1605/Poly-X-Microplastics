@@ -9,11 +9,12 @@ must keep byte-identical. This README records who captured it, when it was
 re-verified or recaptured, and why it must not be regenerated casually.
 
 Current render metadata (recaptured on the PINNED stack — Python 3.11,
-matplotlib 3.9.2, torch present, equipment rows pinned, see below):
-    benign sha256 = bf1cf07fb916139962e10610bdbc06015accf95baa232986e53fdb7075cd7648
-    benign bytes  = 137575
-    hostile sha256 = 7c08e6f35d27460217598ff32c88248484ac34230b6d77d54b946a06186520bb
-    hostile bytes  = 137830
+matplotlib 3.9.2, torch present, equipment rows and ultralytics version
+pinned, figures normalized to ordinal markers — see below):
+    benign sha256 = cb21222319b0512d36d5f98e6ba9d88abbc635782a118c42af8e38f1539991c2
+    benign normalized bytes = 18853
+    hostile sha256 = c3d1467735961f065f1b068274a127632ad5c2971c983cb22e1b0e957ee501ef
+    hostile normalized bytes = 19108
 """
 ```
 
