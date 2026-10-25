@@ -18,6 +18,11 @@ default_branch: main # origin default branch; initialization records it once, no
 
 # Project State
 
+> **Migrated to GSD Pi on 2026-10-25.** This corpus was imported as milestone
+> M011 (slices S01-S03, eight tasks) and the GSD Path v2 run was stopped while
+> T001 was in progress. The branch `gsd-path/M001` and `stash@{0}` keep the
+> abandoned run's history; the live plan is in the GSD database, not here.
+
 One file, always current. The router reads this first; every phase updates
 it on completion. If this file and the artifacts disagree, the artifacts win
 — fix this file.
