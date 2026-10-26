@@ -1038,6 +1038,20 @@ def _section_calibration(state) -> str:
     return calib_html
 
 
+def _morphotype_table(shapes, warning_review: str) -> str:
+    """Morphotype count table, with the review/ring warnings above it."""
+    fibers = sum(1 for d, _ in shapes if d.morphotype == "fibra")
+    pc_f = 100.0 * fibers / len(shapes)
+    return (
+        warning_review
+        + f"""
+<table class='data'><tr>{tr("<th>Morfotipo</th><th>Cuántas</th><th>%</th>")}</tr>
+<tr>{tr("<td>Fibra (relación de aspecto ≥ 3)</td>")}<td>{fibers}</td><td>{pc_f:.1f} %</td></tr>
+<tr>{tr("<td>Partícula (no fibrosa)</td>")}<td>{len(shapes) - fibers}</td><td>{100 - pc_f:.1f} %</td></tr>
+</table>"""
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1064,9 +1078,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
 
     if shapes:
         with_size = [(d, path_2) for d, path_2 in shapes if d.length_um]
-        fibers = sum(1 for d, _ in shapes if d.morphotype == "fibra")
         curves = sum(1 for d, _ in shapes if d.curvature and d.curvature >= 1.15)
-        pc_f = 100.0 * fibers / len(shapes)
 
         # ── Particles whose size warrants a look ──
         # It is declared in the section, not only in each card: whoever reads the size
@@ -1122,14 +1134,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             )
 
         # ── Distribution by morphotype ──
-        table_morphotype = (
-            warning_review
-            + f"""
-<table class='data'><tr>{tr("<th>Morfotipo</th><th>Cuántas</th><th>%</th>")}</tr>
-<tr>{tr("<td>Fibra (relación de aspecto ≥ 3)</td>")}<td>{fibers}</td><td>{pc_f:.1f} %</td></tr>
-<tr>{tr("<td>Partícula (no fibrosa)</td>")}<td>{len(shapes) - fibers}</td><td>{100 - pc_f:.1f} %</td></tr>
-</table>"""
-        )
+        table_morphotype = _morphotype_table(shapes, warning_review)
 
         if with_size:
             lengths = np.array([d.length_um for d, _ in with_size], dtype=float)

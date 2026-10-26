@@ -52,7 +52,6 @@ globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith
 REPORT_CSS = Path(__file__).with_name("report.css").read_text(encoding="utf-8")
 
 
-
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
 # the second and third plate of the same stretch. Crops add `__f<row>c<col>`.
 

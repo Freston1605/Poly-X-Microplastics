@@ -13,6 +13,7 @@ _STATION = {"1": "Chiu Chiu", "2": "Taira", "3": "Desembocadura"}
 _ORDER_STATION = ["Chiu Chiu", "Taira", "Desembocadura"]
 _PLATE = {"": "a", "x": "b", "xx": "c"}
 
+
 def _sample_of(path_2) -> tuple | None:
     """(``estacion``, ``tramo``, ``placa``) parsed from the name, or None if it does
     not follow the naming pattern.
@@ -33,8 +34,6 @@ def _sample_of(path_2) -> tuple | None:
     )
 
 
-
-
 def _clue_order(path_2) -> tuple:
     """Sorts by ``estacion``/``tramo``/``placa`` when the name allows it."""
     m = _sample_of(path_2)
@@ -43,8 +42,6 @@ def _clue_order(path_2) -> tuple:
     station, range_value, plate = m
     idx = _ORDER_STATION.index(station) if station in _ORDER_STATION else 99
     return (0, idx, range_value, plate, Path(path_2).name)
-
-
 
 
 def _lot_forms(state, all_results):
@@ -89,8 +86,6 @@ def _lot_forms(state, all_results):
         1 for r in all_results for p_ in r.predictions if getattr(p_, "aspect", None) is None
     )
     return shapes, n_en_el_aro, n_formless
-
-
 
 
 def _batch_metrics(state, solo_images):
@@ -149,5 +144,3 @@ def _batch_metrics(state, solo_images):
 # serves as an anchor. This dictionary was a second list to keep in
 # sync with SECCIONES, and adding `profundidad` crashed with
 # KeyError -- exactly what SECCIONES avoids by being a single list.
-
-
