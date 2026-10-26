@@ -1,0 +1,58 @@
+# Publicacion en PyPI mediante Trusted Publishing (OIDC): no hay token que
+# filtrar ni rotar. Disparo por tag v* (p.ej. `git tag v2.0.0 && git push
+# --tags`) o manualmente desde la UI de Actions.
+#
+# Antes de la primera ejecucion hay que crear el proyecto en PyPI y anadir
+# este repositorio como "publisher" (Settings -> Publishing -> Add a new
+# publisher), con environment "pypi". Sin eso el job falla con 403 al subir.
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # requerido por Trusted Publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Build sdist and wheel
+        run: |
+          pip install build
+          python -m build -o dist
+      - name: Verify the tag matches the package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VER=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['dynamic'] and __import__('re').search(r'__version__\\s*=\\s*\"([^\"]+)\"', open('src/polyx/__init__.py').read()).group(1))")
+          echo "tag=$TAG package=$VER"
+          test "$TAG" = "$VER"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/polyx-microplastics
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

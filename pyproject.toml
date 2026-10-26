@@ -45,6 +45,7 @@ dependencies = [
 Homepage = "https://github.com/CrissFerrada/Poly-X-Microplastics"
 Repository = "https://github.com/CrissFerrada/Poly-X-Microplastics"
 Issues = "https://github.com/CrissFerrada/Poly-X-Microplastics/issues"
+Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
@@ -65,6 +66,6 @@ polyx-report = "polyx.cli.report:main"
 packages = ["src/polyx"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "README.md", "CLAUDE.md", "requirements.txt"]
+include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE"]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
