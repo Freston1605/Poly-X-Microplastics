@@ -61,7 +61,7 @@ jobs:
         run: >-
           QT_QPA_PLATFORM=offscreen
           MPLCONFIGDIR=/tmp/mplconfig
-          uv run pytest -q
+          uv run --extra gui pytest -q
 
   build:
     runs-on: ubuntu-24.04
