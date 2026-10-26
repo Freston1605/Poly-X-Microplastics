@@ -25,126 +25,111 @@ It integrates the whole pipeline: **training → labelling → detection → pap
 The root deliberately mixes two surfaces with different audiences:
 
 - **End-user surface** (the double-click surface seen right after the ZIP
-  download): `SETUP.bat`, `iniciar_polyx.bat`, `Poly-X.vbs`, `LEEME.txt`,
-  `LEEME_macOS.md`, the updaters (`actualizar.{bat,ps1}`,
-  `actualizar_macOS.command`), the uninstaller and the packagers
-  (`empaquetar_*.bat`, `migrar_instalacion.ps1`). The assumption
-  "they live at the root" is wired in: `polyx.core.platform.name_updater()`
-  plus `polyx.gui.updates` build `ROOT/name_updater()`, `Poly-X.vbs`
-  requires sitting next to `SETUP.bat`, and `empaquetar_para_llevar.bat`
-  builds the offline package from `src\polyx\`, `docs\` and
-  `tools\manual\`. Moving them means updating all of that and the
-  cross-references between the scripts themselves.
+  download): everything under `install/` — `SETUP.bat`, `iniciar_polyx.bat`,
+  `Poly-X.vbs`, the updaters (`actualizar.{bat,ps1}`,
+  `actualizar_macOS.command`, `actualizar_linux.sh`), the uninstaller and the
+  packagers (`empaquetar_*.bat`, `migrar_instalacion.ps1`), plus `setup.sh`,
+  `run.sh` and `polyx.desktop` for Linux. The assumption "they live in
+  install/" is wired in: `polyx.core.platform.name_updater()` plus
+  `polyx.gui.updates` build `ROOT/install/name_updater()`, `Poly-X.vbs`
+  self-locates two levels up (project root), `SETUP.bat` resolves `SRC` as
+  its parent, and `empaquetar_para_llevar.bat` builds the offline package
+  from `src\`, `docs\` and `tools\manual\` and copies the install scripts
+  flat into the bundle root. Moving them again means updating all of that and
+  the cross-references between the scripts themselves.
 - **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
   `tools/audit` (UI-translation audit and report fixtures), `tools/manual`
   (the manual chain), `tools/packaging` (PyInstaller). The compiled manual
-  lives in `docs/manual/` and is NOT versioned (see .gitignore: it is
-  regenerated from `tools/manual`).
+  lives in `docs/manual/` and IS versioned: a fresh ZIP download opens it
+  offline. The PDFs stay ignored (regenerable from `tools/manual`).
 - **Local research work**: `manuscript-workspace/` is not versioned — it is
   a draft-testing workspace, material of the paper that the README keeps
   out of the repository on purpose.
 
 ```
-polyx/                    # Código fuente
-├── __init__.py           # v2.0.0
-├── launcher.py           # Shim Qt-free del entry point histórico
-├── core/                 # Shim temporal de re-export (se elimina al cerrar M005)
-├── model/                # Motor puro, sin Qt
-│   ├── paths.py          # Rutas (models/, runs/, data/, assets/)
-│   ├── yolo_wrap.py      # Wrapper YOLO (Detection, YoloModel)
-│   ├── metrics.py        # TP/FP/FN, IoU, matriz de confusión
-│   ├── morfologia.py     # Segmentación y tallas sobre la máscara
-│   ├── calibracion.py    # Calibración μm/píxel
-│   ├── asignacion.py     # Abstención: detectar ≠ identificar
-│   ├── dataset_audit.py  # Auditoría de dataset
-│   ├── observabilidad.py # Logs JSONL (logger_for, set_run_id)
-│   ├── procedencia.py    # Trazabilidad de la corrida
-│   ├── plataforma.py     # Diferencias entre sistemas operativos
-│   ├── i18n.py           # tr(), idioma()
-│   └── traducciones_en.py
-└── gui/                  # Presentación: todo lo que toca Qt
-    ├── __main__.py       # python -m polyx.gui
-    ├── launcher.py       # Módulo 1: Menú principal (hero + 4 cards)
-    ├── theme.py          # Paleta de colores (Segoe UI, Nile Red RGB)
-    ├── iconos.py         # Iconos vectoriales (QPainterPath, 40 iconos)
-    ├── marca.py          # Identidad por ventana (logo + nombre)
-    ├── widgets.py        # LogoBadge, HLine, custom widgets
-    ├── preferencias.py   # Diálogo de preferencias (tema, idioma)
-    ├── pdf_export.py     # HTML → PDF
-    ├── updates.py        # Buscador de actualizaciones
-    ├── report_html.py    # Generador reporte (base64, paper-quality)
-    ├── detector/         # Módulo 2: Análisis en lote
-    │   ├── __main__.py
-    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-    │   ├── state.py          # DetectorState (modelos, imágenes, params)
-    │   ├── runner.py         # Lógica de ejecución (batch inference)
-    │   └── pages/
-    │       ├── _base.py      # BasePage (herencia)
-    │       ├── modelos.py    # Carga hasta 3 modelos .pt
-    │       ├── imagenes.py   # Selecciona carpeta de imágenes
-    │       ├── parametros.py # Conf, IoU, um/px, device (CPU/GPU)
-    │       ├── gt_manual.py  # Anota ground truth manual
-    │       ├── ejecutar.py   # Botón ▶ run + progreso
-    │       ├── resultados.py # Tabla: imagen, clase, conf, tamaño
-    │       ├── errores.py    # Matriz confusión, galería FP/FN
-    │       ├── comparar.py   # Compara runs (curvas P/R/F1)
-    │       └── reporte.py    # Genera HTML + abre navegador
-    ├── trainer/          # Módulo 3: Entrenamiento YOLO
-    │   ├── __main__.py
-    │   ├── window.py         # Ventana principal (sidebar + 9 páginas)
-    │   ├── state.py          # TrainerState (config, runs, checkpoints)
-    │   ├── runner.py         # Lógica de entrenamiento
-    │   ├── hw.py             # Detección GPU, hardware info
-    │   └── pages/
-    │       ├── _base.py
-    │       ├── modelo.py     # YOLO v8/v11, tamaño (nano-xlarge)
-    │       ├── dataset.py    # Dataset YAML + split (train/val/test)
-    │       ├── parametros.py # Epochs, batch, imgsz, optimizer
-    │       ├── augmentacion.py # Flip, rotation, mosaic, etc.
-    │       ├── entrenar.py   # Lanzar training + loss curves en vivo
-    │       ├── evaluar.py    # Métricas mAP, P, R, F1 por clase
-    │       ├── comparar.py   # Comparar múltiples runs
-    │       ├── exportar.py   # Export PT→ONNX/TensorRT/CoreML
-    │       └── informe.py    # Reporte entrenamiento
-    ├── visor/            # Inspección con calibración μm/píxel
-    └── etiquetador/      # Anotación YOLO manual
+src/                      # Código fuente (paquete instalable)
+└── polyx/                # El paquete `polyx` (importable)
+    ├── __init__.py       # __version__ (fuente única, leída por hatchling)
+    ├── launcher.py       # Shim Qt-free del entry point histórico
+    ├── assets/           # Recursos empaquetados (polyx.ico)
+    ├── cli/              # CLIs headless: train, eval, detect, report,
+    │                     #   download-models
+    ├── core/             # Motor puro, sin Qt
+    │   ├── paths.py      # Rutas (ROOT, ASSETS_DIR, USER_DATA_DIR, ...)
+    │   ├── platform.py   # Diferencias entre sistemas operativos
+    │   ├── i18n.py       # tr(), idioma()
+    │   ├── translations_en.py
+    │   ├── observability.py  # Logs JSONL (logger_for, set_run_id)
+    │   ├── yolo_wrap.py  # Wrapper YOLO (Detection, YoloModel)
+    │   ├── metrics.py    # TP/FP/FN, IoU, matriz de confusión
+    │   ├── assignment.py # Abstención: detectar ≠ identificar
+    │   ├── dataset_audit.py
+    │   ├── detection_run.py  # Motor headless de detección
+    │   ├── training.py       # Motor headless de entrenamiento
+    │   ├── evaluation.py     # Motor headless de evaluación
+    │   ├── report_simple.py  # Reporte HTML sin Qt
+    │   ├── detect/       # Inferencia YOLO
+    │   ├── measure/      # Segmentación y tallas sobre la máscara
+    │   ├── calibration/  # Calibración μm/píxel
+    │   ├── data/         # Carga/validación de datasets
+    │   ├── quality/      # Métricas, asignación, abstractness
+    │   └── provenance/   # Trazabilidad de la corrida
+    └── gui/              # Presentación: todo lo que toca Qt
+        ├── __main__.py   # python -m polyx.gui
+        ├── launcher.py   # Módulo 1: Menú principal (hero + 4 cards)
+        ├── theme.py      # Paleta de colores (Segoe UI, Nile Red RGB)
+        ├── iconos.py     # Iconos vectoriales (QPainterPath)
+        ├── marca.py      # Identidad por ventana (logo + nombre)
+        ├── widgets.py    # LogoBadge, HLine, custom widgets
+        ├── preferencias.py  # Diálogo de preferencias (tema, idioma)
+        ├── pdf_export.py # HTML → PDF
+        ├── updates.py    # Buscador de actualizaciones
+        ├── report_html.py  # Generador reporte (base64, paper-quality)
+        ├── qt.py         # Guard de PySide6 (extra [gui])
+        ├── detector/     # Módulo 2: Análisis en lote
+        │   ├── window.py, state.py, runner.py
+        │   └── pages/    # modelos, imagenes, parametros, gt_manual,
+        │                 # ejecutar, resultados, errores, comparar, reporte
+        ├── trainer/      # Módulo 3: Entrenamiento YOLO
+        │   ├── window.py, state.py, runner.py, hw.py
+        │   └── pages/    # modelo, dataset, parametros, augmentacion,
+        │                 # entrenar, evaluar, comparar, exportar, informe
+        ├── labeler/      # Módulo 4: Anotación YOLO manual
+        └── viewer/       # Módulo 5: Inspección con calibración μm/píxel
 
-legacy/                   # Versiones anteriores, en la RAIZ (no dentro de polyx/)
-├── Detector_Microplastico.py
-├── trainer_microplastico.py
-├── polyx_viewer.py
-└── ...
+tests/                    # Pytest (44 módulos + fixtures)
+├── english_scan.py       # Scanner de remanentes en español (sin LibCST)
+├── test_*_ingles.py      # Guardas de convención de idioma
+├── fixtures/             # Fixtures compartidos y baselines del informe
+└── formas/               # Casos de prueba geométricos
 
-_diagnostico/             # Scripts sueltos de diagnostico. No son del programa:
-                          # se usan a mano para mirar un dataset o un modelo.
+tools/                    # Herramientas de desarrollo (no se empaquetan)
+├── audit/                # Auditoría de traducción + captura de fixtures
+├── manual/               # Cadena del manual (capturar, generar, texto ES/EN)
+└── packaging/            # PyInstaller (polyx.spec, build.py)
 
-# Capturas que empotra el manual (docs/assets/manual_screenshots).
-#   tools/manual/capturar_manual.py   capturas de la interfaz
-#   tools/manual/generar_manual.py    motor: arma Manual_PolyX[.en].html y los PDF
-#   (texto del manual:   tools/manual/manual_texto_es.py / manual_texto_en.py)
+docs/                     # Documentación
+├── manual/               # Manual compilado (versionado, offline)
+├── assets/               # manual_screenshots/ (es, en, web, win)
+├── development/          # diagnóstico, recetas, revisión de arquitectura
+└── (LEEME_macOS.md en la raíz)
 
-models/                   # Pesos YOLO .pt entrenados
-├── bestdetectormedium.pt # Modelo por defecto (producción)
-└── ...
+install/                  # Superficie del usuario final (doble clic)
+├── SETUP.bat, iniciar_polyx.bat, Poly-X.vbs   # Windows
+├── actualizar.{bat,ps1}, desinstalar.ps1, migrar_instalacion.ps1
+├── empaquetar_*.bat
+├── Lanzar_macOS.command, actualizar_macOS.command, ...  # macOS
+├── setup.sh, run.sh, actualizar_linux.sh, polyx.desktop  # Linux
+└── lanzar_polyx.py       # Shim Qt-free
 
-runs/                     # Resultados de cada ejecución
-└── YYYYMMDD_HHMMSS/
-    ├── images/          # Imágenes anotadas (PNG)
-    ├── centroids.csv    # class, x, y, conf, diam_um
-    ├── metrics.json     # TP/FP/FN por clase
-    └── annotations/     # YOLO .txt si hay GT
+legacy/                   # Versiones anteriores (referencia, no se toca)
 
-data_microplastico/       # Dataset etiquetado YOLO
-├── images/
-│   ├── train/
-│   ├── val/
-│   └── test/
-├── labels/
-│   ├── train/           # .txt YOLO (class cx cy w h norm)
-│   └── val/
-└── classes.txt          # 0: PET, 1: PP, 2: LDPE
-
+models/                   # Pesos YOLO .pt (dev; en instalación van a user data)
+runs/                     # Resultados de cada ejecución (gitignored)
+data_microplastico/       # Dataset YOLO etiquetado (gitignored)
 data/                     # Otros datasets
+
+.github/workflows/        # ci.yml (tests + build smoke), publish.yml (PyPI)
 ```
 
 ---
@@ -165,11 +150,11 @@ data/                     # Otros datasets
 **Hardware:**
 - Windows 10/11 · macOS 11 Big Sur or later
 - 8 GB RAM minimum
-- Acceleration: picked automatically in `model/plataforma.py` → **CUDA** (NVIDIA) →
+- Acceleration: picked automatically in `src/polyx/core/platform.py` → **CUDA** (NVIDIA) →
   **MPS** (integrated GPU of Apple Silicon Macs) → **CPU**
 
 **Portability.** Everything that differs between operating systems is concentrated in
-`polyx/model/plataforma.py`, not scattered across the code:
+`src/polyx/core/platform.py`, not scattered across the code:
 
 | Before (Windows only) | Now |
 |---|---|
@@ -190,7 +175,7 @@ data/                     # Otros datasets
 
 ---
 
-## 🎨 Themes and palette (polyx/gui/theme.py)
+## 🎨 Themes and palette (src/polyx/gui/theme.py)
 
 **Four themes**, selectable in *Preferences* (or via `POLYX_TEMA`):
 
@@ -258,7 +243,7 @@ panel draws a fixed frame; it does not disappear.
 
 ### Icons
 
-`polyx/gui/iconos.py` draws **40 icons** with `QPainterPath` on a 24×24 grid, with
+`src/polyx/gui/iconos.py` draws **40 icons** with `QPainterPath` on a 24×24 grid, with
 the stroke proportional to the requested size.
 
 **Emoji are not used as icons.** An emoji is drawn by the system font: it changes
@@ -471,7 +456,7 @@ over the full plate without going back to the Labeller.
 
 ## 🔑 Key classes
 
-### `Detection` (polyx/model/yolo_wrap.py)
+### `Detection` (src/polyx/core/detect/yolo.py)
 ```python
 @dataclass
 class Detection:
@@ -492,7 +477,7 @@ class Detection:
 overestimates the area **1.87×**, and a fibre lying diagonally has a **square**
 box — which is why it was reported as a fragment.
 
-`polyx/model/morfologia.py` segments inside each box (Otsu on the highest-contrast
+`src/polyx/core/measure/morphology.py` segments inside each box (Otsu on the highest-contrast
 channel, the central connected component, clipped to the box) and measures over the
 mask. **The length comes from two standard measures and the larger one is reported:**
 
@@ -528,14 +513,14 @@ Cost 5.9 ms per particle. Only cv2 and numpy: `scipy` is **not** in
 `requirements.txt` —it arrives as a transitive dependency of ultralytics— and
 relying on it would break the install the day ultralytics stops shipping it.
 
-### `YoloModel` (polyx/model/yolo_wrap.py)
+### `YoloModel` (src/polyx/core/detect/yolo.py)
 Lazy-loading wrapper for Ultralytics YOLO:
 ```python
 model = YoloModel("bestdetectormedium.pt")
 detections = model.predict("image.jpg", conf=0.25, device="0")
 ```
 
-### `DetectorState` (polyx/gui/detector/state.py)
+### `DetectorState` (src/polyx/gui/detector/state.py)
 Global state of the Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Hasta 3 modelos
@@ -544,7 +529,7 @@ state.params: InferenceParams           # conf, IoU, um_per_px
 state.results: Dict[int, List[ImageResult]]  # Resultados por modelo
 ```
 
-### `ImageResult` (polyx/gui/detector/state.py)
+### `ImageResult` (src/polyx/gui/detector/state.py)
 Result of one image:
 ```python
 image_path: Path
@@ -554,7 +539,7 @@ tp, fp, fn, miscls: int
 annotated_png: Optional[bytes]  # PNG anotado en base64
 ```
 
-### `MatchResult` (polyx/model/metrics.py)
+### `MatchResult` (src/polyx/core/quality/metrics.py)
 Prediction vs GT matching (IoU ≥ 0.5):
 ```python
 tp: int          # True Positives (conf y clase correcta)
@@ -647,7 +632,7 @@ conf_asignacion: float = 0.0  # Confianza mínima para atribuir polímero (0 = o
 
 ### Abstention: detecting ≠ identifying
 
-`polyx/model/asignacion.py`. Below `conf_asignacion` the particle **still
+`src/polyx/core/quality/assignment.py`. Below `conf_asignacion` the particle **still
 counts** as a detected particle, but it is reported as **"unassignable"** instead
 of attributing a polymer to it. The report declares in Methods what percentage of
 the batch went unassigned.
