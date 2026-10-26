@@ -4,7 +4,7 @@
 > by Nile Red fluorescence under UV light (254 nm), using YOLO v8/v11 models.**
 
 **Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV · 2026
-**Version:** 2.0.0 · **Windows 10/11 and macOS** · Python 3.9+
+**Version:** 2.0.0 · **Windows 10/11 and macOS** · Python 3.11
 
 ---
 
