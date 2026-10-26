@@ -131,10 +131,17 @@ def correr_bench(repeticiones: int = 5):
         reps = 2 if h * w > 200000 else min(repeticiones, max(2, int(3.0e6 / max(h * w, 1))))
 
         t_ref = _medir_ms(
-            lambda dentro=dentro, semilla=semilla: _propagaciones(dentro, semilla, G._propagar_geodesico_referencia),
+            lambda dentro=dentro, semilla=semilla: _propagaciones(
+                dentro, semilla, G._propagar_geodesico_referencia
+            ),
             reps,
         )
-        t_new = _medir_ms(lambda dentro=dentro, semilla=semilla: _propagaciones(dentro, semilla, M._spread_geodesic), reps)
+        t_new = _medir_ms(
+            lambda dentro=dentro, semilla=semilla: _propagaciones(
+                dentro, semilla, M._spread_geodesic
+            ),
+            reps,
+        )
         ratio = t_ref["mediana"] / t_new["mediana"] if t_new["mediana"] else float("inf")
         filas.append(
             {

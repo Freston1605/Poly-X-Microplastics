@@ -196,7 +196,11 @@ def test_q6_10x_load_profile_batch(log_env):
 
     ob.clear_run_id()
     det_file = log_env / "detector.jsonl"
-    recs = [json.loads(line) for line in det_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    recs = [
+        json.loads(line)
+        for line in det_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     finishes = [r for r in recs if r["event"] == "phase.infer.finish" and r.get("run_id") == run_id]
     assert len(finishes) == 100
     for r in finishes:
