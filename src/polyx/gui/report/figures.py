@@ -1,6 +1,7 @@
 """Figures."""
 
 from ._common import *
+from .stats import *
 import polyx.gui.report._common as _common
 
 globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
