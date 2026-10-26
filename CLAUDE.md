@@ -352,7 +352,13 @@ Open the **Launcher** → pick a module.
 
 ## 📊 Main modules
 
-### 🔬 Detector (Module 1)
+### 🏠 Launcher (Module 1)
+Main menu: four cards (Detector, Trainer, Labeller, Viewer), theme picker,
+update checker (`polyx.gui.updates`), manual/report openers, preferences.
+
+---
+
+### 🔬 Detector (Module 2)
 **Purpose:** Batch analysis of images with a trained model.
 
 **Typical flow:**
@@ -372,7 +378,7 @@ Open the **Launcher** → pick a module.
 - `runs/.../metrics.json` — TP/FP/FN per class
 - `runs/.../report.html` — Paper-quality report (base64)
 
-### 🎯 Trainer (Module 2)
+### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
 
 **Flow:**
@@ -391,7 +397,7 @@ Open the **Launcher** → pick a module.
 - `runs/detect/trainN/results.csv` — Per-epoch metrics
 - `runs/detect/trainN/confusion_matrix.png` — Confusion matrix
 
-### 🏷 Labeller (Module 3, working)
+### 🏷 Labeller (Module 4, working)
 Manual YOLO annotation with optional automatic pre-labelling.
 
 **Verified with 552 crops** (August 2026). Startup 0.25 s, interface
@@ -422,7 +428,7 @@ Zoom is kept between images (checkbox in the right panel), with size tolerance:
 crops from a grid differ by 1 px due to rounding, and demanding exact equality
 used to lose the zoom on every change.
 
-### 📐 Viewer (Module 4, working)
+### 📐 Viewer (Module 5, working)
 Single-image inspection with μm/pixel calibration, detection and export.
 
 **Interactive calibration.** Two modes: **line** (2 clicks + real length) and
