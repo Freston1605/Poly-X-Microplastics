@@ -36,12 +36,15 @@ from polyx.core.i18n import language, tr
 from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 
+from polyx.core import stats as _core_stats
 from polyx.gui import theme as T
+
+globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
 
 # ────────────────────────────────────────────────────────────────────
 # Report styles (identical to the manual)
 # ────────────────────────────────────────────────────────────────────
-REPORT_CSS = (Path(__file__).with_name("report.css").read_text(encoding="utf-8"))
+REPORT_CSS = Path(__file__).with_name("report.css").read_text(encoding="utf-8")
 
 
 _ORDER_CLASSES = ["PET", "PP", "LDPE"]
@@ -315,96 +318,6 @@ _PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
 
 _MAX_GROUPS_BOXPLOT = 12
 _MAX_FOLDER_PER_PHOTO = 6
-
-
-def _chi2_sf(h: float, df: int) -> float:
-    """P(X > h) of a chi-square with ``df`` degrees of freedom, without scipy.
-
-    Built from the recurrence of the upper incomplete gamma function
-    Q(a+1,x) = Q(a,x) + x^a e^-x / Gamma(a+1), stepping a in increments
-    of 0.5 up from the closed cases (erfc for odd df, exp for even df).
-    df here is always a small integer (number of groups - 1), so the
-    recurrence converges in a few steps.
-    """
-    if h <= 0 or df < 1:
-        return 1.0
-    xa = h / 2.0
-    if df % 2 == 1:
-        q = math.erfc(math.sqrt(xa))
-        a0, n = 0.5, (df - 1) // 2
-    else:
-        q = math.exp(-xa)
-        a0, n = 1.0, (df - 2) // 2
-    if n <= 0:
-        return min(1.0, max(0.0, q))
-    term = (xa**a0) * math.exp(-xa) / math.gamma(a0 + 1.0)
-    q += term
-    for k in range(1, n):
-        term *= xa / (a0 + k)
-        q += term
-    return min(1.0, max(0.0, q))
-
-
-# Two-tailed Student t table, 95% (alpha=0.05), for the confidence
-# interval of the batch mean scale. Same reason as _chi2_sf for not
-# using scipy.stats.t. Exact standard table values for df 1-30, plus
-# the usual reference points 40/60/120 for large batches.
-_TABLE_T95 = {
-    1: 12.706,
-    2: 4.303,
-    3: 3.182,
-    4: 2.776,
-    5: 2.571,
-    6: 2.447,
-    7: 2.365,
-    8: 2.306,
-    9: 2.262,
-    10: 2.228,
-    11: 2.201,
-    12: 2.179,
-    13: 2.160,
-    14: 2.145,
-    15: 2.131,
-    16: 2.120,
-    17: 2.110,
-    18: 2.101,
-    19: 2.093,
-    20: 2.086,
-    21: 2.080,
-    22: 2.074,
-    23: 2.069,
-    24: 2.064,
-    25: 2.060,
-    26: 2.056,
-    27: 2.052,
-    28: 2.048,
-    29: 2.045,
-    30: 2.042,
-    40: 2.021,
-    60: 2.000,
-    120: 1.980,
-}
-
-
-def _t_critical95(df: int) -> float:
-    """Two-tailed critical t (95%) for ``df`` degrees of freedom.
-
-    Beyond gl=30 there is no entry per gl: the smallest tabulated step
-    that is >= the real one is used. Since t decreases with the degrees
-    of freedom, that step gives a slightly wider interval than the exact
-    one, never narrower — conservative rather than optimistic.
-    """
-    if df <= 0:
-        return float("nan")
-    if df in _TABLE_T95:
-        return _TABLE_T95[df]
-    for threshold in (40, 60, 120):
-        if df <= threshold:
-            return _TABLE_T95[threshold]
-    return 1.960
-
-
-_NAME_MORPHOTYPE = {"fibra": "Fibra", "fragmento": "Partícula"}
 
 
 def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
@@ -1252,10 +1165,6 @@ def generate_report(
             sections=sections,
         )
 
-
-# Late imports: figures and sections use helpers defined above.
-from .figures import *  # noqa: E402
-from .sections import *  # noqa: E402
 
 # Late imports: submodules use helpers defined above.
 from .figures import *  # noqa: E402
