@@ -438,7 +438,7 @@ shortcut.
 >
 > **Fix:** **right-click** → **Open** → confirm **Open**. Only needed the first time;
 > a normal double-click works afterwards. If it still refuses, in Terminal:
-> `xattr -d com.apple.quarantine Lanzar_macOS.command`
+> `xattr -d com.apple.quarantine install/Lanzar_macOS.command`
 
 Full details in **[LEEME_macOS.md](LEEME_macOS.md)**.
 
@@ -446,7 +446,7 @@ Full details in **[LEEME_macOS.md](LEEME_macOS.md)**.
 
 ### Opening without a console window (Windows)
 
-Double-click **`Poly-X.vbs`** (project root): it opens the Launcher directly,
+Double-click **`install/Poly-X.vbs`**: it opens the Launcher directly,
 with no black window. It resolves its own location, so it works from any folder —
 just download the repository and double-click, no path editing needed.
 
@@ -553,13 +553,20 @@ runs/                    # Results of each run
 data_microplastico/      # YOLO dataset (images/ + labels/)
 tests/                   # Test suite for measurement, calibration and portability
 
-SETUP.bat                # 🪟 Installer
-iniciar_polyx.bat        # 🪟 Launcher
-actualizar.bat           # 🪟 Updater
-Lanzar_macOS.command     # 🍎 Installer + launcher (both in one)
-crear_icono_macOS.command    # 🍎 Icon that opens with no Terminal window
-actualizar_macOS.command # 🍎 Updater
-construir_app_macOS.command  # 🍎 Build Poly-X.app (optional)
+install/                # 🪟/🍎 end-user scripts (SETUP, launchers, updaters, uninstaller)
+├── SETUP.bat           # 🪟 Installer
+├── iniciar_polyx.bat   # 🪟 Launcher (with console)
+├── Poly-X.vbs          # 🪟 Launcher (no console)
+├── actualizar.bat      # 🪟 Updater
+├── actualizar.ps1
+├── Lanzar_macOS.command    # 🍎 Installer + launcher
+├── actualizar_macOS.command # 🍎 Updater
+├── crear_icono_macOS.command # 🍎 Icon without a Terminal window
+├── construir_app_macOS.command # 🍎 Build Poly-X.app (optional)
+├── desinstalar.ps1     # 🪟 Uninstaller (searches the whole disk)
+├── migrar_instalacion.ps1
+├── empaquetar_para_llevar.bat
+└── empaquetar_dataset_para_drive.bat
 ```
 
 Everything that differs between systems — opening folders, launching the updater,

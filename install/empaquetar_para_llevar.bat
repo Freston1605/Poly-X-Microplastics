@@ -2,7 +2,8 @@
 setlocal enabledelayedexpansion
 title Poly-X - Empaquetar para llevar (Drive / USB)
 cd /d "%~dp0"
-set "SRC=%cd%"
+for %%I in ("%~dp0..") do set "SRC=%%~fI"
+cd /d "%SRC%"
 
 echo.
 echo ============================================================
@@ -55,7 +56,7 @@ if exist "%SRC%\models" (
 
 echo [INFO] Copiando archivos sueltos esenciales...
 for %%F in (SETUP.bat iniciar_polyx.bat actualizar.bat actualizar.ps1 migrar_instalacion.ps1 requirements.txt README.md LEEME.txt Poly-X.vbs CLAUDE.md) do (
-    if exist "%SRC%\%%F" copy /y "%SRC%\%%F" "!OUT!\" >nul
+    if exist "%SRC%\install\%%F" copy /y "%SRC%\install\%%F" "!OUT!\" >nul
 )
 
 REM ---- Sello de version ----

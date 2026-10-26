@@ -10,7 +10,7 @@
 # ══════════════════════════════════════════════════════════════════
 
 cd "$(dirname "$0")" || exit 1
-INSTALL_DIR="$(pwd)"
+INSTALL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 REPO="CrissFerrada/Poly-X-Microplastics"
 RAMA="main"

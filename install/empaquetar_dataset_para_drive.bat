@@ -2,6 +2,7 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
+for %%I in ("%~dp0..") do cd /d "%%~fI"
 
 echo ============================================================
 echo   Poly-X - Empaquetar dataset para Google Drive
@@ -22,7 +23,7 @@ if not exist "data_microplastico\images" (
     exit /b 1
 )
 
-set "ZIP=%~dp0PolyX_dataset.zip"
+set "ZIP=%cd%\PolyX_dataset.zip"
 if exist "%ZIP%" del "%ZIP%"
 
 echo Empaquetando en la carpeta del proyecto:

@@ -16,15 +16,17 @@
 #      Solo hace falta la primera vez.
 # ══════════════════════════════════════════════════════════════════
 
-cd "$(dirname "$0")" || exit 1
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT" || exit 1
 
 # src/ layout: el paquete vive en src/polyx, asi que src debe estar en PYTHONPATH.
-export PYTHONPATH="$(pwd)/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 
 # Ruta absoluta: el enlace del Escritorio no puede apuntar a una ruta
 # relativa -- quedaria roto en cuanto se abriera desde otro sitio.
-INSTALL_DIR_ABS="$(pwd)"
-VENV_PY=".venv/bin/python"
+INSTALL_DIR_ABS="$PROJECT_ROOT"
+VENV_PY="$PROJECT_ROOT/.venv/bin/python"
 
 alerta() {
     osascript -e "display alert \"Poly-X\" message \"$1\"" 2>/dev/null || echo "[AVISO] $1"
@@ -166,7 +168,7 @@ if [ -d "$ESCRITORIO" ] && [ ! -e "$ESCRITORIO/Poly-X.app" ]; then
             # Un .app y no un enlace a este mismo .command: el .command arrastra
             # siempre una ventana de Terminal detras, que se queda abierta todo
             # el rato que dure el programa. El .app arranca sin ella.
-            bash "$INSTALL_DIR_ABS/crear_icono_macOS.command" --escritorio --silencioso || {
+            bash "$SCRIPT_DIR/crear_icono_macOS.command" --escritorio --silencioso || {
                 echo "  [AVISO] No se pudo crear el icono. No es grave:"
                 echo "          abre Poly-X desde esta misma carpeta."
             }
