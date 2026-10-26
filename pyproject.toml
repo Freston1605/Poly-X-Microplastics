@@ -49,6 +49,9 @@ Issues = "https://github.com/CrissFerrada/Poly-X-Microplastics/issues"
 Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHANGELOG.md"
 
 
+[dependency-groups]
+dev = ["pytest", "ruff>=0.17"]
+
 [project.optional-dependencies]
 gui = ["PySide6==6.7.2"]
 dev = ["pytest", "ruff>=0.17"]
