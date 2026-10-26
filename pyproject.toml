@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "polyx-microplastics"
-version = "2.0.0"
+dynamic = ["version"]
 description = "Automated detection and classification of Nile Red-stained microplastics"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
@@ -66,3 +66,5 @@ packages = ["src/polyx"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "README.md", "CLAUDE.md", "requirements.txt"]
+[tool.hatch.version]
+path = "src/polyx/__init__.py"
