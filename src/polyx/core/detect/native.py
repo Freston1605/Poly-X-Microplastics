@@ -76,7 +76,7 @@ class NativeDetector(DetectionSource):
         **kwargs,
     ) -> List[Instance]:
         # For now, just call the regular predict
-        return self.predict(image_path, conf, iou, imgsz, device, **kwargs)
+        return self.predict(image_path, conf=conf, iou=iou, **kwargs)
 
     @property
     def names(self) -> Dict[int, str]:
