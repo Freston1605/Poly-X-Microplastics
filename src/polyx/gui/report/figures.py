@@ -1,12 +1,5 @@
 """Figures."""
 
-import io
-
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
 from ._common import *
 import polyx.gui.report._common as _common
 

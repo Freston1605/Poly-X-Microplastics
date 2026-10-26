@@ -104,4 +104,5 @@ ignore = [
 "tests/*" = ["S101", "S105", "S106", "S107", "PLR2004", "S603", "S102", "S310", "S110", "S607", "S606", "S112", "S311", "S608"]
 "tools/*" = ["S101", "T201", "S603", "S105"]
 "src/polyx/gui/report/*.py" = ["F403", "F405", "I001"]
+"src/polyx/gui/report/_common.py" = ["F401"]
 "src/polyx/gui/report_html.py" = ["F401", "F403"]
