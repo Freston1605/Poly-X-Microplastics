@@ -54,7 +54,7 @@ jobs:
         run: |
           bash -n install/*.sh install/*.command
           python -m py_compile install/bootstrap.py install/gpu.py install/update.py install/versions.py
-          python -m pytest -q tests/test_install.py
+          uv run pytest -q tests/test_install.py
 
       - name: Check formatting
         run: uv run ruff format --check src/ tests/ tools/
