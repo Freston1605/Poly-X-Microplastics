@@ -44,7 +44,7 @@ if exist "%SRC%\docs\manual\Manual_PolyX.html" (
 )
 
 if exist "%SRC%\tools\manual" (
-    echo [INFO] Copiando el cadena del manual (texto y motor)...
+    echo [INFO] Copiando la cadena del manual (texto y motor)...
     robocopy "%SRC%\tools\manual" "!OUT!\tools\manual" /E /XD __pycache__ /NFL /NDL /NJH /NJS /NP >nul
 )
 
@@ -57,9 +57,6 @@ echo [INFO] Copiando archivos sueltos esenciales...
 for %%F in (SETUP.bat iniciar_polyx.bat actualizar.bat actualizar.ps1 migrar_instalacion.ps1 requirements.txt README.md LEEME.txt Poly-X.vbs CLAUDE.md) do (
     if exist "%SRC%\%%F" copy /y "%SRC%\%%F" "!OUT!\" >nul
 )
-
-echo [INFO] Copiando modelos .pt de la raiz (para el Detector y el Visor)...
-copy /y "%SRC%\*.pt" "!OUT!\" >nul 2>&1
 
 REM ---- Sello de version ----
 REM Sin este archivo el aviso de "hay version nueva" no puede funcionar: el

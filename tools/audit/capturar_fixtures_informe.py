@@ -17,7 +17,7 @@ Outputs (relative to the repo root):
 - tests/fixtures/baseline_informe/benigna/informe.html  (+ informe.sha256)
 - tests/fixtures/baseline_informe/hostil/informe.html   (+ informe.sha256)
 
-Run from the repo root:  python scripts/capturar_fixtures_informe.py
+Run from the repo root:  python tools/audit/capturar_fixtures_informe.py
 """
 from __future__ import annotations
 
@@ -26,15 +26,15 @@ import os
 import sys
 from pathlib import Path
 
-# El baseline es el render en ingles (M006/S05): fijar el idioma ANTES de
-# importar tests.fixtures_informe o cualquier modulo de polyx, porque i18n
-# resuelve y cachea el idioma al importar.
+# The baseline is the English render (M006/S05): pin the language BEFORE
+# importing tests.fixtures_informe or any polyx module, because i18n
+# resolves and caches the language at import time.
 os.environ["POLYX_IDIOMA"] = "en"
 
-# Ejecutado como archivo desde scripts/, sys.path[0] apunta a scripts/: hay
-# que poner la raiz del repo primero para que `import tests.fixtures_informe`
-# y `import polyx` resuelvan igual que en pytest.
-RAIZ = Path(__file__).resolve().parent.parent
+# Run as a raw file from tools/audit/, sys.path[0] points there: the repo
+# root must go first so `import tests.fixtures_informe` and `import polyx`
+# resolve exactly as they do under pytest.
+RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ))
 
 from tests.fixtures_informe import estado_benigno, estado_hostil  # noqa: E402

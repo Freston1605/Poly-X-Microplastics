@@ -583,10 +583,11 @@ installation meant for use does not need it.
 `docs/manual/Manual_PolyX.html` (Spanish) are the full
 manual: step-by-step installation from GitHub with real photographs of every
 step — on Windows and macOS — all four modules screen by screen, how size is
-measured, the report, the shortcuts and troubleshooting. They open on a
-double-click and work offline: every image is embedded. Alongside them,
-`Manual_PolyX.en.pdf` and `Manual_PolyX.pdf` for printing or emailing.
-The HTML is generated and not versioned — build it from the text sources.
+measured, the report, the shortcuts and troubleshooting. They are versioned
+and open on a double-click, so a repo download carries the manual offline:
+every image is embedded. Alongside them,
+`Manual_PolyX.en.pdf` and `Manual_PolyX.pdf` for printing or emailing;
+those are generated and not versioned.
 
 To regenerate it against the current interface:
 
