@@ -30,12 +30,22 @@ if exist "!OUT!" (
 mkdir "!OUT!"
 
 echo.
-echo [INFO] Copiando codigo del programa (polyx\)...
-robocopy "%SRC%\polyx" "!OUT!\polyx" /E /XD __pycache__ /NFL /NDL /NJH /NJS /NP >nul
+echo [INFO] Copiando codigo del programa (src\polyx\)...
+robocopy "%SRC%\src\polyx" "!OUT!\src\polyx" /E /XD __pycache__ /NFL /NDL /NJH /NJS /NP >nul
 
-if exist "%SRC%\manual_screenshots" (
+if exist "%SRC%\docs\assets\manual_screenshots" (
     echo [INFO] Copiando capturas del manual...
-    robocopy "%SRC%\manual_screenshots" "!OUT!\manual_screenshots" /E /NFL /NDL /NJH /NJS /NP >nul
+    robocopy "%SRC%\docs\assets\manual_screenshots" "!OUT!\docs\assets\manual_screenshots" /E /XD __pycache__ /NFL /NDL /NJH /NJS /NP >nul
+)
+
+if exist "%SRC%\docs\manual\Manual_PolyX.html" (
+    echo [INFO] Copiando el manual compilado...
+    robocopy "%SRC%\docs\manual" "!OUT!\docs\manual" /E /NFL /NDL /NJH /NJS /NP >nul
+)
+
+if exist "%SRC%\tools\manual" (
+    echo [INFO] Copiando la cadena del manual (texto y motor)...
+    robocopy "%SRC%\tools\manual" "!OUT!\tools\manual" /E /XD __pycache__ /NFL /NDL /NJH /NJS /NP >nul
 )
 
 if exist "%SRC%\models" (
@@ -44,12 +54,9 @@ if exist "%SRC%\models" (
 )
 
 echo [INFO] Copiando archivos sueltos esenciales...
-for %%F in (SETUP.bat iniciar_polyx.bat actualizar.bat actualizar.ps1 migrar_instalacion.ps1 requirements.txt README.md LEEME.txt Manual_PolyX.html Manual_PolyX.en.html generar_manual.py capturar_manual.py manual_texto_es.py manual_texto_en.py CLAUDE.md) do (
+for %%F in (SETUP.bat iniciar_polyx.bat actualizar.bat actualizar.ps1 migrar_instalacion.ps1 requirements.txt README.md LEEME.txt Poly-X.vbs CLAUDE.md) do (
     if exist "%SRC%\%%F" copy /y "%SRC%\%%F" "!OUT!\" >nul
 )
-
-echo [INFO] Copiando modelos .pt de la raiz (para el Detector y el Visor)...
-copy /y "%SRC%\*.pt" "!OUT!\" >nul 2>&1
 
 REM ---- Sello de version ----
 REM Sin este archivo el aviso de "hay version nueva" no puede funcionar: el

@@ -1,6 +1,6 @@
 """Estados DetectorState reutilizables para los fixtures del informe.
 
-La captura del baseline pre-fix (scripts/capturar_fixtures_informe.py, T03) y
+La captura del baseline pre-fix (tools/audit/capturar_fixtures_informe.py, T03) y
 los tests de identidad de bytes e inyeccion muerta (T04-T07) necesitan todos
 el MISMO par de estados de entrada: uno benigno y otro con inyeccion HTML en
 los nombres de archivo y alias de modelo. Una receta repetida a mano en cada

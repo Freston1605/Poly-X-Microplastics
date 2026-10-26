@@ -2,7 +2,7 @@
 
 The key is the Spanish string exactly as it appears in the code, with its
 accents, emojis and spaces. Without an exact match `tr()` returns the
-Spanish and the translation is not applied: `scripts/audit_translations.py`
+Spanish and the translation is not applied: `tools/audit/audit_translations.py`
 flags those cases.
 
 Not translated: polymer names (PET/PP/LDPE), units, metric acronyms (mAP,

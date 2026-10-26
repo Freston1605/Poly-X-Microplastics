@@ -1589,19 +1589,18 @@ programa.</p>
 "sub": "Qué es tuyo, qué es del programa, y qué se puede borrar.",
 "html": r"""
 <pre><code>Poly-X-Microplastics-main\
-├── <span class="p">polyx\</span>                    <span class="c">código fuente — del programa</span>
+├── <span class="p">src\polyx\</span>               <span class="c">código fuente — del programa</span>
 │   ├── launcher.py
 │   ├── core\                 <span class="c">núcleo compartido (medida, calibración, informe, idioma)</span>
-│   ├── detector\             <span class="c">módulo 1 — 9 páginas</span>
-│   ├── trainer\              <span class="c">módulo 2 — 9 páginas</span>
-│   ├── etiquetador\          <span class="c">módulo 3</span>
-│   └── visor\                <span class="c">módulo 4</span>
+│   ├── gui\                  <span class="c">interfaz: detector\, trainer\, labeler\, viewer\…</span>
+│   └── cli\                  <span class="c">comandos sin ventana (polyx-train, polyx-eval…)</span>
 ├── <span class="p">models\</span>                   <span class="c">TUYO — los pesos .pt entrenados</span>
 ├── <span class="p">runs\</span>                     <span class="c">TUYO — una carpeta por corrida, con fecha y hora</span>
 ├── <span class="p">data_microplastico\</span>       <span class="c">TUYO — dataset YOLO (images/ + labels/)</span>
 ├── <span class="p">.venv\</span>                    <span class="c">entorno de Python — se regenera con SETUP.bat</span>
+├── docs\                     <span class="c">documentación</span>
+│   └── manual\               <span class="c">Manual_PolyX.html — este manual</span>
 ├── tests\                    <span class="c">suite de pruebas de medida y calibración</span>
-├── manual_screenshots\       <span class="c">capturas que usa este manual</span>
 │
 ├── SETUP.bat                 <span class="c">[Win] instalador</span>
 ├── iniciar_polyx.bat         <span class="c">[Win] lanzador con consola</span>
@@ -1609,7 +1608,6 @@ programa.</p>
 ├── actualizar.bat            <span class="c">[Win] actualizador</span>
 ├── Lanzar_macOS.command      <span class="c">[Mac] instalador + lanzador</span>
 ├── actualizar_macOS.command  <span class="c">[Mac] actualizador</span>
-├── Manual_PolyX.html         <span class="c">este manual</span>
 └── LEEME.txt                 <span class="c">versión corta de la instalación</span></code></pre>
 
 <div class="aviso err">

@@ -20,6 +20,30 @@ It integrates the whole pipeline: **training → labelling → detection → pap
 
 ## 📦 Structure
 
+### The root and its contract
+
+The root deliberately mixes two surfaces with different audiences:
+
+- **End-user surface** (the double-click surface seen right after the ZIP
+  download): `SETUP.bat`, `iniciar_polyx.bat`, `Poly-X.vbs`, `LEEME.txt`,
+  `LEEME_macOS.md`, the updaters (`actualizar.{bat,ps1}`,
+  `actualizar_macOS.command`), the uninstaller and the packagers
+  (`empaquetar_*.bat`, `migrar_instalacion.ps1`). The assumption
+  "they live at the root" is wired in: `polyx.core.platform.name_updater()`
+  plus `polyx.gui.updates` build `ROOT/name_updater()`, `Poly-X.vbs`
+  requires sitting next to `SETUP.bat`, and `empaquetar_para_llevar.bat`
+  builds the offline package from `src\polyx\`, `docs\` and
+  `tools\manual\`. Moving them means updating all of that and the
+  cross-references between the scripts themselves.
+- **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
+  `tools/audit` (UI-translation audit and report fixtures), `tools/manual`
+  (the manual chain), `tools/packaging` (PyInstaller). The compiled manual
+  lives in `docs/manual/` and is NOT versioned (see .gitignore: it is
+  regenerated from `tools/manual`).
+- **Local research work**: `manuscript-workspace/` is not versioned — it is
+  a draft-testing workspace, material of the paper that the README keeps
+  out of the repository on purpose.
+
 ```
 polyx/                    # Código fuente
 ├── __init__.py           # v2.0.0
@@ -94,15 +118,10 @@ legacy/                   # Versiones anteriores, en la RAIZ (no dentro de polyx
 _diagnostico/             # Scripts sueltos de diagnostico. No son del programa:
                           # se usan a mano para mirar un dataset o un modelo.
 
-manual_screenshots/       # Capturas que empotra el manual
-├── es/  en/                 interfaz, un idioma por carpeta
-└── web/ win/                figuras de apoyo
-
-# Cadena del manual (archivos sueltos en la raiz):
-#   capturar_manual.py   capturas de la interfaz → manual_screenshots/
-#   manual_texto_es.py   texto del manual, ES
-#   manual_texto_en.py   texto del manual, EN
-#   generar_manual.py    motor: arma Manual_PolyX[.en].html y los PDF
+# Capturas que empotra el manual (docs/assets/manual_screenshots).
+#   tools/manual/capturar_manual.py   capturas de la interfaz
+#   tools/manual/generar_manual.py    motor: arma Manual_PolyX[.en].html y los PDF
+#   (texto del manual:   tools/manual/manual_texto_es.py / manual_texto_en.py)
 
 models/                   # Pesos YOLO .pt entrenados
 ├── bestdetectormedium.pt # Modelo por defecto (producción)
@@ -670,24 +689,26 @@ lr0: float = 0.01
 | "CUDA not available" | Normal, CPU only works (slower) |
 | Detector finds nothing | Lower conf to 0.10 in Parameters |
 | OOM during training | Lower batch to 4-8, imgsz to 512-576 |
-| Report does not open | Check Manual_PolyX.html manually |
+| Report does not open | Check docs/manual/Manual_PolyX.html manually |
 
 ---
 
 ## 📚 Automatically generated files
 
-- **Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) — built from
-  scratch by `generar_manual.py`: text, figures, index and stylesheet.
-- **manual_texto_es.py / manual_texto_en.py** — the manual's text. Content
-  only; the engine is in `generar_manual.py`.
-- **manual_screenshots/** — screenshots the manual embeds, one folder per
-  source: `es/` and `en/` (interface, one language each), plus `web/` and `win/`.
+- **docs/manual/Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) —
+  built from scratch by `tools/manual/generar_manual.py`: text, figures,
+  index and stylesheet. Generated and not versioned.
+- **tools/manual/manual_texto_es.py / manual_texto_en.py** — the manual's
+  text. Content only; the engine is in `tools/manual/generar_manual.py`.
+- **docs/assets/manual_screenshots/** — screenshots the manual embeds, one
+  folder per source: `es/` and `en/` (interface, one language each), plus
+  `web/` and `win/`.
 
 To regenerate (screenshots first, manual after):
 ```bash
-.venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/es
-set POLYX_IDIOMA=en && .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/en
-.venv\Scripts\python.exe generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
+set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
 ```
 
 > The previous generator replaced figures *by position* inside an already written

@@ -3,7 +3,7 @@
 El render del informe escapa los sumideros de valor con html.escape SIN
 alterar el documento para entradas benignas. La forma honesta de probarlo es
 un test de identidad contra el baseline benigno capturado por
-scripts/capturar_fixtures_informe.py: el render por el pipeline real debe
+tools/audit/capturar_fixtures_informe.py: el render por el pipeline real debe
 reproducirlo byte a byte, y si un cambio toca algo mas que lo previsto, este
 test lo dice con la desviacion de hash y de tamano.
 
@@ -12,7 +12,7 @@ es determinista (planning: 41 corridas repiten el mismo hash); los tiempos del
 cronometro y la fecha de generacion nunca entran al HTML.
 
 NOTA DE IDIOMA (contrato desde M006/S05): el baseline es el render en INGLES.
-La recaptura de M006/S05 corre scripts/capturar_fixtures_informe.py, que fija
+La recaptura de M006/S05 corre tools/audit/capturar_fixtures_informe.py, que fija
 POLYX_IDIOMA=en antes de importar cualquier modulo, y este test fija el mismo
 valor: el compare de bytes no depende del locale de la maquina ni de
 ~/.polyx_idioma.json. Los snapshots M004 (es=bb2e9f…, en=bf483e…) quedaron
@@ -117,7 +117,7 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     importlib.reload(rh)
 
     # Pin the machine-equipment table to the same canonical rows the
-    # baseline was captured with (scripts/capturar_fixtures_informe.py sets
+    # baseline was captured with (tools/audit/capturar_fixtures_informe.py sets
     # the identical lambda): the report's _team() reads live OS/RAM/GPU/
     # torch values that differ per runner, and a byte gate cannot depend on
     # them. Production keeps the live rows; only this fixture and the

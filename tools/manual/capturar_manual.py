@@ -5,9 +5,9 @@ capturas a una carpeta para que el manual se arme desde cero. Cubre las 21
 pantallas (incluye la pestana 2 del Detector, "GT manual", que el generador
 antiguo se saltaba).
 
-Uso:
-    .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/es
-    POLYX_IDIOMA=en .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/en
+Uso (desde la raiz del proyecto):
+    .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
+    POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
 from __future__ import annotations
 import sys, os, time, argparse, importlib.util
@@ -90,12 +90,13 @@ def capturar(modulo: str, clase: str, size, tab, espera_ms: int, destino: Path) 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--salida", default="manual_screenshots/es")
+    ap.add_argument("--salida", default=None,
+                    help="carpeta destino; por omision docs/assets/manual_screenshots/es")
     ap.add_argument("--solo", default=None, help="subcadena del nombre de captura")
     args = ap.parse_args()
 
-    root = Path(__file__).resolve().parent
-    out = root / args.salida
+    raiz = Path(__file__).resolve().parents[2]
+    out = Path(args.salida) if args.salida else raiz / "docs" / "assets" / "manual_screenshots" / "es"
     print(f"Idioma UI : {os.environ.get('POLYX_IDIOMA', '(preferencia guardada)')}")
     print(f"Salida    : {out}")
 
