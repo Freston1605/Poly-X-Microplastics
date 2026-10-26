@@ -68,7 +68,7 @@ polyx-report = "polyx.cli.report:main"
 packages = ["src/polyx"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE"]
+include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
 
