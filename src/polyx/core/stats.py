@@ -7,6 +7,7 @@ import math
 import numpy as np
 
 from polyx.core.i18n import tr
+from polyx.core.quality.metrics import match_image
 
 _TABLE_T95 = {
     1: 12.706,
@@ -267,3 +268,43 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
         return "—"
     name_2 = tr(_NAME_MORPHOTYPE.get(value, value))
     return name_2.lower() if lowercase else name_2
+
+def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
+    """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
+
+    The saved predictions already passed the threshold the run used, so
+    raising it is just filtering and re-pairing. Lowering it is NOT
+    possible: those detections were never computed. That is why the sweep
+    starts at the threshold used and states that limitation.
+
+    Returns {alias: [(conf, precision, recall, f1, n_det), ...]}.
+    """
+    thresholds = [round(u, 2) for u in np.arange(conf_current, 0.96, 0.05)]
+    output_2 = {}
+    for mi, slot in enumerate(state.model_slots):
+        if slot.path is None:
+            continue
+        rs = [r for r in results_2.get(mi, []) if r.has_gt]
+        if not rs:
+            continue
+        rows_2 = []
+        for u in thresholds:
+            tp = fp = fn = mc = nd = 0
+            for r in rs:
+                preds = [p for p in r.predictions if p.conf >= u]
+                nd += len(preds)
+                m = match_image(preds, r.gt, iou_thr=iou_thr)
+                tp += m.tp
+                fp += m.fp
+                fn += m.fn
+                mc += m.miscls
+            # Strict: misclassification penalizes on both sides.
+            p = tp / (tp + fp + mc) if (tp + fp + mc) else 0.0
+            rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
+            f1 = 2 * p * rec / (p + rec) if (p + rec) else 0.0
+            rows_2.append((u, p, rec, f1, nd))
+        output_2[slot.alias] = rows_2
+    return output_2
+
+
+
