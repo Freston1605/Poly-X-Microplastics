@@ -325,7 +325,10 @@ def _team() -> list[tuple]:
                 ("GPU", props.name),
                 ("VRAM", f"{props.total_memory / 1024**3:.1f} GB"),
                 ("Compute capability", f"{props.major}.{props.minor}"),
-                ("PyTorch", f"{torch.__version__} (CUDA {torch.version.cuda})"),
+                (
+                    "PyTorch",
+                    f"{torch.__version__} ({'ROCm' if getattr(torch.version, 'hip', None) else 'CUDA'} {getattr(torch.version, 'hip', None) or getattr(torch.version, 'cuda', None)})",
+                ),
             ]
         else:
             rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]

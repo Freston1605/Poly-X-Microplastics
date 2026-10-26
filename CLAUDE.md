@@ -149,7 +149,7 @@ data/                     # Other datasets
 
 - 8 GB RAM minimum
 - Acceleration: picked automatically in `src/polyx/core/platform.py` → **CUDA** (NVIDIA) →
-  **MPS** (integrated GPU of Apple Silicon Macs) → **CPU**
+  **ROCm** (AMD) → **MPS** (integrated GPU of Apple Silicon Macs) → **CPU**
 
 **Portability.** Everything that differs between operating systems is concentrated in
 `src/polyx/core/platform.py`, not scattered across the code:

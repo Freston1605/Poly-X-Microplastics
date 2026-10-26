@@ -117,9 +117,17 @@ class TrainerRunner(QThread):
 
             # ── Explicit hardware diagnostics ──
             cuda_ok = torch.cuda.is_available()
+            torch_cuda = getattr(torch.version, "cuda", None)
+            torch_hip = getattr(torch.version, "hip", None)
+            build_str = (
+                torch_cuda
+                if torch_cuda is not None
+                else (torch_hip if torch_hip is not None else "CPU-only")
+            )
+            backend_name = "ROCm" if (cuda_ok and torch_hip is not None) else "CUDA"
             self.log_line.emit("=" * 60)
             self.log_line.emit(
-                f"[HW] PyTorch {torch.__version__}  ·  CUDA build: {torch.version.cuda}"
+                f"[HW] PyTorch {torch.__version__}  ·  {backend_name} build: {build_str}"
             )
             self.log_line.emit(f"[HW] torch.cuda.is_available(): {cuda_ok}")
             if cuda_ok:
@@ -135,7 +143,7 @@ class TrainerRunner(QThread):
             req = (p.device or "0").strip().lower()
             if not cuda_ok and req != "cpu":
                 self.log_line.emit(
-                    "[ATENCION] CUDA no disponible — se forzará entrenamiento en CPU."
+                    "[ATENCION] GPU (CUDA/ROCm) no disponible — se forzará entrenamiento en CPU."
                 )
                 effective_device = "cpu"
             elif req in ("cpu",):  # noqa: FURB171
