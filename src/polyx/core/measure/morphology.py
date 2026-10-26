@@ -84,7 +84,6 @@ another machine."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -159,12 +158,12 @@ class Morphology:
     # geodesico, it tells how irregular or filamentous the particle is.
     length_rect_eq_px: float = 0.0
     # um, if calibrated
-    area_um2: Optional[float] = None
-    length_um: Optional[float] = None
-    width_um: Optional[float] = None
-    feret_um: Optional[float] = None
-    geodesic_um: Optional[float] = None
-    equivalent_rect_length_um: Optional[float] = None
+    area_um2: float | None = None
+    length_um: float | None = None
+    width_um: float | None = None
+    feret_um: float | None = None
+    geodesic_um: float | None = None
+    equivalent_rect_length_um: float | None = None
     # dimensionless
     aspect: float = 0.0
     circularity: float = 0.0
@@ -389,9 +388,9 @@ def segment(
     y1: float,
     x2: float,
     y2: float,
-    margin: Optional[int] = None,
-    record: Optional[dict] = None,
-) -> Optional[np.ndarray]:
+    margin: int | None = None,
+    record: dict | None = None,
+) -> np.ndarray | None:
     """Mask of the particle inside the box. None if it could not be isolated.
 
     If ``registro`` is passed, it is annotated there with how far the mask
@@ -566,7 +565,7 @@ def segment(
     return mask if mask.any() else None
 
 
-def _contour_elderly(mask: np.ndarray) -> Optional[np.ndarray]:
+def _contour_elderly(mask: np.ndarray) -> np.ndarray | None:
     """The external contour with the largest area, or None if the mask is empty."""
     if mask is None or not mask.any():
         return None
@@ -852,7 +851,7 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
         return None, None
 
 
-def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
+def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     """Size and shape from the mask of a particle."""
     m = Morphology()
     if mask is None or not mask.any():
@@ -969,9 +968,9 @@ def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
 def measure_detection(
     bgr: np.ndarray,
     det,
-    um_por_px: Optional[float] = None,
-    margin: Optional[int] = None,
-    mask: Optional[np.ndarray] = None,
+    um_por_px: float | None = None,
+    margin: int | None = None,
+    mask: np.ndarray | None = None,
 ) -> Morphology:
     """Segments the box of a ``Detection`` and measures it. Never raises.
 
@@ -1031,7 +1030,7 @@ def measure_detection(
 
 
 def apply_to_detection(
-    det, bgr: np.ndarray, um_por_px: Optional[float] = None, mask: Optional[np.ndarray] = None
+    det, bgr: np.ndarray, um_por_px: float | None = None, mask: np.ndarray | None = None
 ) -> bool:
     """Measures the particle and writes the result into the ``Detection``.
 

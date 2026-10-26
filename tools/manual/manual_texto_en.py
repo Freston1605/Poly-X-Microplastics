@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """English text of the Poly-X manual.
 
 Content only: the engine that turns it into HTML lives in generar_manual.py.

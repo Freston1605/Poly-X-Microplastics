@@ -8,7 +8,6 @@ Here we compute a sensible value from the available VRAM.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -42,7 +41,7 @@ class GPUInfo:
         return str(self.index) if self.available else "cpu"
 
 
-def _nvidia_smi() -> Optional[dict]:
+def _nvidia_smi() -> dict | None:
     """Consults the GPU through nvidia-smi, outside of torch.
 
     It distinguishes "no card" from "there is a card but torch was installed

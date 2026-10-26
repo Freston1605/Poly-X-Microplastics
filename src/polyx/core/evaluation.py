@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -21,7 +21,7 @@ class EvalConfig:
     split: str = "val"
     imgsz: int = 640
     batch: int = 16
-    device: Optional[str] = None  # None = let Ultralytics auto-select
+    device: str | None = None  # None = let Ultralytics auto-select
     iou: float = 0.5
     extra: dict = field(default_factory=dict)
 
@@ -70,7 +70,7 @@ def _metrics_from_results(results: Any, names: dict) -> dict:
     return metrics
 
 
-def evaluate(cfg: EvalConfig, on_log: Optional[Any] = None) -> dict:
+def evaluate(cfg: EvalConfig, on_log: Any | None = None) -> dict:
     """Run Ultralytics validation and return a metrics dict."""
     try:
         from ultralytics import YOLO

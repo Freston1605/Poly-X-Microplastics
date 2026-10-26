@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import QObject, QPointF, Signal
 
@@ -33,7 +32,7 @@ class ViewerState(QObject):
 
     # ── Image ────────────────────────────────────────────────
     @property
-    def current_image(self) -> Optional[Path]:
+    def current_image(self) -> Path | None:
         if 0 <= self.current_idx < len(self.images):
             return self.images[self.current_idx]
         return None
@@ -123,7 +122,7 @@ class ViewerState(QObject):
         self.calib_changed.emit(um_per_px, mode_name)
 
     # ── Utilities ────────────────────────────────────────────
-    def px_to_um(self, px: float) -> Optional[float]:
+    def px_to_um(self, px: float) -> float | None:
         return px * self.um_per_px if self.um_per_px > 0 else None
 
 

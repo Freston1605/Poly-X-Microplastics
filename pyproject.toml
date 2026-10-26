@@ -86,11 +86,10 @@ line-length = 100
 src = ["src", "tests", "tools"]
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "BLE", "S", "SIM", "RUF", "PLW", "PERF", "ISC", "I", "C4", "FURB"]
+select = ["E", "F", "B", "BLE", "S", "SIM", "RUF", "PLW", "PERF", "ISC", "I", "C4", "FURB", "UP"]
 ignore = [
     "E501",        # line length — handled by ruff format (phase B)
     "E701", "E702", # multiple statements on one line (legacy style)
-    "UP006", "UP035", "UP037", "UP045",  # type modernisation (phase C)
     "RUF001", "RUF002", "RUF003",  # ambiguous unicode (intentional: ×, –, ñ)
     "S101",        # assert is fine in tests and invariants
     "RUF012",      # mutable class defaults (common in dataclasses/config)

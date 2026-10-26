@@ -33,8 +33,8 @@ right on PP and LDPE, already the classes with the worst recall."""
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, List
 
 # Label used to report a particle whose polymer claim does not hold.
 # It is left in Spanish and lowercase because it travels into the report tables as
@@ -108,7 +108,7 @@ class SummaryAssignment:
 
 def resume(detections: Iterable, threshold_2: float) -> SummaryAssignment:
     """Counts assigned and unassignable over an already-marked batch."""
-    dets: List = list(detections)
+    dets: list = list(detections)
     no_assignment = sum(1 for d in dets if not getattr(d, "assignable", True))
     return SummaryAssignment(
         total=len(dets),

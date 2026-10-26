@@ -78,7 +78,7 @@ class FakeYOLO:
     """
 
     al_entrenar = None  # type: ignore[assignment]
-    instancias: list["FakeYOLO"] = []
+    instancias: list[FakeYOLO] = []
 
     def __init__(self, weights) -> None:
         self.weights = str(weights)

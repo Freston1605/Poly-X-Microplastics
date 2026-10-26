@@ -38,7 +38,7 @@ from ._base import TrainerPage
 def _load_yaml(path: Path) -> dict:
     import yaml
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 

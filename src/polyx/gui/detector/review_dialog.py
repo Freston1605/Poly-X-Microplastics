@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import List
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QImage, QKeySequence, QShortcut
@@ -46,7 +45,7 @@ class ReviewDialog(QDialog):
         self.setWindowTitle(tr("Revisión de detecciones — Poly-X"))
         self.setModal(False)
         self._current_idx = -1
-        self._results: List = []  # ImageResult of the active model
+        self._results: list = []  # ImageResult of the active model
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
@@ -228,7 +227,7 @@ class ReviewDialog(QDialog):
         res = self._results[row]
         path = Path(res.image_path)
         # load predictions as editable boxes
-        existing: List[Detection] = list(res.predictions)
+        existing: list[Detection] = list(res.predictions)
         self.canvas.load_image(path, existing)
         self._update_counts(res)
 
@@ -271,7 +270,7 @@ class ReviewDialog(QDialog):
 
     # ── Saving corrections ──
     @staticmethod
-    def _yolo_lines(dets: List[Detection], W: int, H: int) -> List[str]:
+    def _yolo_lines(dets: list[Detection], W: int, H: int) -> list[str]:
         lines = []
         for d in dets:
             cx = (d.x1 + d.x2) / 2 / W

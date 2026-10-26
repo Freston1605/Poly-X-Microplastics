@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
@@ -62,18 +61,18 @@ class ViewerCanvas(QWidget):
         self.setMouseTracking(True)
         self.setMinimumSize(500, 500)
 
-        self._pixmap: Optional[QPixmap] = None
+        self._pixmap: QPixmap | None = None
         self._scale: float = 1.0
         self._offset: QPointF = QPointF(0.0, 0.0)
-        self._filter_cls: Optional[str] = None
+        self._filter_cls: str | None = None
 
         # Pan
         self._panning = False
-        self._pan_start: Optional[QPointF] = None
+        self._pan_start: QPointF | None = None
         self._pan_offset_start = QPointF(0.0, 0.0)
 
         # Calibration cursor (current mouse position in calibration mode)
-        self._cursor_img: Optional[QPointF] = None
+        self._cursor_img: QPointF | None = None
 
         state.image_loaded.connect(self._on_image_loaded)
         state.detections_changed.connect(self.update)
@@ -114,7 +113,7 @@ class ViewerCanvas(QWidget):
         self._fit_to_window()
         super().resizeEvent(ev)
 
-    def set_filter_class(self, cls_name: Optional[str]):
+    def set_filter_class(self, cls_name: str | None):
         """None = show all the classes."""
         self._filter_cls = cls_name
         self.update()

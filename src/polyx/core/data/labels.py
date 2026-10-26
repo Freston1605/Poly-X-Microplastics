@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
 
 from polyx.core.detect.protocol import Instance
 
@@ -15,9 +14,9 @@ def read_labels(
     txt_path: str | Path,
     img_w: int,
     img_h: int,
-    class_names: Dict[int, str],
+    class_names: dict[int, str],
     include_conf: bool = False,
-) -> List["Instance"]:
+) -> list[Instance]:
     """Read YOLO-txt label file and return Instance list.
 
     Args:
@@ -32,9 +31,9 @@ def read_labels(
     """
     from polyx.core.detect.protocol import Instance
 
-    instances: List[Instance] = []
+    instances: list[Instance] = []
     try:
-        with open(txt_path, "r", encoding="utf-8") as f:
+        with open(txt_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()  # noqa: PLW2901
                 if not line:
@@ -73,7 +72,7 @@ def read_labels(
 
 
 def write_labels(
-    instances: List["Instance"],
+    instances: list[Instance],
     txt_path: str | Path,
     img_w: int,
     img_h: int,
@@ -109,18 +108,18 @@ def classes_txt_path(run_dir: str | Path) -> Path:
     return Path(run_dir) / "classes.txt"
 
 
-def write_classes_txt(class_names: Dict[int, str], txt_path: str | Path) -> None:
+def write_classes_txt(class_names: dict[int, str], txt_path: str | Path) -> None:
     """Write class names to classes.txt (one per line, ordered by class_id)."""
     max_id = max(class_names.keys()) if class_names else 0
     lines = [class_names.get(i, f"class_{i}") for i in range(max_id + 1)]
     Path(txt_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def read_classes_txt(txt_path: str | Path) -> Dict[int, str]:
+def read_classes_txt(txt_path: str | Path) -> dict[int, str]:
     """Read class names from classes.txt."""
     class_names = {}
     try:
-        with open(txt_path, "r", encoding="utf-8") as f:
+        with open(txt_path, encoding="utf-8") as f:
             for i, line in enumerate(f):
                 name = line.strip()
                 if name:

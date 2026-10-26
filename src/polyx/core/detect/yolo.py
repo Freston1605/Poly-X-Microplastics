@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -63,7 +62,7 @@ class YoloModel:
         self.weights_path = str(weights_path)
         self.alias = alias or Path(self.weights_path).stem
         self._model = None
-        self.names: Dict[int, str] = {}
+        self.names: dict[int, str] = {}
         # imgsz actually used in the last inference (may be smaller than
         # requested if auto-fallback ran due to GPU memory exhaustion)
         self.last_imgsz: int = 0
@@ -83,9 +82,9 @@ class YoloModel:
         self,
         image_path: str | Path,
         device: str = "0",
-        candidates: Tuple[int, ...] = (2048, 3008, 4096, 5120, 6144, 7168, 8192),
+        candidates: tuple[int, ...] = (2048, 3008, 4096, 5120, 6144, 7168, 8192),
         progress=None,
-    ) -> Tuple[int, Dict[int, str]]:
+    ) -> tuple[int, dict[int, str]]:
         """Finds the largest imgsz the GPU can take for THIS model.
 
         Runs real inference at increasing sizes until it fails on memory.
@@ -93,7 +92,7 @@ class YoloModel:
         On CPU there is no VRAM cap → returns the largest candidate untested.
         """
         self.load()
-        detail: Dict[int, str] = {}
+        detail: dict[int, str] = {}
         dev = str(device).strip().lower()
         if dev in ("cpu", "-1"):
             return candidates[-1], dict.fromkeys(candidates, "cpu")
@@ -137,7 +136,7 @@ class YoloModel:
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
-    ) -> List[Detection]:
+    ) -> list[Detection]:
         self.load()
         # Auto-fallback: if the requested imgsz exhausts VRAM, it retries with each
         # smaller size in the ladder instead of aborting the whole analysis.
@@ -174,7 +173,7 @@ class YoloModel:
                     reason="gpu_oom",
                 )
                 _cuda_empty_cache()
-        out: List[Detection] = []
+        out: list[Detection] = []
         if not res:
             return out
         r = res[0]
@@ -206,9 +205,9 @@ class YoloModel:
         overlap: float = 0.25,
         device: str = "0",
         agnostic_nms: bool = True,
-        imgsz: Optional[int] = None,
+        imgsz: int | None = None,
         batch: int = 8,
-    ) -> List[Detection]:
+    ) -> list[Detection]:
         """Tile-based inference (SAHI / Slicing Aided Hyper Inference).
 
         Splits the image into overlapping ``tile``×``tile`` px crops, infers
@@ -230,8 +229,8 @@ class YoloModel:
         xs = _tile_starts(W, tile, step)
         ys = _tile_starts(H, tile, step)
 
-        crops: List[np.ndarray] = []
-        origins: List[Tuple[int, int]] = []
+        crops: list[np.ndarray] = []
+        origins: list[tuple[int, int]] = []
         for y0 in ys:
             for x0 in xs:
                 crops.append(img[y0 : y0 + tile, x0 : x0 + tile])
@@ -244,7 +243,7 @@ class YoloModel:
         # the scale at which the model was trained (key for small objects).
         infer_sz = int(imgsz) if imgsz else tile
 
-        dets: List[Detection] = []
+        dets: list[Detection] = []
         bs = max(1, int(batch))
         # Run in sub-batches to avoid exhausting VRAM (many tiles at high imgsz).
         for start in range(0, len(crops), bs):
@@ -293,8 +292,8 @@ class YoloModel:
         overlap: float = 0.25,
         batch: int = 8,
         agnostic_nms: bool = True,
-        record: Optional[Dict] = None,
-    ) -> List[Detection]:
+        record: dict | None = None,
+    ) -> list[Detection]:
         """Infers with or without tiling according to the photo's size, hands-free.
 
         ``troceo``: ``"auto"`` decides on the longer side against
@@ -343,7 +342,7 @@ class YoloModel:
         )
 
 
-def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
+def size_image(image_path: str | Path) -> tuple[int, int] | None:
     """(width, height) reading only the header, without decoding the whole image.
 
     It is queried before every inference, so decoding a 3260 px photo just
@@ -383,7 +382,7 @@ def policy_tiling(
     threshold_px: int = 2000,
     tile: int = 0,
     overlap: float = 0.25,
-) -> Optional[Dict]:
+) -> dict | None:
     """Decides whether the photo gets tiled, and with which geometry, from its
     size alone.
 
@@ -430,7 +429,7 @@ def policy_tiling(
     }
 
 
-def _tile_starts(total: int, tile: int, step: int) -> List[int]:
+def _tile_starts(total: int, tile: int, step: int) -> list[int]:
     """Start positions of the tiles along one axis (the last one flush with the edge)."""
     if total <= tile:
         return [0]
@@ -454,10 +453,10 @@ def _box_iou(a: Detection, b: Detection) -> float:
     return inter / union if union > 0 else 0.0
 
 
-def _nms(dets: List[Detection], iou_thr: float = 0.45, agnostic: bool = True) -> List[Detection]:
+def _nms(dets: list[Detection], iou_thr: float = 0.45, agnostic: bool = True) -> list[Detection]:
     """Greedy NMS over the detections of all tiles. Keeps the one with the highest conf."""
     order = sorted(range(len(dets)), key=lambda i: -dets[i].conf)
-    keep: List[int] = []
+    keep: list[int] = []
     suppressed = [False] * len(dets)
     for idx in order:
         if suppressed[idx]:
@@ -474,10 +473,10 @@ def _nms(dets: List[Detection], iou_thr: float = 0.45, agnostic: bool = True) ->
 
 
 def read_yolo_txt(
-    txt_path: str | Path, img_w: int, img_h: int, class_names: Dict[int, str]
-) -> List[Detection]:
+    txt_path: str | Path, img_w: int, img_h: int, class_names: dict[int, str]
+) -> list[Detection]:
     """Reads a YOLO .txt (detection or seg polygon) and returns Detection with conf=1."""
-    out: List[Detection] = []
+    out: list[Detection] = []
     p = Path(txt_path)
     if not p.exists():
         return out
@@ -540,7 +539,7 @@ def read_yolo_txt(
     return out
 
 
-def find_gt_for_image(image_path: Path, gt_folder: Optional[Path]) -> Optional[Path]:
+def find_gt_for_image(image_path: Path, gt_folder: Path | None) -> Path | None:
     """Finds the GT .txt next to the image, in the sibling /labels, or in gt_folder."""
     stem = image_path.stem
     candidates = []
@@ -559,7 +558,7 @@ def find_gt_for_image(image_path: Path, gt_folder: Optional[Path]) -> Optional[P
     return None
 
 
-def compute_box_size_um(det: Detection, um_per_px: Optional[float]) -> None:
+def compute_box_size_um(det: Detection, um_per_px: float | None) -> None:
     """Approximate size from the BOX, not the particle.
 
     It is a fallback: it overestimates the area 1.87x at the median of this
@@ -596,7 +595,7 @@ class YoloSegModel(YoloModel):
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
-    ) -> List[Detection]:
+    ) -> list[Detection]:
         self.load()
         sizes = [int(imgsz)]
         if auto_fallback:
@@ -622,7 +621,7 @@ class YoloSegModel(YoloModel):
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
                     raise
                 _cuda_empty_cache()
-        out: List[Detection] = []
+        out: list[Detection] = []
         if not res:
             return out
         r = res[0]

@@ -7,8 +7,6 @@ instance when segmentation fails for a given particle.
 
 from __future__ import annotations
 
-from typing import List
-
 from .protocol import (
     DetectionSource,
     Instance,
@@ -34,7 +32,7 @@ class TwoStageDetector(DetectionSource):
         self._names: dict = {}
         self._last_imgsz: int = 0
 
-    def load(self) -> "TwoStageDetector":
+    def load(self) -> TwoStageDetector:
         self.detector.load()
         self.segmenter.load()
         try:
@@ -45,7 +43,7 @@ class TwoStageDetector(DetectionSource):
 
     def predict(
         self, image_path, conf=0.25, iou=0.45, imgsz=640, device="0", **kwargs
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         boxes_instances = self.detector.predict(
             image_path, conf=conf, iou=iou, imgsz=imgsz, device=device, **kwargs
         )
@@ -53,7 +51,7 @@ class TwoStageDetector(DetectionSource):
             return boxes_instances
 
         boxes = [(d.x1, d.y1, d.x2, d.y2) for d in boxes_instances]
-        seg_instances: List[Instance] = []
+        seg_instances: list[Instance] = []
         try:
             if hasattr(self.segmenter, "segment_from_boxes"):
                 seg_instances = self.segmenter.segment_from_boxes(
@@ -66,7 +64,7 @@ class TwoStageDetector(DetectionSource):
             seg_instances = []
 
         # Merge: keep detector class/conf, attach segmenter mask.
-        out: List[Instance] = []
+        out: list[Instance] = []
         for i, det in enumerate(boxes_instances):
             seg = seg_instances[i] if i < len(seg_instances) else None
             if seg is not None and getattr(seg, "mask", None) is not None:

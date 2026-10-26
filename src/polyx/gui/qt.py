@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from importlib.util import find_spec
 from types import ModuleType
-from typing import Tuple
 
 _INSTALL_HINT = (
     "PySide6 is required to run the Poly-X GUI. Install it with:\n"
@@ -31,7 +30,7 @@ def _raise_missing() -> None:
     raise ImportError(_INSTALL_HINT) from None
 
 
-def _bind_gui_modules() -> Tuple[ModuleType, ModuleType]:
+def _bind_gui_modules() -> tuple[ModuleType, ModuleType]:
     """Import QtCore/QtGui, raising a readable ImportError when absent."""
     try:
         import PySide6.QtCore as qt_core

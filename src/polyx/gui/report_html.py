@@ -22,7 +22,6 @@ import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # matplotlib in non-interactive mode
 import matplotlib
@@ -168,7 +167,7 @@ def _count_per_class(detections) -> Counter:
     return c
 
 
-def _classes_views(results_planes) -> List[str]:
+def _classes_views(results_planes) -> list[str]:
     """Classes present in the batch, in presentation order.
 
     Taken from the detections **and** from the Ground Truth: a polymer the
@@ -183,7 +182,7 @@ def _classes_views(results_planes) -> List[str]:
     return order + rest + ([NO_ASSIGNABLE] if NO_ASSIGNABLE in views else [])
 
 
-def _sample_of(path_2) -> Optional[tuple]:
+def _sample_of(path_2) -> tuple | None:
     """(``estacion``, ``tramo``, ``placa``) parsed from the name, or None if it does
     not follow the naming pattern.
 
@@ -225,7 +224,7 @@ def _esc(v) -> str:
     return html.escape(str(v), quote=False)
 
 
-def _table_count(manual: Optional[Counter], detected: Counter, classes: List[str]) -> str:
+def _table_count(manual: Counter | None, detected: Counter, classes: list[str]) -> str:
     """Per-photo table: particles by polymer, counted by hand and by the model.
 
     It is a count, not an evaluation: the model column is **all** of its
@@ -303,7 +302,7 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
     return "data:image/png;base64," + _img_b64(data)
 
 
-def _team() -> List[tuple]:
+def _team() -> list[tuple]:
     """Machine components, so the report can state where it was run."""
     import platform
 
@@ -335,7 +334,7 @@ def _team() -> List[tuple]:
     return rows_2
 
 
-def _training_of(weight: Path) -> Optional[Dict]:
+def _training_of(weight: Path) -> dict | None:
     """Reads from the checkpoint with which configuration and result the model
     was trained.
 
@@ -457,7 +456,7 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
     return output_2
 
 
-def _fig_sweep(sweep: Dict[str, list]) -> str:
+def _fig_sweep(sweep: dict[str, list]) -> str:
     """F1 curve against the confidence threshold, one line per model."""
     if not sweep:
         return ""
@@ -491,7 +490,7 @@ def _fig_sweep(sweep: Dict[str, list]) -> str:
 _PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
 
 
-def _fig_comparison_metrics(data_2: List[tuple]) -> str:
+def _fig_comparison_metrics(data_2: list[tuple]) -> str:
     """Grouped bars of P/R/F1 per model, under the two criteria.
 
     ``datos``: ``[(alias, p_loc, r_loc, f1_loc, p_cls, r_cls, f1_cls), ...]``.
@@ -538,7 +537,7 @@ def _fig_comparison_metrics(data_2: List[tuple]) -> str:
     return _fig_to_b64(fig)
 
 
-def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: List[tuple]) -> str:
+def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: list[tuple]) -> str:
     """Detections per image of one model against the other, with the diagonal.
 
     A batch total is dominated by a few dense plates, so two models can
@@ -582,7 +581,7 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: List[tuple]) -> s
     return _fig_to_b64(fig)
 
 
-def _fig_metrics_by_class(by_model: Dict[str, Dict[str, tuple]]) -> str:
+def _fig_metrics_by_class(by_model: dict[str, dict[str, tuple]]) -> str:
     """F1 per class and per model: where each one wins.
 
     The global F1 averages polymers of very different performance — PET
@@ -622,7 +621,7 @@ def _fig_metrics_by_class(by_model: Dict[str, Dict[str, tuple]]) -> str:
     return _fig_to_b64(fig)
 
 
-def _fig_class_distribution(per_class_counts: Dict[str, int]) -> str:
+def _fig_class_distribution(per_class_counts: dict[str, int]) -> str:
     if not per_class_counts:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.2))
@@ -636,7 +635,7 @@ def _fig_class_distribution(per_class_counts: Dict[str, int]) -> str:
     return _fig_to_b64(fig)
 
 
-def _fig_confidence_hist(confs: List[float]) -> str:
+def _fig_confidence_hist(confs: list[float]) -> str:
     if not confs:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.2))
@@ -648,7 +647,7 @@ def _fig_confidence_hist(confs: List[float]) -> str:
     return _fig_to_b64(fig)
 
 
-def _fig_size_hist(sizes_um: List[float]) -> str:
+def _fig_size_hist(sizes_um: list[float]) -> str:
     if not sizes_um:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.2))
@@ -660,7 +659,7 @@ def _fig_size_hist(sizes_um: List[float]) -> str:
     return _fig_to_b64(fig)
 
 
-def _fig_sizes_by_section(lengths_per_class: Dict[str, List[float]]) -> str:
+def _fig_sizes_by_section(lengths_per_class: dict[str, list[float]]) -> str:
     """Stacked size histogram, in bands, with one bar per class.
 
     Stacked and not overlaid: the question it answers is how many
@@ -830,7 +829,7 @@ def _t_critical95(df: int) -> float:
     return 1.960
 
 
-def _average_ic95(values_2: List[float]) -> Optional[Tuple[float, float, int]]:
+def _average_ic95(values_2: list[float]) -> tuple[float, float, int] | None:
     """(mean, margin of the 95% CI, n), or None when there is nothing to estimate
     from.
 
@@ -848,7 +847,7 @@ def _average_ic95(values_2: List[float]) -> Optional[Tuple[float, float, int]]:
     return average, margin, n
 
 
-def _kruskal_wallis(groups: List[np.ndarray]) -> Optional[Tuple[float, float, int]]:
+def _kruskal_wallis(groups: list[np.ndarray]) -> tuple[float, float, int] | None:
     """(H, p, degrees of freedom), or None without enough data.
 
     Includes the standard correction for ties (common here: sizes are
@@ -883,7 +882,7 @@ def _kruskal_wallis(groups: List[np.ndarray]) -> Optional[Tuple[float, float, in
     return h, p, df
 
 
-def _text_kruskal(result: Optional[Tuple[float, float, int]], n_groups: int) -> str:
+def _text_kruskal(result: tuple[float, float, int] | None, n_groups: int) -> str:
     if result is None:
         return tr(
             "Sin datos suficientes para una prueba estadística (hace falta "
@@ -903,7 +902,7 @@ def _text_kruskal(result: Optional[Tuple[float, float, int]], n_groups: int) -> 
 
 
 def _fig_boxplot_groups(
-    groups: Dict[str, List[float]], title: str, xlabel: str, max_groups: int = _MAX_GROUPS_BOXPLOT
+    groups: dict[str, list[float]], title: str, xlabel: str, max_groups: int = _MAX_GROUPS_BOXPLOT
 ) -> str:
     """Boxplot of size by group (folder, or photo inside a folder).
 
@@ -949,7 +948,7 @@ def _fig_boxplot_groups(
     return _fig_to_b64(fig)
 
 
-def _spearman(x, y) -> Optional[float]:
+def _spearman(x, y) -> float | None:
     """Rank correlation between two series. None when it cannot be computed.
 
     Ranks and not Pearson because here there is no reason to expect a
@@ -969,7 +968,7 @@ def _spearman(x, y) -> Optional[float]:
     return float(((rx - rx.mean()) * (ry - ry.mean())).mean() / (sx * sy))
 
 
-def _p_permutation(x, y, n_perm: int = 20000, seed: int = 0) -> Optional[float]:
+def _p_permutation(x, y, n_perm: int = 20000, seed: int = 0) -> float | None:
     """Two-sided p of the correlation, shuffling one of the two series.
 
     By permutation and not by the usual t approximation: with 7 or 8
@@ -1091,7 +1090,7 @@ def _fig_profile_depth(profiles: dict) -> str:
 _NAME_MORPHOTYPE = {"fibra": "Fibra", "fragmento": "Partícula"}
 
 
-def _morphotype(value: Optional[str], lowercase: bool = False) -> str:
+def _morphotype(value: str | None, lowercase: bool = False) -> str:
     """Presentable name for a morphotype. '—' when it could not be determined."""
     if not value:
         return "—"
@@ -1099,7 +1098,7 @@ def _morphotype(value: Optional[str], lowercase: bool = False) -> str:
     return name_2.lower() if lowercase else name_2
 
 
-def choose_records(shapes: List[tuple], max_records: int) -> List[tuple]:
+def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
     """Which particles are shown with their measurement drawn, and in what order.
 
     ``formas`` is a list of ``(Detection, ruta)`` pairs. At most
@@ -1169,8 +1168,8 @@ def section_depth(shapes, results_2) -> str:
     # -- Count by stretch, summing the plates of the same stretch --
     # They are summed because they are subsamples of the same sediment mass, not
     # photographic replicates. It is the same rule as the count section.
-    count: Dict[tuple, int] = {}
-    plates: Dict[tuple, set] = {}
+    count: dict[tuple, int] = {}
+    plates: dict[tuple, set] = {}
     for r in results_2:
         m = _sample_of(r.image_path)
         if m is None:
@@ -1180,7 +1179,7 @@ def section_depth(shapes, results_2) -> str:
         plates.setdefault((station, range_value), set()).add(plate)
 
     # -- Sizes by stretch --
-    sizes_2: Dict[tuple, List[float]] = {}
+    sizes_2: dict[tuple, list[float]] = {}
     for d, path_2 in shapes:
         m = _sample_of(path_2)
         if m is None or not d.length_um:
@@ -1192,7 +1191,7 @@ def section_depth(shapes, results_2) -> str:
         # measure; saying so is more useful than a two-point figure.
         return ""
 
-    profiles: Dict[str, list] = {}
+    profiles: dict[str, list] = {}
     for (station, range_value), n in sorted(count.items()):
         vals = np.asarray(sizes_2.get((station, range_value), []), dtype=float)
         if len(vals):
@@ -1373,7 +1372,7 @@ def _figure_calibration(state) -> str:
 <p>{tr("Conviene mirar si el círculo verde sigue el borde del anillo y no otra cosa —la sombra de la placa, un reflejo, o el borde del filtro de dentro—. Si cayera mal, <strong>todas</strong> las tallas de esa foto saldrían escaladas por el mismo factor equivocado, y ninguna otra cifra del informe lo delataría.")}</p>"""
 
 
-def _record_particle(det, image_path_2, um_por_px: Optional[float], title: str) -> str:
+def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> str:
     """Crop of a particle with its mask and the px-to-µm count.
 
     The complete conversion is shown — pixels measured, the scale of
@@ -1473,7 +1472,7 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float], title: str) 
     )
 
 
-def _fig_confusion_matrix(cm: np.ndarray, class_names: List[str]) -> str:
+def _fig_confusion_matrix(cm: np.ndarray, class_names: list[str]) -> str:
     labels = list(class_names) + ["background"]  # noqa: RUF005
     fig, ax = plt.subplots(figsize=(5.5, 4.8))
     im = ax.imshow(cm, cmap="Blues")
@@ -1494,8 +1493,8 @@ def _fig_confusion_matrix(cm: np.ndarray, class_names: List[str]) -> str:
 
 
 def _table_width(
-    rows_2: List[tuple],
-    classes: List[str],
+    rows_2: list[tuple],
+    classes: list[str],
     title_col: str,
     there_is_a_manual: bool,
     totals: bool = True,
@@ -1564,7 +1563,7 @@ def _table_width(
     return f"<table class='data'>{header_line}{body}</table>"
 
 
-def _section_count(results_2: Dict[int, list], state, active, classes: List[str]) -> str:
+def _section_count(results_2: dict[int, list], state, active, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
     It is the table requested for the manuscript: count by plastic type
@@ -1614,8 +1613,8 @@ def _section_count(results_2: Dict[int, list], state, active, classes: List[str]
     table_range = table_station = ""
     note_grouping = ""
     if parseable:
-        per_section: Dict[tuple, list] = {}
-        per_station: Dict[str, list] = {}
+        per_section: dict[tuple, list] = {}
+        per_station: dict[str, list] = {}
         for r, (station, range_value, _plate) in parseable:
             per_section.setdefault((station, range_value), []).append(r)
             per_station.setdefault(station, []).append(r)
@@ -2086,7 +2085,7 @@ def _section_comparison(state, results_2) -> str:
         figures_cmp = ""
         if there_is_gt:
             data_bars = []
-            by_model_class: Dict[str, Dict[str, tuple]] = {}
+            by_model_class: dict[str, dict[str, tuple]] = {}
             for mi in active_2:
                 alias = state.model_slots[mi].alias
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
@@ -2214,7 +2213,7 @@ def _section_comparison(state, results_2) -> str:
 
 
 def _section_gallery(
-    results_2: Dict[int, list],
+    results_2: dict[int, list],
     state,
     classes_batch,
     max_gallery: int = 60,
@@ -2341,7 +2340,7 @@ def _section_gallery(
     return gallery_html
 
 
-def _section_results(per_class: Dict[str, int], confs: List[float], sizes: List[float]) -> str:
+def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[float]) -> str:
     """Body of the ``'resultados'`` section: aggregate figures plus captions.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns
@@ -2651,7 +2650,7 @@ def _size_per_folder(with_size):
     # treatments, or any other grouping that the user has
     # expressed as folders when choosing the images.
     by_html_folder = ""
-    groups_folder: Dict[str, List[float]] = {}
+    groups_folder: dict[str, list[float]] = {}
     for d, path_2 in with_size:
         folder = Path(path_2).parent.name or str(Path(path_2).parent)
         groups_folder.setdefault(folder, []).append(d.length_um)
@@ -2679,7 +2678,7 @@ def _size_per_folder(with_size):
         for folder in sorted(groups_folder, key=lambda c: -len(groups_folder[c])):
             if len(parts_photo) >= _MAX_FOLDER_PER_PHOTO:
                 break
-            folder_photos: Dict[str, List[float]] = {}
+            folder_photos: dict[str, list[float]] = {}
             for d, path_2 in with_size:
                 if Path(path_2).parent.name == folder:
                     folder_photos.setdefault(Path(path_2).name, []).append(d.length_um)
@@ -2857,7 +2856,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
 </table>"""
 
             # ── Sizes by stretch, stacked by class ──
-            per_class_2: Dict[str, List[float]] = {}
+            per_class_2: dict[str, list[float]] = {}
             for d, _path in with_size:
                 per_class_2.setdefault(d.class_name, []).append(d.length_um)
             fig = _fig_sizes_by_section(per_class_2)
@@ -2906,7 +2905,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # It goes inside the forma section: it answers `how many fibres and how many
         # fragments are there on each plate`, which is the question asked of the
         # table when reviewing photo by photo.
-        por_img: Dict[str, list] = {}
+        por_img: dict[str, list] = {}
         for d, path_2 in shapes:
             por_img.setdefault(Path(path_2).name, []).append(d)
         rows_img = ""
@@ -3027,7 +3026,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
     return shape_html, by_html_folder
 
 
-def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
+def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
     """Body of the 'fichas' section: one annotated card per sampled particle.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
@@ -3048,7 +3047,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
 
         chosen = choose_records(shapes, max_records)
         n_fibers_sample = sum(1 for d, _ in chosen if d.morphotype == "fibra")
-        por_img_f: Dict[str, list] = {}
+        por_img_f: dict[str, list] = {}
         for d, path_2 in chosen:
             por_img_f.setdefault(str(path_2), []).append(d)
         parts, made = [], 0

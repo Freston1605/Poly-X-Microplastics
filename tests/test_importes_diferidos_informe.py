@@ -59,7 +59,7 @@ def test_importar_informe_no_carga_los_pesados():
             # yolo_wrap debe seguir importable: es la via transitiva declarada
             # de cv2; si desaparece, la exencion de cv2 (D017) quedo obsoleta.
             "import polyx.core.detect.yolo",
-            "filtrados = [m for m in sys.modules if m in %r]" % (LAZY_TARGETS,),
+            "filtrados = [m for m in sys.modules if m in %r]" % (LAZY_TARGETS,),  # noqa: UP031
             "print('YoloWrapImportable:ok')",
             "print('FILTRADOS:' + ','.join(filtrados))",
         ]

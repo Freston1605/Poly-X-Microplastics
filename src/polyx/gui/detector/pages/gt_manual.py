@@ -19,7 +19,6 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -157,16 +156,16 @@ class AnnotCanvas(QGraphicsView):
 
         self._pixmap_item = None
         self._image_size = (0, 0)
-        self._image_path: Optional[Path] = None
-        self.boxes: List[Box] = []
+        self._image_path: Path | None = None
+        self.boxes: list[Box] = []
         self.selected_idx: int = -1
         self.active_class: int = 0
-        self.class_names: List[str] = list(DEFAULT_CLASSES)
+        self.class_names: list[str] = list(DEFAULT_CLASSES)
 
         # Interaction state
         self._mode = MODE_IDLE
-        self._mouse_press_scene: Optional[QPointF] = None
-        self._mouse_press_box: Optional[Box] = None
+        self._mouse_press_scene: QPointF | None = None
+        self._mouse_press_box: Box | None = None
         self._drag_handle: int = HANDLE_NONE
         self._space_pressed = False
         self._last_pan_pos = None
@@ -176,7 +175,7 @@ class AnnotCanvas(QGraphicsView):
         self._redo: list[list[Box]] = []
 
     # ── Public API ───────────────────────────────────────────────
-    def set_class_names(self, names: List[str]):
+    def set_class_names(self, names: list[str]):
         self.class_names = list(names)
         if self.active_class >= len(self.class_names):
             self.active_class = 0
@@ -192,7 +191,7 @@ class AnnotCanvas(QGraphicsView):
                 self._refresh()
                 self.boxes_changed.emit()
 
-    def load_image(self, path: Path, existing: List[Detection]):
+    def load_image(self, path: Path, existing: list[Detection]):
         self._image_path = path
         pm = _qpixmap_de(path)
         if pm.isNull():
@@ -216,7 +215,7 @@ class AnnotCanvas(QGraphicsView):
         self._refresh()
         self.boxes_changed.emit()
 
-    def detections(self) -> List[Detection]:
+    def detections(self) -> list[Detection]:
         out = []
         for b in self.boxes:
             name = (
@@ -806,7 +805,7 @@ class GTManualPage(DetectorPage):
         path = Path(it.data(Qt.UserRole))
         self._current_path = path
         self.lbl_image_name.setText(path.name)
-        existing: List[Detection] = []
+        existing: list[Detection] = []
         gt_txt = find_gt_for_image(path, self.state.gt_folder)
         if gt_txt:
             # Same dimensions the detector uses. PIL reads the header without
@@ -852,7 +851,7 @@ class GTManualPage(DetectorPage):
         out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir, out_dir / f"{img_path.stem}.txt"
 
-    def _save_to_txt(self, img_path: Path, dets: List[Detection]):
+    def _save_to_txt(self, img_path: Path, dets: list[Detection]):
         out_dir, out_path = self._gt_out_path(img_path)
         wh = size_image(img_path)
         if not wh or wh[0] <= 0 or wh[1] <= 0:

@@ -36,11 +36,11 @@ import os
 import stat
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Iterator, Optional
 
 __all__ = [
     "SIZE_TOTAL",
@@ -86,7 +86,7 @@ def _level_from_environment() -> int:
 def _about_json(record: logging.LogRecord) -> str:
     """From a LogRecord to JSON: fixed fields + event payload."""
     about: dict = {
-        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "ts": datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         "level": record.levelname,
         "module": record.name,
         "pid": os.getpid(),
@@ -285,7 +285,7 @@ def set_run_id(run_id: str) -> None:
     _run_local.run_id = run_id or None
 
 
-def run_id_current() -> Optional[str]:
+def run_id_current() -> str | None:
     return getattr(_run_local, "run_id", None)
 
 
@@ -294,7 +294,7 @@ def clear_run_id() -> None:
 
 
 def event_error(
-    logger: logging.Logger, name_2: str, exc: BaseException, ms: Optional[int] = None, **data
+    logger: logging.Logger, name_2: str, exc: BaseException, ms: int | None = None, **data
 ) -> None:
     """ERROR-level event with a full traceback.
 
@@ -310,7 +310,7 @@ def event_error(
 
 
 def event(
-    logger: logging.Logger, name_2: str, level: int = logging.INFO, ms: Optional[int] = None, **data
+    logger: logging.Logger, name_2: str, level: int = logging.INFO, ms: int | None = None, **data
 ) -> None:
     """Emits a verb.object event with the payload in ``datos``.
 

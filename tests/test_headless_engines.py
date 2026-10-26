@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -66,7 +65,7 @@ def _write_image(path, w: int = 200, h: int = 150) -> None:
 class _FakeDetector:
     """Minimal DetectionSource: returns fixed boxes, owns names."""
 
-    def __init__(self, boxes, masks: Optional[List[np.ndarray]] = None):
+    def __init__(self, boxes, masks: list[np.ndarray] | None = None):
         self._boxes = boxes
         self._masks = masks or [None] * len(boxes)
         self._names = {0: "particle", 1: "fiber"}
@@ -84,7 +83,7 @@ class _FakeDetector:
 
     def predict(
         self, image_path, conf=0.25, iou=0.45, imgsz=1280, device=None, **kwargs
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         out = []
         for i, (cid, x1, y1, x2, y2) in enumerate(self._boxes):
             out.append(

@@ -18,8 +18,8 @@ If a dataset does not carry both prefixes, the step is skipped silently.
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -31,7 +31,7 @@ BEST_REAL_NAME = "best_real.pt"
 BEST_LAB_NAME = "best_sintetico.pt"
 
 
-def _val_images(data_yaml: Path) -> List[Path]:
+def _val_images(data_yaml: Path) -> list[Path]:
     """Lists the images of the validation split declared in the yaml."""
     cfg = yaml.safe_load(data_yaml.read_text(encoding="utf-8")) or {}
     root = Path(cfg.get("path") or data_yaml.parent)
@@ -53,7 +53,7 @@ def _val_images(data_yaml: Path) -> List[Path]:
     return []
 
 
-def domains_present(data_yaml: Path) -> Dict[str, int]:
+def domains_present(data_yaml: Path) -> dict[str, int]:
     """Counts how many validation images there are of each domain."""
     count = {"real": 0, "lab": 0, "sin_marcar": 0}
     for p in _val_images(Path(data_yaml)):
@@ -95,7 +95,7 @@ def _link(origin: Path, destination: Path) -> None:
         shutil.copy2(origin, destination)
 
 
-def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Optional[Path]:
+def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Path | None:
     """Writes a dataset.yaml whose validation set is only the real images.
 
     The subset lives in its **own tree** images/ + labels/, not in a list
@@ -140,7 +140,7 @@ def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Optional[Pa
     return output
 
 
-def candidates(run_dir: Path) -> List[Path]:
+def candidates(run_dir: Path) -> list[Path]:
     """Checkpoints to evaluate: best, last and the periodic ones if any."""
     weights = Path(run_dir) / "weights"
     if not weights.is_dir():
@@ -166,8 +166,8 @@ def choose_better_in_real(
     imgsz: int,
     batch: int,
     device: str,
-    log: Optional[Callable[[str], None]] = None,
-) -> Tuple[Optional[Path], List[Dict]]:
+    log: Callable[[str], None] | None = None,
+) -> tuple[Path | None, list[dict]]:
     """Evaluates the checkpoints on real sediment and copies the best one.
 
     Returns (path of best_real.pt, results table). If nothing can be
@@ -198,7 +198,7 @@ def choose_better_in_real(
     _log("=" * 60)
     _log(f"  Evaluando {len(weights)} checkpoint(s) sobre el subconjunto real.")
 
-    table: List[Dict] = []
+    table: list[dict] = []
     for p in weights:
         try:
             res = YOLO(str(p)).val(

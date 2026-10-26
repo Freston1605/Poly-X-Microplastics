@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -27,10 +26,10 @@ class Sam2Segmenter(DetectionSource):
         self.model_cfg = model_cfg
         self.device = device
         self._predictor = None
-        self._names: Dict[int, str] = {}
+        self._names: dict[int, str] = {}
         self._last_imgsz: int = 0
 
-    def load(self) -> "Sam2Segmenter":
+    def load(self) -> Sam2Segmenter:
         if self._predictor is not None:
             return self
         try:
@@ -54,7 +53,7 @@ class Sam2Segmenter(DetectionSource):
         imgsz: int = 640,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         """SAM2 requires prompts (boxes/points). This method is not directly usable
         without a detector to provide prompts. Use `segment_from_boxes` instead.
         """
@@ -65,9 +64,9 @@ class Sam2Segmenter(DetectionSource):
     def segment_from_boxes(
         self,
         image_path: str | Path,
-        boxes: List[Tuple[float, float, float, float]],
+        boxes: list[tuple[float, float, float, float]],
         conf: float = 0.25,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         """Generate masks for the given boxes using SAM2."""
         if self._predictor is None:
             self.load()
@@ -122,11 +121,11 @@ class Sam2Segmenter(DetectionSource):
         overlap: float = 0.25,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         raise NotImplementedError("SAM2 does not support sliced prediction directly")
 
     @property
-    def names(self) -> Dict[int, str]:
+    def names(self) -> dict[int, str]:
         return self._names
 
     @property

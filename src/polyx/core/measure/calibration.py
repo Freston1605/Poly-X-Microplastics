@@ -23,7 +23,6 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
 
 import cv2
 import numpy as np
@@ -107,7 +106,7 @@ class Calibration:
         return f"{self.um_por_px:.4f} µm/px — introducida a mano"
 
 
-def read_image(path_2: str | Path) -> Optional[np.ndarray]:
+def read_image(path_2: str | Path) -> np.ndarray | None:
     """Reads with ``fromfile`` because folder names carry accents and parentheses.
 
     ``cv2.imread`` fails silently with non-ASCII paths on Windows and returns
@@ -119,7 +118,7 @@ def read_image(path_2: str | Path) -> Optional[np.ndarray]:
         return None
 
 
-def hough_approximate(bgr: np.ndarray) -> Optional[tuple]:
+def hough_approximate(bgr: np.ndarray) -> tuple | None:
     """Approximate centre and radius. Only a seed for the fine fit."""
     height, width = bgr.shape[:2]
     scale = 900 / max(height, width)
@@ -182,7 +181,7 @@ def adjust_circle(pts: np.ndarray) -> tuple:
     return cx, cy, r
 
 
-def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> Optional[tuple]:
+def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> tuple | None:
     """Fits and discards distant points; the ring has reflections and occlusions."""
     for _ in range(iterations):
         if len(pts) < 30:
@@ -303,7 +302,7 @@ def calibrate_from_plate(
     )
 
 
-def carry_index(path_csv: str | Path) -> Dict[str, float]:
+def carry_index(path_csv: str | Path) -> dict[str, float]:
     """Reads a CSV mapping image name to its already-calibrated um/px.
 
     Meant for the crops: the full plate does not appear in a crop, so its
@@ -319,7 +318,7 @@ def carry_index(path_csv: str | Path) -> Dict[str, float]:
     path_2 = Path(path_csv)
     if not path_2.is_file():
         return {}
-    map_value: Dict[str, float] = {}
+    map_value: dict[str, float] = {}
     try:
         with path_2.open(newline="", encoding="utf-8") as fh:
             for row in csv.DictReader(fh):
@@ -338,7 +337,7 @@ def carry_index(path_csv: str | Path) -> Dict[str, float]:
 NAMES_INDEX = ("indice.csv", "calibracion_placas.csv")
 
 
-def search_index(image_path: str | Path, levels: int = 3) -> Dict[str, float]:
+def search_index(image_path: str | Path, levels: int = 3) -> dict[str, float]:
     """Finds a calibration CSV next to the images, walking some levels up.
 
     It is searched for instead of required because the paper pipeline writes
@@ -361,11 +360,11 @@ def search_index(image_path: str | Path, levels: int = 3) -> Dict[str, float]:
 
 def resolver(
     image_path: str | Path,
-    index: Optional[Dict[str, float]] = None,
+    index: dict[str, float] | None = None,
     um_por_px_manual: float = 0.0,
     diameter_mm: float = DIAMETER_PLATE_MM,
     measure_plate: bool = False,
-    bgr: Optional[np.ndarray] = None,
+    bgr: np.ndarray | None = None,
     height_plate_mm: float = 0.0,
     distance_camera_mm: float = 0.0,
 ) -> Calibration:
@@ -425,7 +424,7 @@ def resolver(
 FRACTION_AREA_USEFUL = 0.95
 
 
-def radius_fraction(cal, x: float, y: float) -> Optional[float]:
+def radius_fraction(cal, x: float, y: float) -> float | None:
     """At what fraction of the plate radius the point (x, y) falls.
 
     None when that photo has no fitted circle, which happens when the scale
@@ -462,7 +461,7 @@ def summary_batch(calibrations) -> dict:
     if not ums:
         return {"n": 0, "origenes": {}}
     a = np.array(ums, dtype=float)
-    origins: Dict[str, int] = {}
+    origins: dict[str, int] = {}
     for c in calibrations:
         if c.valid:
             origins[c.origin] = origins.get(c.origin, 0) + 1

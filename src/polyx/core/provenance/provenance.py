@@ -18,7 +18,6 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Optional
 
 from polyx.core.paths import ROOT
 
@@ -50,7 +49,7 @@ def _version_de(module: str) -> str:
     return str(getattr(mod, "__version__", "")) if mod is not None else ""
 
 
-def versions() -> Dict[str, str]:
+def versions() -> dict[str, str]:
     """Version of Poly-X and of the libraries that decide the numerical result."""
     from .. import __version__ as version_polyx
 
@@ -65,7 +64,7 @@ def versions() -> Dict[str, str]:
     }
 
 
-def commit_git(root: Optional[Path] = None) -> Dict[str, str]:
+def commit_git(root: Path | None = None) -> dict[str, str]:
     """Current commit of the repository and whether the tree had uncommitted
     changes.
 
@@ -75,7 +74,7 @@ def commit_git(root: Optional[Path] = None) -> Dict[str, str]:
     root = Path(root) if root is not None else ROOT
     output = {"commit": "", "sucio": ""}
 
-    def _git(*args: str) -> Optional[str]:
+    def _git(*args: str) -> str | None:
         try:
             r = subprocess.run(  # noqa: PLW1510, S603
                 ["git", "-C", str(root), *args],  # noqa: S607
@@ -98,8 +97,8 @@ def commit_git(root: Optional[Path] = None) -> Dict[str, str]:
     return output
 
 
-def provenance(root: Optional[Path] = None) -> Dict[str, object]:
+def provenance(root: Path | None = None) -> dict[str, object]:
     """Complete block to dump into the summary of a run."""
-    data: Dict[str, object] = {"versiones": versions()}
+    data: dict[str, object] = {"versiones": versions()}
     data.update(commit_git(root))
     return data

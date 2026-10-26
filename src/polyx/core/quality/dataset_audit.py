@@ -15,7 +15,6 @@ import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
@@ -33,10 +32,10 @@ class Finding:
 
 @dataclass
 class DatasetAudit:
-    findings: List[Finding] = field(default_factory=list)
-    class_names: List[str] = field(default_factory=list)
-    per_class: Dict[str, Dict[str, int]] = field(default_factory=dict)  # split -> {class: n}
-    box_area_median: Dict[str, float] = field(
+    findings: list[Finding] = field(default_factory=list)
+    class_names: list[str] = field(default_factory=list)
+    per_class: dict[str, dict[str, int]] = field(default_factory=dict)  # split -> {class: n}
+    box_area_median: dict[str, float] = field(
         default_factory=dict
     )  # class -> median normalised area
     ok: bool = True  # False if there is any Finding at error level
@@ -51,11 +50,11 @@ class DatasetAudit:
 def _load_yaml(path: Path) -> dict:
     import yaml
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
-def _resolve_split(yaml_dir: Path, data: dict, split_value) -> Optional[Path]:
+def _resolve_split(yaml_dir: Path, data: dict, split_value) -> Path | None:
     if not split_value:
         return None
     p = Path(split_value)
@@ -72,7 +71,7 @@ def _resolve_split(yaml_dir: Path, data: dict, split_value) -> Optional[Path]:
     return (yaml_dir / p).resolve()
 
 
-def _label_for(img: Path) -> Optional[Path]:
+def _label_for(img: Path) -> Path | None:
     parts = list(img.parts)
     for i in range(len(parts) - 1, -1, -1):
         if parts[i].lower() == "images":
@@ -85,11 +84,11 @@ def _label_for(img: Path) -> Optional[Path]:
     return same if same.exists() else None
 
 
-def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> List[Path]:
+def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> list[Path]:
     if split_path is None or not split_path.exists():
         return []
     if split_path.is_dir():
-        out: List[Path] = []
+        out: list[Path] = []
         for ext in IMAGE_EXTS:
             out.extend(split_path.rglob(f"*{ext}"))
         return out
@@ -108,7 +107,7 @@ def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> List[Path]:
     return out
 
 
-def _scan_split(images: List[Path]) -> dict:
+def _scan_split(images: list[Path]) -> dict:
     """Reads labels of a split. Returns per-class counts, box stats and issues."""
     per_class = defaultdict(int)
     areas = defaultdict(list)

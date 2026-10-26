@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -26,7 +25,7 @@ class BBox:
         return f"{self.class_id} {self.cx:.6f} {self.cy:.6f} {self.w:.6f} {self.h:.6f}"
 
     @classmethod
-    def from_yolo_line(cls, line: str) -> "BBox":
+    def from_yolo_line(cls, line: str) -> BBox:
         parts = line.strip().split()
         return cls(
             int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
@@ -47,7 +46,7 @@ class LabelerState(QObject):
         self.current_idx: int = -1
         self.class_names: list[str] = list(CLASS_NAMES_DEFAULT)
         self.active_class: int = 0
-        self.root_folder: Optional[Path] = None
+        self.root_folder: Path | None = None
 
         self._annotations: dict[str, list[BBox]] = {}
         self._undo_stacks: dict[str, list[list[BBox]]] = {}
@@ -59,7 +58,7 @@ class LabelerState(QObject):
 
     # ── Properties ───────────────────────────────────────────
     @property
-    def current_image(self) -> Optional[Path]:
+    def current_image(self) -> Path | None:
         if 0 <= self.current_idx < len(self.images):
             return self.images[self.current_idx]
         return None

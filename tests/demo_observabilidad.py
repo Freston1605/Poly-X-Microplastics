@@ -34,7 +34,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -197,7 +197,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     if args.log_dir:  # noqa: SIM108
         ruta_dir = Path(args.log_dir)
     else:

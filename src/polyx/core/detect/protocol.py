@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol, Tuple
+from typing import Protocol
 
 import cv2
 import numpy as np
@@ -30,30 +30,30 @@ class Instance:
     x2: float
     y2: float
     # Optional calibrated measurements (filled by measurement layer)
-    diam_um: Optional[float] = None
-    area_um2: Optional[float] = None
+    diam_um: float | None = None
+    area_um2: float | None = None
     # True shape measurements (from mask-based measurement)
-    length_um: Optional[float] = None
-    width_um: Optional[float] = None
-    aspect: Optional[float] = None
-    curvature: Optional[float] = None
-    morphotype: Optional[str] = None  # "fibre" | "fragment"
-    feret_um: Optional[float] = None
-    geodesic_um: Optional[float] = None
-    equivalent_rect_length_um: Optional[float] = None
-    method_length: Optional[str] = None
+    length_um: float | None = None
+    width_um: float | None = None
+    aspect: float | None = None
+    curvature: float | None = None
+    morphotype: str | None = None  # "fibre" | "fragment"
+    feret_um: float | None = None
+    geodesic_um: float | None = None
+    equivalent_rect_length_um: float | None = None
+    method_length: str | None = None
     review: bool = False
-    warning_shape: Optional[str] = None
-    number: Optional[int] = None
+    warning_shape: str | None = None
+    number: int | None = None
     assignable: bool = True
     # ── Segmentation mask (optional) ──────────────────────────────────────
     # Full-image boolean mask when a segmentation backend produced one.
     # Stored as a cropped array + offset when memory matters; None means
     # "no mask available, fall back to box-derived segmentation".
-    mask: Optional[np.ndarray] = None
-    mask_rle: Optional[str] = None  # COCO RLE for persistence
-    mask_source: Optional[str] = None  # "yolo-seg"|"sam2"|"otsu-box"|...
-    mask_offset: Optional[Tuple[int, int]] = None  # (x0, y0) of cropped mask
+    mask: np.ndarray | None = None
+    mask_rle: str | None = None  # COCO RLE for persistence
+    mask_source: str | None = None  # "yolo-seg"|"sam2"|"otsu-box"|...
+    mask_offset: tuple[int, int] | None = None  # (x0, y0) of cropped mask
 
     @property
     def w(self) -> float:
@@ -91,7 +91,7 @@ class DetectionSource(Protocol):
         imgsz: int = 640,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         """Run inference on a single image."""
         ...
 
@@ -104,12 +104,12 @@ class DetectionSource(Protocol):
         overlap: float = 0.25,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         """Run sliced inference on a large image."""
         ...
 
     @property
-    def names(self) -> Dict[int, str]:
+    def names(self) -> dict[int, str]:
         """Class id → name mapping."""
         ...
 
@@ -120,11 +120,11 @@ class DetectionSource(Protocol):
 
 
 # Convenience type alias
-Detections = List[Instance]
+Detections = list[Instance]
 
 
 # Utility functions (kept here for now; could move to a utils module)
-def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
+def size_image(image_path: str | Path) -> tuple[int, int] | None:
     """Read image dimensions without loading full image."""
     try:
         import cv2
@@ -142,7 +142,7 @@ def policy_tiling(
     threshold_px: int = 2000,
     tile: int = 0,
     overlap: float = 0.25,
-) -> Tuple[int, int, int, float]:
+) -> tuple[int, int, int, float]:
     """Compute tiling parameters.
 
     Returns (tile_size, overlap_px, n_tiles_x, n_tiles_y)
@@ -163,12 +163,12 @@ def read_yolo_txt(
     txt_path: str | Path,
     img_w: int,
     img_h: int,
-    class_names: Dict[int, str],
-) -> List[Instance]:
+    class_names: dict[int, str],
+) -> list[Instance]:
     """Read YOLO-format label file and return Instance list."""
     instances = []
     try:
-        with open(txt_path, "r", encoding="utf-8") as f:
+        with open(txt_path, encoding="utf-8") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) < 5:
@@ -231,7 +231,7 @@ def read_yolo_txt(
     return instances
 
 
-def find_gt_for_image(image_path: str | Path, gt_folder: str | Path) -> Optional[Path]:
+def find_gt_for_image(image_path: str | Path, gt_folder: str | Path) -> Path | None:
     """Find the ground-truth .txt file for an image."""
     img_path = Path(image_path)
     for ext in (".txt",):
@@ -255,9 +255,9 @@ def compute_box_size_um(det: Instance, um_per_px: float) -> None:
 class SegmentationPrompts:
     """Prompts fed to a segmentation backend."""
 
-    boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
-    points: Optional[List[Tuple[float, float]]] = None
-    point_labels: Optional[List[int]] = None
+    boxes: list[tuple[float, float, float, float]] = field(default_factory=list)
+    points: list[tuple[float, float]] | None = None
+    point_labels: list[int] | None = None
 
 
 class SegmentationSource(Protocol):
@@ -267,24 +267,24 @@ class SegmentationSource(Protocol):
     (typically boxes from a detector) and returns Instance objects carrying masks.
     """
 
-    def load(self) -> "SegmentationSource": ...
+    def load(self) -> SegmentationSource: ...
 
     def segment(
         self,
         image_path: str | Path,
         prompts: SegmentationPrompts,
         **kwargs,
-    ) -> List[Instance]: ...
+    ) -> list[Instance]: ...
 
     def segment_from_boxes(
         self,
         image_path: str | Path,
-        boxes: List[Tuple[float, float, float, float]],
+        boxes: list[tuple[float, float, float, float]],
         **kwargs,
-    ) -> List[Instance]: ...
+    ) -> list[Instance]: ...
 
     @property
-    def names(self) -> Dict[int, str]: ...
+    def names(self) -> dict[int, str]: ...
 
     @property
     def last_imgsz(self) -> int: ...

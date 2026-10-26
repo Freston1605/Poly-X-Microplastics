@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -114,7 +113,7 @@ class ModelConfig:
     family: str = "v8"  # `"v8"` or `"v11"`
     size: str = "m"  # n / s / m / l / x
     task: str = "detect"  # `"detect"` or `"segment"`
-    custom_weights: Optional[Path] = None
+    custom_weights: Path | None = None
     preset_name: str = "Balanceado (recomendado)"
     # Train v8 and v11 in sequence with the SAME configuration, to attribute
     # the metric difference to the architecture and not to the hyperparameters.
@@ -150,11 +149,11 @@ class ModelConfig:
 
 @dataclass
 class DatasetConfig:
-    yaml_path: Optional[Path] = None
+    yaml_path: Path | None = None
     train_count: int = 0
     val_count: int = 0
     test_count: int = 0
-    class_names: List[str] = field(default_factory=list)
+    class_names: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -237,14 +236,14 @@ class TrainerState(QObject):
         self.aug = AugParams()
 
         # epoch history during the current run
-        self.history: List[EpochMetrics] = []
+        self.history: list[EpochMetrics] = []
         self.best_map50: float = 0.0
         self.best_epoch: int = 0
         self.epochs_no_improve: int = 0
 
         self._running = False
         self._abort = False
-        self.run_dir: Optional[Path] = None
+        self.run_dir: Path | None = None
 
     def is_running(self) -> bool:
         return self._running
@@ -283,7 +282,7 @@ class TrainerState(QObject):
 # ────────────────────────────────────────────────────────────────────
 # Pre-flight validation: dataset + parameters before training
 # ────────────────────────────────────────────────────────────────────
-def _num(value) -> Optional[float]:
+def _num(value) -> float | None:
     """float(valor) or None if it is not numeric (None, empty str, text)."""
     try:
         return float(value)
@@ -316,7 +315,7 @@ def validate_training_config(
     on every keypress; the full audit runs when ``dataset_changed`` arrives
     and always before starting the runner.
     """
-    msgs: List[str] = []
+    msgs: list[str] = []
     ok = True
 
     def _error(msg: str) -> None:

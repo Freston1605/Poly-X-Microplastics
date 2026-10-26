@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -24,9 +23,9 @@ class ModelSlot:
     """A model slot in the `Modelos` tab (up to 3)."""
 
     alias: str = ""
-    path: Optional[Path] = None  # path to the weights
+    path: Path | None = None  # path to the weights
     model_type: str = "yolo"  # "yolo" | "yolo-seg" | "sam2" | ...
-    loaded: Optional[DetectionSource] = None
+    loaded: DetectionSource | None = None
 
 
 @dataclass
@@ -95,7 +94,7 @@ class InferenceParams:
 
 
 @lru_cache(maxsize=12)
-def _read_png(path_2: str, _mtime: float) -> Optional[bytes]:
+def _read_png(path_2: str, _mtime: float) -> bytes | None:
     """Reads a run PNG, with a bounded cache.
 
     ``_mtime`` is not used inside: it takes part in the signature so the cache
@@ -120,24 +119,24 @@ class ImageResult:
 
     image_path: Path
     model_idx: int
-    predictions: List[Detection] = field(default_factory=list)
-    gt: List[Detection] = field(default_factory=list)
+    predictions: list[Detection] = field(default_factory=list)
+    gt: list[Detection] = field(default_factory=list)
     has_gt: bool = False
     tp: int = 0
     fp: int = 0
     fn: int = 0
     miscls: int = 0
     # Paths of the annotated images saved in the run folder.
-    annotated_path: Optional[Path] = None  # prediction + GT (preview/errors)
-    pred_path: Optional[Path] = None  # model predictions only
-    gt_path: Optional[Path] = None  # GT only (None if absent)
+    annotated_path: Path | None = None  # prediction + GT (preview/errors)
+    pred_path: Path | None = None  # model predictions only
+    gt_path: Path | None = None  # GT only (None if absent)
     # user verdict after visual review: None / `"buena"` / `"mala"`
-    verdict: Optional[str] = None
+    verdict: str | None = None
     # tiling geometry if the photo was split; "" = inferred as one piece
     tiling: str = ""
 
     @staticmethod
-    def _bytes_de(path_2: Optional[Path]) -> Optional[bytes]:
+    def _bytes_de(path_2: Path | None) -> bytes | None:
         if path_2 is None:
             return None
         try:
@@ -147,15 +146,15 @@ class ImageResult:
         return _read_png(str(path_2), mtime)
 
     @property
-    def annotated_png(self) -> Optional[bytes]:
+    def annotated_png(self) -> bytes | None:
         return self._bytes_de(self.annotated_path)
 
     @property
-    def pred_png(self) -> Optional[bytes]:
+    def pred_png(self) -> bytes | None:
         return self._bytes_de(self.pred_path)
 
     @property
-    def gt_png(self) -> Optional[bytes]:
+    def gt_png(self) -> bytes | None:
         return self._bytes_de(self.gt_path)
 
 
@@ -175,25 +174,25 @@ class DetectorState(QObject):
 
     def __init__(self):
         super().__init__()
-        self.model_slots: List[ModelSlot] = [
+        self.model_slots: list[ModelSlot] = [
             ModelSlot(alias=tr("Modelo {n}").format(n=i + 1)) for i in range(3)
         ]
-        self.images: List[Path] = []
-        self.gt_folder: Optional[Path] = None
+        self.images: list[Path] = []
+        self.gt_folder: Path | None = None
         self.params = InferenceParams()
         # results[model_idx] -> List[ImageResult]
-        self.results: Dict[int, List[ImageResult]] = {}
+        self.results: dict[int, list[ImageResult]] = {}
         # Scale of each image and where it came from, by filename. The
         # runner fills it; the report reports it. Without this the sizes in um
         # would appear without saying what standard they were measured against.
-        self.calibrations: Dict[str, object] = {}
+        self.calibrations: dict[str, object] = {}
         # run timestamp/folder
-        self.run_dir: Optional[Path] = None
+        self.run_dir: Path | None = None
         self._running = False
         self._abort = False
 
     # ── helpers ──
-    def active_models(self) -> List[ModelSlot]:
+    def active_models(self) -> list[ModelSlot]:
         return [s for s in self.model_slots if s.path is not None]
 
     def has_gt(self) -> bool:

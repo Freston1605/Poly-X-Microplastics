@@ -8,7 +8,6 @@ where platform differences are allowed.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from polyx.core.platform import user_data_dir
 
@@ -28,7 +27,7 @@ DEFAULT_MODEL = MODELS_DIR / "bestdetectormedium.pt"
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
 
-def discover_default_model() -> Optional[Path]:
+def discover_default_model() -> Path | None:
     """Return DEFAULT_MODEL if it exists on disk, else None.
 
     Falls back to a bundled model next to the package (dev checkout).

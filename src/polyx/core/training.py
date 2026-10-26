@@ -7,9 +7,9 @@ adapter over this module.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
 
 
 @dataclass
@@ -23,7 +23,7 @@ class TrainingConfig:
     epochs: int = 100
     batch: int = 16
     imgsz: int = 640
-    device: Optional[str] = None  # None = let Ultralytics auto-select
+    device: str | None = None  # None = let Ultralytics auto-select
     optimizer: str = "SGD"
     lr0: float = 0.01
     extra: dict = field(default_factory=dict)  # forwarded to model.train()
@@ -31,9 +31,9 @@ class TrainingConfig:
 
 def train(
     cfg: TrainingConfig,
-    on_epoch: Optional[Callable[[dict], None]] = None,
-    on_log: Optional[Callable[[str], None]] = None,
-    callbacks: Optional[dict[str, Callable]] = None,
+    on_epoch: Callable[[dict], None] | None = None,
+    on_log: Callable[[str], None] | None = None,
+    callbacks: dict[str, Callable] | None = None,
 ) -> Path:
     """Run Ultralytics training and return the path to best.pt.
 

@@ -24,8 +24,8 @@ from __future__ import annotations
 import json
 import locale
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from polyx.core.translations_en import EN as _EN
 from polyx.core.translations_en import NO_TRANSLATE

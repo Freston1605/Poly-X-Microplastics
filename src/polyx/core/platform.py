@@ -27,7 +27,6 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 # ── System identification ──
 # Computed once: `sys.platform` does not change mid-run, and
@@ -258,7 +257,7 @@ def user_data_dir() -> Path:
     return base / "polyx"
 
 
-def environment_python(root: Optional[Path] = None) -> Optional[Path]:
+def environment_python(root: Path | None = None) -> Path | None:
     """Path to the .venv python, which hangs off a different folder per OS.
 
     Windows puts it in ``.venv/Scripts/python.exe`` and the rest of the world

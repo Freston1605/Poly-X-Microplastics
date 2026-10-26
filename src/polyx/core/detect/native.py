@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
 
 import cv2
 
@@ -25,10 +24,10 @@ class NativeDetector(DetectionSource):
         self.threshold = threshold
         self.min_area = min_area
         self.max_area = max_area
-        self._names: Dict[int, str] = {0: "particle"}
+        self._names: dict[int, str] = {0: "particle"}
         self._last_imgsz: int = 0
 
-    def load(self) -> "NativeDetector":
+    def load(self) -> NativeDetector:
         return self
 
     def predict(
@@ -39,7 +38,7 @@ class NativeDetector(DetectionSource):
         imgsz: int = 640,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         """Run threshold + connected components on a single image."""
         img = cv2.imread(str(image_path))
         if img is None:
@@ -84,12 +83,12 @@ class NativeDetector(DetectionSource):
         overlap: float = 0.25,
         device: str = "0",
         **kwargs,
-    ) -> List[Instance]:
+    ) -> list[Instance]:
         # For now, just call the regular predict
         return self.predict(image_path, conf=conf, iou=iou, **kwargs)
 
     @property
-    def names(self) -> Dict[int, str]:
+    def names(self) -> dict[int, str]:
         return self._names
 
     @property

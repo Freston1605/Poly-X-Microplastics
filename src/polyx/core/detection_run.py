@@ -14,7 +14,6 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -50,7 +49,7 @@ def _draw(img, dets):
     return out
 
 
-def _measure(det: Instance, img: np.ndarray, um_per_px: Optional[float]) -> None:
+def _measure(det: Instance, img: np.ndarray, um_per_px: float | None) -> None:
     """Box-size (+ shape) measurement, preferring an attached mask."""
     compute_box_size_um(det, um_per_px if um_per_px and um_per_px > 0 else None)
     apply_to_detection(
@@ -68,10 +67,10 @@ def run_batch(
     conf: float = 0.25,
     iou: float = 0.45,
     imgsz: int = 1280,
-    device: Optional[str] = None,
+    device: str | None = None,
     um_per_px: float = 0.0,
     measure_shape: bool = True,
-    gt_folder: Optional[Path] = None,
+    gt_folder: Path | None = None,
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     img_dir = output_dir / "images"

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -71,14 +70,14 @@ class MatchResult:
     fn: int = 0
     miscls: int = 0  # located correctly but wrong class
     # (pred_idx, gt_idx) lists for each category
-    tp_pairs: List[Tuple[int, int]] = field(default_factory=list)
-    fp_idx: List[int] = field(default_factory=list)  # indices into preds
-    fn_idx: List[int] = field(default_factory=list)  # indices into gts
-    miscls_pairs: List[Tuple[int, int]] = field(default_factory=list)
+    tp_pairs: list[tuple[int, int]] = field(default_factory=list)
+    fp_idx: list[int] = field(default_factory=list)  # indices into preds
+    fn_idx: list[int] = field(default_factory=list)  # indices into gts
+    miscls_pairs: list[tuple[int, int]] = field(default_factory=list)
 
 
 def match_image(
-    preds: List[Detection], gts: List[Detection], iou_thr: float = 0.5, use_mask_iou: bool = False
+    preds: list[Detection], gts: list[Detection], iou_thr: float = 0.5, use_mask_iou: bool = False
 ) -> MatchResult:
     """Matches predictions to GTs by IoU. Greedy, descending by confidence."""
     res = MatchResult()
@@ -153,12 +152,12 @@ class ClassMetrics:
 
 
 def aggregate_per_class(
-    all_preds: List[List[Detection]],
-    all_gts: List[List[Detection]],
-    class_ids: List[int],
+    all_preds: list[list[Detection]],
+    all_gts: list[list[Detection]],
+    class_ids: list[int],
     iou_thr: float = 0.5,
     use_mask_iou: bool = False,
-) -> Dict[int, ClassMetrics]:
+) -> dict[int, ClassMetrics]:
     """Returns {class_id: ClassMetrics} summed over all images."""
     out = {cid: ClassMetrics() for cid in class_ids}
     for preds, gts in zip(all_preds, all_gts):  # noqa: B905
@@ -190,9 +189,9 @@ def aggregate_per_class(
 
 
 def confusion_matrix(
-    all_preds: List[List[Detection]],
-    all_gts: List[List[Detection]],
-    class_ids: List[int],
+    all_preds: list[list[Detection]],
+    all_gts: list[list[Detection]],
+    class_ids: list[int],
     iou_thr: float = 0.5,
     use_mask_iou: bool = False,
 ) -> np.ndarray:

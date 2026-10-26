@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
@@ -71,7 +69,7 @@ class BboxCanvas(QWidget):
         self.setMouseTracking(True)
         self.setMinimumSize(400, 400)
 
-        self._pixmap: Optional[QPixmap] = None
+        self._pixmap: QPixmap | None = None
         self._scale = 1.0
         self._offset = QPointF(0.0, 0.0)
         # With hundreds of crops, reframing on every image forces redoing the
@@ -81,12 +79,12 @@ class BboxCanvas(QWidget):
 
         # New box drawing
         self._drawing = False
-        self._draw_start: Optional[QPointF] = None  # image coords (pixels)
-        self._draw_end: Optional[QPointF] = None
+        self._draw_start: QPointF | None = None  # image coords (pixels)
+        self._draw_end: QPointF | None = None
 
         # Pan
         self._panning = False
-        self._pan_start: Optional[QPointF] = None
+        self._pan_start: QPointF | None = None
         self._pan_offset_start = QPointF(0.0, 0.0)
 
         # Selection

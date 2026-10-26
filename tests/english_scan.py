@@ -26,8 +26,8 @@ import io
 import re
 import tokenize
 import unicodedata
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Set, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLYX_ROOT = REPO_ROOT / "src" / "polyx"
@@ -57,7 +57,7 @@ _CELL_MARKER = re.compile(r"^#\s*%%")
 _PROSE_CHARACTER = re.compile(r"[^\W_]", re.UNICODE)
 
 
-def split_comment(raw: str) -> Tuple[str, str, str]:
+def split_comment(raw: str) -> tuple[str, str, str]:
     """Split a raw comment into ``(prefix, body, trailing_whitespace)``.
 
     The prefix is the leading hash run, an optional ``:`` and the full
@@ -412,7 +412,7 @@ def _strip_code_like(text: str, identifiers: Sequence[str]) -> str:
     )
 
 
-def spanish_comment_findings(text: str, identifiers: Sequence[str] = ()) -> List[str]:
+def spanish_comment_findings(text: str, identifiers: Sequence[str] = ()) -> list[str]:
     """Return Spanish markers found in a comment body ([] = clean)."""
     cleaned = _strip_code_like(text, identifiers)
     findings = spanish_findings(cleaned)
@@ -429,7 +429,7 @@ def spanish_comment_findings(text: str, identifiers: Sequence[str] = ()) -> List
     return list(dict.fromkeys(findings))
 
 
-def _comment_tokens(text: str) -> List[tokenize.TokenInfo]:
+def _comment_tokens(text: str) -> list[tokenize.TokenInfo]:
     """Return every COMMENT token of a Python source in tokenize order."""
     return [
         token
@@ -438,7 +438,7 @@ def _comment_tokens(text: str) -> List[tokenize.TokenInfo]:
     ]
 
 
-def _identifiers_from_source(text: str) -> Set[str]:
+def _identifiers_from_source(text: str) -> set[str]:
     """Return every identifier name in a Python source."""
     return {
         token.string
@@ -449,10 +449,10 @@ def _identifiers_from_source(text: str) -> Set[str]:
 
 def comment_blocks(
     tokens: Sequence[tokenize.TokenInfo],
-) -> List[List[tokenize.TokenInfo]]:
+) -> list[list[tokenize.TokenInfo]]:
     """Group consecutive comment lines that start at the same column."""
-    blocks: List[List[tokenize.TokenInfo]] = []
-    current: List[tokenize.TokenInfo] = []
+    blocks: list[list[tokenize.TokenInfo]] = []
+    current: list[tokenize.TokenInfo] = []
     for token in tokens:
         if (
             current
@@ -469,11 +469,11 @@ def comment_blocks(
     return blocks
 
 
-def scan_comments(text: str) -> List[Tuple[str, List[str]]]:
+def scan_comments(text: str) -> list[tuple[str, list[str]]]:
     """Return ``(line_label, findings)`` for every Spanish comment finding."""
     tokens = _comment_tokens(text)
     identifiers = _identifiers_from_source(text)
-    results: List[Tuple[str, List[str]]] = []
+    results: list[tuple[str, list[str]]] = []
     for token in tokens:
         if is_protected_comment(token.string):
             continue
@@ -509,9 +509,9 @@ def _strip_inline_code(text: str) -> str:
     return text
 
 
-def spanish_findings(prose: str) -> List[str]:
+def spanish_findings(prose: str) -> list[str]:
     """Return the Spanish markers found in prose ([] = clean)."""
-    findings: List[str] = []
+    findings: list[str] = []
     for match in PALABRAS_ES.finditer(prose):
         word = match.group(0).lower()
         if word not in PROSE_ALLOWLIST:
@@ -523,7 +523,7 @@ def spanish_findings(prose: str) -> List[str]:
     return findings
 
 
-def enumerate_docstrings(text: str) -> List[Tuple[int, str]]:
+def enumerate_docstrings(text: str) -> list[tuple[int, str]]:
     """Return ``[(index, content)]`` for each docstring in document order.
 
     The index is the pre-order position of the owning node among modules,
@@ -531,12 +531,12 @@ def enumerate_docstrings(text: str) -> List[Tuple[int, str]]:
     produced.
     """
     tree = ast.parse(text)
-    docs: List[Tuple[int, str]] = []
+    docs: list[tuple[int, str]] = []
     counter = 0
 
     def visit(node: ast.AST) -> None:
         nonlocal counter
-        index: Optional[int] = None
+        index: int | None = None
         if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             index = counter
             counter += 1
@@ -825,14 +825,14 @@ _SUBWORD = re.compile(
 IDENTIFIER_ALLOWLIST = HOMOGRAPH_ALLOWLIST | UNIT_ALLOWLIST
 
 
-def split_identifier(name: str) -> List[str]:
+def split_identifier(name: str) -> list[str]:
     """Split snake_case, CamelCase and ALLCAPS identifiers into subwords.
 
     Digit runs are merged into the preceding subword (``g2`` -> ``["g2"]``,
     ``N_ANGULOS`` -> ``["N", "ANGULOS"]``, ``DialogoPreferencias`` ->
     ``["Dialogo", "Preferencias"]``).
     """
-    subwords: List[str] = []
+    subwords: list[str] = []
     for part in name.split("_"):
         if not part:
             continue
@@ -850,7 +850,7 @@ def _strip_digits(subword: str) -> str:
     return re.sub(r"\d+$", "", subword)
 
 
-def spanish_identifier_findings(name: str) -> List[str]:
+def spanish_identifier_findings(name: str) -> list[str]:
     """Return Spanish markers for an identifier (``[]`` means clean).
 
     Findings use ``spanish-identifier:<subword>`` so a durable gate can
@@ -858,7 +858,7 @@ def spanish_identifier_findings(name: str) -> List[str]:
     """
     if name in EXACT_ALLOWLIST:
         return []
-    findings: List[str] = []
+    findings: list[str] = []
     for subword in split_identifier(name):
         base = _strip_digits(subword)
         if not base:
@@ -885,7 +885,7 @@ def spanish_identifier_findings(name: str) -> List[str]:
 @functools.lru_cache(maxsize=1)
 def default_module_stems() -> frozenset:
     """Cached module stems of the checked-out polyx package."""
-    stems: Set[str] = {POLYX_ROOT.name}
+    stems: set[str] = {POLYX_ROOT.name}
     if not POLYX_ROOT.is_dir():
         return frozenset(stems)
     for path in POLYX_ROOT.rglob("*.py"):
@@ -897,7 +897,7 @@ def default_module_stems() -> frozenset:
     return frozenset(stems)
 
 
-def module_stem_bindings(text: str, stems: Iterable[str] = ()) -> Set[str]:
+def module_stem_bindings(text: str, stems: Iterable[str] = ()) -> set[str]:
     """Return local names bound to an imported module stem in ``text``.
 
     ``from polyx.gui import iconos`` binds the module ``iconos``; the binding
@@ -909,7 +909,7 @@ def module_stem_bindings(text: str, stems: Iterable[str] = ()) -> Set[str]:
     except SyntaxError:
         return set()
     stem_set = frozenset(stems)
-    bindings: Set[str] = set()
+    bindings: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.names:
             for alias in node.names:
@@ -933,8 +933,8 @@ def _ignored_token(token: tokenize.TokenInfo) -> bool:
 
 
 def _keyword_positions_after(
-    text: str, heads: Set[str], *, skip_definitions: bool, require_dot: bool = False
-) -> Set[Tuple[int, int]]:
+    text: str, heads: set[str], *, skip_definitions: bool, require_dot: bool = False
+) -> set[tuple[int, int]]:
     """Positions of keyword names in calls whose head is in ``heads``.
 
     Used for two sets of non-symbols: ``str.format`` field references (which
@@ -946,7 +946,7 @@ def _keyword_positions_after(
         for token in tokenize.generate_tokens(io.StringIO(text).readline)
         if not _ignored_token(token)
     ]
-    positions: Set[Tuple[int, int]] = set()
+    positions: set[tuple[int, int]] = set()
     for index, token in enumerate(tokens):
         if (
             token.type != tokenize.NAME
@@ -985,21 +985,21 @@ def _keyword_positions_after(
     return positions
 
 
-def _format_keyword_positions(text: str) -> Set[Tuple[int, int]]:
+def _format_keyword_positions(text: str) -> set[tuple[int, int]]:
     """Positions of keyword names that are ``str.format`` field references."""
     return _keyword_positions_after(
         text, {"format", "format_map"}, skip_definitions=False, require_dot=True
     )
 
 
-def _data_keyword_positions(text: str) -> Set[Tuple[int, int]]:
+def _data_keyword_positions(text: str) -> set[tuple[int, int]]:
     """Positions of keyword names that are JSONL data keys."""
     return _keyword_positions_after(text, set(OBSERVABILITY_SINKS), skip_definitions=True)
 
 
 def identifier_occurrences(
-    text: str, stems: Optional[Iterable[str]] = None
-) -> List[Tuple[int, str]]:
+    text: str, stems: Iterable[str] | None = None
+) -> list[tuple[int, str]]:
     """Yield ``(line, name)`` for every identifier outside import context.
 
     Module paths, imported symbols and the local bindings of imported module
@@ -1012,7 +1012,7 @@ def identifier_occurrences(
     protected = module_stem_bindings(text, stems)
     format_keywords = _format_keyword_positions(text)
     data_keywords = _data_keyword_positions(text)
-    occurrences: List[Tuple[int, str]] = []
+    occurrences: list[tuple[int, str]] = []
     in_import = False
     for token in tokenize.generate_tokens(io.StringIO(text).readline):
         if token.type == tokenize.NAME and token.string in {"import", "from"}:

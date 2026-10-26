@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional
 
 from .native import NativeDetector
 from .protocol import DetectionSource
 from .sam import Sam2Segmenter
 from .yolo import YoloModel, YoloSegModel
 
-_DETECTOR_REGISTRY: Dict[str, type] = {
+_DETECTOR_REGISTRY: dict[str, type] = {
     "yolo": YoloModel,
     "yolo-seg": YoloSegModel,
     "native": NativeDetector,
@@ -20,7 +19,7 @@ _DETECTOR_REGISTRY: Dict[str, type] = {
 
 def make_detector(
     name: str,
-    weights: Optional[str | Path] = None,
+    weights: str | Path | None = None,
     **kwargs,
 ) -> DetectionSource:
     """Create a detector instance by name.

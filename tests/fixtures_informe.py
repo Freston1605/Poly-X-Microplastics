@@ -32,8 +32,8 @@ rifican.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence, Union
 
 import cv2
 import numpy as np
@@ -65,7 +65,7 @@ NOMBRE_FOTO_HOSTIL: str = "<img src=x onerror=alert(2)>.png"
 ALIAS_HOSTIL: str = "<img src=x onerror=alert(1)>"
 
 
-def foto_sintetica(ancho: int = 320, alto: int = 260) -> "np.ndarray":
+def foto_sintetica(ancho: int = 320, alto: int = 260) -> np.ndarray:
     """Build the synthetic BGR frame shared by all benign/hostile fixtures."""
     img = np.full((alto, ancho, 3), 18, np.uint8)
     cv2.circle(img, (ancho // 2, alto // 2), 22, (60, 210, 240), -1)
@@ -86,7 +86,7 @@ def _escribir_foto(ruta: Path) -> None:
     ruta.write_bytes(buf.tobytes())
 
 
-def deteccion_medida(img: "np.ndarray") -> Detection:
+def deteccion_medida(img: np.ndarray) -> Detection:
     """Build the measured Detection (disc fit to the synthetic frame)."""
     d = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
     from polyx.core import morphology
@@ -95,7 +95,7 @@ def deteccion_medida(img: "np.ndarray") -> Detection:
     return d
 
 
-def _normalizar(valor: Union[str, Sequence[str]]) -> list[str]:
+def _normalizar(valor: str | Sequence[str]) -> list[str]:
     """Accept one filename/alias or a whole batch; always return a list."""
     if isinstance(valor, str):
         return [valor]
@@ -140,7 +140,7 @@ def _construir_estado(
     return st
 
 
-def estado_benigno(directorio: Optional[Path] = None):
+def estado_benigno(directorio: Path | None = None):
     """Return a clean, benign DetectorState for the report fixtures.
 
     The photo written is also benign (``placa_muestra_a.png``), so downstream
@@ -151,9 +151,9 @@ def estado_benigno(directorio: Optional[Path] = None):
 
 
 def estado_hostil(
-    nombres: Union[str, Sequence[str], None] = None,
-    alias: Union[str, Sequence[str], None] = None,
-    directorio: Optional[Path] = None,
+    nombres: str | Sequence[str] | None = None,
+    alias: str | Sequence[str] | None = None,
+    directorio: Path | None = None,
 ):
     """Return a DetectorState carrying HTML injection in its strings.
 
