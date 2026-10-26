@@ -2,19 +2,24 @@
 title Poly-X - Actualizar
 setlocal
 cd /d "%~dp0"
-set "HERE=%~dp0"
-set "HERE=%HERE:~0,-1%"
+for %%I in ("%~dp0..") do set "RAIZ=%%~fI"
 
-REM La raiz del proyecto es el padre de esta carpeta (install\).
-for %%I in ("%HERE%\..") do set "RAIZ=%%~fI"
-
-where powershell >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] No se encontro PowerShell; no se puede actualizar automaticamente.
-    echo Descarga la ultima version manualmente desde:
-    echo   https://github.com/CrissFerrada/Poly-X-Microplastics
+set "PYEXE="
+where py >nul 2>&1
+if %errorlevel%==0 (
+    for /f "tokens=*" %%i in ('py -3.11 -c "import sys; print(sys.executable)" 2^>nul') do set "PYEXE=%%i"
+)
+if "!PYEXE!"=="" (
+    where python >nul 2>&1
+    if %errorlevel%==0 (
+        for /f "tokens=*" %%i in ('python -c "import sys; print(sys.executable)" 2^>nul') do set "PYEXE=%%i"
+    )
+)
+if "!PYEXE!"=="" (
+    echo [ERROR] No se encontro Python.
     pause
     exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\actualizar.ps1" -InstallDir "%RAIZ%"
+"!PYEXE!" "%~dp0update.py" --root "!RAIZ!"
+pause
