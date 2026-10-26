@@ -69,3 +69,11 @@ packages = ["src/polyx"]
 include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE"]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
+
+[tool.uv]
+# Keep the dev/CI lock aligned with the tested stack. torch/torchvision are
+# not declared as direct dependencies (ultralytics pulls them in and the
+# installer picks the CUDA wheel per GPU), but the resolver must not drift
+# to a newer, untested torch. The CPU wheels come from the default index;
+# GPU dev setups override with the CUDA wheel via SETUP.bat / uv pip.
+constraint-dependencies = ["torch==2.7.1", "torchvision==0.22.1"]

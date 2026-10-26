@@ -30,6 +30,21 @@ install the pinned stack and, on Windows, offer a Desktop shortcut. Full
 step-by-step instructions (with photographs) are in
 `docs/manual/Manual_PolyX.html`.
 
+### Development (uv)
+
+The project ships a `uv.lock` for reproducible developer environments:
+
+```bash
+uv sync --extra gui --extra dev          # creates/updates .venv from the lock
+uv run pytest -q                         # run the suite
+uv run polyx-train --help
+```
+
+`uv sync` resolves the **CPU** torch wheel (2.7.1) from the default index,
+which is what CI uses. If you train on a GPU, install the CUDA wheel on top
+with `SETUP.bat` (Windows) or the matching `--index-url` (see `requirements.txt`),
+or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu128`.
+
 ---
 
 ## Modules
