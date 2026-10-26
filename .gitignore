@@ -117,9 +117,12 @@ matlab_R2024b_Windows.exe
 # ── Fuera del repo publicado: no lo necesita el programa ────────────
 # El repositorio contiene SOLO lo que hace falta para instalar, ejecutar y
 # documentar Poly-X. Lo de abajo se queda en el disco de trabajo.
-# Los PDF del manual se regeneran con: generar_manual.py --pdf
-# El HTML si va versionado y se abre sin conexion, asi que el PDF sobra (10 MB).
+# El manual completo se regenera desde tools/manual/manual_texto_*.py con:
+#   .venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+# (el HTML ya no va versionado: 12 MB de binario reconstruible en un minuto).
 Manual_PolyX*.pdf
+docs/manual/*.html
+docs/manual/*.pdf
 
 # Hoja de ruta personal, no es material del programa.
 SUGERENCIAS_Y_PROXIMOS_PASOS.md

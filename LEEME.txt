@@ -103,13 +103,12 @@ FLUJO RÁPIDO (usar modelo ya entrenado)
 
 ESTRUCTURA DE CARPETAS
 ----------------------
-  polyx/              Código fuente (launcher, detector, ...)
+  src/polyx/          Código fuente (launcher, detector, ...)
   models/             Pesos .pt entrenados
   runs/               Resultados de cada corrida (timestamp)
   data/               Datasets YOLO (images/ + labels/)
   legacy/             Versiones anteriores del código (referencia)
-  manual_screenshots/ Capturas usadas por el manual
-  Manual_PolyX.html   Manual de usuario completo (abrir en navegador)
+  docs/manual/        Manual de usuario completo (abrir en navegador)
   LEEME_macOS.md      Guia especifica de macOS
   SETUP.bat                 [Win] Instalación
   iniciar_polyx.bat         [Win] Lanzador
@@ -123,17 +122,15 @@ REGENERAR EL MANUAL CON LA UI ACTUAL
 Son dos pasos: primero las capturas de la interfaz, despues el manual.
 
   1) capturas (una tanda por idioma)
-     .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/es
-     set POLYX_IDIOMA=en && .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/en
+     .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
+     set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
 
   2) manual completo, en los dos idiomas, mas los PDF
-     .venv\Scripts\python.exe generar_manual.py --pdf
+     .venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
 
-El texto vive en manual_texto_es.py y manual_texto_en.py; el motor (plantilla,
-hoja de estilo, numeracion de figuras) en generar_manual.py.
-
-  generar_manual.py quedo OBSOLETO: reemplazaba figuras por posicion y sobre
-  el manual actual las descolocaria. Ya no hace nada, solo avisa.
+El texto vive en tools\manual\manual_texto_es.py y manual_texto_en.py; el motor
+(plantilla, hoja de estilo, numeracion de figuras) en
+tools\manual\generar_manual.py.
 
 PROBLEMAS COMUNES
 -----------------

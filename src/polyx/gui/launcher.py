@@ -912,7 +912,7 @@ class LauncherWindow(QMainWindow):
             self._toast(fallback or f"No se pudo abrir el módulo {dotted}")
 
     def open_manual(self):
-        manual = Path(__file__).resolve().parents[3] / "Manual_PolyX.html"
+        manual = Path(__file__).resolve().parents[3] / "docs" / "manual" / "Manual_PolyX.html"
         if manual.exists():
             import webbrowser
             webbrowser.open(manual.as_uri())

@@ -579,26 +579,29 @@ installation meant for use does not need it.
 
 ## User manual
 
-`Manual_PolyX.en.html` (English) and `Manual_PolyX.html` (Spanish) are the full
+`docs/manual/Manual_PolyX.en.html` (English) and
+`docs/manual/Manual_PolyX.html` (Spanish) are the full
 manual: step-by-step installation from GitHub with real photographs of every
 step — on Windows and macOS — all four modules screen by screen, how size is
 measured, the report, the shortcuts and troubleshooting. They open on a
 double-click and work offline: every image is embedded. Alongside them,
 `Manual_PolyX.en.pdf` and `Manual_PolyX.pdf` for printing or emailing.
+The HTML is generated and not versioned — build it from the text sources.
 
 To regenerate it against the current interface:
 
 ```bash
 # 1. interface screenshots, one pass per language
-.venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/es
-POLYX_IDIOMA=en .venv\Scripts\python.exe capturar_manual.py --salida manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
+POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
 
 # 2. the manual, both languages and their PDFs
-.venv\Scripts\python.exe generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
 ```
 
-The text lives in `manual_texto_es.py` and `manual_texto_en.py`; the engine —
-template, stylesheet and figure numbering — in `generar_manual.py`.
+The text lives in `tools/manual/manual_texto_es.py` and
+`tools/manual/manual_texto_en.py`; the engine — template, stylesheet and
+figure numbering — in `tools/manual/generar_manual.py`.
 
 ---
 

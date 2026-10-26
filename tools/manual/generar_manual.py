@@ -3,20 +3,20 @@
 A diferencia de generar_manual.py —que solo reemplazaba las capturas dentro de
 un HTML ya escrito— este script arma el manual completo: texto, figuras
 numeradas, indice y hoja de estilo. El texto vive en manual_texto_es.py y
-manual_texto_en.py; aqui solo esta el motor.
+manual_texto_en.py (esta misma carpeta); aqui solo esta el motor.
 
 Las imagenes se empotran en base64, de modo que el archivo resultante se abre
 con doble clic y sin conexion. Antes de empotrarlas se reescalan, porque las
 capturas web van a 2x y sin reducir el manual pasaria de 25 MB.
 
-Uso:
-    .venv\\Scripts\\python.exe generar_manual.py            # ambos idiomas
-    .venv\\Scripts\\python.exe generar_manual.py --idioma es
-    .venv\\Scripts\\python.exe generar_manual.py --pdf      # ademas el PDF
+Uso (desde la raiz del proyecto):
+    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py            # ambos idiomas
+    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py --idioma es
+    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py --pdf      # ademas el PDF
 
 Para regenerar las capturas de la interfaz antes de armar el manual:
-    .venv\\Scripts\\python.exe capturar_manual.py --salida manual_screenshots/es
-    POLYX_IDIOMA=en .venv\\Scripts\\python.exe capturar_manual.py --salida manual_screenshots/en
+    .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/es
+    POLYX_IDIOMA=en .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
 from __future__ import annotations
 
@@ -34,8 +34,10 @@ try:
 except Exception:
     pass
 
-RAIZ = Path(__file__).resolve().parent
-CAPTURAS = RAIZ / "manual_screenshots"
+RAIZ = Path(__file__).resolve().parent  # tools/manual: home of manual_texto_*.{es,en}
+PROYECTO = RAIZ.parents[1]              # project root, inputs and outputs of the manual
+CAPTURAS = PROYECTO / "docs" / "assets" / "manual_screenshots"
+DESTINO_HTML = PROYECTO / "docs" / "manual"
 
 # Ancho maximo al que se reescala cada figura antes de empotrarla. 1300 px
 # cubre el ancho de columna del manual en pantallas normales y a 150 dpi de
@@ -108,7 +110,7 @@ def expandir_figuras(html: str, idioma: str, num: Numerador, etiqueta: str) -> s
         ruta = carpeta / (nombre if nombre.endswith(".png") else nombre + ".png")
         i = num.siguiente()
         if not ruta.exists():
-            num.faltantes.append(str(ruta.relative_to(RAIZ)))
+            num.faltantes.append(str(ruta.relative_to(PROYECTO)))
             return (
                 f'<figure class="fig falta"><div class="ph">Falta la captura '
                 f'<code>{ruta.name}</code></div>'
@@ -592,7 +594,10 @@ def main() -> int:
 
     idiomas = ["es", "en"] if args.idioma == "ambos" else [args.idioma]
     for idioma in idiomas:
-        destino = RAIZ / ("Manual_PolyX.html" if idioma == "es" else f"Manual_PolyX.{idioma}.html")
+        destino = DESTINO_HTML / (
+            "Manual_PolyX.html" if idioma == "es" else f"Manual_PolyX.{idioma}.html"
+        )
+        destino.parent.mkdir(parents=True, exist_ok=True)
         print(f"\n[{idioma}] {destino.name}")
         html, faltantes = construir(idioma)
         destino.write_text(html, encoding="utf-8")
