@@ -34,7 +34,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-REPORT_PATH = REPO_ROOT / "src" / "polyx" / "gui" / "report_html.py"
+REPORT_PATH = REPO_ROOT / "src" / "polyx" / "gui" / "report" / "_common.py"
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "baseline_informe"
 
 # The twelve Spanish labels, as they appear in the visible text. The ``<br>``

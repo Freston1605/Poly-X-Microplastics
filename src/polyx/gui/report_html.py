@@ -1,7 +1,5 @@
 """Compatibility shim."""
 
-import os
-
 import polyx.gui.report as _report
 import polyx.gui.report._common as _common
 
