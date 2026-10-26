@@ -25,6 +25,7 @@ capturarlos, y la cobertura recae en generadores + formas conocidas.
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
+
 from __future__ import annotations
 
 import sys
@@ -117,7 +118,8 @@ def _bits_iguales(a: np.ndarray, b: np.ndarray, caso: str) -> None:
         pos = (int(fila[0]), int(col[0]))
         raise AssertionError(
             f"{caso}: primer pixel divergente en {pos}: "
-            f"bits referencia {ta[pos]:#010x} contra bits actual {tb[pos]:#010x}")
+            f"bits referencia {ta[pos]:#010x} contra bits actual {tb[pos]:#010x}"
+        )
 
 
 def _mismo_float(x: float, y: float) -> bool:
@@ -169,8 +171,10 @@ def _grumo_con_huecos(rng, lado=180, n_huecos=4, radio=72):
     m = np.zeros((lado, lado), np.uint8)
     cv2.circle(m, (lado // 2, lado // 2), radio, 255, -1)
     for _ in range(n_huecos):
-        cy, cx = int(rng.integers(radio - 16, lado - radio + 16)), \
-            int(rng.integers(radio - 16, lado - radio + 16))
+        cy, cx = (
+            int(rng.integers(radio - 16, lado - radio + 16)),
+            int(rng.integers(radio - 16, lado - radio + 16)),
+        )
         cv2.circle(m, (cx, cy), int(rng.integers(5, 12)), 0, -1)
     return m
 
@@ -178,7 +182,7 @@ def _grumo_con_huecos(rng, lado=180, n_huecos=4, radio=72):
 def _erodada_bernoulli(rng, lado=140, p=0.88):
     """Cuadrado erosionado punto a punto con Bernoulli: borde dentado."""
     m = np.zeros((lado, lado), np.uint8)
-    m[lado // 3:2 * lado // 3, lado // 4:3 * lado // 4] = 255
+    m[lado // 3 : 2 * lado // 3, lado // 4 : 3 * lado // 4] = 255
     m = np.where(rng.random(m.shape) < p, m, 0).astype(np.uint8)
     return m
 
@@ -208,12 +212,13 @@ def _generadores_procedurales():
     casos = []
     k = 11
     for nombre, fab in [
-            ("blob borde ruidoso", _blob_borde_ruidoso),
-            ("cinta sinuosa", _cinta_sinuosa),
-            ("espiral 1.6 vueltas", _espiral),
-            ("grumo con huecos", _grumo_con_huecos),
-            ("erodada bernoulli", _erodada_bernoulli),
-            ("dos componentes", _dos_componentes)]:
+        ("blob borde ruidoso", _blob_borde_ruidoso),
+        ("cinta sinuosa", _cinta_sinuosa),
+        ("espiral 1.6 vueltas", _espiral),
+        ("grumo con huecos", _grumo_con_huecos),
+        ("erodada bernoulli", _erodada_bernoulli),
+        ("dos componentes", _dos_componentes),
+    ]:
         rng = np.random.default_rng(k)
         casos.append((nombre, fab(rng)))
         k += 1
@@ -236,7 +241,7 @@ def _comparar_mascara(mascara: np.ndarray, nombre: str) -> None:
     if len(idx) < 2:
         # largo_geodesico sale temprano; solo queda probar la propagacion
         # cruda sobre el recorte entero, que tambien debe ser bit-identica.
-        dentro = (mascara > 0)
+        dentro = mascara > 0
         idx = np.argwhere(dentro)
         if len(idx) == 0:
             return
@@ -249,7 +254,7 @@ def _comparar_mascara(mascara: np.ndarray, nombre: str) -> None:
     # Mismo recorte al rectangulo envolvente que morfologia.largo_geodesico.
     y0, x0 = idx.min(axis=0)
     y1_, x1_ = idx.max(axis=0) + 1
-    dentro = (mascara[y0:y1_, x0:x1_] > 0)
+    dentro = mascara[y0:y1_, x0:x1_] > 0
     idx = np.argwhere(dentro)
     semilla = tuple(idx[0])
 
@@ -260,10 +265,8 @@ def _comparar_mascara(mascara: np.ndarray, nombre: str) -> None:
 
     # El extremo lejano tiene que salir identico para que la segunda
     # propagacion parta del mismo sitio.
-    fin = np.unravel_index(
-        np.argmax(np.where(np.isfinite(d1_ref), d1_ref, -1)), d1_ref.shape)
-    fin_act = np.unravel_index(
-        np.argmax(np.where(np.isfinite(d1_act), d1_act, -1)), d1_act.shape)
+    fin = np.unravel_index(np.argmax(np.where(np.isfinite(d1_ref), d1_ref, -1)), d1_ref.shape)
+    fin_act = np.unravel_index(np.argmax(np.where(np.isfinite(d1_act), d1_act, -1)), d1_act.shape)
     assert fin == fin_act, f"{nombre}: extremo lejano distinto {fin} vs {fin_act}"
 
     d2_ref = _propagar_geodesico_referencia(dentro, fin)
@@ -284,15 +287,18 @@ def _comparar_mascara(mascara: np.ndarray, nombre: str) -> None:
     m_act = M.measure(mascara)
 
     assert _mismo_float(largo_ref, largo_act), (
-        f"{nombre}: largo_geodesico {largo_ref!r} vs {largo_act!r}")
+        f"{nombre}: largo_geodesico {largo_ref!r} vs {largo_act!r}"
+    )
     assert camino_ref == camino_act, f"{nombre}: camino_geodesico distinto"
     assert _mismo_float(m_ref.geodesic_px, m_act.geodesic_px), (
-        f"{nombre}: medir().geodesico_px {m_ref.geodesic_px!r} vs "
-        f"{m_act.geodesic_px!r}")
+        f"{nombre}: medir().geodesico_px {m_ref.geodesic_px!r} vs {m_act.geodesic_px!r}"
+    )
     assert _mismo_float(m_ref.length_px, m_act.length_px), (
-        f"{nombre}: medir().largo_px {m_ref.length_px!r} vs {m_act.length_px!r}")
+        f"{nombre}: medir().largo_px {m_ref.length_px!r} vs {m_act.length_px!r}"
+    )
     assert m_ref.method == m_act.method, (
-        f"{nombre}: medir().metodo {m_ref.method!r} vs {m_act.method!r}")
+        f"{nombre}: medir().metodo {m_ref.method!r} vs {m_act.method!r}"
+    )
 
 
 # ── Tests de identidad ────────────────────────────────────────────────
@@ -306,23 +312,25 @@ def test_identidad_sobre_fixtures_reales():
             "Sin mascaras capturadas en tests/fixtures/geodesia (esta copia "
             "de trabajo no tiene datos runs/). Capturalas con "
             "tests/capturar_fixtures_geodesia.py desde una carpeta "
-            "runs/detect_* del equipo que tenga las fotos origen.")
+            "runs/detect_* del equipo que tenga las fotos origen."
+        )
     for f in fijos:
         m = np.load(f, allow_pickle=False)
         assert m.ndim == 2 and m.dtype == np.uint8, (
-            f"{f.name}: el fixture debe de ser una mascara uint8 en gris")
+            f"{f.name}: el fixture debe de ser una mascara uint8 en gris"
+        )
         _comparar_mascara(m, f.name)
 
 
-@pytest.mark.parametrize("nombre,mascara", _generadores_procedurales(),
-                         ids=[c[0] for c in _generadores_procedurales()])
+@pytest.mark.parametrize(
+    "nombre,mascara", _generadores_procedurales(), ids=[c[0] for c in _generadores_procedurales()]
+)
 def test_identidad_sobre_generadores(nombre, mascara):
     """Identidad bit a bit sobre clases procedurales: seeds fijas."""
     _comparar_mascara(mascara, nombre)
 
 
-@pytest.mark.parametrize("nombre,fabrica,tol", CASOS,
-                         ids=[c[0] for c in CASOS])
+@pytest.mark.parametrize("nombre,fabrica,tol", CASOS, ids=[c[0] for c in CASOS])
 def test_identidad_sobre_formas_conocidas(nombre, fabrica, tol):
     """Idem sobre las figuras sinteticas de talla conocida (formas.py)."""
     mascara, _real = fabrica()
@@ -339,7 +347,7 @@ def test_negativo_un_ulp_de_diferencia_sale_rojo():
     mascara = _blob_borde_ruidoso(rng)
     y0, x0 = np.argwhere(mascara > 0).min(axis=0)
     y1_, x1_ = np.argwhere(mascara > 0).max(axis=0) + 1
-    dentro = (mascara[y0:y1_, x0:x1_] > 0)
+    dentro = mascara[y0:y1_, x0:x1_] > 0
     semilla = tuple(np.argwhere(dentro)[0])
     d = _propagar_geodesico_referencia(dentro, semilla).copy()
 
@@ -349,8 +357,7 @@ def test_negativo_un_ulp_de_diferencia_sale_rojo():
     pos = tuple(finitos[0])
     d[pos] = np.nextafter(np.float32(d[pos]), np.float32(np.inf))
     with pytest.raises(AssertionError, match="primer pixel divergente"):
-        _bits_iguales(
-            _propagar_geodesico_referencia(dentro, semilla), d, "ulp test")
+        _bits_iguales(_propagar_geodesico_referencia(dentro, semilla), d, "ulp test")
 
 
 def test_bits_de_infinito_son_comparables_en_casos_degenerados():
@@ -367,7 +374,8 @@ def test_bits_de_infinito_son_comparables_en_casos_degenerados():
     semilla = tuple(np.argwhere(dentro)[0])
     d = _propagar_geodesico_referencia(dentro, semilla)
     assert (d.view(np.uint32)[~np.isfinite(d)] == INF_BITS).all(), (
-        "los no finitos deberian ser TODOS bits de +infinito")
+        "los no finitos deberian ser TODOS bits de +infinito"
+    )
     # Y el comparador los pasaria: bit a bit contra una copia idéntica.
     _bits_iguales(d, d.copy(), "dos componentes")
 
@@ -383,5 +391,4 @@ def test_embebido_no_toque_morfologia():
     m = _blob_borde_ruidoso(rng)
     original = M._spread_geodesic
     _comparar_mascara(m, "sanidad")
-    assert M._spread_geodesic is original, (
-        "la inyeccion de referencia debe restaurar el modulo")
+    assert M._spread_geodesic is original, "la inyeccion de referencia debe restaurar el modulo"

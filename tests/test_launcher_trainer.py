@@ -10,6 +10,7 @@ All tests run under an offscreen QApplication and rely on the conftest
 autouse fixture (``_aislar_logs_suite``) to isolate ``POLYX_LOG_DIR`` to
 ``tmp_path / "_polyx_logs"`` per test, so ``app.jsonl`` lands there.
 """
+
 from __future__ import annotations
 
 import json
@@ -25,6 +26,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
+
 
 def _leer_app_jsonl(tmp_path: Path) -> list[dict]:
     """Read app.jsonl records from the isolated log directory."""
@@ -61,6 +63,7 @@ class TestSpawnModuleTrainerExitoso:
     def test_spawn_module_trainer_exitoso(self, tmp_path, monkeypatch):
         """_spawn_module('polyx.gui.trainer') returns True and emits module.launch."""
         import polyx.gui.launcher as launcher
+
         monkeypatch.setattr(launcher.subprocess, "Popen", _FakePopen)
 
         resultado = launcher._spawn_module("polyx.gui.trainer")
@@ -72,11 +75,10 @@ class TestSpawnModuleTrainerExitoso:
         assert args == [sys.executable, "-m", "polyx.gui.trainer"]
         assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[3])
 
-    def test_spawn_module_emite_module_launch_en_app_jsonl(
-        self, tmp_path, monkeypatch
-    ):
+    def test_spawn_module_emite_module_launch_en_app_jsonl(self, tmp_path, monkeypatch):
         """The module.launch record has the English core schema."""
         import polyx.gui.launcher as launcher
+
         monkeypatch.setattr(launcher.subprocess, "Popen", _FakePopen)
 
         launcher._spawn_module("polyx.gui.trainer")
@@ -96,6 +98,7 @@ class TestSpawnModuleModuloInexistente:
     def test_spawn_module_modulo_inexistente(self, tmp_path, monkeypatch):
         """_spawn_module with a non-existent module returns False and logs error."""
         import polyx.gui.launcher as launcher
+
         monkeypatch.setattr(launcher.subprocess, "Popen", _FakePopen)
 
         resultado = launcher._spawn_module("modulo.que.no.existe")
@@ -126,9 +129,7 @@ class TestSpawnModulePopenFalla:
         assert len(errors) == 1
         assert "no space left on device" in errors[0]["data"]["error"]
 
-    def test_spawn_module_error_emite_module_launch_error(
-        self, tmp_path, monkeypatch
-    ):
+    def test_spawn_module_error_emite_module_launch_error(self, tmp_path, monkeypatch):
         """Error path also emits module.launch.error with English schema."""
         import polyx.gui.launcher as launcher
 
@@ -156,6 +157,7 @@ class TestOpenTrainerWiring:
     def test_open_trainer_lanza_modulo_trainer(self, qapp, monkeypatch):
         """Launcher's "Abrir Entrenador" button spawns the trainer module."""
         from polyx.gui.launcher import LauncherWindow, ModuleCard
+
         captured = {}
 
         def capturar(self, dotted):
@@ -178,6 +180,7 @@ class TestOpenTrainerWiring:
         """_launch_module shows QMessageBox.information when _spawn_module fails."""
         import polyx.gui.launcher as launcher
         from polyx.gui.launcher import LauncherWindow
+
         window = LauncherWindow()
         avisos: list[tuple] = []
 
@@ -186,9 +189,9 @@ class TestOpenTrainerWiring:
 
         # Monkeypatch QMessageBox.information to capture the call
         from PySide6.QtWidgets import QMessageBox
+
         monkeypatch.setattr(
-            QMessageBox, "information",
-            lambda parent, title, msg: avisos.append((title, msg))
+            QMessageBox, "information", lambda parent, title, msg: avisos.append((title, msg))
         )
 
         window._launch_module("polyx.gui.trainer")
@@ -221,8 +224,14 @@ def _leer(ruta: Path) -> str:
 
 
 def _es_qt(nombre: str) -> bool:
-    return nombre.split(".", 1)[0] in ("PySide6", "PySide2", "PyQt5", "PyQt6",
-                                       "shiboken6", "shiboken2")
+    return nombre.split(".", 1)[0] in (
+        "PySide6",
+        "PySide2",
+        "PyQt5",
+        "PyQt6",
+        "shiboken6",
+        "shiboken2",
+    )
 
 
 def _es_paquete_heredado(nombre: str) -> bool:
@@ -231,11 +240,11 @@ def _es_paquete_heredado(nombre: str) -> bool:
 
 def _resuelve_relativo(partes: tuple[str, ...], nivel: int, modulo: str | None) -> str:
     """Resolve a relative import against the current package parts.
-    
+
     partes: parts from polyx/gui/ to the file (e.g., ("detector", "pages", "ejecutar"))
     nivel: number of dots in the relative import
     modulo: the module name being imported
-    
+
     The file is at polyx/gui/<partes>/module.py
     """
     # Start from polyx/gui/ + partes
@@ -284,7 +293,8 @@ def _imports_heredados(arbol: ast.AST, partes: list[str]) -> list[str]:
 def _fuentes_fuera_de_gui() -> list[Path]:
     """All .py files under polyx/ except those under polyx/gui/."""
     return sorted(
-        p for p in (RAIZ / "src" / "polyx").rglob("*.py")
+        p
+        for p in (RAIZ / "src" / "polyx").rglob("*.py")
         if "__pycache__" not in p.parts and not p.is_relative_to(PAQUETE_GUI)
     )
 
@@ -319,24 +329,44 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
         assert (RAIZ / rel_path).as_posix() in nombres
 
 
-@pytest.mark.parametrize("ruta", _fuentes_fuera_de_gui(), ids=lambda r: r.relative_to(RAIZ).as_posix())
+@pytest.mark.parametrize(
+    "ruta", _fuentes_fuera_de_gui(), ids=lambda r: r.relative_to(RAIZ).as_posix()
+)
 def test_fuera_de_gui_no_importa_qt(ruta: Path):
     """No module outside polyx/gui imports Qt."""
     arbol = ast.parse(ruta.read_text(encoding="utf-8"), filename=str(ruta))
-    prohibidos = [n for n in ast.walk(arbol) if isinstance(n, ast.Import) for a in n.names if a.name.split(".", 1)[0] in ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2")]
+    prohibidos = [
+        n
+        for n in ast.walk(arbol)
+        if isinstance(n, ast.Import)
+        for a in n.names
+        if a.name.split(".", 1)[0]
+        in ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2")
+    ]
     # Also check ImportFrom at module level
     for nodo in ast.walk(arbol):
         if isinstance(nodo, ast.ImportFrom) and not nodo.level:
-            if nodo.module and nodo.module.split(".", 1)[0] in ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2"):
+            if nodo.module and nodo.module.split(".", 1)[0] in (
+                "PySide6",
+                "PySide2",
+                "PyQt5",
+                "PyQt6",
+                "shiboken6",
+                "shiboken2",
+            ):
                 prohibidos.append(nodo.module)
     assert not prohibidos, f"{ruta.relative_to(RAIZ).as_posix()} importa Qt: {prohibidos}"
 
 
-@pytest.mark.parametrize("ruta", sorted(PAQUETE_GUI.rglob("*.py")), ids=lambda r: r.relative_to(RAIZ).as_posix())
+@pytest.mark.parametrize(
+    "ruta", sorted(PAQUETE_GUI.rglob("*.py")), ids=lambda r: r.relative_to(RAIZ).as_posix()
+)
 def test_la_gui_no_importa_el_paquete_heredado(ruta: Path):
     """No polyx/gui module imports the old re-export package."""
     partes = _partes_del_paquete(ruta)
-    prohibidos = _imports_heredados(ast.parse(ruta.read_text(encoding="utf-8"), filename=str(ruta)), partes)
+    prohibidos = _imports_heredados(
+        ast.parse(ruta.read_text(encoding="utf-8"), filename=str(ruta)), partes
+    )
     assert not prohibidos, (
         f"{ruta.relative_to(RAIZ).as_posix()} importa un paquete re-export inexistente "
         f"del core: {prohibidos}"
@@ -351,6 +381,7 @@ def test_el_paquete_de_reexport_del_core_ha_desaparecido():
     # The new polyx.core MUST exist (it's the engine)
     assert (RAIZ / "src" / "polyx" / "core").exists(), "polyx/core (the engine) does not exist"
     import polyx.core
+
     assert hasattr(polyx.core, "Instance")  # exports the engine API
 
 

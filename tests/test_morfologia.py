@@ -7,6 +7,7 @@ la segmentación puede desplazar todas las tallas sin que nada avise.
 Cada prueba fija además el PORQUÉ de una decisión de diseño, de modo que si
 alguien vuelve a intentar la variante descartada, la suite se lo dice.
 """
+
 from __future__ import annotations
 
 import sys
@@ -31,8 +32,7 @@ from tests.formas import (
 
 
 # ── El largo ───────────────────────────────────────────────────────────
-@pytest.mark.parametrize("nombre,fabrica,tol", CASOS,
-                         ids=[c[0] for c in CASOS])
+@pytest.mark.parametrize("nombre,fabrica,tol", CASOS, ids=[c[0] for c in CASOS])
 def test_largo_contra_talla_conocida(nombre, fabrica, tol):
     mascara, real = fabrica()
     m = M.measure(mascara)
@@ -40,7 +40,8 @@ def test_largo_contra_talla_conocida(nombre, fabrica, tol):
     error = 100.0 * abs(m.length_px - real) / real
     assert error <= tol, (
         f"{nombre}: largo {m.length_px:.1f} px frente a {real:.1f} reales "
-        f"({error:.1f} % de error, tolerancia {tol} %)")
+        f"({error:.1f} % de error, tolerancia {tol} %)"
+    )
 
 
 def test_el_largo_no_depende_de_la_orientacion():
@@ -52,7 +53,8 @@ def test_el_largo_no_depende_de_la_orientacion():
         desvio = 100.0 * abs(girada - horizontal) / horizontal
         assert desvio < 3.0, (
             f"a {grados}° la misma barra mide {girada:.1f} px en vez de "
-            f"{horizontal:.1f} ({desvio:.1f} % de desvío)")
+            f"{horizontal:.1f} ({desvio:.1f} % de desvío)"
+        )
 
 
 def test_en_fibra_curva_gana_el_geodesico():
@@ -79,8 +81,7 @@ def test_el_geodesico_no_se_usa_en_particula_gruesa():
     """
     mascara, real = grumo_con_muesca()
     m = M.measure(mascara)
-    assert m.method.startswith("Feret"), (
-        "un grumo grueso no debe medirse por el camino geodésico")
+    assert m.method.startswith("Feret"), "un grumo grueso no debe medirse por el camino geodésico"
     assert m.length_px <= real * 1.10
 
 
@@ -91,9 +92,11 @@ def test_el_rectangulo_equivalente_no_sirve_como_talla():
     mascara, real = recta_dentada()
     m = M.measure(mascara)
     assert m.length_rect_eq_px > real * 1.15, (
-        "si esto falla, el caso dentado dejó de ser representativo")
+        "si esto falla, el caso dentado dejó de ser representativo"
+    )
     assert abs(m.length_px - real) / real < 0.06, (
-        "el largo reportado no debe seguir al rectángulo equivalente")
+        "el largo reportado no debe seguir al rectángulo equivalente"
+    )
 
 
 def test_el_rectangulo_equivalente_no_existe_en_una_compacta():
@@ -151,7 +154,7 @@ def test_la_mascara_no_se_traga_el_fondo():
     # cree que prueba.
     margen = M.box_margin(x2 - x1, y2 - y1)
     ox, oy = max(0, x1 - margen), max(0, y1 - margen)
-    gris = img.max(axis=2)[oy:oy + mascara.shape[0], ox:ox + mascara.shape[1]]
+    gris = img.max(axis=2)[oy : oy + mascara.shape[0], ox : ox + mascara.shape[1]]
     dentro = gris[mascara > 0]
     assert dentro.min() > 100, "hay píxeles de fondo dentro de la máscara"
 
@@ -161,14 +164,13 @@ def test_la_mascara_no_se_escapa_de_la_caja():
     sola componente conexa y se mide el conjunto."""
     img = np.full((200, 300, 3), 18, np.uint8)
     cv2.circle(img, (100, 100), 20, (60, 210, 240), -1)
-    cv2.circle(img, (150, 100), 20, (60, 210, 240), -1)   # vecina pegada
+    cv2.circle(img, (150, 100), 20, (60, 210, 240), -1)  # vecina pegada
     cv2.rectangle(img, (118, 95), (134, 105), (60, 210, 240), -1)  # puente
     mascara = M.segment(img, 80, 80, 120, 120)
     assert mascara is not None
     ys, xs = np.nonzero(mascara)
     ancho = xs.max() - xs.min() + 1
-    assert ancho < 40 * 1.6, (
-        f"la máscara mide {ancho} px de ancho para una caja de 40")
+    assert ancho < 40 * 1.6, f"la máscara mide {ancho} px de ancho para una caja de 40"
 
 
 def _foto_dos_pegadas(d=60, solape=8, lienzo=340):
@@ -193,15 +195,19 @@ def test_separa_dos_particulas_en_contacto(solape):
     error = 100.0 * abs(m.length_px - real) / real
     assert error < 8.0, (
         f"con solape {solape} px mide {m.length_px:.1f} en vez de {real:.0f} "
-        f"({error:.1f} % de error): no se separaron")
+        f"({error:.1f} % de error): no se separaron"
+    )
 
 
 def test_no_parte_una_particula_sana():
     """El riesgo contrario: cortar donde no hay nada que cortar. Ninguna de las
     formas de una sola pieza debe verse afectada por la separación."""
-    for nombre, fabrica in (("circulo", circulo), ("recta", recta),
-                            ("arco 180", lambda: arco(180)),
-                            ("dentada", recta_dentada)):
+    for nombre, fabrica in (
+        ("circulo", circulo),
+        ("recta", recta),
+        ("arco 180", lambda: arco(180)),
+        ("dentada", recta_dentada),
+    ):
         mascara, real = fabrica()
         ys, xs = np.nonzero(mascara)
         semilla = ((xs.min() + xs.max()) // 2, (ys.min() + ys.max()) // 2)
@@ -209,7 +215,8 @@ def test_no_parte_una_particula_sana():
         despues = int(np.count_nonzero(M.separate_glued(mascara, semilla)))
         assert despues == antes, (
             f"{nombre}: la separación recortó {antes - despues} px de una "
-            f"partícula de una sola pieza")
+            f"partícula de una sola pieza"
+        )
 
 
 def test_una_particula_aislada_no_cambia():
@@ -260,6 +267,7 @@ def test_sin_calibracion_no_hay_micrometros():
 
 # ── Cajas sin particula ───────────────────────────────────────────────
 
+
 def test_una_caja_sin_contraste_no_devuelve_mascara():
     """Sin particula que aislar no se inventa una talla.
 
@@ -274,6 +282,7 @@ def test_una_caja_sin_contraste_no_devuelve_mascara():
     un sitio sin particula.
     """
     import numpy as np
+
     rng = np.random.default_rng(0)
     # Ruido uniforme: ni particula ni fondo, solo grano.
     img = (18 + rng.normal(0, 2.0, (200, 200, 3))).clip(0, 255).astype(np.uint8)
@@ -288,8 +297,9 @@ def test_una_particula_tenue_pero_visible_si_se_mide():
     que medirse sin problema.
     """
     import numpy as np
+
     img = np.full((200, 200, 3), 18, np.uint8)
-    cv2.circle(img, (100, 100), 15, (18, 58, 58), -1)   # +40 sobre el fondo
+    cv2.circle(img, (100, 100), 15, (18, 58, 58), -1)  # +40 sobre el fondo
     mascara = M.segment(img, 80, 80, 120, 120)
     assert mascara is not None
     assert M.measure(mascara).ok

@@ -1,4 +1,5 @@
 """Page 4 — `Augmentación`. Presets (`Suave`/`Medio`/`Fuerte`) + manual sliders."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -16,9 +17,13 @@ from ..state import AUG_LEVELS
 from ._base import TrainerPage
 
 
-def _slider_row(label: str, value: float, max_val: float, on_change) -> tuple[QHBoxLayout, QSlider, QLabel]:
-    h = QHBoxLayout(); h.setSpacing(8)
-    lbl = QLabel(label); lbl.setMinimumWidth(120)
+def _slider_row(
+    label: str, value: float, max_val: float, on_change
+) -> tuple[QHBoxLayout, QSlider, QLabel]:
+    h = QHBoxLayout()
+    h.setSpacing(8)
+    lbl = QLabel(label)
+    lbl.setMinimumWidth(120)
     lbl.setStyleSheet(f"color: {T.INK2}; border: none;")
     h.addWidget(lbl)
     s = QSlider(Qt.Horizontal)
@@ -34,6 +39,7 @@ def _slider_row(label: str, value: float, max_val: float, on_change) -> tuple[QH
         real = v / 1000.0 * max_val
         val_lbl.setText(f"{real:.3f}")
         on_change(real)
+
     s.valueChanged.connect(_cb)
     return h, s, val_lbl
 
@@ -41,9 +47,9 @@ def _slider_row(label: str, value: float, max_val: float, on_change) -> tuple[QH
 class AugmentationPage(TrainerPage):
     PAGE_ICON = "augmentacion"
     PAGE_TITLE = tr("Augmentación de datos")
-    PAGE_DESCRIPTION = (
-        tr("Aumenta artificialmente la variedad del dataset. Útil para datasets pequeños "
-        "(< 500 imágenes). Demasiado aug = el modelo no converge; muy poco = sobreajuste.")
+    PAGE_DESCRIPTION = tr(
+        "Aumenta artificialmente la variedad del dataset. Útil para datasets pequeños "
+        "(< 500 imágenes). Demasiado aug = el modelo no converge; muy poco = sobreajuste."
     )
 
     def __init__(self, state, parent=None):
@@ -51,24 +57,29 @@ class AugmentationPage(TrainerPage):
 
         # ── Preset ──
         c1, l1 = self.card(tr("Nivel de augmentación"), "ajustes")
-        row = QHBoxLayout(); row.setSpacing(8)
+        row = QHBoxLayout()
+        row.setSpacing(8)
         row.addWidget(QLabel(tr("Nivel:")))
         self.combo = QComboBox()
         self.combo.addItems(list(AUG_LEVELS.keys()))
         self.combo.setCurrentText(state.aug.level)
         self.combo.currentTextChanged.connect(self._apply_level)
         self.combo.setMinimumWidth(180)
-        row.addWidget(self.combo); row.addStretch(1)
+        row.addWidget(self.combo)
+        row.addStretch(1)
         l1.addLayout(row)
 
         legend = QLabel(
-            tr("<b>Ninguno</b>: sin transformaciones. &nbsp; "
-            "<b>Suave</b>: solo flips y jitter HSV. &nbsp; "
-            "<b>Medio</b> (recomendado): + mosaic, mixup ligero. &nbsp; "
-            "<b>Fuerte</b>: + copy-paste agresivo.")
+            tr(
+                "<b>Ninguno</b>: sin transformaciones. &nbsp; "
+                "<b>Suave</b>: solo flips y jitter HSV. &nbsp; "
+                "<b>Medio</b> (recomendado): + mosaic, mixup ligero. &nbsp; "
+                "<b>Fuerte</b>: + copy-paste agresivo."
+            )
         )
         legend.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
-        legend.setWordWrap(True); legend.setTextFormat(Qt.RichText)
+        legend.setWordWrap(True)
+        legend.setTextFormat(Qt.RichText)
         l1.addWidget(legend)
         self.body.addWidget(c1)
 
@@ -76,19 +87,20 @@ class AugmentationPage(TrainerPage):
         c2, l2 = self.card(tr("Sliders manuales (avanzado)"), "ajustes")
 
         sets = [
-            ("HSV-H (hue):",      "hsv_h",      0.1),
-            ("HSV-S (saturación):", "hsv_s",    1.0),
-            ("HSV-V (valor):",    "hsv_v",      1.0),
-            ("Fliplr (horizontal):", "fliplr",  1.0),
-            ("Mosaic:",           "mosaic",     1.0),
-            ("Mixup:",            "mixup",      1.0),
-            ("Copy-paste:",       "copy_paste", 1.0),
+            ("HSV-H (hue):", "hsv_h", 0.1),
+            ("HSV-S (saturación):", "hsv_s", 1.0),
+            ("HSV-V (valor):", "hsv_v", 1.0),
+            ("Fliplr (horizontal):", "fliplr", 1.0),
+            ("Mosaic:", "mosaic", 1.0),
+            ("Mixup:", "mixup", 1.0),
+            ("Copy-paste:", "copy_paste", 1.0),
         ]
         self.sliders: dict[str, QSlider] = {}
         self.value_lbls: dict[str, QLabel] = {}
         for label, attr, mx in sets:
-            row, s, vl = _slider_row(label, getattr(state.aug, attr), mx,
-                                     lambda v, a=attr: self._on_slider(a, v))
+            row, s, vl = _slider_row(
+                label, getattr(state.aug, attr), mx, lambda v, a=attr: self._on_slider(a, v)
+            )
             l2.addLayout(row)
             self.sliders[attr] = s
             self.value_lbls[attr] = vl
@@ -97,13 +109,16 @@ class AugmentationPage(TrainerPage):
         # Hints
         c3, l3 = self.card(tr("Recomendaciones"), "idea")
         tips = QLabel(
-            tr("• <b>Dataset pequeño (< 500 imgs)</b>: usa Fuerte. Más variedad sintética compensa pocos ejemplos.<br>"
-            "• <b>Microplásticos PET/PP/LDPE</b>: <b>NO</b> uses HSV-H alto: los colores son la pista principal.<br>"
-            "• <b>Copy-paste</b> funciona muy bien si el fondo es uniforme (como un filtro).<br>"
-            "• Si el modelo no converge (mAP no sube), baja el nivel a Suave o Ninguno.")
+            tr(
+                "• <b>Dataset pequeño (< 500 imgs)</b>: usa Fuerte. Más variedad sintética compensa pocos ejemplos.<br>"
+                "• <b>Microplásticos PET/PP/LDPE</b>: <b>NO</b> uses HSV-H alto: los colores son la pista principal.<br>"
+                "• <b>Copy-paste</b> funciona muy bien si el fondo es uniforme (como un filtro).<br>"
+                "• Si el modelo no converge (mAP no sube), baja el nivel a Suave o Ninguno."
+            )
         )
         tips.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none; line-height: 1.6;")
-        tips.setTextFormat(Qt.RichText); tips.setWordWrap(True)
+        tips.setTextFormat(Qt.RichText)
+        tips.setWordWrap(True)
         l3.addWidget(tips)
         self.body.addWidget(c3)
 
@@ -124,7 +139,8 @@ class AugmentationPage(TrainerPage):
             self.value_lbls[attr].setText(f"{val:.3f}")
 
     def _apply_level(self, name: str):
-        if name not in AUG_LEVELS: return
+        if name not in AUG_LEVELS:
+            return
         d = AUG_LEVELS[name]
         a = self.state.aug
         a.level = name

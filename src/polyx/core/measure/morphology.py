@@ -80,6 +80,7 @@ Only cv2 and numpy are used. Not scipy -- which is not a declared dependency
 and only arrives indirectly with ultralytics -- nor skimage nor
 opencv-contrib: adding dependencies is exactly what breaks the install on
 another machine."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -142,15 +143,16 @@ CURVE_FROM = 1.15
 @dataclass
 class Morphology:
     """Shape and size of a particle, measured on its mask."""
+
     ok: bool = False
     # px
     area_px: float = 0.0
     perimeter_px: float = 0.0
-    length_px: float = 0.0        # the reported size: max(feret, geodesico)
+    length_px: float = 0.0  # the reported size: max(feret, geodesico)
     width_px: float = 0.0
-    cuerda_px: float = 0.0       # straight extent (minAreaRect)
-    feret_px: float = 0.0        # greatest distance between two edge points
-    geodesic_px: float = 0.0    # longest path INSIDE the particle
+    cuerda_px: float = 0.0  # straight extent (minAreaRect)
+    feret_px: float = 0.0  # greatest distance between two edge points
+    geodesic_px: float = 0.0  # longest path INSIDE the particle
     # Length of the rectangle with equal area and perimeter. It is NOT "the length of the
     # particle": it is that of an equivalent rectangle, and a jagged edge inflates
     # the perimeter and with it this figure. It is kept because, measured against feret and
@@ -166,11 +168,11 @@ class Morphology:
     # dimensionless
     aspect: float = 0.0
     circularity: float = 0.0
-    curvature: float = 1.0       # length / chord; 1.0 = straight
-    filling: float = 0.0         # particle area / its box area
-    solidity: float = 1.0         # area / its convex hull area
+    curvature: float = 1.0  # length / chord; 1.0 = straight
+    filling: float = 0.0  # particle area / its box area
+    solidity: float = 1.0  # area / its convex hull area
     morphotype: str = INDETERMINATE
-    method: str = ""             # where the length came from
+    method: str = ""  # where the length came from
     # What fraction of the Feret line falls OUTSIDE the particle. It is only
     # filled in by `dibujar_medicion()`, which is what draws it. On a concave
     # particle it is nonzero and it is not an error: Feret measures the separation of
@@ -208,8 +210,7 @@ def box_margin(box_width: float, box_height: float) -> int:
     -- it was lost before anything was segmented. On a compact particle both
     sides are similar and the number does not change.
     """
-    return int(max(3, round(0.50 * max(max(1.0, box_width),
-                                       max(1.0, box_height)))))
+    return int(max(3, round(0.50 * max(max(1.0, box_width), max(1.0, box_height)))))
 
 
 def _cutout(bgr: np.ndarray, x1, y1, x2, y2, margin: int):
@@ -350,11 +351,10 @@ def separate_glued(mask: np.ndarray, seed) -> np.ndarray:
     if dt.max() < 2:
         return mask
 
-    _, cores = cv2.threshold(dt, THRESHOLD_CORE * dt.max(), 255,
-                               cv2.THRESH_BINARY)
+    _, cores = cv2.threshold(dt, THRESHOLD_CORE * dt.max(), 255, cv2.THRESH_BINARY)
     cores = cores.astype(np.uint8)
     n, marks = cv2.connectedComponents(cores)
-    if n <= 2:                       # background + one core: isolated particle
+    if n <= 2:  # background + one core: isolated particle
         return mask
 
     # `cv2.watershed` reserves 0 for "unknown" and 1 for the background.
@@ -373,20 +373,25 @@ def separate_glued(mask: np.ndarray, seed) -> np.ndarray:
     if label <= 1:
         # The center fell on the dividing line or on the background. The largest
         # region touching the center is kept, rather than returning the whole set.
-        neighbours = marks[max(0, sy - 2):sy + 3, max(0, sx - 2):sx + 3]
+        neighbours = marks[max(0, sy - 2) : sy + 3, max(0, sx - 2) : sx + 3]
         candidates = [v for v in np.unique(neighbours) if v > 1]
         if not candidates:
             return mask
-        label = max(candidates,
-                       key=lambda v: int((marks == v).sum()))
+        label = max(candidates, key=lambda v: int((marks == v).sum()))
 
     output = ((marks == label) & (mask > 0)).astype(np.uint8) * 255
     return output if output.any() else mask
 
 
-def segment(bgr: np.ndarray, x1: float, y1: float, x2: float, y2: float,
-              margin: Optional[int] = None,
-              record: Optional[dict] = None) -> Optional[np.ndarray]:
+def segment(
+    bgr: np.ndarray,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    margin: Optional[int] = None,
+    record: Optional[dict] = None,
+) -> Optional[np.ndarray]:
     """Mask of the particle inside the box. None if it could not be isolated.
 
     If ``registro`` is passed, it is annotated there with how far the mask
@@ -465,8 +470,7 @@ def segment(bgr: np.ndarray, x1: float, y1: float, x2: float, y2: float,
             return None
 
     if threshold_2 is None:
-        _, mask = cv2.threshold(canal, 0, 255,
-                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _, mask = cv2.threshold(canal, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     else:
         mask = (canal > threshold_2).astype(np.uint8) * 255
 
@@ -484,8 +488,7 @@ def segment(bgr: np.ndarray, x1: float, y1: float, x2: float, y2: float,
     # need to tell which polymer each one is.
 
     # Removes salt noise without closing the gap of a U-shaped particle.
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,
-                               np.ones((3, 3), np.uint8), iterations=1)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=1)
 
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
     if n <= 1:
@@ -589,7 +592,7 @@ def feret_maximum(contour: np.ndarray) -> float:
     if len(env) < 2:
         return 0.0
     d = env[:, None, :] - env[None, :, :]
-    return float(np.sqrt((d ** 2).sum(-1)).max())
+    return float(np.sqrt((d**2).sum(-1)).max())
 
 
 def _spread_geodesic(inside: np.ndarray, seed: tuple) -> np.ndarray:
@@ -699,7 +702,7 @@ def length_geodesic(mask: np.ndarray) -> float:
     # a 4096 plate would cost the same as the whole plate.
     y0, x0 = idx.min(axis=0)
     y1_, x1_ = idx.max(axis=0) + 1
-    inside = (mask[y0:y1_, x0:x1_] > 0)
+    inside = mask[y0:y1_, x0:x1_] > 0
     idx = np.argwhere(inside)
 
     d1 = _spread_geodesic(inside, tuple(idx[0]))
@@ -728,7 +731,7 @@ def path_geodesic(mask: np.ndarray):
         return []
     y0, x0 = idx.min(axis=0)
     y1, x1 = idx.max(axis=0) + 1
-    inside = (mask[y0:y1, x0:x1] > 0)
+    inside = mask[y0:y1, x0:x1] > 0
     ii = np.argwhere(inside)
     d1 = _spread_geodesic(inside, tuple(ii[0]))
     if not np.isfinite(d1).any():
@@ -747,8 +750,7 @@ def path_geodesic(mask: np.ndarray):
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 q = (p[0] + dy, p[1] + dx)
-                if (0 <= q[0] < d2.shape[0] and 0 <= q[1] < d2.shape[1]
-                        and d2[q] < minor):
+                if 0 <= q[0] < d2.shape[0] and 0 <= q[1] < d2.shape[1] and d2[q] < minor:
                     minor, best = d2[q], q
         if best is None:
             break
@@ -765,7 +767,7 @@ def extremes_feret(contour: np.ndarray):
     if len(env) < 2:
         return None
     d = env[:, None, :] - env[None, :, :]
-    D = np.sqrt((d ** 2).sum(-1))
+    D = np.sqrt((d**2).sum(-1))
     i, j = np.unravel_index(np.argmax(D), D.shape)
     return tuple(env[i].astype(int)), tuple(env[j].astype(int))
 
@@ -823,7 +825,7 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
         # report: the mask "looked shifted" relative to the particle.
         margin = box_margin(x2 - x1, y2 - y1)
         ox, oy = max(0, int(x1) - margin), max(0, int(y1) - margin)
-        sub = bgr[oy:oy + mask.shape[0], ox:ox + mask.shape[1]].copy()
+        sub = bgr[oy : oy + mask.shape[0], ox : ox + mask.shape[1]].copy()
         if sub.size == 0:
             return None, None
 
@@ -838,15 +840,13 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
             elif cont:
                 ext = extremes_feret(max(cont, key=cv2.contourArea))
                 if ext:
-                    outside = _draw_feret(vis, mask, ext[0], ext[1],
-                                           (0, 210, 255))
+                    outside = _draw_feret(vis, mask, ext[0], ext[1], (0, 210, 255))
                     for q in ext:
                         cv2.circle(vis, q, 2, (0, 210, 255), -1)
                     m.feret_outside = outside
         par = np.hstack([sub, vis])
         if zoom > 1:
-            par = cv2.resize(par, None, fx=zoom, fy=zoom,
-                             interpolation=cv2.INTER_NEAREST)
+            par = cv2.resize(par, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
         return par, m
     except Exception:
         return None, None
@@ -859,8 +859,7 @@ def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
         m.warning = "sin mascara"
         return m
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL,
-                                    cv2.CHAIN_APPROX_NONE)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not contours:
         m.warning = "sin contorno"
         return m
@@ -922,8 +921,7 @@ def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
     envelope = cv2.contourArea(cv2.convexHull(c))
     solidity = area / envelope if envelope > 0 else 1.0
 
-    if (thinness >= THINNESS_FOR_GEODESIC
-            and solidity < SOLIDITY_CONVEX and geo >= feret):
+    if thinness >= THINNESS_FOR_GEODESIC and solidity < SOLIDITY_CONVEX and geo >= feret:
         length, method = geo, "geodesico"
     else:
         length, method = feret, "Feret maximo"
@@ -968,9 +966,13 @@ def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
     return m
 
 
-def measure_detection(bgr: np.ndarray, det, um_por_px: Optional[float] = None,
-                    margin: Optional[int] = None,
-                     mask: Optional[np.ndarray] = None) -> Morphology:
+def measure_detection(
+    bgr: np.ndarray,
+    det,
+    um_por_px: Optional[float] = None,
+    margin: Optional[int] = None,
+    mask: Optional[np.ndarray] = None,
+) -> Morphology:
     """Segments the box of a ``Detection`` and measures it. Never raises.
 
     A segmentation failure on one particle cannot take down the batch: a
@@ -982,8 +984,7 @@ def measure_detection(bgr: np.ndarray, det, um_por_px: Optional[float] = None,
         if mask is None:
             mask = getattr(det, "mask", None)
         if mask is None:
-            mask = segment(bgr, det.x1, det.y1, det.x2, det.y2, margin,
-                                record=record)
+            mask = segment(bgr, det.x1, det.y1, det.x2, det.y2, margin, record=record)
             if mask is None:
                 m = Morphology()
                 m.warning = "no se pudo separar la particula del fondo"
@@ -998,7 +999,7 @@ def measure_detection(bgr: np.ndarray, det, um_por_px: Optional[float] = None,
                     m = Morphology()
                     m.warning = "no se pudo separar la particula del fondo"
                     return m
-                mask = mask[oy:oy + sub.shape[0], ox:ox + sub.shape[1]]
+                mask = mask[oy : oy + sub.shape[0], ox : ox + sub.shape[1]]
             mask = (mask > 0).astype(np.uint8) * 255 if mask.dtype != np.uint8 else mask
             if not mask.any():
                 m = Morphology()
@@ -1020,7 +1021,8 @@ def measure_detection(bgr: np.ndarray, det, um_por_px: Optional[float] = None,
             m.warning = (m.warning + " | " if m.warning else "") + (
                 f"la mascara se salia {previous / diagonal:.1f}x la diagonal de su "
                 f"caja y se recorto a ella: puede ser una vecina pegada, y la "
-                f"talla se queda corta si la particula seguia de verdad")
+                f"talla se queda corta si la particula seguia de verdad"
+            )
         return m
     except cv2.error as e:
         m = Morphology()
@@ -1028,9 +1030,9 @@ def measure_detection(bgr: np.ndarray, det, um_por_px: Optional[float] = None,
         return m
 
 
-def apply_to_detection(det, bgr: np.ndarray,
-                        um_por_px: Optional[float] = None,
-                        mask: Optional[np.ndarray] = None) -> bool:
+def apply_to_detection(
+    det, bgr: np.ndarray, um_por_px: Optional[float] = None, mask: Optional[np.ndarray] = None
+) -> bool:
     """Measures the particle and writes the result into the ``Detection``.
 
     Returns whether it could be measured. When not, the shape fields stay

@@ -4,6 +4,7 @@ Lo que se fija aquí es que abstenerse NO pierde partículas. El estudio informa
 por número de partículas, así que una que no se puede atribuir a un polímero
 tiene que seguir contando en el total; lo único que cambia es bajo qué etiqueta.
 """
+
 from polyx.core.detect.yolo import Detection
 from polyx.core.quality.assignment import (
     NO_ASSIGNABLE,
@@ -15,8 +16,7 @@ from polyx.core.quality.assignment import (
 
 
 def _det(clase: str, conf: float, cid: int = 0) -> Detection:
-    return Detection(class_id=cid, class_name=clase, conf=conf,
-                     x1=0, y1=0, x2=10, y2=10)
+    return Detection(class_id=cid, class_name=clase, conf=conf, x1=0, y1=0, x2=10, y2=10)
 
 
 def test_por_defecto_todo_se_asigna():
@@ -99,18 +99,20 @@ def test_el_informe_declara_lo_que_no_pudo_asignar(tmp_path):
     ruta = tmp_path / "placa.png"
     cv2.imwrite(str(ruta), img)
 
-    segura = Detection(class_id=0, class_name="PET", conf=0.90,
-                       x1=90, y1=110, x2=130, y2=150)
-    dudosa = Detection(class_id=2, class_name="LDPE", conf=0.28,
-                       x1=190, y1=110, x2=230, y2=150)
+    segura = Detection(class_id=0, class_name="PET", conf=0.90, x1=90, y1=110, x2=130, y2=150)
+    dudosa = Detection(class_id=2, class_name="LDPE", conf=0.28, x1=190, y1=110, x2=230, y2=150)
     mark_assignables([segura, dudosa], 0.50)
 
     st = DetectorState()
     st.params.conf_assignment = 0.50
     st.model_slots[0] = ModelSlot(alias="m1", path=tmp_path / "fake.pt")
-    st.results = {0: [ImageResult(image_path=ruta, model_idx=0,
-                                  predictions=[segura, dudosa], gt=[],
-                                  has_gt=False)]}
+    st.results = {
+        0: [
+            ImageResult(
+                image_path=ruta, model_idx=0, predictions=[segura, dudosa], gt=[], has_gt=False
+            )
+        ]
+    }
 
     salida = tmp_path / "informe.html"
     rh.generate_report(st, salida, sections=list(rh.IDS_SECTIONS))
@@ -128,6 +130,7 @@ def test_detecciones_antiguas_sin_el_campo_se_asignan():
     Las detecciones del ground truth y las de runs viejos no traen 'asignable';
     ahí la respuesta correcta es la clase de siempre, no «no asignable».
     """
+
     class DeteccionVieja:
         class_name = "PET"
 

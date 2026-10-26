@@ -1,4 +1,5 @@
 """Main window of the Labeller — 3 panels: list | canvas | classes."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,13 +37,21 @@ from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
     "Microplásticos Nile Red": ["PET", "PP", "LDPE"],
-    "General (1 clase)":       ["objeto"],
-    "Personalizado":            [],
+    "General (1 clase)": ["objeto"],
+    "Personalizado": [],
 }
 
 # Colors matching those of the canvas
-_CLS_COLORS = ["#e3342f", "#ff8c00", "#ffd700", "#00b4d8",
-               "#48cae4", "#0077b6", "#023e8a", "#7b2d8b"]
+_CLS_COLORS = [
+    "#e3342f",
+    "#ff8c00",
+    "#ffd700",
+    "#00b4d8",
+    "#48cae4",
+    "#0077b6",
+    "#023e8a",
+    "#7b2d8b",
+]
 
 
 class LabelerWindow(QMainWindow):
@@ -53,7 +62,7 @@ class LabelerWindow(QMainWindow):
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = LabelerState()
-        self._pre_model = None   # YoloModel loaded on demand
+        self._pre_model = None  # YoloModel loaded on demand
 
         # Thumbnails in the background: generating them all at once froze the
         # window for ~9 s with 552 crops, because each one decodes the full
@@ -86,9 +95,7 @@ class LabelerWindow(QMainWindow):
     def _build_left(self) -> QFrame:
         panel = QFrame()
         panel.setFixedWidth(230)
-        panel.setStyleSheet(
-            f"QFrame {{ background: {T.BG}; border-right: 1px solid {T.RULE}; }}"
-        )
+        panel.setStyleSheet(f"QFrame {{ background: {T.BG}; border-right: 1px solid {T.RULE}; }}")
         lv = QVBoxLayout(panel)
         lv.setContentsMargins(12, 14, 12, 12)
         lv.setSpacing(8)
@@ -165,9 +172,7 @@ class LabelerWindow(QMainWindow):
     def _build_right(self) -> QFrame:
         panel = QFrame()
         panel.setFixedWidth(244)
-        panel.setStyleSheet(
-            f"QFrame {{ background: {T.BG}; border-left: 1px solid {T.RULE}; }}"
-        )
+        panel.setStyleSheet(f"QFrame {{ background: {T.BG}; border-left: 1px solid {T.RULE}; }}")
         rv = QVBoxLayout(panel)
         rv.setContentsMargins(14, 14, 14, 14)
         rv.setSpacing(9)
@@ -246,8 +251,10 @@ class LabelerWindow(QMainWindow):
         self.sb_pre_imgsz.setSingleStep(64)
         self.sb_pre_imgsz.setValue(2080)
         self.sb_pre_imgsz.setToolTip(
-            tr("Resolución de inferencia. Con partículas diminutas en fotos grandes,\n"
-            "un valor bajo no propone nada.")
+            tr(
+                "Resolución de inferencia. Con partículas diminutas en fotos grandes,\n"
+                "un valor bajo no propone nada."
+            )
         )
         row_pre.addWidget(self.sb_pre_imgsz)
         rv.addLayout(row_pre)
@@ -266,20 +273,23 @@ class LabelerWindow(QMainWindow):
         self.chk_zoom = QCheckBox(tr("Mantener zoom entre imágenes"))
         self.chk_zoom.setChecked(True)
         self.chk_zoom.setToolTip(
-            tr("Conserva el nivel de acercamiento al cambiar de recorte.\n"
-            "Con cientos de recortes, reencuadrar cada vez cuesta mucho tiempo.\n"
-            "F reencuadra manualmente.")
+            tr(
+                "Conserva el nivel de acercamiento al cambiar de recorte.\n"
+                "Con cientos de recortes, reencuadrar cada vez cuesta mucho tiempo.\n"
+                "F reencuadra manualmente."
+            )
         )
-        self.chk_zoom.toggled.connect(
-            lambda v: setattr(self.canvas, "keep_zoom", v))
+        self.chk_zoom.toggled.connect(lambda v: setattr(self.canvas, "keep_zoom", v))
         rv.addWidget(self.chk_zoom)
 
         rv.addStretch(1)
 
         btn_rev = QPushButton(tr("✓  Revisada, siguiente   (Espacio)"))
         btn_rev.setToolTip(
-            tr("Deja constancia de que miraste esta imagen aunque no tenga partículas.\n"
-            "Sin esto, una placa vacía revisada es indistinguible de una sin mirar.")
+            tr(
+                "Deja constancia de que miraste esta imagen aunque no tenga partículas.\n"
+                "Sin esto, una placa vacía revisada es indistinguible de una sin mirar."
+            )
         )
         btn_rev.clicked.connect(self._mark_reviewed)
         rv.addWidget(btn_rev)
@@ -314,17 +324,20 @@ class LabelerWindow(QMainWindow):
         self._update_progress()
 
     def _on_box_rejected(self, side: float):
-        self._set_status(f"⚠ Caja de {side:.1f} px descartada (mínimo "
-                         f"{self.canvas.SIDE_MINIMUM_PX:.0f} px) — acerca el zoom", T.WARN)
+        self._set_status(
+            f"⚠ Caja de {side:.1f} px descartada (mínimo "
+            f"{self.canvas.SIDE_MINIMUM_PX:.0f} px) — acerca el zoom",
+            T.WARN,
+        )
         QTimer.singleShot(3500, lambda: self._set_status("● Listo", T.OK))
 
     def _install_shortcuts(self):
         QShortcut(QKeySequence("Ctrl+S"), self, self._save)
         QShortcut(QKeySequence("Ctrl+Z"), self, self.state.undo)
         QShortcut(QKeySequence("Ctrl+Y"), self, self.state.redo)
-        QShortcut(QKeySequence(Qt.Key_Left),  self, self.state.prev_image)
+        QShortcut(QKeySequence(Qt.Key_Left), self, self.state.prev_image)
         QShortcut(QKeySequence(Qt.Key_Right), self, self.state.next_image)
-        QShortcut(QKeySequence(Qt.Key_Tab),   self, self._go_next_pending)
+        QShortcut(QKeySequence(Qt.Key_Tab), self, self._go_next_pending)
 
     # ── Class management ─────────────────────────────────────
     def _rebuild_class_buttons(self, names: list[str] | None = None):
@@ -368,9 +381,7 @@ class LabelerWindow(QMainWindow):
 
     # ── Files ────────────────────────────────────────────────
     def _open_folder(self):
-        folder = QFileDialog.getExistingDirectory(
-            self, "Seleccionar carpeta de imágenes"
-        )
+        folder = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta de imágenes")
         if folder:
             self.state.load_images(Path(folder))
             self.state.save_classes_txt()
@@ -383,13 +394,12 @@ class LabelerWindow(QMainWindow):
 
     # ── Pre-annotation ────────────────────────────────────────
     def _load_model(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)"
-        )
+        path, _ = QFileDialog.getOpenFileName(self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)")
         if not path:
             return
         try:
             from polyx.core.detect.yolo import YoloModel
+
             self._pre_model = YoloModel(path)
             self.lbl_model.setText(Path(path).name)
             self._set_status("● Modelo cargado", T.OK)
@@ -405,8 +415,9 @@ class LabelerWindow(QMainWindow):
             return
         if self.state.current_boxes:
             r = QMessageBox.question(
-                self, tr("Sobrescribir"),
-                tr("Esta imagen ya tiene anotaciones. ¿Sobrescribir con el modelo?")
+                self,
+                tr("Sobrescribir"),
+                tr("Esta imagen ya tiene anotaciones. ¿Sobrescribir con el modelo?"),
             )
             if r != QMessageBox.Yes:
                 return
@@ -463,6 +474,7 @@ class LabelerWindow(QMainWindow):
         """
         try:
             import torch
+
             device = "0" if torch.cuda.is_available() else "cpu"
         except Exception:
             device = "cpu"
@@ -470,15 +482,21 @@ class LabelerWindow(QMainWindow):
         # tiles and the boxes return to plate coordinates. The study crops
         # (1630 px per side) stay below the threshold and are
         # inferred in one piece, so nothing changes here.
-        return dict(conf=float(self.sb_pre_conf.value()),
-                    imgsz=int(self.sb_pre_imgsz.value()),
-                    device=device,
-                    tiling="auto", threshold_px=2000, overlap=0.25)
+        return dict(
+            conf=float(self.sb_pre_conf.value()),
+            imgsz=int(self.sb_pre_imgsz.value()),
+            device=device,
+            tiling="auto",
+            threshold_px=2000,
+            overlap=0.25,
+        )
 
     def _dets_to_boxes(self, dets, img_path: Path):
         from .state import BBox
+
         try:
             from PIL import Image
+
             with Image.open(str(img_path)) as im:
                 iw, ih = im.size
         except Exception:
@@ -553,15 +571,15 @@ class LabelerWindow(QMainWindow):
         self.bar.setMaximum(total)
         self.bar.setValue(made)
         self.lbl_progress.setText(
-            f"{made} / {total} revisadas  ({100 * made / total:.0f}%)   "
-            f"faltan {total - made}"
+            f"{made} / {total} revisadas  ({100 * made / total:.0f}%)   faltan {total - made}"
         )
 
     def _go_next_pending(self):
         i = self.state.next_unreviewed()
         if i < 0:
-            QMessageBox.information(self, tr("Conteo completo"),
-                                    tr("No quedan imágenes sin revisar."))
+            QMessageBox.information(
+                self, tr("Conteo completo"), tr("No quedan imágenes sin revisar.")
+            )
             return
         self.state.goto(i)
 
@@ -582,9 +600,11 @@ class LabelerWindow(QMainWindow):
 
         cls_counts: dict[str, int] = {}
         for b in boxes:
-            name = (self.state.class_names[b.class_id]
-                    if b.class_id < len(self.state.class_names)
-                    else str(b.class_id))
+            name = (
+                self.state.class_names[b.class_id]
+                if b.class_id < len(self.state.class_names)
+                else str(b.class_id)
+            )
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:

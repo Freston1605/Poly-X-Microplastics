@@ -10,27 +10,35 @@ Tokens disponibles dentro de cada sección:
 """
 
 TITULO_DOC = "Manual de Poly-X — Suite de detección de microplásticos"
-DESCRIPCION = ("Manual completo de Poly-X: instalación paso a paso desde GitHub en "
-               "Windows y macOS, y guia de los cuatro módulos.")
+DESCRIPCION = (
+    "Manual completo de Poly-X: instalación paso a paso desde GitHub en "
+    "Windows y macOS, y guia de los cuatro módulos."
+)
 SELLO = "Manual de usuario · v2.0.0"
-TITULO_H1 = 'Poly-X <em>analytics</em>'
-BAJADA = ("Detección, medida y clasificación de microplásticos por fluorescencia "
-          "Nile Red bajo luz UV, con modelos YOLO v8/v11. De la descarga en GitHub "
-          "al informe listo para publicar.")
-META = ("<b>Cristofher Ferrada</b> · Dr (c) en Ciencias mención Química<br>"
-        "Laboratorio de Química Ambiental · Pontificia Universidad Católica de Valparaíso<br>"
-        "Windows 10/11 y macOS · Python 3.11 · 2026")
+TITULO_H1 = "Poly-X <em>analytics</em>"
+BAJADA = (
+    "Detección, medida y clasificación de microplásticos por fluorescencia "
+    "Nile Red bajo luz UV, con modelos YOLO v8/v11. De la descarga en GitHub "
+    "al informe listo para publicar."
+)
+META = (
+    "<b>Cristofher Ferrada</b> · Dr (c) en Ciencias mención Química<br>"
+    "Laboratorio de Química Ambiental · Pontificia Universidad Católica de Valparaíso<br>"
+    "Windows 10/11 y macOS · Python 3.11 · 2026"
+)
 
 ETIQUETA_INDICE = "Contenido"
 ETIQUETA_FIGURA = "Figura"
 PALABRA_ESQUEMA = "Esquema"
 
-PIE = ("<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
-       "Repositorio: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
-       "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
-       "Contacto: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
-       "Las capturas de la interfaz se regeneran contra el programa instalado, de modo "
-       "que este manual muestra la versión que tienes delante y no una anterior.")
+PIE = (
+    "<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
+    "Repositorio: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
+    "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
+    "Contacto: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
+    "Las capturas de la interfaz se regeneran contra el programa instalado, de modo "
+    "que este manual muestra la versión que tienes delante y no una anterior."
+)
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -182,13 +190,12 @@ ESQUEMAS = {
 #  Secciones
 # ════════════════════════════════════════════════════════════════════
 SECCIONES = [
-
-# ── 1 ───────────────────────────────────────────────────────────────
-{
-"id": "que-es",
-"titulo": "Qué es Poly-X",
-"sub": "Qué problema resuelve, qué hace y qué no hace.",
-"html": r"""
+    # ── 1 ───────────────────────────────────────────────────────────────
+    {
+        "id": "que-es",
+        "titulo": "Qué es Poly-X",
+        "sub": "Qué problema resuelve, qué hace y qué no hace.",
+        "html": r"""
 <p>Poly-X es un programa de escritorio para <b>contar, medir y clasificar
 microplásticos</b> en fotografías de microscopio. Las partículas se tiñen con
 <b>rojo Nilo</b> (Nile Red) y se fotografian bajo luz <b>UV de 254 nm</b>: cada
@@ -257,15 +264,14 @@ otros tres módulos existen para construir ese modelo y para verificarlo.</p>
   <b>7 a 15</b> recorren todo lo que el programa sabe hacer hoy, pantalla por
   pantalla. Si solo vienes a instalarlo, con las primeras seis basta.</p>
 </div>
-"""
-},
-
-# ── 2 ───────────────────────────────────────────────────────────────
-{
-"id": "requisitos",
-"titulo": "Antes de empezar",
-"sub": "Qué necesita el equipo, y cuanto va a ocupar.",
-"html": r"""
+""",
+    },
+    # ── 2 ───────────────────────────────────────────────────────────────
+    {
+        "id": "requisitos",
+        "titulo": "Antes de empezar",
+        "sub": "Qué necesita el equipo, y cuanto va a ocupar.",
+        "html": r"""
 <div class="tabla-env">
 <table>
   <thead><tr><th>Componente</th><th>Windows</th><th>macOS</th></tr></thead>
@@ -314,20 +320,21 @@ otros tres módulos existen para construir ese modelo y para verificarlo.</p>
   soporte de GPU</b>, que se descarga aparte y ronda los <b>2,8 GB</b>
   comprimidos. El programa en sí es pequeño; la biblioteca de cálculo no.</p>
 </div>
-"""
-},
-
-# ── 3 ───────────────────────────────────────────────────────────────
-{
-"id": "instalar-windows",
-"titulo": "Instalación en Windows, paso a paso",
-"sub": "Cinco pasos, con una fotografía de cada uno. Se hace una sola vez.",
-"anclas": [("w-python", "Paso 1 · Python 3.11"),
-           ("w-descargar", "Paso 2 · Descargar de GitHub"),
-           ("w-extraer", "Paso 3 · Descomprimir"),
-           ("w-setup", "Paso 4 · Ejecutar SETUP.bat"),
-           ("w-arrancar", "Paso 5 · Primer arranque")],
-"html": r"""
+""",
+    },
+    # ── 3 ───────────────────────────────────────────────────────────────
+    {
+        "id": "instalar-windows",
+        "titulo": "Instalación en Windows, paso a paso",
+        "sub": "Cinco pasos, con una fotografía de cada uno. Se hace una sola vez.",
+        "anclas": [
+            ("w-python", "Paso 1 · Python 3.11"),
+            ("w-descargar", "Paso 2 · Descargar de GitHub"),
+            ("w-extraer", "Paso 3 · Descomprimir"),
+            ("w-setup", "Paso 4 · Ejecutar SETUP.bat"),
+            ("w-arrancar", "Paso 5 · Primer arranque"),
+        ],
+        "html": r"""
 <ol class="pasos">
 
 <li id="w-python"><span class="t">Instalar Python 3.11.9</span>
@@ -524,15 +531,14 @@ el selector de arriba a la derecha cambia el idioma de todo el programa.]]
   </tbody>
 </table>
 </div>
-"""
-},
-
-# ── 4 ───────────────────────────────────────────────────────────────
-{
-"id": "instalar-macos",
-"titulo": "Instalación en macOS, paso a paso",
-"sub": "Los mismos pasos, con una diferencia importante: el aviso de seguridad de Apple.",
-"html": r"""
+""",
+    },
+    # ── 4 ───────────────────────────────────────────────────────────────
+    {
+        "id": "instalar-macos",
+        "titulo": "Instalación en macOS, paso a paso",
+        "sub": "Los mismos pasos, con una diferencia importante: el aviso de seguridad de Apple.",
+        "html": r"""
 <div class="aviso vio">
   <span class="et">Sobre las imágenes de esta sección</span>
   <p>Las páginas web son fotografías reales, iguales para los dos sistemas. Los
@@ -645,15 +651,14 @@ programa. Detecta solo el tipo de procesador:</p>
   <code>Poly-X.app</code> normal, que se puede arrastrar al Dock. Detalle completo
   en <code>LEEME_macOS.md</code>.</p>
 </div>
-"""
-},
-
-# ── 5 ───────────────────────────────────────────────────────────────
-{
-"id": "modelo-pt",
-"titulo": "El modelo entrenado: lo único que no viene en la descarga",
-"sub": "Sin un archivo .pt el Detector y el Visor no tienen con qué detectar.",
-"html": r"""
+""",
+    },
+    # ── 5 ───────────────────────────────────────────────────────────────
+    {
+        "id": "modelo-pt",
+        "titulo": "El modelo entrenado: lo único que no viene en la descarga",
+        "sub": "Sin un archivo .pt el Detector y el Visor no tienen con qué detectar.",
+        "html": r"""
 <div class="aviso err">
   <span class="et">Importante</span>
   <p>Los modelos entrenados (<code>*.pt</code>) <b>no se incluyen en la descarga
@@ -700,15 +705,14 @@ vacía:</p>
   se nota— y por eso conviene verificar con conteo manual antes de confiar en
   las cifras. La <a href="#flujos">sección 14</a> propone como.</p>
 </div>
-"""
-},
-
-# ── 6 ───────────────────────────────────────────────────────────────
-{
-"id": "launcher",
-"titulo": "El Launcher: la pantalla de entrada",
-"sub": "Desde aquí se abre cada módulo, y se cambia el idioma.",
-"html": r"""
+""",
+    },
+    # ── 6 ───────────────────────────────────────────────────────────────
+    {
+        "id": "launcher",
+        "titulo": "El Launcher: la pantalla de entrada",
+        "sub": "Desde aquí se abre cada módulo, y se cambia el idioma.",
+        "html": r"""
 [[fig:ui/01_launcher|El Launcher. Cada módulo se abre en su propia ventana, independiente de
 las demás.]]
 
@@ -738,20 +742,25 @@ se recuerda entre sesiones; la primera vez toma el idioma del sistema.</p>
 Si lo esta, aparece un botón con el identificador de la versión nueva. La
 comprobación <b>no retrasa el arranque</b> y se calla ante cualquier fallo: sin
 internet, o con GitHub caido, simplemente no aparece el aviso.</p>
-"""
-},
-
-# ── 7 ───────────────────────────────────────────────────────────────
-{
-"id": "detector",
-"titulo": "Módulo Detector",
-"sub": "Análisis en lote de una carpeta entera, y el informe final. Nueve pantallas.",
-"anclas": [("d-modelos", "Modelos"), ("d-imagenes", "Imágenes"),
-           ("d-gt", "GT manual"), ("d-parametros", "Parámetros"),
-           ("d-ejecutar", "Ejecutar"), ("d-resultados", "Resultados"),
-           ("d-errores", "Errores"), ("d-comparar", "Comparar"),
-           ("d-reporte", "Reporte")],
-"html": r"""
+""",
+    },
+    # ── 7 ───────────────────────────────────────────────────────────────
+    {
+        "id": "detector",
+        "titulo": "Módulo Detector",
+        "sub": "Análisis en lote de una carpeta entera, y el informe final. Nueve pantallas.",
+        "anclas": [
+            ("d-modelos", "Modelos"),
+            ("d-imagenes", "Imágenes"),
+            ("d-gt", "GT manual"),
+            ("d-parametros", "Parámetros"),
+            ("d-ejecutar", "Ejecutar"),
+            ("d-resultados", "Resultados"),
+            ("d-errores", "Errores"),
+            ("d-comparar", "Comparar"),
+            ("d-reporte", "Reporte"),
+        ],
+        "html": r"""
 <p>Es el módulo principal: recibe una carpeta de fotografías y un modelo, y
 devuelve el conteo, las tallas y un informe. Las nueve pantallas de la izquierda
 se recorren de arriba abajo, en ese orden.</p>
@@ -890,15 +899,14 @@ global.</p>
 donde el análisis se convierte en documento.]]
 <p>Es la salida del módulo y merece sección propia: está detallada en la
 <a href="#informe">sección 13</a>.</p>
-"""
-},
-
-# ── 8 ───────────────────────────────────────────────────────────────
-{
-"id": "entrenador",
-"titulo": "Módulo Entrenador",
-"sub": "Entrenar un modelo YOLO propio, con curvas en vivo. Nueve pantallas.",
-"html": r"""
+""",
+    },
+    # ── 8 ───────────────────────────────────────────────────────────────
+    {
+        "id": "entrenador",
+        "titulo": "Módulo Entrenador",
+        "sub": "Entrenar un modelo YOLO propio, con curvas en vivo. Nueve pantallas.",
+        "html": r"""
 <p>Se usa cuando el modelo disponible no sirve para tus fotografías: otro
 microscopio, otra tinción, otro rango de tallas. Necesita un dataset ya anotado
 —el que produce el <a href="#etiquetador">Etiquetador</a>— y bastante paciencia.</p>
@@ -968,15 +976,14 @@ configuración completa.]]
   <b>batch</b> a 4 o 2, y la resolución a 640. Es preferible a bajar el tamaño del
   modelo, que cuesta más métricas.</p>
 </div>
-"""
-},
-
-# ── 9 ───────────────────────────────────────────────────────────────
-{
-"id": "etiquetador",
-"titulo": "Módulo Etiquetador",
-"sub": "Anotar cientos de imágenes sin perder la cuenta entre sesiones.",
-"html": r"""
+""",
+    },
+    # ── 9 ───────────────────────────────────────────────────────────────
+    {
+        "id": "etiquetador",
+        "titulo": "Módulo Etiquetador",
+        "sub": "Anotar cientos de imágenes sin perder la cuenta entre sesiones.",
+        "html": r"""
 [[fig:ui/20_etiquetador|El Etiquetador. La lista de la izquierda distingue lo revisado de lo
 pendiente, y ese estado se recupera del disco al reabrir la carpeta.]]
 
@@ -1046,15 +1053,14 @@ Después se corrigen a mano. Sobre el material del estudio ahorra alrededor del
   <li>Las miniaturas se generan en segundo plano, para que la ventana responda de
       inmediato.</li>
 </ul>
-"""
-},
-
-# ── 10 ──────────────────────────────────────────────────────────────
-{
-"id": "visor",
-"titulo": "Módulo Visor",
-"sub": "Una imagen a la vez: calibrar la escala y verificar cada medida.",
-"html": r"""
+""",
+    },
+    # ── 10 ──────────────────────────────────────────────────────────────
+    {
+        "id": "visor",
+        "titulo": "Módulo Visor",
+        "sub": "Una imagen a la vez: calibrar la escala y verificar cada medida.",
+        "html": r"""
 [[fig:ui/21_visor|El Visor. La tabla lista cada partícula, y al seleccionar una fila se ve
 <b>sobre que se midió</b>: el recorte limpio y, al lado, la máscara con la medida dibujada.]]
 
@@ -1111,15 +1117,14 @@ ancho y aspecto. Al seleccionar una fila se ve <b>sobre que se midió</b>:</p>
   <li><b>Exportar</b> la imagen anotada, <code>detecciones.csv</code> y
       <code>resumen.json</code>.</li>
 </ul>
-"""
-},
-
-# ── 11 ──────────────────────────────────────────────────────────────
-{
-"id": "medida",
-"titulo": "Cómo se mide la talla de una partícula",
-"sub": "El criterio, sus excepciones, su exactitud y sus límites declarados.",
-"html": r"""
+""",
+    },
+    # ── 11 ──────────────────────────────────────────────────────────────
+    {
+        "id": "medida",
+        "titulo": "Cómo se mide la talla de una partícula",
+        "sub": "El criterio, sus excepciones, su exactitud y sus límites declarados.",
+        "html": r"""
 <p>El criterio general es <b>la línea recta más larga que cabe en la
 partícula</b>: la mayor distancia entre dos puntos de su contorno, o
 <i>diámetro de Feret máximo</i>. No depende de la orientación con que la
@@ -1222,15 +1227,14 @@ en las cifras, solo en la imagen. Está fijado en
   de cada codo, subestimando hasta un <b>19 %</b> en el caso más cerrado
   ensayado.</p>
 </div>
-"""
-},
-
-# ── 12 ──────────────────────────────────────────────────────────────
-{
-"id": "polimeros",
-"titulo": "Los tres polímeros, y por qué dos se confunden",
-"sub": "Lo que hay que saber para interpretar el recall por clase.",
-"html": r"""
+""",
+    },
+    # ── 12 ──────────────────────────────────────────────────────────────
+    {
+        "id": "polimeros",
+        "titulo": "Los tres polímeros, y por qué dos se confunden",
+        "sub": "Lo que hay que saber para interpretar el recall por clase.",
+        "html": r"""
 <div class="tabla-env">
 <table>
   <thead><tr><th>ID</th><th>Clase</th><th>Fluorescencia observada</th><th>Color de la caja en pantalla</th></tr></thead>
@@ -1274,15 +1278,14 @@ dataset de entrenamiento (media RGB, n = 30 por clase):</p>
   la emisión observada. Se corrigió en agosto de 2026 a partir de la medición RGB
   y de la observación directa.</p>
 </div>
-"""
-},
-
-# ── 13 ──────────────────────────────────────────────────────────────
-{
-"id": "informe",
-"titulo": "El informe de detección",
-"sub": "Un HTML autocontenido con calidad de publicación, y su PDF.",
-"html": r"""
+""",
+    },
+    # ── 13 ──────────────────────────────────────────────────────────────
+    {
+        "id": "informe",
+        "titulo": "El informe de detección",
+        "sub": "Un HTML autocontenido con calidad de publicación, y su PDF.",
+        "html": r"""
 [[fig:ui/10_det_reporte|La pestaña <b>Reporte</b>. Trece casillas de sección y tres presets:
 Completo, Resumen breve y Metodológico.]]
 
@@ -1356,15 +1359,14 @@ fotografías que muestra.</p>
   <p>Títulos, tablas, pies de figura, ejes de los gráficos y la prosa de métodos
   siguen el idioma elegido en el Launcher — no solo la interfaz.</p>
 </div>
-"""
-},
-
-# ── 14 ──────────────────────────────────────────────────────────────
-{
-"id": "flujos",
-"titulo": "Flujos de trabajo recomendados",
-"sub": "Tres escenarios, según de dónde partas.",
-"html": r"""
+""",
+    },
+    # ── 14 ──────────────────────────────────────────────────────────────
+    {
+        "id": "flujos",
+        "titulo": "Flujos de trabajo recomendados",
+        "sub": "Tres escenarios, según de dónde partas.",
+        "html": r"""
 <h3>A · Ya tienes un modelo y solo quieres analizar fotografías</h3>
 <p>Es el caso más frecuente y el más corto.</p>
 <ol>
@@ -1417,15 +1419,14 @@ fotografías que muestra.</p>
   tramo</b>, que se mide en el laboratorio y no sale de las fotografías. El
   programa no la puede inventar.</p>
 </div>
-"""
-},
-
-# ── 15 ──────────────────────────────────────────────────────────────
-{
-"id": "atajos",
-"titulo": "Atajos de teclado",
-"sub": "Los del Etiquetador y el GT manual son los que más tiempo ahorran.",
-"html": r"""
+""",
+    },
+    # ── 15 ──────────────────────────────────────────────────────────────
+    {
+        "id": "atajos",
+        "titulo": "Atajos de teclado",
+        "sub": "Los del Etiquetador y el GT manual son los que más tiempo ahorran.",
+        "html": r"""
 <h3>Etiquetador y GT manual</h3>
 <div class="tabla-env">
 <table>
@@ -1459,15 +1460,14 @@ fotografías que muestra.</p>
   </tbody>
 </table>
 </div>
-"""
-},
-
-# ── 16 ──────────────────────────────────────────────────────────────
-{
-"id": "actualizar",
-"titulo": "Actualizar y desinstalar",
-"sub": "Traer lo nuevo sin reinstalar, y retirar el programa sin dejar restos.",
-"html": r"""
+""",
+    },
+    # ── 16 ──────────────────────────────────────────────────────────────
+    {
+        "id": "actualizar",
+        "titulo": "Actualizar y desinstalar",
+        "sub": "Traer lo nuevo sin reinstalar, y retirar el programa sin dejar restos.",
+        "html": r"""
 <h3>Actualizar</h3>
 <p>Doble clic en el actualizador que corresponda:</p>
 <div class="tabla-env">
@@ -1508,15 +1508,14 @@ programa.</p>
   entrenado puede representar días de trabajo y no se recupera de GitHub, porque
   nunca estuvo ahí.</p>
 </div>
-"""
-},
-
-# ── 17 ──────────────────────────────────────────────────────────────
-{
-"id": "problemas",
-"titulo": "Solución de problemas",
-"sub": "Lo que suele fallar, por qué, y qué hacer.",
-"html": r"""
+""",
+    },
+    # ── 17 ──────────────────────────────────────────────────────────────
+    {
+        "id": "problemas",
+        "titulo": "Solución de problemas",
+        "sub": "Lo que suele fallar, por qué, y qué hacer.",
+        "html": r"""
 <h3>Al instalar</h3>
 <div class="tabla-env">
 <table>
@@ -1579,15 +1578,14 @@ programa.</p>
   <p>Arranca con <code>iniciar_polyx.bat</code> en vez del acceso directo: muestra
   la consola, y ahí aparece el mensaje entero en vez de una ventana que se cierra.</p>
 </div>
-"""
-},
-
-# ── 18 ──────────────────────────────────────────────────────────────
-{
-"id": "estructura",
-"titulo": "Estructura de carpetas",
-"sub": "Qué es tuyo, qué es del programa, y qué se puede borrar.",
-"html": r"""
+""",
+    },
+    # ── 18 ──────────────────────────────────────────────────────────────
+    {
+        "id": "estructura",
+        "titulo": "Estructura de carpetas",
+        "sub": "Qué es tuyo, qué es del programa, y qué se puede borrar.",
+        "html": r"""
 <pre><code>Poly-X-Microplastics-main\
 ├── <span class="p">src\polyx\</span>               <span class="c">código fuente — del programa</span>
 │   ├── launcher.py
@@ -1640,15 +1638,14 @@ programa.</p>
   <code>polyx/core/plataforma.py</code>, y no repartido por el código. Es la razón
   de que el programa funcione igual en ambos sin dos versiones que mantener.</p>
 </div>
-"""
-},
-
-# ── 19 ──────────────────────────────────────────────────────────────
-{
-"id": "referencias",
-"titulo": "Referencias y contacto",
-"sub": "El método publicado sobre el que se apoya Poly-X.",
-"html": r"""
+""",
+    },
+    # ── 19 ──────────────────────────────────────────────────────────────
+    {
+        "id": "referencias",
+        "titulo": "Referencias y contacto",
+        "sub": "El método publicado sobre el que se apoya Poly-X.",
+        "html": r"""
 <h3>Publicaciones</h3>
 <ul>
   <li><b>Perez M, Parra S, Ferrada C, Bravo M, Perez PA, Quiroz W (2024).</b>
@@ -1687,7 +1684,6 @@ en <code>requirements.txt</code>: una instalación de uso no lo necesita.</p>
 Laboratorio de Química Ambiental · Pontificia Universidad Católica de Valparaíso<br>
 <a href="mailto:cristofher.ferrada@pucv.cl">cristofher.ferrada@pucv.cl</a><br>
 <a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a></p>
-"""
-},
-
+""",
+    },
 ]

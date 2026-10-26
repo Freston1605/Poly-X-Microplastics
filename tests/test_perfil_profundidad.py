@@ -10,6 +10,7 @@ la misma placa no son observaciones independientes de la profundidad; contarlas
 como tales daria p diminutos sin ninguna base, que es el error clasico de este
 tipo de analisis (pseudorreplicacion).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -32,6 +33,7 @@ def _en_español():
     previo = os.environ.get("POLYX_IDIOMA")
     os.environ["POLYX_IDIOMA"] = "es"
     import polyx.core.i18n as i18n
+
     importlib.reload(i18n)
     importlib.reload(R)
     yield
@@ -44,6 +46,7 @@ def _en_español():
 
 
 # ── Spearman ──────────────────────────────────────────────────────────
+
 
 def test_una_serie_que_crece_da_correlacion_uno():
     assert R._spearman([1, 2, 3, 4, 5], [2, 4, 9, 11, 30]) == pytest.approx(1.0)
@@ -76,6 +79,7 @@ def test_con_menos_de_tres_tramos_no_se_calcula():
 
 
 # ── p por permutacion ─────────────────────────────────────────────────
+
 
 def test_una_tendencia_perfecta_sale_significativa():
     p = R._p_permutation(list(range(1, 9)), [1, 2, 3, 4, 5, 6, 7, 8])
@@ -119,6 +123,7 @@ def test_con_pocos_tramos_una_tendencia_debil_no_se_declara():
 
 
 # ── La frase que sale en el informe ───────────────────────────────────
+
 
 def test_la_frase_declara_rho_p_y_n():
     """Las tres cifras juntas o la afirmacion no se puede juzgar."""

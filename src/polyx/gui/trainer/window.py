@@ -1,4 +1,5 @@
 """Main window of the Trainer. Sidebar with 9 items + pages on the right."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt
@@ -49,8 +50,7 @@ class SidebarButton(QPushButton):
         self.setCheckable(True)
         self.setCursor(Qt.PointingHandCursor)
         self.setMinimumHeight(38)
-        self.setIcon(iconos.switchable_icon(
-            icon_name, 17, T.INK3, T.ACCENT_D_TX))
+        self.setIcon(iconos.switchable_icon(icon_name, 17, T.INK3, T.ACCENT_D_TX))
         self.setIconSize(QSize(17, 17))
         self.setStyleSheet(
             f"""
@@ -76,6 +76,7 @@ class SidebarButton(QPushButton):
             """
         )
 
+
 class TrainerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -94,16 +95,15 @@ class TrainerWindow(QMainWindow):
         # ── Sidebar ──
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
-        sidebar.setStyleSheet(
-            f"QFrame {{ background: {T.BG}; border-right: 1px solid {T.RULE}; }}"
-        )
+        sidebar.setStyleSheet(f"QFrame {{ background: {T.BG}; border-right: 1px solid {T.RULE}; }}")
         sb = QVBoxLayout(sidebar)
         sb.setContentsMargins(14, 16, 14, 16)
         sb.setSpacing(4)
 
         sb.addWidget(LogoBadge("POLY-X", "YOLO Trainer"))
         sb.addSpacing(12)
-        sep = QFrame(); sep.setFixedHeight(1)
+        sep = QFrame()
+        sep.setFixedHeight(1)
         sep.setStyleSheet(f"background: {T.RULE_SOFT};")
         sb.addWidget(sep)
         sb.addSpacing(8)

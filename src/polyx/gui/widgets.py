@@ -1,4 +1,5 @@
 """Reusable widgets (logo, numbered headers, KPI cards)."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
@@ -24,7 +25,7 @@ class LogoBadge(QWidget):
         self._badge.setAlignment(Qt.AlignCenter)
         self._badge.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border-radius: 6px; "
-            f"font-size: {int(size*0.55)}pt; font-weight: 700;"
+            f"font-size: {int(size * 0.55)}pt; font-weight: 700;"
         )
         self._badge.setText("P")
         lay.addWidget(self._badge)
@@ -101,7 +102,7 @@ class KPICard(QFrame):
         lay.setSpacing(8)
 
         self.lbl_title = QLabel(label)
-        self.lbl_title.setWordWrap(True)   # long labels (e.g. `"Verdaderos Positivos"`)
+        self.lbl_title.setWordWrap(True)  # long labels (e.g. `"Verdaderos Positivos"`)
         self.lbl_title.setStyleSheet(
             f"color: {T.INK3}; font-size: 10pt; font-weight: 500; border: none;"
         )

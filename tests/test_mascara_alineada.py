@@ -11,6 +11,7 @@ Por eso la prueba es de COMPORTAMIENTO y no de estructura, y recorre las dos
 funciones: comprueba que el verde dibujado se solape con la particula
 brillante. Si aparece una tercera copia con su propio margen, cae aqui.
 """
+
 from __future__ import annotations
 
 import base64
@@ -35,8 +36,9 @@ def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
     cv2.circle(img, (cx, cy), r, (60, 210, 240), -1)
     ruta = tmp_path / "placa.png"
     cv2.imwrite(str(ruta), img)
-    d = Detection(class_id=0, class_name="PET", conf=0.9,
-                  x1=cx - r, y1=cy - r, x2=cx + r, y2=cy + r)
+    d = Detection(
+        class_id=0, class_name="PET", conf=0.9, x1=cx - r, y1=cy - r, x2=cx + r, y2=cy + r
+    )
     d.number = 1
     M.apply_to_detection(d, img, 30.0)
     return img, ruta, d
@@ -59,7 +61,7 @@ def test_dibujar_medicion_pone_el_contorno_sobre_la_particula(tmp_path):
     img, _, d = _foto_con_particula(tmp_path)
     par, m = M.draw_measurement(img, d, zoom=1)
     assert par is not None and m.ok
-    vis = par[:, par.shape[1] // 2:]
+    vis = par[:, par.shape[1] // 2 :]
     c_verde, c_part = _centroides(vis)
     assert c_verde is not None, "no se dibujo el contorno"
     desvio = float(np.hypot(c_verde[0] - c_part[0], c_verde[1] - c_part[1]))
@@ -81,7 +83,7 @@ def test_la_ficha_del_informe_pone_el_contorno_sobre_la_particula(tmp_path):
     par = cv2.imdecode(datos, cv2.IMREAD_COLOR)
     assert par is not None
 
-    vis = par[:, par.shape[1] // 2:]
+    vis = par[:, par.shape[1] // 2 :]
     c_verde, c_part = _centroides(vis)
     assert c_verde is not None, "no se dibujo el contorno"
     # La ficha se reescala para el informe, asi que el desvio se mide en
@@ -89,7 +91,8 @@ def test_la_ficha_del_informe_pone_el_contorno_sobre_la_particula(tmp_path):
     desvio = float(np.hypot(c_verde[0] - c_part[0], c_verde[1] - c_part[1]))
     assert desvio < 0.06 * vis.shape[1], (
         f"el contorno esta {desvio:.0f} px fuera de la particula "
-        f"(ancho {vis.shape[1]} px): el recorte y la mascara no comparten origen")
+        f"(ancho {vis.shape[1]} px): el recorte y la mascara no comparten origen"
+    )
 
 
 @pytest.mark.parametrize("lado_x,lado_y", [(90, 30), (30, 90), (60, 60)])
@@ -107,7 +110,7 @@ def test_el_margen_del_recorte_es_el_mismo_en_los_dos_sitios(lado_x, lado_y):
     fuente = inspect.getsource(report_html._record_particle)
     assert "margen_de_caja(" in fuente, (
         "la ficha volvio a calcularse su propio margen; tiene que usar "
-        "margen_de_caja() o el contorno saldra corrido")
+        "margen_de_caja() o el contorno saldra corrido"
+    )
     # Y que ese margen no sea el que se usaba antes.
-    assert M.box_margin(lado_x, lado_y) == int(
-        max(3, round(0.50 * max(lado_x, lado_y))))
+    assert M.box_margin(lado_x, lado_y) == int(max(3, round(0.50 * max(lado_x, lado_y))))

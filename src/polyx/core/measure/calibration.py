@@ -17,6 +17,7 @@ The algorithm used to live in ``paper/detectar_placa.py`` and was moved here
 so the application and the paper script measure with the same code. Two
 implementations of the same measurement diverge, and then the figure in the
 report stops being the figure in the paper."""
+
 from __future__ import annotations
 
 import csv
@@ -63,15 +64,16 @@ BIAS_MAXIMUM_WALL_PCT = 4.2
 
 # Where the scale came from, from most to least reliable. It goes into the report: a measurement without
 # its provenance is not verifiable.
-ORIGIN_PLATE = "placa"      # fitted on the ring of this same photo
-ORIGIN_INDEX = "indice"    # inherited from the crop via `indice.csv`
-ORIGIN_MANUAL = "manual"    # typed by hand in `Parametros`
+ORIGIN_PLATE = "placa"  # fitted on the ring of this same photo
+ORIGIN_INDEX = "indice"  # inherited from the crop via `indice.csv`
+ORIGIN_MANUAL = "manual"  # typed by hand in `Parametros`
 ORIGIN_NONE = "ninguna"  # not calibrated; sizes cannot be reported
 
 
 @dataclass
 class Calibration:
     """Scale of an image and how it was obtained."""
+
     um_por_px: float = 0.0
     origin: str = ORIGIN_NONE
     cx: float = 0.0
@@ -95,9 +97,11 @@ class Calibration:
         if not self.valid:
             return "sin calibrar"
         if self.origin == ORIGIN_PLATE:
-            return (f"{self.um_por_px:.4f} µm/px — placa de "
-                    f"{self.diameter_mm:g} mm, r={self.radius_px:.0f} px "
-                    f"({self.n_points} puntos de borde)")
+            return (
+                f"{self.um_por_px:.4f} µm/px — placa de "
+                f"{self.diameter_mm:g} mm, r={self.radius_px:.0f} px "
+                f"({self.n_points} puntos de borde)"
+            )
         if self.origin == ORIGIN_INDEX:
             return f"{self.um_por_px:.4f} µm/px — heredada del recorte"
         return f"{self.um_por_px:.4f} µm/px — introducida a mano"
@@ -110,8 +114,7 @@ def read_image(path_2: str | Path) -> Optional[np.ndarray]:
     None, which here would be confused with "there is no plate".
     """
     try:
-        return cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8),
-                            cv2.IMREAD_COLOR)
+        return cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8), cv2.IMREAD_COLOR)
     except (OSError, ValueError):
         return None
 
@@ -123,9 +126,16 @@ def hough_approximate(bgr: np.ndarray) -> Optional[tuple]:
     small = cv2.resize(bgr, (int(width * scale), int(height * scale)))
     gris = cv2.medianBlur(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY), 5)
     side = min(gris.shape)
-    c = cv2.HoughCircles(gris, cv2.HOUGH_GRADIENT, dp=1.5, minDist=side,
-                         param1=120, param2=60,
-                         minRadius=int(side * 0.22), maxRadius=int(side * 0.52))
+    c = cv2.HoughCircles(
+        gris,
+        cv2.HOUGH_GRADIENT,
+        dp=1.5,
+        minDist=side,
+        param1=120,
+        param2=60,
+        minRadius=int(side * 0.22),
+        maxRadius=int(side * 0.52),
+    )
     if c is None:
         return None
     best = max(np.round(c[0]).astype(float), key=lambda v: v[2])
@@ -138,15 +148,19 @@ def edge_points(gris: np.ndarray, cx: float, cy: float, r: float) -> np.ndarray:
     radii = np.arange(max(1, int(r * 0.80)), int(r * 1.25))
     xs = np.clip(cx + np.outer(radii, np.cos(ang)), 0, gris.shape[1] - 1).astype(int)
     ys = np.clip(cy + np.outer(radii, np.sin(ang)), 0, gris.shape[0] - 1).astype(int)
-    profiles = gris[ys, xs].astype(float)          # (radius, angle)
+    profiles = gris[ys, xs].astype(float)  # (radius, angle)
 
-    base = np.median(gris[int(max(0, cy - r * 0.5)):int(cy + r * 0.5),
-                          int(max(0, cx - r * 0.5)):int(cx + r * 0.5)])
+    base = np.median(
+        gris[
+            int(max(0, cy - r * 0.5)) : int(cy + r * 0.5),
+            int(max(0, cx - r * 0.5)) : int(cx + r * 0.5),
+        ]
+    )
     points = []
     for k in range(N_ANGLES):
         col = profiles[:, k]
         peak = int(np.argmax(col))
-        if col[peak] <= base + 12:                 # no ring seen here
+        if col[peak] <= base + 12:  # no ring seen here
             continue
         threshold_2 = base + (col[peak] - base) * 0.5
         j = peak
@@ -161,10 +175,10 @@ def adjust_circle(pts: np.ndarray) -> tuple:
     """Algebraic circle fit by least squares (Kasa)."""
     x, y = pts[:, 0], pts[:, 1]
     A = np.c_[2 * x, 2 * y, np.ones(len(x))]
-    b = x ** 2 + y ** 2
+    b = x**2 + y**2
     sol, *_ = np.linalg.lstsq(A, b, rcond=None)
     cx, cy = sol[0], sol[1]
-    r = np.sqrt(sol[2] + cx ** 2 + cy ** 2)
+    r = np.sqrt(sol[2] + cx**2 + cy**2)
     return cx, cy, r
 
 
@@ -179,8 +193,7 @@ def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> Optional[tuple]:
     return adjust_circle(pts) + (len(pts),)
 
 
-def correct_parallax(um_por_px: float, height_plate_mm: float,
-                      distance_camera_mm: float) -> tuple:
+def correct_parallax(um_por_px: float, height_plate_mm: float, distance_camera_mm: float) -> tuple:
     """Carries the plate RING scale over to the BASE PLANE.
 
     The ring is closer to the camera than the bottom where the particles rest,
@@ -230,10 +243,12 @@ def correct_parallax(um_por_px: float, height_plate_mm: float,
     return um_por_px * factor, factor
 
 
-def calibrate_from_plate(bgr: np.ndarray,
-                         diameter_mm: float = DIAMETER_PLATE_MM,
-                         height_plate_mm: float = 0.0,
-                         distance_camera_mm: float = 0.0) -> Calibration:
+def calibrate_from_plate(
+    bgr: np.ndarray,
+    diameter_mm: float = DIAMETER_PLATE_MM,
+    height_plate_mm: float = 0.0,
+    distance_camera_mm: float = 0.0,
+) -> Calibration:
     """Measures the plate ring and returns the scale for this photo.
 
     It returns an invalid Calibracion -- with ``aviso`` explaining why -- when
@@ -248,8 +263,7 @@ def calibrate_from_plate(bgr: np.ndarray,
     gris = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     seed = hough_approximate(bgr)
     if seed is None:
-        return Calibration(diameter_mm=diameter_mm,
-                           warning="no se encontro la placa en la foto")
+        return Calibration(diameter_mm=diameter_mm, warning="no se encontro la placa en la foto")
     hx, hy, hr = seed
 
     pts = edge_points(gris, hx, hy, hr)
@@ -271,16 +285,22 @@ def calibrate_from_plate(bgr: np.ndarray,
         return Calibration(diameter_mm=diameter_mm, warning="radio ajustado nulo")
 
     um_aro = (diameter_mm * 1000.0) / (2 * r)
-    um_base, factor = correct_parallax(um_aro, height_plate_mm,
-                                        distance_camera_mm)
+    um_base, factor = correct_parallax(um_aro, height_plate_mm, distance_camera_mm)
     # No warning when no correction is applied: it was measured on this material and the effect
     # is undetectable (see `corregir_paralaje()`). Warning on every photo would
     # raise an alarm over a bias that the data bound below 1.3%.
-    return Calibration(um_por_px=um_base,
-                       origin=ORIGIN_PLATE, cx=cx, cy=cy, radius_px=r,
-                       n_points=n, detour_hough_pct=detour,
-                       diameter_mm=diameter_mm, factor_parallax=factor,
-                       warning=warning)
+    return Calibration(
+        um_por_px=um_base,
+        origin=ORIGIN_PLATE,
+        cx=cx,
+        cy=cy,
+        radius_px=r,
+        n_points=n,
+        detour_hough_pct=detour,
+        diameter_mm=diameter_mm,
+        factor_parallax=factor,
+        warning=warning,
+    )
 
 
 def carry_index(path_csv: str | Path) -> Dict[str, float]:
@@ -339,14 +359,16 @@ def search_index(image_path: str | Path, levels: int = 3) -> Dict[str, float]:
     return {}
 
 
-def resolver(image_path: str | Path,
-             index: Optional[Dict[str, float]] = None,
-             um_por_px_manual: float = 0.0,
-             diameter_mm: float = DIAMETER_PLATE_MM,
-             measure_plate: bool = False,
-             bgr: Optional[np.ndarray] = None,
-             height_plate_mm: float = 0.0,
-             distance_camera_mm: float = 0.0) -> Calibration:
+def resolver(
+    image_path: str | Path,
+    index: Optional[Dict[str, float]] = None,
+    um_por_px_manual: float = 0.0,
+    diameter_mm: float = DIAMETER_PLATE_MM,
+    measure_plate: bool = False,
+    bgr: Optional[np.ndarray] = None,
+    height_plate_mm: float = 0.0,
+    distance_camera_mm: float = 0.0,
+) -> Calibration:
     """Scale of an image, in order of reliability.
 
     1. ``indice`` -- already calibrated against the plate, per photo. It is
@@ -364,25 +386,27 @@ def resolver(image_path: str | Path,
     """
     name_2 = Path(image_path).name
     if index and name_2 in index:
-        return Calibration(um_por_px=index[name_2], origin=ORIGIN_INDEX,
-                           diameter_mm=diameter_mm)
+        return Calibration(um_por_px=index[name_2], origin=ORIGIN_INDEX, diameter_mm=diameter_mm)
 
     if measure_plate:
         if bgr is None:
             bgr = read_image(image_path)
-        cal = calibrate_from_plate(bgr, diameter_mm, height_plate_mm,
-                                   distance_camera_mm)
+        cal = calibrate_from_plate(bgr, diameter_mm, height_plate_mm, distance_camera_mm)
         if cal.valid:
             return cal
         if um_por_px_manual > 0:
-            return Calibration(um_por_px=um_por_px_manual, origin=ORIGIN_MANUAL,
-                               diameter_mm=diameter_mm,
-                               warning=f"no se pudo medir la placa ({cal.warning})")
+            return Calibration(
+                um_por_px=um_por_px_manual,
+                origin=ORIGIN_MANUAL,
+                diameter_mm=diameter_mm,
+                warning=f"no se pudo medir la placa ({cal.warning})",
+            )
         return cal
 
     if um_por_px_manual > 0:
-        return Calibration(um_por_px=um_por_px_manual, origin=ORIGIN_MANUAL,
-                           diameter_mm=diameter_mm)
+        return Calibration(
+            um_por_px=um_por_px_manual, origin=ORIGIN_MANUAL, diameter_mm=diameter_mm
+        )
     return Calibration(diameter_mm=diameter_mm)
 
 

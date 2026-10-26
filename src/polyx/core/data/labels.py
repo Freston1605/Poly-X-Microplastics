@@ -31,6 +31,7 @@ def read_labels(
         List of Instance objects.
     """
     from polyx.core.detect.protocol import Instance
+
     instances: List[Instance] = []
     try:
         with open(txt_path, "r", encoding="utf-8") as f:
@@ -55,12 +56,17 @@ def read_labels(
                 x2 = cx + w / 2
                 y2 = cy + h / 2
 
-                instances.append(Instance(
-                    class_id=cid,
-                    class_name=class_names.get(cid, str(cid)),
-                    conf=conf,
-                    x1=x1, y1=y1, x2=x2, y2=y2,
-                ))
+                instances.append(
+                    Instance(
+                        class_id=cid,
+                        class_name=class_names.get(cid, str(cid)),
+                        conf=conf,
+                        x1=x1,
+                        y1=y1,
+                        x2=x2,
+                        y2=y2,
+                    )
+                )
     except Exception:
         pass
     return instances
@@ -89,7 +95,9 @@ def write_labels(
         w_n = inst.w / img_w
         h_n = inst.h / img_h
         if include_conf:
-            lines.append(f"{inst.class_id} {cx_n:.6f} {cy_n:.6f} {w_n:.6f} {h_n:.6f} {inst.conf:.6f}")
+            lines.append(
+                f"{inst.class_id} {cx_n:.6f} {cy_n:.6f} {w_n:.6f} {h_n:.6f} {inst.conf:.6f}"
+            )
         else:
             lines.append(f"{inst.class_id} {cx_n:.6f} {cy_n:.6f} {w_n:.6f} {h_n:.6f}")
 

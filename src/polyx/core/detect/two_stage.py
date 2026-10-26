@@ -43,10 +43,12 @@ class TwoStageDetector(DetectionSource):
             self._names = {}
         return self
 
-    def predict(self, image_path, conf=0.25, iou=0.45, imgsz=640,
-                device="0", **kwargs) -> List[Instance]:
+    def predict(
+        self, image_path, conf=0.25, iou=0.45, imgsz=640, device="0", **kwargs
+    ) -> List[Instance]:
         boxes_instances = self.detector.predict(
-            image_path, conf=conf, iou=iou, imgsz=imgsz, device=device, **kwargs)
+            image_path, conf=conf, iou=iou, imgsz=imgsz, device=device, **kwargs
+        )
         if not boxes_instances:
             return boxes_instances
 
@@ -55,7 +57,8 @@ class TwoStageDetector(DetectionSource):
         try:
             if hasattr(self.segmenter, "segment_from_boxes"):
                 seg_instances = self.segmenter.segment_from_boxes(
-                    image_path, boxes, conf=self.segmenter_conf or conf)
+                    image_path, boxes, conf=self.segmenter_conf or conf
+                )
             else:
                 prompts = SegmentationPrompts(boxes=boxes)
                 seg_instances = self.segmenter.segment(image_path, prompts)
@@ -82,13 +85,14 @@ class TwoStageDetector(DetectionSource):
         self._last_imgsz = getattr(self.detector, "last_imgsz", 0)
         return out
 
-    def predict_sliced(self, image_path, conf=0.10, iou=0.45, tile=1024,
-                       overlap=0.25, device="0", **kwargs):
+    def predict_sliced(
+        self, image_path, conf=0.10, iou=0.45, tile=1024, overlap=0.25, device="0", **kwargs
+    ):
         # Fall back to detector-only sliced prediction; segmentation on tiles
         # is left to callers that need it.
         return self.detector.predict_sliced(
-            image_path, conf=conf, iou=iou, tile=tile, overlap=overlap,
-            device=device, **kwargs)
+            image_path, conf=conf, iou=iou, tile=tile, overlap=overlap, device=device, **kwargs
+        )
 
     @property
     def names(self):
@@ -99,7 +103,7 @@ class TwoStageDetector(DetectionSource):
         return self._last_imgsz
 
 
-def build_two_stage(detector: DetectionSource,
-                    segmenter: SegmentationSource,
-                    **kwargs) -> TwoStageDetector:
+def build_two_stage(
+    detector: DetectionSource, segmenter: SegmentationSource, **kwargs
+) -> TwoStageDetector:
     return TwoStageDetector(detector, segmenter, **kwargs)

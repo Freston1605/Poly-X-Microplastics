@@ -22,6 +22,7 @@ The two ``baseline`` tests read the frozen HTML snapshots and are expected to
 be red until S05/T03 recaptures them from the fixed code; the rest of the
 module runs green on the fixed render (``-k "not baseline"``).
 """
+
 from __future__ import annotations
 
 import ast
@@ -110,6 +111,7 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
+
     importlib.reload(rh)
 
     logger = obs.logger_for("detector")
@@ -148,18 +150,12 @@ def _completo(directory: Path):
 
 def _missing_forms(lines: set[str], expected: dict) -> list[str]:
     """Canonical labels with none of their accepted forms in ``lines``."""
-    return [
-        label
-        for label, variants in expected.items()
-        if not (variants & lines)
-    ]
+    return [label for label, variants in expected.items() if not (variants & lines)]
 
 
 def _assert_english_forms(lines: set[str], expected: dict) -> None:
     missing = _missing_forms(lines, expected)
-    assert not missing, (
-        "missing English report headings: " + ", ".join(sorted(missing))
-    )
+    assert not missing, "missing English report headings: " + ", ".join(sorted(missing))
 
 
 # ---------------------------------------------------------------------------
@@ -230,11 +226,7 @@ def _heading_literals(source: str) -> list[tuple[int, str]]:
 
     tr_contents: set[int] = set()
     for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "tr"
-        ):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "tr":
             for child in ast.walk(node):
                 tr_contents.add(id(child))
 

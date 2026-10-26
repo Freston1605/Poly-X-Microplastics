@@ -26,6 +26,7 @@ quedan listos para seguir en vivo::
 Docstring en ingles no se aplica aqui: es script de demo, comentarios en
 espanol segun la convencion del repo.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -41,7 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from polyx.core import observability as ob
 
 CAMPOS_NUCLEO = ("ts", "level", "module", "event")
-FALSOS = []            # ruta absoluta de cada mensaje de falla, para el resumen
+FALSOS = []  # ruta absoluta de cada mensaje de falla, para el resumen
 
 FASES = ("phase.decode", "phase.detect", "phase.morphology", "phase.measure")
 
@@ -52,18 +53,17 @@ def _falla(mensaje: str) -> None:
 
 def _simular_lote(ruta_dir: Path, placas: int, ts: str) -> dict:
     """Recorre las costuras reales de un lote de deteccion de placas."""
-    os.environ["POLYX_LOG_DIR"] = str(ruta_dir)   # vale tambien si explicito
-    ob._loggers.clear()                           # el cache honra el nuevo dir
+    os.environ["POLYX_LOG_DIR"] = str(ruta_dir)  # vale tambien si explicito
+    ob._loggers.clear()  # el cache honra el nuevo dir
     run_id = f"demo_{ts}"
     ob.clear_run_id()
     ob.set_run_id(run_id)
     log = ob.logger_for("detector")
-    ob.event(log, "run.config", placas=placas,
-              params={"min_confianza": 0.6, "forma_alta": True})
+    ob.event(log, "run.config", placas=placas, params={"min_confianza": 0.6, "forma_alta": True})
     for i in range(1, placas + 1):
         for fase in FASES:
             with ob.timer(log, fase, placa=i):
-                time.sleep(0.002)                  # latencia minima del 2 AM
+                time.sleep(0.002)  # latencia minima del 2 AM
     # el reporte corre en el mismo run (misma corrida, otro modulo en la vida real)
     log_reporte = ob.logger_for("reporte")
     with ob.timer(log_reporte, "report.build", placas=placas):
@@ -75,15 +75,20 @@ def _simular_lote(ruta_dir: Path, placas: int, ts: str) -> dict:
     with ob.timer(log_trainer, "train.run", epochs=20):
         time.sleep(0.002)
     ob.clear_run_id()
-    return {"run_id": run_id, "logger_detector": log,
-            "logger_reporte": log_reporte, "logger_trainer": log_trainer}
+    return {
+        "run_id": run_id,
+        "logger_detector": log,
+        "logger_reporte": log_reporte,
+        "logger_trainer": log_trainer,
+    }
 
 
 def _offsets_previos(ruta_dir: Path) -> dict[str, int]:
     """Tamano previo de cada JSONL: lo que esta corrida appendea es lo suyo."""
-    return {m: (ruta_dir / f"{m}.jsonl").stat().st_size
-            if (ruta_dir / f"{m}.jsonl").exists() else 0
-            for m in ("detector", "reporte", "trainer")}
+    return {
+        m: (ruta_dir / f"{m}.jsonl").stat().st_size if (ruta_dir / f"{m}.jsonl").exists() else 0
+        for m in ("detector", "reporte", "trainer")
+    }
 
 
 def _tramo_propio(ruta: Path, desde: int) -> list[dict]:
@@ -95,7 +100,7 @@ def _tramo_propio(ruta: Path, desde: int) -> list[dict]:
     """
     bruto = ruta.read_bytes()
     ini = desde
-    if ini > 0 and bruto[ini - 1:ini] != b"\n":
+    if ini > 0 and bruto[ini - 1 : ini] != b"\n":
         salto = bruto.find(b"\n", ini - 1)
         ini = len(bruto) if salto == -1 else salto + 1
     lineas = [l for l in bruto[ini:].decode("utf-8").splitlines() if l.strip()]
@@ -108,8 +113,7 @@ def _tramo_propio(ruta: Path, desde: int) -> list[dict]:
     return recs
 
 
-def _verificar(ruta_dir: Path, run_id: str, placas: int,
-               desde: dict[str, int]) -> list[dict]:
+def _verificar(ruta_dir: Path, run_id: str, placas: int, desde: dict[str, int]) -> list[dict]:
     """Re-lee el tramo que esta corrida escribio y verifica el contrato nucleo."""
     todos: list[dict] = []
     for modulo in ("detector", "reporte", "trainer"):
@@ -143,8 +147,7 @@ def _verificar(ruta_dir: Path, run_id: str, placas: int,
     if por_evento.get("run.config", 0) != 1:
         _falla("detector: falta (o abunda) el run.config del lote")
     for fase in FASES:
-        if por_evento.get(f"{fase}.start") != placas or \
-           por_evento.get(f"{fase}.finish") != placas:
+        if por_evento.get(f"{fase}.start") != placas or por_evento.get(f"{fase}.finish") != placas:
             _falla(f"detector: faltan pares start/finish de {fase}")
 
     terminados = [r for r in det_run if r["event"].endswith(".finish")]
@@ -168,18 +171,30 @@ def _tabla_fase(recs: list[dict]) -> str:
         if r["event"].endswith(".finish") and isinstance(r.get("ms"), (int, float)):
             ms_fase.setdefault(r["event"], []).append(r["ms"])
     for evento, valores in sorted(ms_fase.items()):
-        lineas.append(f"  {evento:<28} n={len(valores):3}  "
-                      f"min={min(valores):6.1f}  max={max(valores):6.1f} ms")
+        lineas.append(
+            f"  {evento:<28} n={len(valores):3}  "
+            f"min={min(valores):6.1f}  max={max(valores):6.1f} ms"
+        )
     return "\n".join(lineas)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Demo auto-verificada del esquema de logs de Poly-X")
-    parser.add_argument("--log-dir", default=None, metavar="DIR",
-                        help="carpeta destino (defecto: la carpeta real de logs)")
-    parser.add_argument("--placas", type=int, default=10, metavar="N",
-                        help="placas simuladas en el lote (defecto: 10)")
+        description="Demo auto-verificada del esquema de logs de Poly-X"
+    )
+    parser.add_argument(
+        "--log-dir",
+        default=None,
+        metavar="DIR",
+        help="carpeta destino (defecto: la carpeta real de logs)",
+    )
+    parser.add_argument(
+        "--placas",
+        type=int,
+        default=10,
+        metavar="N",
+        help="placas simuladas en el lote (defecto: 10)",
+    )
     args = parser.parse_args()
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
@@ -191,7 +206,7 @@ def main() -> int:
     print(f"[demo] carpeta de logs: {ruta_dir}")
     print(f"[demo] simulando un lote de {args.placas} placas, run_id demo_{ts}")
 
-    desde = _offsets_previos(ruta_dir)   # el historico ajeno no se juzga
+    desde = _offsets_previos(ruta_dir)  # el historico ajeno no se juzga
     _simular_lote(ruta_dir, args.placas, ts)
     recs = _verificar(ruta_dir, f"demo_{ts}", args.placas, desde)
 
@@ -211,10 +226,14 @@ def main() -> int:
     print(_tabla_fase(recs))
     print()
     print("Recetas jq para seguir el log en vivo (tarjeta de la 2 AM):")
-    print("  jq -c 'select(.event | endswith(\".finish\")) | {ts, event, ms}' "
-          f"'{ruta_dir / 'detector.jsonl'}'")
-    print(f"  jq -c 'select(.run_id==\"demo_{ts}\") | {{ts, event, ms}}' "
-          f"'{ruta_dir / 'detector.jsonl'}'")
+    print(
+        "  jq -c 'select(.event | endswith(\".finish\")) | {ts, event, ms}' "
+        f"'{ruta_dir / 'detector.jsonl'}'"
+    )
+    print(
+        f"  jq -c 'select(.run_id==\"demo_{ts}\") | {{ts, event, ms}}' "
+        f"'{ruta_dir / 'detector.jsonl'}'"
+    )
     return 0
 
 

@@ -24,6 +24,7 @@ por test (``tmp_path / "_polyx_logs"``), limpia variables de entorno ambientales
 (``POLYX_LOG``, ``POLYX_LOG_TOTAL_CAP_MB``) y cierra y reinicia los loggers y el
 run_id en setup y teardown.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -60,11 +61,11 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
     ob.clear_run_id()
 
 
-
 @pytest.fixture
 def qapp():
     """Una sola QApplication por módulo: PySide6 no permite recrearla."""
     from PySide6.QtWidgets import QApplication
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])

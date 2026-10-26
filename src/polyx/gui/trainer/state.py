@@ -1,4 +1,5 @@
 """Shared state of the Trainer across all the pages."""
+
 from __future__ import annotations
 
 import re
@@ -21,50 +22,98 @@ _DEVICE_RE = re.compile(r"^(cpu|mps|cuda(:\d+)?|\d+(,\d+)*)$", re.IGNORECASE)
 # ────────────────────────────────────────────────────────────────────
 PRESETS = {
     "Balanceado (recomendado)": {
-        "epochs": 150, "imgsz": 1280, "batch": 8, "lr0": 0.01,
-        "weight_decay": 0.0005, "momentum": 0.937, "warmup_epochs": 5,
-        "close_mosaic": 15, "label_smoothing": 0.05, "patience": 50,
-        "save_period": 20, "amp": True, "cos_lr": False, "cache": "disk",
+        "epochs": 150,
+        "imgsz": 1280,
+        "batch": 8,
+        "lr0": 0.01,
+        "weight_decay": 0.0005,
+        "momentum": 0.937,
+        "warmup_epochs": 5,
+        "close_mosaic": 15,
+        "label_smoothing": 0.05,
+        "patience": 50,
+        "save_period": 20,
+        "amp": True,
+        "cos_lr": False,
+        "cache": "disk",
         "aug_level": "Medio",
     },
     "Rápido (poco data)": {
-        "epochs": 100, "imgsz": 960, "batch": 16, "lr0": 0.01,
-        "weight_decay": 0.0005, "momentum": 0.937, "warmup_epochs": 3,
-        "close_mosaic": 10, "label_smoothing": 0.0, "patience": 30,
-        "save_period": 10, "amp": True, "cos_lr": False, "cache": "ram",
+        "epochs": 100,
+        "imgsz": 960,
+        "batch": 16,
+        "lr0": 0.01,
+        "weight_decay": 0.0005,
+        "momentum": 0.937,
+        "warmup_epochs": 3,
+        "close_mosaic": 10,
+        "label_smoothing": 0.0,
+        "patience": 30,
+        "save_period": 10,
+        "amp": True,
+        "cos_lr": False,
+        "cache": "ram",
         "aug_level": "Fuerte",
     },
     "Largo (paper-quality)": {
-        "epochs": 300, "imgsz": 1280, "batch": 8, "lr0": 0.005,
-        "weight_decay": 0.0005, "momentum": 0.937, "warmup_epochs": 5,
-        "close_mosaic": 20, "label_smoothing": 0.10, "patience": 100,
-        "save_period": 25, "amp": True, "cos_lr": True, "cache": "disk",
+        "epochs": 300,
+        "imgsz": 1280,
+        "batch": 8,
+        "lr0": 0.005,
+        "weight_decay": 0.0005,
+        "momentum": 0.937,
+        "warmup_epochs": 5,
+        "close_mosaic": 20,
+        "label_smoothing": 0.10,
+        "patience": 100,
+        "save_period": 25,
+        "amp": True,
+        "cos_lr": True,
+        "cache": "disk",
         "aug_level": "Medio",
     },
     "Máximo imgsz (alta resolución)": {
-        "epochs": 200, "imgsz": 1920, "batch": 4, "lr0": 0.01,
-        "weight_decay": 0.0005, "momentum": 0.937, "warmup_epochs": 5,
-        "close_mosaic": 15, "label_smoothing": 0.05, "patience": 60,
-        "save_period": 20, "amp": True, "cos_lr": False, "cache": "disk",
+        "epochs": 200,
+        "imgsz": 1920,
+        "batch": 4,
+        "lr0": 0.01,
+        "weight_decay": 0.0005,
+        "momentum": 0.937,
+        "warmup_epochs": 5,
+        "close_mosaic": 15,
+        "label_smoothing": 0.05,
+        "patience": 60,
+        "save_period": 20,
+        "amp": True,
+        "cos_lr": False,
+        "cache": "disk",
         "aug_level": "Medio",
     },
     "Personalizado": {},  # marker
 }
 
 AUG_LEVELS = {
-    "Ninguno":  dict(hsv_h=0.0,  hsv_s=0.0,  hsv_v=0.0,  fliplr=0.0, mosaic=0.0, mixup=0.0, copy_paste=0.0),
-    "Suave":    dict(hsv_h=0.01, hsv_s=0.5,  hsv_v=0.3,  fliplr=0.5, mosaic=0.5, mixup=0.0, copy_paste=0.0),
-    "Medio":    dict(hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,  fliplr=0.5, mosaic=1.0, mixup=0.1, copy_paste=0.1),
-    "Fuerte":   dict(hsv_h=0.02, hsv_s=0.9,  hsv_v=0.5,  fliplr=0.5, mosaic=1.0, mixup=0.2, copy_paste=0.3),
+    "Ninguno": dict(
+        hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, fliplr=0.0, mosaic=0.0, mixup=0.0, copy_paste=0.0
+    ),
+    "Suave": dict(
+        hsv_h=0.01, hsv_s=0.5, hsv_v=0.3, fliplr=0.5, mosaic=0.5, mixup=0.0, copy_paste=0.0
+    ),
+    "Medio": dict(
+        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, fliplr=0.5, mosaic=1.0, mixup=0.1, copy_paste=0.1
+    ),
+    "Fuerte": dict(
+        hsv_h=0.02, hsv_s=0.9, hsv_v=0.5, fliplr=0.5, mosaic=1.0, mixup=0.2, copy_paste=0.3
+    ),
 }
 
 
 # ────────────────────────────────────────────────────────────────────
 @dataclass
 class ModelConfig:
-    family: str = "v8"      # `"v8"` or `"v11"`
-    size: str = "m"          # n / s / m / l / x
-    task: str = "detect"     # `"detect"` or `"segment"`
+    family: str = "v8"  # `"v8"` or `"v11"`
+    size: str = "m"  # n / s / m / l / x
+    task: str = "detect"  # `"detect"` or `"segment"`
     custom_weights: Optional[Path] = None
     preset_name: str = "Balanceado (recomendado)"
     # Train v8 and v11 in sequence with the SAME configuration, to attribute
@@ -110,7 +159,7 @@ class DatasetConfig:
 
 @dataclass
 class TrainParams:
-    imgsz: int = 1280              # default HIGH (practical max) per user requirement
+    imgsz: int = 1280  # default HIGH (practical max) per user requirement
     epochs: int = 150
     batch: int = 8
     lr0: float = 0.01
@@ -123,7 +172,7 @@ class TrainParams:
     save_period: int = 20
     amp: bool = True
     cos_lr: bool = False
-    cache: str = "disk"            # `"disk"`, `"ram"`, or `"False"`
+    cache: str = "disk"  # `"disk"`, `"ram"`, or `"False"`
     # After training, re-select the checkpoint by evaluating it only on the real
     # sediment of the validation split. best.pt comes from the global mAP, which in a mixed dataset
     # is dominated by the laboratory plates: the wrong domain for detection
@@ -134,7 +183,7 @@ class TrainParams:
     device: str = field(default_factory=device_available)
     workers: int = 8
     project_name: str = "polyx_train"
-    run_name: str = ""             # empty = auto-date
+    run_name: str = ""  # empty = auto-date
 
 
 @dataclass
@@ -174,9 +223,9 @@ class TrainerState(QObject):
     aug_changed = Signal()
 
     train_started = Signal()
-    train_epoch = Signal(object)        # EpochMetrics
-    train_log = Signal(str)             # Ultralytics log line
-    train_finished = Signal(str)        # path to best.pt
+    train_epoch = Signal(object)  # EpochMetrics
+    train_log = Signal(str)  # Ultralytics log line
+    train_finished = Signal(str)  # path to best.pt
     train_aborted = Signal()
     train_failed = Signal(str)
 
@@ -197,11 +246,19 @@ class TrainerState(QObject):
         self._abort = False
         self.run_dir: Optional[Path] = None
 
-    def is_running(self) -> bool: return self._running
-    def set_running(self, v: bool): self._running = v
-    def request_abort(self): self._abort = True
+    def is_running(self) -> bool:
+        return self._running
+
+    def set_running(self, v: bool):
+        self._running = v
+
+    def request_abort(self):
+        self._abort = True
+
     def consume_abort(self) -> bool:
-        a = self._abort; self._abort = False; return a
+        a = self._abort
+        self._abort = False
+        return a
 
     def apply_preset(self, name: str):
         if name not in PRESETS or name == "Personalizado":
@@ -240,7 +297,9 @@ def _in_range(value, lo: float, hi: float) -> bool:
     return v is not None and lo <= v <= hi
 
 
-def validate_training_config(state: TrainerState, *, con_dataset: bool = True) -> tuple[bool, list[str]]:
+def validate_training_config(
+    state: TrainerState, *, con_dataset: bool = True
+) -> tuple[bool, list[str]]:
     """Strict pre-flight validation before launching a training.
 
     Returns (ok, messages). ok=False if something prevents or compromises
@@ -305,14 +364,22 @@ def validate_training_config(state: TrainerState, *, con_dataset: bool = True) -
     if not _in_range(p.workers, 0, 64):
         _error(f"workers fuera de rango: {p.workers} (use un entero entre 0 y 64).")
     cache = p.cache
-    if not (isinstance(cache, bool)
-            or (isinstance(cache, str) and cache.strip().lower() in ("ram", "disk", "true", "false"))):
+    if not (
+        isinstance(cache, bool)
+        or (isinstance(cache, str) and cache.strip().lower() in ("ram", "disk", "true", "false"))
+    ):
         _error(f"cache inválido: {cache!r} (use «disk», «ram», «true» o «false»).")
 
     a = state.aug
-    for name_2, value in (("hsv_h", a.hsv_h), ("hsv_s", a.hsv_s), ("hsv_v", a.hsv_v),
-                         ("fliplr", a.fliplr), ("mosaic", a.mosaic),
-                         ("mixup", a.mixup), ("copy_paste", a.copy_paste)):
+    for name_2, value in (
+        ("hsv_h", a.hsv_h),
+        ("hsv_s", a.hsv_s),
+        ("hsv_v", a.hsv_v),
+        ("fliplr", a.fliplr),
+        ("mosaic", a.mosaic),
+        ("mixup", a.mixup),
+        ("copy_paste", a.copy_paste),
+    ):
         if not _in_range(value, 0.0, 1.0):
             _error(f"{name_2} fuera de rango: {value} (use un valor en [0, 1]).")
 

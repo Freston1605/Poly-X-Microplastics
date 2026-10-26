@@ -1,4 +1,5 @@
 """Page 5 — `Ejecutar`. Starts the inference in the background and shows previews."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,10 +55,15 @@ class _PreviewSlot(QFrame):
         ba = QByteArray(data)
         pm = QPixmap()
         pm.loadFromData(ba, "PNG")
-        if pm.isNull(): return
+        if pm.isNull():
+            return
         # Scale to the available width
-        scaled = pm.scaled(self.preview.width() or 320, self.preview.height() or 200,
-                           Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scaled = pm.scaled(
+            self.preview.width() or 320,
+            self.preview.height() or 200,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation,
+        )
         self.preview.setPixmap(scaled)
         if name:
             self.lbl_title.setText(f"{self.lbl_title.text().split(' — ')[0]} — {name}")
@@ -66,9 +72,9 @@ class _PreviewSlot(QFrame):
 class RunPage(DetectorPage):
     STEP_N = 5
     STEP_TITLE = tr("Ejecutar")
-    STEP_DESCRIPTION = (
-        tr("Inicia la inferencia. Verás progreso en vivo, previews de imágenes anotadas "
-        "y podrás cancelar en cualquier momento.")
+    STEP_DESCRIPTION = tr(
+        "Inicia la inferencia. Verás progreso en vivo, previews de imágenes anotadas "
+        "y podrás cancelar en cualquier momento."
     )
 
     def refresh(self):
@@ -78,6 +84,7 @@ class RunPage(DetectorPage):
     def _refresh_warning_tiling(self):
         """Summarizes whether the photos will be tiled, and how much longer it will take."""
         from polyx.core.detect.yolo import policy_tiling, size_image
+
         p = self.state.params
         if not self.state.images:
             self.lbl_tiling.setText("")
@@ -89,32 +96,48 @@ class RunPage(DetectorPage):
             return
 
         if p.tiling == "nunca":
-            self.lbl_tiling.setText(tr(
-                "Troceado desactivado: cada foto entra completa a imgsz {}. "
-                "En fotos grandes las partículas pequeñas pueden desaparecer al "
-                "reescalar.").format(p.imgsz))
+            self.lbl_tiling.setText(
+                tr(
+                    "Troceado desactivado: cada foto entra completa a imgsz {}. "
+                    "En fotos grandes las partículas pequeñas pueden desaparecer al "
+                    "reescalar."
+                ).format(p.imgsz)
+            )
             return
 
         plan = policy_tiling(
-            wh[0], wh[1], p.imgsz,
+            wh[0],
+            wh[1],
+            p.imgsz,
             threshold_px=0 if p.tiling == "siempre" else p.tiling_threshold_px,
-            tile=p.tiling_tile, overlap=p.tiling_overlap)
+            tile=p.tiling_tile,
+            overlap=p.tiling_overlap,
+        )
 
         if plan is None:
-            self.lbl_tiling.setText(tr(
-                "Las fotos ({}×{} px) no llegan al umbral de "
-                "{} px: se analizan de una pieza.").format(
-                    wh[0], wh[1], p.tiling_threshold_px))
+            self.lbl_tiling.setText(
+                tr(
+                    "Las fotos ({}×{} px) no llegan al umbral de {} px: se analizan de una pieza."
+                ).format(wh[0], wh[1], p.tiling_threshold_px)
+            )
         else:
-            self.lbl_tiling.setText(tr(
-                "⚠ Fotos grandes ({}×{} px): se analizarán en "
-                "{} recortes de {} px con "
-                "{}% de solape. Va a tardar unas "
-                "{}× más.<br>"
-                "El recorte es solo para que el modelo pueda detectar: los "
-                "resultados y el informe se entregan sobre la foto completa.").format(
-                    wh[0], wh[1], plan['n_tiles'], plan['tile'],
-                    int(plan['overlap'] * 100), plan['n_tiles']))
+            self.lbl_tiling.setText(
+                tr(
+                    "⚠ Fotos grandes ({}×{} px): se analizarán en "
+                    "{} recortes de {} px con "
+                    "{}% de solape. Va a tardar unas "
+                    "{}× más.<br>"
+                    "El recorte es solo para que el modelo pueda detectar: los "
+                    "resultados y el informe se entregan sobre la foto completa."
+                ).format(
+                    wh[0],
+                    wh[1],
+                    plan["n_tiles"],
+                    plan["tile"],
+                    int(plan["overlap"] * 100),
+                    plan["n_tiles"],
+                )
+            )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
@@ -208,10 +231,16 @@ class RunPage(DetectorPage):
             return
         active = self.state.active_models()
         if not active:
-            QMessageBox.warning(self, tr("Faltan modelos"), tr("Carga al menos un modelo .pt en la pestaña Modelos."))
+            QMessageBox.warning(
+                self,
+                tr("Faltan modelos"),
+                tr("Carga al menos un modelo .pt en la pestaña Modelos."),
+            )
             return
         if not self.state.images:
-            QMessageBox.warning(self, tr("Sin imágenes"), tr("Selecciona imágenes en la pestaña Imágenes."))
+            QMessageBox.warning(
+                self, tr("Sin imágenes"), tr("Selecciona imágenes en la pestaña Imágenes.")
+            )
             return
         # Update each preview title with the model alias
         for i, slot in enumerate(active):
@@ -233,7 +262,8 @@ class RunPage(DetectorPage):
         self.runner.start()
 
     def _stop(self):
-        if not self.state.is_running(): return
+        if not self.state.is_running():
+            return
         self.state.request_abort()
         self.lbl_progress_info.setText(tr("Deteniendo…"))
 
@@ -242,14 +272,18 @@ class RunPage(DetectorPage):
         if d and d.exists():
             open_in_system(str(d))
         else:
-            QMessageBox.information(self, tr("Sin resultados"), tr("Aún no se ha ejecutado ninguna corrida."))
+            QMessageBox.information(
+                self, tr("Sin resultados"), tr("Aún no se ha ejecutado ninguna corrida.")
+            )
 
     def _open_review(self):
         if not any(self.state.results.values()):
-            QMessageBox.information(self, tr("Sin resultados"),
-                                    tr("Ejecuta una detección primero."))
+            QMessageBox.information(
+                self, tr("Sin resultados"), tr("Ejecuta una detección primero.")
+            )
             return
         from ..review_dialog import ReviewDialog
+
         dlg = ReviewDialog(self.state, self)
         dlg.showMaximized()
         dlg.exec()
@@ -279,7 +313,8 @@ class RunPage(DetectorPage):
         self.btn_stop.setEnabled(False)
         self.btn_review.setEnabled(True)
         self.lbl_progress_info.setText(
-            tr("Listo. Pulsa «Revisar en pantalla grande» para inspeccionar y corregir."))
+            tr("Listo. Pulsa «Revisar en pantalla grande» para inspeccionar y corregir.")
+        )
         self.state.run_finished.emit()
 
     def _on_aborted(self):

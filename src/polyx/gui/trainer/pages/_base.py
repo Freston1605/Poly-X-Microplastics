@@ -1,4 +1,5 @@
 """Base page of the Trainer (header with icon+title, not a number)."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -42,7 +43,9 @@ class TrainerPage(QWidget):
         if self.PAGE_DESCRIPTION:
             desc = QLabel(self.PAGE_DESCRIPTION)
             desc.setWordWrap(True)
-            desc.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none; margin-left: 52px;")
+            desc.setStyleSheet(
+                f"color: {T.INK3}; font-size: 10pt; border: none; margin-left: 52px;"
+            )
             outer.addWidget(desc)
 
         self.body = QVBoxLayout()

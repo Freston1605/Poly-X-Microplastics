@@ -8,6 +8,7 @@ so the lab chemist does not train blindly on a bad split.
 
 Public function: ``audit_dataset(yaml_path) -> DatasetAudit``.
 Pure Python (no Qt) → testable headless."""
+
 from __future__ import annotations
 
 import statistics
@@ -25,7 +26,7 @@ LEVEL_ERROR = "error"
 
 @dataclass
 class Finding:
-    level: str           # ok | warn | error
+    level: str  # ok | warn | error
     title: str
     detail: str = ""
 
@@ -35,8 +36,10 @@ class DatasetAudit:
     findings: List[Finding] = field(default_factory=list)
     class_names: List[str] = field(default_factory=list)
     per_class: Dict[str, Dict[str, int]] = field(default_factory=dict)  # split -> {class: n}
-    box_area_median: Dict[str, float] = field(default_factory=dict)     # class -> median normalised area
-    ok: bool = True      # False if there is any Finding at error level
+    box_area_median: Dict[str, float] = field(
+        default_factory=dict
+    )  # class -> median normalised area
+    ok: bool = True  # False if there is any Finding at error level
 
     def add(self, level: str, title: str, detail: str = ""):
         self.findings.append(Finding(level, title, detail))
@@ -47,6 +50,7 @@ class DatasetAudit:
 # ──────────────────────────────────────────────────────────────────
 def _load_yaml(path: Path) -> dict:
     import yaml
+
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
@@ -72,7 +76,7 @@ def _label_for(img: Path) -> Optional[Path]:
     parts = list(img.parts)
     for i in range(len(parts) - 1, -1, -1):
         if parts[i].lower() == "images":
-            cand = Path(*(parts[:i] + ["labels"] + parts[i + 1:])).with_suffix(".txt")
+            cand = Path(*(parts[:i] + ["labels"] + parts[i + 1 :])).with_suffix(".txt")
             return cand if cand.exists() else None
     sib = img.parent.parent / "labels" / (img.stem + ".txt")
     if sib.exists():
@@ -141,10 +145,17 @@ def _scan_split(images: List[Path]) -> dict:
             seen.add(key)
         if n_boxes == 0:
             empty += 1
-    return dict(per_class=dict(per_class), areas=dict(areas),
-               per_class_per_img={k: dict(v) for k, v in per_class_per_img.items()},
-               degenerate=degenerate, out_range=out_range, duplicates=duplicates,
-               empty=empty, no_label=no_label, n_imgs=n_imgs)
+    return dict(
+        per_class=dict(per_class),
+        areas=dict(areas),
+        per_class_per_img={k: dict(v) for k, v in per_class_per_img.items()},
+        degenerate=degenerate,
+        out_range=out_range,
+        duplicates=duplicates,
+        empty=empty,
+        no_label=no_label,
+        n_imgs=n_imgs,
+    )
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -185,16 +196,22 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
         # be trained or validated. Without this check the audit came out «ok»
         # with a data.yaml that only had 'names'.
         if not split_value and split in ("train", "val"):
-            audit.add(LEVEL_ERROR, f"Sin split {split} declarado",
-                      f"El data.yaml no tiene clave '{split}'. Ultralytics la "
-                      "necesita para entrenar y medir métricas.")
+            audit.add(
+                LEVEL_ERROR,
+                f"Sin split {split} declarado",
+                f"El data.yaml no tiene clave '{split}'. Ultralytics la "
+                "necesita para entrenar y medir métricas.",
+            )
         # Path declared but missing -> almost always a data.yaml moved from another PC
         elif split_value and (resolved is None or not resolved.exists()):
             lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
-            audit.add(lvl, f"Ruta de {split} no existe",
-                      f"El data.yaml apunta a «{resolved}», que no existe en este equipo. "
-                      "Suele pasar al mover el proyecto de carpeta o de PC: corrige las "
-                      "rutas del data.yaml (o usa rutas relativas).")
+            audit.add(
+                lvl,
+                f"Ruta de {split} no existe",
+                f"El data.yaml apunta a «{resolved}», que no existe en este equipo. "
+                "Suele pasar al mover el proyecto de carpeta o de PC: corrige las "
+                "rutas del data.yaml (o usa rutas relativas).",
+            )
         imgs = _iter_images(resolved, yaml_dir, root)
         scans[split] = _scan_split(imgs)
         scans[split]["path_exists"] = bool(resolved and resolved.exists())
@@ -211,11 +228,15 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     if not audit.class_names:
         audit.add(LEVEL_ERROR, "Sin clases definidas", "El data.yaml no tiene clave 'names'.")
     if tr["n_imgs"] == 0 and tr.get("path_exists"):
-        audit.add(LEVEL_ERROR, "Train vacío",
-                  "La carpeta de train existe pero no contiene imágenes.")
+        audit.add(
+            LEVEL_ERROR, "Train vacío", "La carpeta de train existe pero no contiene imágenes."
+        )
     if vl["n_imgs"] == 0 and vl.get("path_exists"):
-        audit.add(LEVEL_ERROR, "Val vacío",
-                  "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas.")
+        audit.add(
+            LEVEL_ERROR,
+            "Val vacío",
+            "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas.",
+        )
 
     train_classes = set(tr["per_class"].keys())
     val_classes = set(vl["per_class"].keys())
@@ -224,17 +245,21 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     missing_in_val = train_classes - val_classes
     if missing_in_val and vl["n_imgs"] > 0:
         names_2 = ", ".join(sorted(cls_name(c) for c in missing_in_val))
-        audit.add(LEVEL_ERROR,
-                  f"Clases sin validación: {names_2}",
-                  "Estas clases tienen ejemplos en train pero CERO en val. El mAP "
-                  "no medirá su rendimiento (te dará una falsa sensación de éxito). "
-                  "Agrega imágenes de estas clases al split de validación.")
+        audit.add(
+            LEVEL_ERROR,
+            f"Clases sin validación: {names_2}",
+            "Estas clases tienen ejemplos en train pero CERO en val. El mAP "
+            "no medirá su rendimiento (te dará una falsa sensación de éxito). "
+            "Agrega imágenes de estas clases al split de validación.",
+        )
     # Val with a single class while train has several
     if len(val_classes) == 1 and len(train_classes) > 1:
-        audit.add(LEVEL_ERROR,
-                  f"Validación de una sola clase ({cls_name(next(iter(val_classes)))})",
-                  "El set de validación contiene una única clase pese a que el "
-                  "modelo aprende varias. Las métricas multiclase no son válidas.")
+        audit.add(
+            LEVEL_ERROR,
+            f"Validación de una sola clase ({cls_name(next(iter(val_classes)))})",
+            "El set de validación contiene una única clase pese a que el "
+            "modelo aprende varias. Las métricas multiclase no son válidas.",
+        )
 
     # Class imbalance in train
     counts = tr["per_class"]
@@ -243,9 +268,12 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
         if mn > 0 and mx / mn >= 10:
             top = cls_name(max(counts, key=counts.get))
             bot = cls_name(min(counts, key=counts.get))
-            audit.add(LEVEL_WARN, "Desbalance fuerte de clases en train",
-                      f"«{top}» tiene {mx} cajas y «{bot}» solo {mn} "
-                      f"({mx/mn:.0f}× más). Considera balancear o usar pesos por clase.")
+            audit.add(
+                LEVEL_WARN,
+                "Desbalance fuerte de clases en train",
+                f"«{top}» tiene {mx} cajas y «{bot}» solo {mn} "
+                f"({mx / mn:.0f}× más). Considera balancear o usar pesos por clase.",
+            )
 
     # Dominance by a few images per class (low diversity)
     for c, per_img in tr["per_class_per_img"].items():
@@ -253,10 +281,12 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
         if total >= 50 and per_img:
             top_img, top_n = max(per_img.items(), key=lambda kv: kv[1])
             if top_n / total >= 0.40:
-                audit.add(LEVEL_WARN,
-                          f"«{cls_name(c)}»: poca diversidad",
-                          f"El {top_n/total*100:.0f}% de sus cajas viene de una sola "
-                          f"imagen ({top_img}). El modelo puede sobreajustar a esa escena.")
+                audit.add(
+                    LEVEL_WARN,
+                    f"«{cls_name(c)}»: poca diversidad",
+                    f"El {top_n / total * 100:.0f}% de sus cajas viene de una sola "
+                    f"imagen ({top_img}). El modelo puede sobreajustar a esa escena.",
+                )
 
     # Classes with almost identical size (hard to separate if only colour changes)
     meds = audit.box_area_median
@@ -267,33 +297,53 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             if aa > 0 and ab > 0:
                 ratio = max(aa, ab) / min(aa, ab)
                 if ratio < 1.25:
-                    audit.add(LEVEL_WARN,
-                              f"«{na}» y «{nb}» tienen tamaño casi idéntico",
-                              "Sus cajas son del mismo tamaño, así que el modelo solo "
-                              "puede distinguirlas por color/textura. Si además se "
-                              "parecen visualmente, esperá confusión entre ambas.")
+                    audit.add(
+                        LEVEL_WARN,
+                        f"«{na}» y «{nb}» tienen tamaño casi idéntico",
+                        "Sus cajas son del mismo tamaño, así que el modelo solo "
+                        "puede distinguirlas por color/textura. Si además se "
+                        "parecen visualmente, esperá confusión entre ambas.",
+                    )
 
     # Mechanical labelling problems (train+val combined)
     for split, sc in (("train", tr), ("val", vl)):
         if sc["degenerate"]:
-            audit.add(LEVEL_WARN, f"Cajas degeneradas en {split}: {sc['degenerate']}",
-                      "Cajas con ancho/alto ~0. Revisa la anotación.")
+            audit.add(
+                LEVEL_WARN,
+                f"Cajas degeneradas en {split}: {sc['degenerate']}",
+                "Cajas con ancho/alto ~0. Revisa la anotación.",
+            )
         if sc["out_range"]:
-            audit.add(LEVEL_ERROR, f"Coordenadas fuera de [0,1] en {split}: {sc['out_range']}",
-                      "Labels mal normalizadas; YOLO las interpretará mal.")
+            audit.add(
+                LEVEL_ERROR,
+                f"Coordenadas fuera de [0,1] en {split}: {sc['out_range']}",
+                "Labels mal normalizadas; YOLO las interpretará mal.",
+            )
         if sc["duplicates"]:
-            audit.add(LEVEL_WARN, f"Cajas duplicadas en {split}: {sc['duplicates']}",
-                      "Misma caja repetida en un archivo.")
+            audit.add(
+                LEVEL_WARN,
+                f"Cajas duplicadas en {split}: {sc['duplicates']}",
+                "Misma caja repetida en un archivo.",
+            )
         if sc["no_label"]:
-            audit.add(LEVEL_WARN, f"Imágenes sin label en {split}: {sc['no_label']}",
-                      "Se entrenarán como fondo (sin objetos). Confirma que es intencional.")
+            audit.add(
+                LEVEL_WARN,
+                f"Imágenes sin label en {split}: {sc['no_label']}",
+                "Se entrenarán como fondo (sin objetos). Confirma que es intencional.",
+            )
 
     # Size of val
     if 0 < vl["n_imgs"] < 5:
-        audit.add(LEVEL_WARN, f"Validación muy pequeña ({vl['n_imgs']} imágenes)",
-                  "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20.")
+        audit.add(
+            LEVEL_WARN,
+            f"Validación muy pequeña ({vl['n_imgs']} imágenes)",
+            "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20.",
+        )
 
     if audit.ok and not any(f.level == LEVEL_WARN for f in audit.findings):
-        audit.add(LEVEL_OK, "Dataset sin problemas detectados",
-                  "Distribución de clases, validación y formato se ven correctos.")
+        audit.add(
+            LEVEL_OK,
+            "Dataset sin problemas detectados",
+            "Distribución de clases, validación y formato se ven correctos.",
+        )
     return audit

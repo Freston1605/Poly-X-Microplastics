@@ -26,6 +26,7 @@ Uso::
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -74,9 +75,7 @@ def construir_morfologias(
 
     # 2. fragmento_irregular: poligono concavo
     img_irreg = _crear_lienzo(lado, fondo)
-    pts_irreg = np.array(
-        [[75, 75], [130, 75], [130, 130], [105, 108], [75, 130]], dtype=np.int32
-    )
+    pts_irreg = np.array([[75, 75], [130, 75], [130, 130], [105, 108], [75, 130]], dtype=np.int32)
     cv2.fillPoly(img_irreg, [pts_irreg], color_brillo)
     formas.append(("fragmento_irregular", img_irreg, _obtener_caja_del_primer_plano(img_irreg)))
 

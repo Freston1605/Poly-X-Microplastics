@@ -1,4 +1,5 @@
 """Enables `python -m polyx.gui.detector`."""
+
 import sys
 
 from PySide6.QtCore import QCoreApplication, Qt

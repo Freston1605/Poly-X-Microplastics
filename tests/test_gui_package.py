@@ -20,6 +20,7 @@ frontera en tres frentes:
 Los escaneos usan ``ast.walk`` a proposito: los imports perezosos dentro de
 funciones y clases tambien cruzan la frontera y tienen que cazarles.
 """
+
 from __future__ import annotations
 
 import ast
@@ -73,9 +74,7 @@ def _fuentes_de_gui() -> list[Path]:
 
 def _fuentes_fuera_de_gui() -> list[Path]:
     """Rutas de los .py de polyx/ que NO estan en polyx/gui."""
-    return sorted(
-        ruta for ruta in (RAIZ / "src" / "polyx").rglob("*.py") if not _es_de_gui(ruta)
-    )
+    return sorted(ruta for ruta in (RAIZ / "src" / "polyx").rglob("*.py") if not _es_de_gui(ruta))
 
 
 def _partes_del_paquete(ruta: Path) -> list[str]:
@@ -230,8 +229,7 @@ def test_fuera_de_gui_no_importa_qt(ruta: Path):
     """
     prohibidos = _imports_qt(_leer(ruta))
     assert not prohibidos, (
-        f"{ruta.relative_to(RAIZ).as_posix()} importa Qt fuera de polyx/gui: "
-        f"{prohibidos}"
+        f"{ruta.relative_to(RAIZ).as_posix()} importa Qt fuera de polyx/gui: {prohibidos}"
     )
 
 
@@ -240,15 +238,14 @@ def test_el_escaneo_interno_cubre_los_modulos_movidos():
     """Guardia contra un escaneo vacio: los ocho modulos movidos se miran."""
     escaneados = {ruta.as_posix() for ruta in _fuentes_de_gui()}
     faltan = [
-        f"polyx/gui/{modulo}.py" for modulo in MODULOS_MOVIDOS
+        f"polyx/gui/{modulo}.py"
+        for modulo in MODULOS_MOVIDOS
         if (PAQUETE_GUI / f"{modulo}.py").as_posix() not in escaneados
     ]
     assert not faltan, f"los escaneos no cubren los modulos movidos: {faltan}"
 
 
-@pytest.mark.parametrize(
-    "ruta", _fuentes_de_gui(), ids=lambda r: r.relative_to(RAIZ).as_posix()
-)
+@pytest.mark.parametrize("ruta", _fuentes_de_gui(), ids=lambda r: r.relative_to(RAIZ).as_posix())
 def test_la_gui_no_importa_el_paquete_heredado(ruta: Path):
     """Ningun modulo de polyx/gui importa el paquete de re-export inexistente.
 
@@ -320,12 +317,8 @@ def test_el_escanner_detecta_violaciones_sinteticas():
     """
     # Qt fuera de la GUI, tanto absoluto como importado dentro de una
     # funcion (ast.walk tiene que bajar ahi).
-    assert _imports_qt(ast.parse("import PySide6.QtWidgets\n")) == [
-        "PySide6.QtWidgets"
-    ]
-    assert _imports_qt(ast.parse("from PySide6.QtCore import QTimer\n")) == [
-        "PySide6.QtCore"
-    ]
+    assert _imports_qt(ast.parse("import PySide6.QtWidgets\n")) == ["PySide6.QtWidgets"]
+    assert _imports_qt(ast.parse("from PySide6.QtCore import QTimer\n")) == ["PySide6.QtCore"]
     anidado = ast.parse("def arrancar():\n    import PyQt5.QtGui\n")
     assert _imports_qt(anidado) == ["PyQt5.QtGui"]
 
@@ -333,24 +326,18 @@ def test_el_escanner_detecta_violaciones_sinteticas():
     # Las dos absolutas se arman por interpolacion por el mismo motivo que
     # NOMBRE_HEREDADO: el nombre viejo no puede aparecer escrito aqui.
     partes_gui = ["polyx", "gui"]
-    fuente_absoluta = 'from polyx.core_reexport import theme\n'
-    fuente_con_submodulo = 'import polyx.core_reexport.theme\n'
-    assert _imports_heredados(
-        ast.parse(fuente_absoluta), partes_gui
-    ) == [NOMBRE_HEREDADO]
-    assert _imports_heredados(
-        ast.parse(fuente_con_submodulo), partes_gui
-    ) == [NOMBRE_HEREDADO + ".theme"]
-    assert _imports_heredados(
-        ast.parse("from ..core_reexport import theme\n"), partes_gui
-    ) == [NOMBRE_HEREDADO]
+    fuente_absoluta = "from polyx.core_reexport import theme\n"
+    fuente_con_submodulo = "import polyx.core_reexport.theme\n"
+    assert _imports_heredados(ast.parse(fuente_absoluta), partes_gui) == [NOMBRE_HEREDADO]
+    assert _imports_heredados(ast.parse(fuente_con_submodulo), partes_gui) == [
+        NOMBRE_HEREDADO + ".theme"
+    ]
+    assert _imports_heredados(ast.parse("from ..core_reexport import theme\n"), partes_gui) == [
+        NOMBRE_HEREDADO
+    ]
 
     # Y lo legitimo NO se marca: la GUI puede importar del motor y de sus
     # propios hermanos.
     assert _imports_qt(ast.parse("from polyx.core.i18n import tr\n")) == []
-    assert _imports_heredados(
-        ast.parse("from polyx.core.i18n import tr\n"), partes_gui
-    ) == []
-    assert _imports_heredados(
-        ast.parse("from .theme import INK\n"), partes_gui
-    ) == []
+    assert _imports_heredados(ast.parse("from polyx.core.i18n import tr\n"), partes_gui) == []
+    assert _imports_heredados(ast.parse("from .theme import INK\n"), partes_gui) == []

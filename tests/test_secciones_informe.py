@@ -20,6 +20,7 @@ los constructores de errores/veredicto/galeria/calibracion/profundidad y
 talla_carpetas devuelven '' -- y el ensamblador suelta esas secciones, que
 es exactamente por lo que el baseline no tiene sus <h2>.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -33,8 +34,9 @@ import pytest
 # Baseline benigno de M006/S05: solo lectura en la suite; se recaptura con
 # tools/audit/capturar_fixtures_informe.py solo ante un cambio consciente del
 # informe, actualizando sha256, pin y README juntos.
-BASELINE_HTML = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
-    / "benigna" / "informe.html"
+BASELINE_HTML = (
+    Path(__file__).resolve().parent / "fixtures" / "baseline_informe" / "benigna" / "informe.html"
+)
 
 # Las figuras del baseline son PNG base64 de matplotlib, cuyos bytes cambian
 # con el renderer/fuentes del SO incluso a la misma version pinneada. Los
@@ -54,6 +56,7 @@ def _sin_payload_figuras(html: str) -> str:
     """Reemplaza cada data-URI de PNG por el marcador constante <FIG>."""
     return _PNG_URI_RE_SECTION.sub("data:image/png;base64,<FIG>", html)
 
+
 from tests.test_render_reporte_benigno import _normalizar_figuras  # noqa: E402,F401
 
 # El baseline ya normalizado con marcador constante (solo separa estructura):
@@ -63,11 +66,20 @@ BASELINE_TXT = _sin_payload_figuras(BASELINE_HTML.read_text(encoding="utf-8"))
 
 # Constructores extraidos en S02/T01-T07 mas los que ya eran de modulo.
 CONSTRUCTORES = (
-    "_section_summary", "_section_errors", "_section_models",
-    "_section_verdict", "_section_comparison", "_section_gallery",
-    "_section_results", "_section_methods", "_section_references",
-    "_section_calibration", "_section_shape", "_section_records",
-    "_section_count", "section_depth",
+    "_section_summary",
+    "_section_errors",
+    "_section_models",
+    "_section_verdict",
+    "_section_comparison",
+    "_section_gallery",
+    "_section_results",
+    "_section_methods",
+    "_section_references",
+    "_section_calibration",
+    "_section_shape",
+    "_section_records",
+    "_section_count",
+    "section_depth",
 )
 
 
@@ -90,6 +102,7 @@ def _idioma_del_baseline(tmp_path):
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
+
     importlib.reload(rh)
 
     yield
@@ -128,10 +141,19 @@ def _precomputados(st) -> SimpleNamespace:
         for p in r.predictions:
             per_class[p.class_name] += 1
     return SimpleNamespace(
-        resultados=resultados, active=active, all_results=all_results,
-        total_imgs=total_imgs, total_dets=total_dets, confs=confs,
-        sizes=sizes, avg_conf=avg_conf, avg_size=avg_size, any_gt=any_gt,
-        clases_lote=clases_lote, per_class=per_class)
+        resultados=resultados,
+        active=active,
+        all_results=all_results,
+        total_imgs=total_imgs,
+        total_dets=total_dets,
+        confs=confs,
+        sizes=sizes,
+        avg_conf=avg_conf,
+        avg_size=avg_size,
+        any_gt=any_gt,
+        clases_lote=clases_lote,
+        per_class=per_class,
+    )
 
 
 def _estado_benigno(tmp_path) -> tuple:
@@ -160,9 +182,9 @@ def test_resumen_devuelve_cuerpo_sin_h2(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    cuerpo = rh._section_summary(pre.total_imgs, pre.total_dets,
-                                 pre.avg_conf, pre.avg_size,
-                                 pre.active, pre.any_gt)
+    cuerpo = rh._section_summary(
+        pre.total_imgs, pre.total_dets, pre.avg_conf, pre.avg_size, pre.active, pre.any_gt
+    )
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     # El ensamblador inserta el cuerpo tal cual cuando no lleva {NUM}.
@@ -221,8 +243,9 @@ def test_galeria_sin_bytes_de_prediccion_queda_vacia(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    cuerpo = rh._section_gallery(pre.resultados, st, pre.clases_lote,
-                                 max_gallery=60, include_gallery=True)
+    cuerpo = rh._section_gallery(
+        pre.resultados, st, pre.clases_lote, max_gallery=60, include_gallery=True
+    )
     assert cuerpo == ""
     assert "<h2 id='gallery'>" not in BASELINE_TXT
 
@@ -244,8 +267,9 @@ def test_metodos_devuelve_tres_partes_con_placeholder_num(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    partes = rh._section_methods(st, pre.active, pre.all_results,
-                                 pre.total_imgs, pre.total_dets, pre.any_gt)
+    partes = rh._section_methods(
+        st, pre.active, pre.all_results, pre.total_imgs, pre.total_dets, pre.any_gt
+    )
     assert isinstance(partes, tuple) and len(partes) == 3
     assert all(isinstance(p, str) and p for p in partes)
     combinado = "".join(partes)
@@ -285,8 +309,7 @@ def test_conteo_por_muestra_con_placeholder_num(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    cuerpo = rh._section_count(pre.resultados, st, pre.active,
-                                pre.clases_lote)
+    cuerpo = rh._section_count(pre.resultados, st, pre.active, pre.clases_lote)
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
     assert rh.NUM in cuerpo
@@ -364,18 +387,24 @@ def test_generar_impl_centrada_en_secciones():
 
     fuente = Path(rh.__file__).resolve().read_text(encoding="utf-8")
     impl = next(
-        n for n in ast.walk(ast.parse(fuente))
-        if isinstance(n, ast.FunctionDef) and n.name == "_generate_report_impl")
+        n
+        for n in ast.walk(ast.parse(fuente))
+        if isinstance(n, ast.FunctionDef) and n.name == "_generate_report_impl"
+    )
 
     lineas = impl.end_lineno - impl.lineno + 1
     assert lineas <= 150, (
         f"_generate_report_impl crecio a {lineas} lineas (tope 150): "
         f"un bloque de calculo volvio a crecer inline y hay que hoistearlo "
-        f"a un helper de nivel de modulo")
+        f"a un helper de nivel de modulo"
+    )
 
     # Toda llamada directa dentro del impl, por nombre de la funcion llamada.
-    llamadas = {n.func.id for n in ast.walk(impl)
-                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    llamadas = {
+        n.func.id
+        for n in ast.walk(impl)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+    }
 
     # id de seccion -> constructores que producen su cuerpo en el impl.
     # talla_carpetas sale de la misma llamada que forma (segundo retorno) y
@@ -400,11 +429,15 @@ def test_generar_impl_centrada_en_secciones():
     assert ids_secciones == set(constructor_de), (
         f"SECCIONES y constructor_de desincronizados: sin constructor "
         f"{sorted(ids_secciones - set(constructor_de))}, "
-        f"fantasmas {sorted(set(constructor_de) - ids_secciones)}")
+        f"fantasmas {sorted(set(constructor_de) - ids_secciones)}"
+    )
 
-    faltantes = {sid: [c for c in cs if c not in llamadas]
-                 for sid, cs in constructor_de.items()
-                 if any(c not in llamadas for c in cs)}
+    faltantes = {
+        sid: [c for c in cs if c not in llamadas]
+        for sid, cs in constructor_de.items()
+        if any(c not in llamadas for c in cs)
+    }
     assert not faltantes, (
         f"el impl no llama a los constructores de {faltantes}: la seccion "
-        f"quedo sin cuerpo o su llamada salio del impl")
+        f"quedo sin cuerpo o su llamada salio del impl"
+    )

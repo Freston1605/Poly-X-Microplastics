@@ -1,4 +1,5 @@
 """Page 8 — Comparing models against each other (summary table + per-image)."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -14,15 +15,16 @@ from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 from ._base import DetectorPage
 
 
-def _safe_div(a, b): return a / b if b else 0.0
+def _safe_div(a, b):
+    return a / b if b else 0.0
 
 
 class ComparePage(DetectorPage):
     STEP_N = 8
     STEP_TITLE = tr("Comparar")
-    STEP_DESCRIPTION = (
-        tr("Si cargaste más de un modelo, aquí ves tabla resumen con todas las métricas "
-        "lado a lado y cuántas detecciones hizo cada uno por imagen.")
+    STEP_DESCRIPTION = tr(
+        "Si cargaste más de un modelo, aquí ves tabla resumen con todas las métricas "
+        "lado a lado y cuántas detecciones hizo cada uno por imagen."
     )
 
     def __init__(self, state, parent=None):
@@ -31,8 +33,7 @@ class ComparePage(DetectorPage):
         c1, l1 = self.card(tr("Resumen por modelo"), "resultados")
         self.tbl_summary = QTableWidget(0, 8)
         self.tbl_summary.setHorizontalHeaderLabels(
-            ["Modelo", "Imágenes", "Detecciones", "Conf media",
-             LABEL_TP, LABEL_FP, LABEL_FN, "F1"]
+            ["Modelo", "Imágenes", "Detecciones", "Conf media", LABEL_TP, LABEL_FP, LABEL_FN, "F1"]
         )
         self.tbl_summary.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tbl_summary.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -69,20 +70,35 @@ class ComparePage(DetectorPage):
             tp = sum(x.tp for x in rs)
             fp = sum(x.fp for x in rs)
             fn = sum(x.fn for x in rs)
-            prec = _safe_div(tp, tp + fp); rec = _safe_div(tp, tp + fn)
+            prec = _safe_div(tp, tp + fp)
+            rec = _safe_div(tp, tp + fn)
             f1 = _safe_div(2 * prec * rec, prec + rec)
-            cm = sum(confs)/len(confs) if confs else 0
+            cm = sum(confs) / len(confs) if confs else 0
             self.tbl_summary.setItem(r, 0, QTableWidgetItem(slot.alias))
-            for col, v in enumerate([n_img, n_det, f"{cm:.3f}", tp, fp, fn,
-                                     f"{f1:.3f}" if any(x.has_gt for x in rs) else "—"], start=1):
+            for col, v in enumerate(
+                [
+                    n_img,
+                    n_det,
+                    f"{cm:.3f}",
+                    tp,
+                    fp,
+                    fn,
+                    f"{f1:.3f}" if any(x.has_gt for x in rs) else "—",
+                ],
+                start=1,
+            ):
                 it = QTableWidgetItem(str(v))
                 it.setTextAlignment(Qt.AlignCenter)
                 self.tbl_summary.setItem(r, col, it)
 
         # Per image: one column per model
         if not active_indices:
-            self.tbl_per_image.setColumnCount(1); self.tbl_per_image.setRowCount(0); return
-        image_set = sorted({x.image_path for mi in active_indices for x in state.results.get(mi, [])})
+            self.tbl_per_image.setColumnCount(1)
+            self.tbl_per_image.setRowCount(0)
+            return
+        image_set = sorted(
+            {x.image_path for mi in active_indices for x in state.results.get(mi, [])}
+        )
         cols = ["Imagen"] + [state.model_slots[mi].alias for mi in active_indices]
         self.tbl_per_image.setColumnCount(len(cols))
         self.tbl_per_image.setHorizontalHeaderLabels(cols)

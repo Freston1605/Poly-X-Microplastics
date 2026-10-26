@@ -1,4 +1,5 @@
 """Page 6 — `Resultados`. Large KPIs + size histogram + per-image table."""
+
 from __future__ import annotations
 
 import csv
@@ -32,9 +33,9 @@ from ._base import DetectorPage
 class ResultsPage(DetectorPage):
     STEP_N = 6
     STEP_TITLE = tr("Resultados")
-    STEP_DESCRIPTION = (
-        tr("Resumen cuantitativo del análisis. Para gráficos completos y galería por imagen, "
-        "genera el reporte HTML en la pestaña Reporte.")
+    STEP_DESCRIPTION = tr(
+        "Resumen cuantitativo del análisis. Para gráficos completos y galería por imagen, "
+        "genera el reporte HTML en la pestaña Reporte."
     )
 
     def __init__(self, state, parent=None):
@@ -44,14 +45,14 @@ class ResultsPage(DetectorPage):
         c1, l1 = self.card(tr("Métricas generales"), "resultados")
         grid = QGridLayout()
         grid.setSpacing(12)
-        self.kpi_imgs   = KPICard(tr("Imágenes"), T.ACCENT)
-        self.kpi_dets   = KPICard(tr("Detecciones"), T.ACCENT)
-        self.kpi_conf   = KPICard(tr("Confianza media"), T.VIO)
-        self.kpi_size   = KPICard(tr("Tamaño medio (μm)"), T.WARN)
-        self.kpi_tp     = KPICard(LABEL_TP, T.OK)
-        self.kpi_fp     = KPICard(LABEL_FP, T.WARN)
-        self.kpi_fn     = KPICard(LABEL_FN, T.ERR)
-        self.kpi_f1     = KPICard("F1", T.ACCENT_D)
+        self.kpi_imgs = KPICard(tr("Imágenes"), T.ACCENT)
+        self.kpi_dets = KPICard(tr("Detecciones"), T.ACCENT)
+        self.kpi_conf = KPICard(tr("Confianza media"), T.VIO)
+        self.kpi_size = KPICard(tr("Tamaño medio (μm)"), T.WARN)
+        self.kpi_tp = KPICard(LABEL_TP, T.OK)
+        self.kpi_fp = KPICard(LABEL_FP, T.WARN)
+        self.kpi_fn = KPICard(LABEL_FN, T.ERR)
+        self.kpi_f1 = KPICard("F1", T.ACCENT_D)
         grid.addWidget(self.kpi_imgs, 0, 0)
         grid.addWidget(self.kpi_dets, 0, 1)
         grid.addWidget(self.kpi_conf, 0, 2)
@@ -68,8 +69,8 @@ class ResultsPage(DetectorPage):
         row = QHBoxLayout()
         row.setSpacing(20)
         self.lbl_prec = QLabel(tr("Precisión:  —"))
-        self.lbl_rec  = QLabel(tr("Recall:  —"))
-        self.lbl_mis  = QLabel(f"{LABEL_MISCLS}:  —")
+        self.lbl_rec = QLabel(tr("Recall:  —"))
+        self.lbl_mis = QLabel(f"{LABEL_MISCLS}:  —")
         for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):
             l.setStyleSheet(f"color: {T.INK2}; font-size: 10.5pt; font-weight: 500; border: none;")
             row.addWidget(l)
@@ -79,7 +80,8 @@ class ResultsPage(DetectorPage):
         self.lbl_sugg = QLabel("")
         self.lbl_sugg.setWordWrap(True)
         self.lbl_sugg.setStyleSheet(
-            f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;")
+            f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;"
+        )
         l2.addWidget(self.lbl_sugg)
         self.body.addWidget(c2)
 
@@ -100,21 +102,24 @@ class ResultsPage(DetectorPage):
 
         # ── Reload GT from disk ──
         c_gt, l_gt = self.card(tr("Ground truth"), "recargar")
-        note_gt = QLabel(tr(
-            "No pide ninguna carpeta: relee los .txt que están junto a cada "
-            "foto, los mismos que ves en GT manual. Hace falta porque la corrida "
-            "guarda el ground truth que leyó, así que corregir una anotación "
-            "después no cambia por sí solo estas métricas ni el informe. "
-            "Recalcula sin pasar el modelo otra vez y solo redibuja las imágenes "
-            "cuyo .txt cambió."))
+        note_gt = QLabel(
+            tr(
+                "No pide ninguna carpeta: relee los .txt que están junto a cada "
+                "foto, los mismos que ves en GT manual. Hace falta porque la corrida "
+                "guarda el ground truth que leyó, así que corregir una anotación "
+                "después no cambia por sí solo estas métricas ni el informe. "
+                "Recalcula sin pasar el modelo otra vez y solo redibuja las imágenes "
+                "cuyo .txt cambió."
+            )
+        )
         note_gt.setWordWrap(True)
-        note_gt.setStyleSheet(
-            f"color: {T.INK3}; font-size: 9.5pt; border: none;")
+        note_gt.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         l_gt.addWidget(note_gt)
         self.lbl_recharge = QLabel("")
         self.lbl_recharge.setWordWrap(True)
         self.lbl_recharge.setStyleSheet(
-            f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;")
+            f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;"
+        )
         row_gt = QHBoxLayout()
         self.btn_reload = QPushButton(tr("Releer los .txt del disco y recalcular"))
         self.btn_reload.setIcon(iconos.icon("recargar", 15, T.INK2))
@@ -157,10 +162,13 @@ class ResultsPage(DetectorPage):
         row_rev.addWidget(btn_rev)
         row_rev.addStretch(1)
         l3.addLayout(row_rev)
-        note_rev = QLabel(tr(
-            "Abre la imagen seleccionada en el Visor con estas mismas detecciones, "
-            "numeradas. Allí cada partícula muestra sobre qué se midió y si es "
-            "fibra o fragmento — sin volver a pasar el modelo."))
+        note_rev = QLabel(
+            tr(
+                "Abre la imagen seleccionada en el Visor con estas mismas detecciones, "
+                "numeradas. Allí cada partícula muestra sobre qué se midió y si es "
+                "fibra o fragmento — sin volver a pasar el modelo."
+            )
+        )
         note_rev.setWordWrap(True)
         note_rev.setStyleSheet(f"color: {T.INK3}; font-size: 9pt; border: none;")
         l3.addWidget(note_rev)
@@ -185,14 +193,14 @@ class ResultsPage(DetectorPage):
 
         self.kpi_imgs.set_value(total_imgs)
         self.kpi_dets.set_value(total_dets)
-        self.kpi_conf.set_value(f"{(sum(confs)/len(confs)):.3f}" if confs else None)
-        self.kpi_size.set_value(f"{(sum(sizes)/len(sizes)):.1f}" if sizes else None)
+        self.kpi_conf.set_value(f"{(sum(confs) / len(confs)):.3f}" if confs else None)
+        self.kpi_size.set_value(f"{(sum(sizes) / len(sizes)):.1f}" if sizes else None)
         self.kpi_tp.set_value(tp)
         self.kpi_fp.set_value(fp)
         self.kpi_fn.set_value(fn)
         prec = tp / (tp + fp) if (tp + fp) else 0.0
-        rec  = tp / (tp + fn) if (tp + fn) else 0.0
-        f1   = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
+        rec = tp / (tp + fn) if (tp + fn) else 0.0
+        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
         any_gt = any(r.has_gt for r in all_results)
         self.kpi_f1.set_value(f"{f1:.3f}" if any_gt else None)
         self.lbl_prec.setText(f"Precisión:  {prec:.3f}" if any_gt else "Precisión:  —")
@@ -211,9 +219,21 @@ class ResultsPage(DetectorPage):
         for mi, rs in state.results.items():
             slot = state.model_slots[mi]
             for r in rs:
-                avg_c = sum(p.conf for p in r.predictions) / len(r.predictions) if r.predictions else 0
-                rows.append((slot.alias, r.image_path, len(r.predictions),
-                             len(r.gt), r.tp, r.fp, r.fn, avg_c))
+                avg_c = (
+                    sum(p.conf for p in r.predictions) / len(r.predictions) if r.predictions else 0
+                )
+                rows.append(
+                    (
+                        slot.alias,
+                        r.image_path,
+                        len(r.predictions),
+                        len(r.gt),
+                        r.tp,
+                        r.fp,
+                        r.fn,
+                        avg_c,
+                    )
+                )
         self.table.setRowCount(len(rows))
         for i, (alias, p, pred, gt, tp, fp, fn, ac) in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(alias))
@@ -233,11 +253,11 @@ class ResultsPage(DetectorPage):
 
         if not self.state.results:
             self.lbl_recharge.setText(
-                "No hay resultados que recalcular: ejecuta primero la detección.")
+                "No hay resultados que recalcular: ejecuta primero la detección."
+            )
             return
 
-        dlg = QProgressDialog(tr("Releyendo ground truth…"), tr("Cancelar"),
-                              0, 0, self)
+        dlg = QProgressDialog(tr("Releyendo ground truth…"), tr("Cancelar"), 0, 0, self)
         dlg.setWindowTitle(tr("Recargar GT"))
         dlg.setMinimumDuration(0)
         dlg.setValue(0)
@@ -270,12 +290,16 @@ class ResultsPage(DetectorPage):
             items_2 = ", ".join(changed[:8])
             if len(changed) > 8:
                 items_2 += f" y {len(changed) - 8} más"
-            text = (f"✓ {len(changed)} imagen(es) con ground truth distinto: "
-                     f"{items_2}. Métricas e imágenes de control actualizadas; "
-                     f"ya puedes generar el informe.")
+            text = (
+                f"✓ {len(changed)} imagen(es) con ground truth distinto: "
+                f"{items_2}. Métricas e imágenes de control actualizadas; "
+                f"ya puedes generar el informe."
+            )
         else:
-            text = (f"✓ Revisadas {summary['revisadas']} imágenes: ningún .txt "
-                     f"cambió respecto a la corrida. No había nada que recalcular.")
+            text = (
+                f"✓ Revisadas {summary['revisadas']} imágenes: ningún .txt "
+                f"cambió respecto a la corrida. No había nada que recalcular."
+            )
         if summary["sin_gt"]:
             text += f"  ({len(summary['sin_gt'])} sin .txt de control.)"
         if cancelled["si"]:
@@ -305,8 +329,9 @@ class ResultsPage(DetectorPage):
         """
         if len(by_model) < 2:
             return None
-        candidates = sorted({round(p.conf, 2) for _, rs in by_model
-                             for r in rs for p in r.predictions})
+        candidates = sorted(
+            {round(p.conf, 2) for _, rs in by_model for r in rs for p in r.predictions}
+        )
         if not candidates:
             return None
         paso = max(1, len(candidates) // 25)
@@ -343,13 +368,15 @@ class ResultsPage(DetectorPage):
                 sign = "⚠" if (f1b - f1a) >= 0.01 else "·"
                 lines.append(
                     f"{sign} {head}  Su mejor umbral es {tb:.2f}: F1 {f1b:.3f} "
-                    f"({f1b - f1a:+.3f}), P {pb:.3f} / R {rb:.3f}.")
+                    f"({f1b - f1a:+.3f}), P {pb:.3f} / R {rb:.3f}."
+                )
                 optimal.append(tb)
             else:
                 lines.append(
                     f"✓ {head}  Es el mejor del rango explorado; por debajo de "
                     f"{ta:g} no hay detecciones calculadas y no se recuperan "
-                    f"filtrando.")
+                    f"filtrando."
+                )
                 optimal.append(ta)
         if not lines:
             return ""
@@ -361,15 +388,18 @@ class ResultsPage(DetectorPage):
                 f"➜ Cada modelo prefiere un umbral distinto. Usa {common[0]:.2f} "
                 f"para los dos (F1 medio {common[1]:.3f}): es el mismo punto de "
                 f"operación y la comparación queda limpia. Cámbialo en "
-                f"Parámetros y vuelve a Ejecutar.")
+                f"Parámetros y vuelve a Ejecutar."
+            )
         elif max(optimal) > used_2 + 1e-9:
             lines.append(
                 f"➜ Cambia la confianza a {max(optimal):.2f} en Parámetros y "
-                f"vuelve a Ejecutar antes de generar el informe.")
+                f"vuelve a Ejecutar antes de generar el informe."
+            )
         else:
             lines.append(
                 f"➜ La confianza {used_2:g} ya es el punto de operación bueno. "
-                f"Puedes generar el informe.")
+                f"Puedes generar el informe."
+            )
         return "\n".join(lines)
 
     def _metrics_to(self, gt_results, threshold: float):
@@ -386,7 +416,10 @@ class ResultsPage(DetectorPage):
         for r in gt_results:
             preds = [p for p in r.predictions if p.conf >= threshold]
             m = match_image(preds, r.gt, iou_thr)
-            tp += m.tp; fp += m.fp; fn += m.fn; mc += m.miscls
+            tp += m.tp
+            fp += m.fp
+            fn += m.fn
+            mc += m.miscls
         prec = tp / (tp + fp + mc) if (tp + fp + mc) else 0.0
         rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
@@ -405,7 +438,7 @@ class ResultsPage(DetectorPage):
         confs = sorted({round(p.conf, 2) for r in gt_results for p in r.predictions})
         if not confs:
             return None
-        step = max(1, len(confs) // 25)   # limit to ~25 thresholds
+        step = max(1, len(confs) // 25)  # limit to ~25 thresholds
         best = None
         for t in confs[::step]:
             f1, prec, rec = self._metrics_to(gt_results, t)
@@ -435,6 +468,7 @@ class ResultsPage(DetectorPage):
 
         try:
             import matplotlib
+
             matplotlib.use("Agg")
             from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
             from matplotlib.figure import Figure
@@ -456,8 +490,15 @@ class ResultsPage(DetectorPage):
             colors = {"PET": "#e3342f", "PP": "#ff8c00", "LDPE": "#ffd700"}
             for cls_name, vals in sizes_by_class.items():
                 color = colors.get(cls_name, "#0969da")
-                ax.hist(vals, bins=20, alpha=0.72, label=f"{cls_name} (n={len(vals)})",
-                        color=color, edgecolor="white", linewidth=0.5)
+                ax.hist(
+                    vals,
+                    bins=20,
+                    alpha=0.72,
+                    label=f"{cls_name} (n={len(vals)})",
+                    color=color,
+                    edgecolor="white",
+                    linewidth=0.5,
+                )
 
             ax.set_xlabel("Diámetro equivalente (μm)", fontsize=9)
             ax.set_ylabel("Frecuencia", fontsize=9)
@@ -486,13 +527,31 @@ class ResultsPage(DetectorPage):
                 # The real shape is exported in addition to the equivalent diameter: for
                 # a fibre, the equivalent diameter is not the quantity
                 # reported in the literature, which is its length.
-                w.writerow(["modelo", "imagen", "clase", "conf",
-                            "x1", "y1", "x2", "y2",
-                            "um_por_px", "origen_escala",
-                            "largo_um", "metodo_largo", "feret_um",
-                            "geodesico_um", "largo_rect_eq_um",
-                            "ancho_um", "area_um2", "diam_um",
-                            "aspecto", "curvatura", "morfotipo"])
+                w.writerow(
+                    [
+                        "modelo",
+                        "imagen",
+                        "clase",
+                        "conf",
+                        "x1",
+                        "y1",
+                        "x2",
+                        "y2",
+                        "um_por_px",
+                        "origen_escala",
+                        "largo_um",
+                        "metodo_largo",
+                        "feret_um",
+                        "geodesico_um",
+                        "largo_rect_eq_um",
+                        "ancho_um",
+                        "area_um2",
+                        "diam_um",
+                        "aspecto",
+                        "curvatura",
+                        "morfotipo",
+                    ]
+                )
                 cals = getattr(self.state, "calibrations", None) or {}
                 for mi, rs in self.state.results.items():
                     alias = self.state.model_slots[mi].alias
@@ -501,27 +560,43 @@ class ResultsPage(DetectorPage):
                         um = f"{cal.um_por_px:.4f}" if cal and cal.valid else ""
                         origin_2 = cal.origin if cal and cal.valid else ""
                         for p in r.predictions:
+
                             def _n(v, dec=2):
                                 return f"{v:.{dec}f}" if v else ""
-                            w.writerow([
-                                alias, r.image_path.name,
-                                p.class_name, f"{p.conf:.4f}",
-                                f"{p.x1:.1f}", f"{p.y1:.1f}",
-                                f"{p.x2:.1f}", f"{p.y2:.1f}",
-                                um, origin_2,
-                                _n(p.length_um, 1), p.method_length or "",
-                                _n(p.feret_um, 1), _n(p.geodesic_um, 1),
-                                _n(p.equivalent_rect_length_um, 1), _n(p.width_um, 1),
-                                _n(p.area_um2, 1), _n(p.diam_um),
-                                _n(p.aspect), _n(p.curvature),
-                                p.morphotype or "",
-                            ])
+
+                            w.writerow(
+                                [
+                                    alias,
+                                    r.image_path.name,
+                                    p.class_name,
+                                    f"{p.conf:.4f}",
+                                    f"{p.x1:.1f}",
+                                    f"{p.y1:.1f}",
+                                    f"{p.x2:.1f}",
+                                    f"{p.y2:.1f}",
+                                    um,
+                                    origin_2,
+                                    _n(p.length_um, 1),
+                                    p.method_length or "",
+                                    _n(p.feret_um, 1),
+                                    _n(p.geodesic_um, 1),
+                                    _n(p.equivalent_rect_length_um, 1),
+                                    _n(p.width_um, 1),
+                                    _n(p.area_um2, 1),
+                                    _n(p.diam_um),
+                                    _n(p.aspect),
+                                    _n(p.curvature),
+                                    p.morphotype or "",
+                                ]
+                            )
         except Exception as e:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, tr("Error"), f"No se pudo guardar: {e}")
 
     def _open_row(self, row: int, col: int):
-        if row < 0 or self.state.run_dir is None: return
+        if row < 0 or self.state.run_dir is None:
+            return
         alias = self.table.item(row, 0).data(Qt.UserRole)
         img = Path(self.table.item(row, 1).data(Qt.UserRole))
         annot = self.state.run_dir / alias / f"{img.stem}_annot.png"
@@ -541,8 +616,8 @@ class ResultsPage(DetectorPage):
         rows_2 = self.table.selectionModel().selectedRows()
         if not rows_2:
             QMessageBox.information(
-                self, tr("Revisar"),
-                tr("Selecciona primero una fila de la tabla de abajo."))
+                self, tr("Revisar"), tr("Selecciona primero una fila de la tabla de abajo.")
+            )
             return
         row = rows_2[0].row()
         alias = self.table.item(row, 0).data(Qt.UserRole)
@@ -559,15 +634,14 @@ class ResultsPage(DetectorPage):
                     break
         if not dets:
             QMessageBox.information(
-                self, tr("Revisar"),
-                tr("Esa imagen no tiene detecciones que revisar."))
+                self, tr("Revisar"), tr("Esa imagen no tiene detecciones que revisar.")
+            )
             return
 
         try:
             from polyx.gui.viewer.window import ViewerWindow
         except Exception as e:
-            QMessageBox.warning(self, tr("Revisar"),
-                                f"No se pudo abrir el Visor: {e}")
+            QMessageBox.warning(self, tr("Revisar"), f"No se pudo abrir el Visor: {e}")
             return
 
         # It is stored in self so the garbage collector does not take it when

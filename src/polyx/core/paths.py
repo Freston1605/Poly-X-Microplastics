@@ -6,6 +6,7 @@ can be installed read-only (wheels, site-packages). The OS-dependent part
 of that directory lives in :mod:`polyx.core.platform`, the single place
 where platform differences are allowed.
 """
+
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,7 @@ DEFAULT_MODEL = MODELS_DIR / "bestdetectormedium.pt"
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
+
 def discover_default_model() -> Optional[Path]:
     """Return DEFAULT_MODEL if it exists on disk, else None.
 
@@ -37,6 +39,7 @@ def discover_default_model() -> Optional[Path]:
     if bundled.is_file():
         return bundled
     return None
+
 
 def ensure_dirs():
     for d in (MODELS_DIR, RUNS_DIR, DATA_DIR):

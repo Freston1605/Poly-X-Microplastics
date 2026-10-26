@@ -10,6 +10,7 @@ dos cajas) para que la suite corra en milisegundos, pero el formato es el real
 que produce el etiquetador: ``images/<split>/*.jpg`` + ``labels/<split>/*.txt``
 y un ``data.yaml`` con ``path``/``train``/``val``/``names``.
 """
+
 from __future__ import annotations
 
 import os
@@ -37,10 +38,16 @@ _BOX_CLASE_0 = "0 0.5 0.5 0.10 0.10"
 _BOX_CLASE_1 = "1 0.5 0.5 0.30 0.30"
 
 
-def crear_dataset(root: Path, *, n_train: int = 6, n_val: int = 6,
-                  splits: tuple[str, ...] = ("train", "val"),
-                  con_labels: bool = True, labels_vacios: bool = False,
-                  clases: int = 2) -> Path:
+def crear_dataset(
+    root: Path,
+    *,
+    n_train: int = 6,
+    n_val: int = 6,
+    splits: tuple[str, ...] = ("train", "val"),
+    con_labels: bool = True,
+    labels_vacios: bool = False,
+    clases: int = 2,
+) -> Path:
     """Crea un dataset YOLO mínimo y devuelve la ruta de su ``data.yaml``.
 
     ``con_labels=False`` omite el directorio ``labels/`` entero.
@@ -145,9 +152,15 @@ def test_nombres_de_pesos_por_familia():
     assert v11.base_weights_name == "yolo11n.pt"
 
 
-@pytest.mark.parametrize("familia,tamano", [
-    ("v9", "m"), ("yolov8", "m"), ("v8", "z"), ("v11", "g"),
-])
+@pytest.mark.parametrize(
+    "familia,tamano",
+    [
+        ("v9", "m"),
+        ("yolov8", "m"),
+        ("v8", "z"),
+        ("v11", "g"),
+    ],
+)
 def test_modelo_desconocido_se_rechaza(dataset_valido, familia, tamano):
     st = estado(dataset_valido)
     st.model.family = familia
@@ -267,18 +280,32 @@ def test_train_con_labels_vacios_se_rechaza(tmp_path):
 # ── Hiperparámetros: fuera de rango ─────────────────────────────────
 # El tercer elemento es el fragmento que debe aparecer en el mensaje: los
 # nombres visibles no siempre coinciden con el atributo («epochs» → «Épocas»).
-@pytest.mark.parametrize("campo,valor,fragmento", [
-    ("epochs", 0, "Épocas"), ("epochs", -5, "Épocas"), ("epochs", 10001, "Épocas"),
-    ("batch", 0, "Batch"), ("batch", 513, "Batch"),
-    ("imgsz", 100, "imgsz"), ("imgsz", 0, "imgsz"), ("imgsz", 16, "imgsz"),
-    ("imgsz", 16384, "imgsz"), ("imgsz", "abc", "imgsz"),
-    ("lr0", 0.0, "lr0"), ("lr0", 1.5, "lr0"),
-    ("weight_decay", 1.5, "weight_decay"), ("weight_decay", -0.1, "weight_decay"),
-    ("momentum", -0.1, "momentum"), ("momentum", 1.5, "momentum"),
-    ("label_smoothing", 1.0, "label_smoothing"), ("label_smoothing", -0.01, "label_smoothing"),
-    ("workers", 65, "workers"), ("workers", -1, "workers"),
-    ("save_period", 0, "save_period"),
-])
+@pytest.mark.parametrize(
+    "campo,valor,fragmento",
+    [
+        ("epochs", 0, "Épocas"),
+        ("epochs", -5, "Épocas"),
+        ("epochs", 10001, "Épocas"),
+        ("batch", 0, "Batch"),
+        ("batch", 513, "Batch"),
+        ("imgsz", 100, "imgsz"),
+        ("imgsz", 0, "imgsz"),
+        ("imgsz", 16, "imgsz"),
+        ("imgsz", 16384, "imgsz"),
+        ("imgsz", "abc", "imgsz"),
+        ("lr0", 0.0, "lr0"),
+        ("lr0", 1.5, "lr0"),
+        ("weight_decay", 1.5, "weight_decay"),
+        ("weight_decay", -0.1, "weight_decay"),
+        ("momentum", -0.1, "momentum"),
+        ("momentum", 1.5, "momentum"),
+        ("label_smoothing", 1.0, "label_smoothing"),
+        ("label_smoothing", -0.01, "label_smoothing"),
+        ("workers", 65, "workers"),
+        ("workers", -1, "workers"),
+        ("save_period", 0, "save_period"),
+    ],
+)
 def test_hiperparametro_fuera_de_rango_se_rechaza(dataset_valido, campo, valor, fragmento):
     ok, msgs = validar(dataset_valido, **{campo: valor})
     assert not ok, f"{campo}={valor!r} debió rechazarse"
@@ -325,10 +352,18 @@ def test_cache_valido_se_acepta(dataset_valido, cache):
 
 
 # ── Aumentación: rangos [0, 1] ──────────────────────────────────────
-@pytest.mark.parametrize("campo,valor", [
-    ("hsv_h", 1.5), ("hsv_s", -0.1), ("hsv_v", 2.0),
-    ("fliplr", 1.1), ("mosaic", -0.5), ("mixup", 1.01), ("copy_paste", 1.5),
-])
+@pytest.mark.parametrize(
+    "campo,valor",
+    [
+        ("hsv_h", 1.5),
+        ("hsv_s", -0.1),
+        ("hsv_v", 2.0),
+        ("fliplr", 1.1),
+        ("mosaic", -0.5),
+        ("mixup", 1.01),
+        ("copy_paste", 1.5),
+    ],
+)
 def test_augmentacion_fuera_de_rango_se_rechaza(dataset_valido, campo, valor):
     ok, msgs = validar(dataset_valido, aug={campo: valor})
     assert not ok, f"{campo}={valor!r} debió rechazarse"
@@ -340,9 +375,14 @@ def test_preflight_nunca_lanza_excepcion_con_tipos_raros(dataset_valido):
     """Tipos inesperados en los parámetros (None, texto) se reportan como
     error de validación, no como un TypeError que tumbe la UI."""
     casos = [
-        {"epochs": None}, {"batch": "muchas"}, {"imgsz": None},
-        {"lr0": "alto"}, {"device": None}, {"cache": None},
-        {"workers": None}, {"label_smoothing": None},
+        {"epochs": None},
+        {"batch": "muchas"},
+        {"imgsz": None},
+        {"lr0": "alto"},
+        {"device": None},
+        {"cache": None},
+        {"workers": None},
+        {"label_smoothing": None},
     ]
     for caso in casos:
         ok, msgs = validar(dataset_valido, **caso)
@@ -420,9 +460,7 @@ def _parchear_runner(monkeypatch) -> list:
 def _parchear_avisos(monkeypatch) -> list[str]:
     """Captura los diálogos QMessageBox.warning sin bloquear la prueba."""
     avisos: list[str] = []
-    monkeypatch.setattr(
-        QMessageBox, "warning", lambda parent, titulo, texto: avisos.append(texto)
-    )
+    monkeypatch.setattr(QMessageBox, "warning", lambda parent, titulo, texto: avisos.append(texto))
     return avisos
 
 

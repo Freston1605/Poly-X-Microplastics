@@ -9,6 +9,7 @@ Usage:
     python scripts/audit_translations.py          # summary
     python scripts/audit_translations.py --list   # plus the missing strings
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,8 +34,11 @@ def tr_strings(path: Path) -> list[str]:
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        name = func.id if isinstance(func, ast.Name) else (
-            func.attr if isinstance(func, ast.Attribute) else "")
+        name = (
+            func.id
+            if isinstance(func, ast.Name)
+            else (func.attr if isinstance(func, ast.Attribute) else "")
+        )
         if name != "tr" or not node.args:
             continue
         arg = node.args[0]
@@ -62,8 +66,9 @@ def main() -> int:
     except (AttributeError, ValueError):
         pass
     parser = argparse.ArgumentParser()
-    parser.add_argument("--list", action="store_true",
-                        help="print the strings that are not translated")
+    parser.add_argument(
+        "--list", action="store_true", help="print the strings that are not translated"
+    )
     args = parser.parse_args()
 
     missing: dict[str, list[Path]] = {}
@@ -80,8 +85,10 @@ def main() -> int:
     translated = len(unique) - len(missing)
     print(f"tr() strings:  {total} ({len(unique)} distinct)")
     print(f"translated:    {translated}")
-    print(f"UNTRANSLATED:  {len(missing)}"
-          + (f"   ({100 * len(missing) / len(unique):.1f} %)" if unique else ""))
+    print(
+        f"UNTRANSLATED:  {len(missing)}"
+        + (f"   ({100 * len(missing) / len(unique):.1f} %)" if unique else "")
+    )
 
     if missing:
         by_file: dict[str, int] = {}

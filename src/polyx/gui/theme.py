@@ -21,6 +21,7 @@ that, the default (`claro`).
 Adding a theme means adding an entry to ``PALETTES`` with the same
 tokens. No window has to be touched.
 """
+
 from __future__ import annotations
 
 import json
@@ -60,63 +61,128 @@ _FILE = Path.home() / ".polyx_tema.json"
 # would not be on the same scale.
 
 PALETTES: dict[str, dict[str, str]] = {
-
     # ── Light: the usual one, aligned with the HTML manual ──
     "claro": {
-        "INK": "#1f2328", "INK2": "#424a53", "INK3": "#656d76", "MUTED": "#8c959f",
-        "RULE": "#d0d7de", "RULE_SOFT": "#eaeef2",
-        "BG": "#ffffff", "BG_SOFT": "#f6f8fa",
-        "ACCENT": "#0969da", "ACCENT_D": "#0550ae", "ON_ACCENT": "#ffffff",
-        "OK": "#1f6b5e", "WARN": "#9a6700", "ERR": "#cf222e", "VIO": "#6639ba",
-        "ACCENT_D_TX": "#0550ae", "ACCENT_TX": "#0969da", "OK_TX": "#1f6b5e", "WARN_TX": "#9a6700",
-        "ERR_TX": "#cf222e", "VIO_TX": "#6639ba",
-        "FIELD_1": "#0d1117", "FIELD_2": "#1c2128", "RING": "#22272e",
-        "TIP_BG": "#1f2328", "TIP_FG": "#ffffff",
+        "INK": "#1f2328",
+        "INK2": "#424a53",
+        "INK3": "#656d76",
+        "MUTED": "#8c959f",
+        "RULE": "#d0d7de",
+        "RULE_SOFT": "#eaeef2",
+        "BG": "#ffffff",
+        "BG_SOFT": "#f6f8fa",
+        "ACCENT": "#0969da",
+        "ACCENT_D": "#0550ae",
+        "ON_ACCENT": "#ffffff",
+        "OK": "#1f6b5e",
+        "WARN": "#9a6700",
+        "ERR": "#cf222e",
+        "VIO": "#6639ba",
+        "ACCENT_D_TX": "#0550ae",
+        "ACCENT_TX": "#0969da",
+        "OK_TX": "#1f6b5e",
+        "WARN_TX": "#9a6700",
+        "ERR_TX": "#cf222e",
+        "VIO_TX": "#6639ba",
+        "FIELD_1": "#0d1117",
+        "FIELD_2": "#1c2128",
+        "RING": "#22272e",
+        "TIP_BG": "#1f2328",
+        "TIP_FG": "#ffffff",
     },
-
     # ── Dark: for working at night and next to UV photos ──
     # The accent is #1f6feb and not GitHub's usual #58a6ff because on top
     # it carries white text: with the light blue the contrast drops to 2.6:1.
     "oscuro": {
-        "INK": "#e6edf3", "INK2": "#c9d1d9", "INK3": "#8b949e", "MUTED": "#6e7681",
-        "RULE": "#30363d", "RULE_SOFT": "#21262d",
-        "BG": "#161b22", "BG_SOFT": "#0d1117",
-        "ACCENT": "#1f6feb", "ACCENT_D": "#1a5fd0", "ON_ACCENT": "#ffffff",
-        "OK": "#2ea043", "WARN": "#bb8009", "ERR": "#da3633", "VIO": "#8957e5",
-        "ACCENT_D_TX": "#79c0ff", "ACCENT_TX": "#58a6ff", "OK_TX": "#3fb950", "WARN_TX": "#d29922",
-        "ERR_TX": "#f85149", "VIO_TX": "#a371f7",
-        "FIELD_1": "#05080d", "FIELD_2": "#11161e", "RING": "#30363d",
-        "TIP_BG": "#e6edf3", "TIP_FG": "#0d1117",
+        "INK": "#e6edf3",
+        "INK2": "#c9d1d9",
+        "INK3": "#8b949e",
+        "MUTED": "#6e7681",
+        "RULE": "#30363d",
+        "RULE_SOFT": "#21262d",
+        "BG": "#161b22",
+        "BG_SOFT": "#0d1117",
+        "ACCENT": "#1f6feb",
+        "ACCENT_D": "#1a5fd0",
+        "ON_ACCENT": "#ffffff",
+        "OK": "#2ea043",
+        "WARN": "#bb8009",
+        "ERR": "#da3633",
+        "VIO": "#8957e5",
+        "ACCENT_D_TX": "#79c0ff",
+        "ACCENT_TX": "#58a6ff",
+        "OK_TX": "#3fb950",
+        "WARN_TX": "#d29922",
+        "ERR_TX": "#f85149",
+        "VIO_TX": "#a371f7",
+        "FIELD_1": "#05080d",
+        "FIELD_2": "#11161e",
+        "RING": "#30363d",
+        "TIP_BG": "#e6edf3",
+        "TIP_FG": "#0d1117",
     },
-
     # ── Night blue: deep blue with a cooler accent ──
     "azul": {
-        "INK": "#e8f0fb", "INK2": "#bed0e6", "INK3": "#8ba3c0", "MUTED": "#6b83a1",
-        "RULE": "#26405c", "RULE_SOFT": "#182b41",
-        "BG": "#102039", "BG_SOFT": "#08111f",
-        "ACCENT": "#2563eb", "ACCENT_D": "#1d4fd8", "ON_ACCENT": "#ffffff",
-        "OK": "#0d9488", "WARN": "#d97706", "ERR": "#e11d48", "VIO": "#7c3aed",
-        "ACCENT_D_TX": "#93c5fd", "ACCENT_TX": "#60a5fa", "OK_TX": "#2dd4bf", "WARN_TX": "#fbbf24",
-        "ERR_TX": "#fb7185", "VIO_TX": "#a78bfa",
-        "FIELD_1": "#040a14", "FIELD_2": "#0c1a2e", "RING": "#26405c",
-        "TIP_BG": "#e8f0fb", "TIP_FG": "#08111f",
+        "INK": "#e8f0fb",
+        "INK2": "#bed0e6",
+        "INK3": "#8ba3c0",
+        "MUTED": "#6b83a1",
+        "RULE": "#26405c",
+        "RULE_SOFT": "#182b41",
+        "BG": "#102039",
+        "BG_SOFT": "#08111f",
+        "ACCENT": "#2563eb",
+        "ACCENT_D": "#1d4fd8",
+        "ON_ACCENT": "#ffffff",
+        "OK": "#0d9488",
+        "WARN": "#d97706",
+        "ERR": "#e11d48",
+        "VIO": "#7c3aed",
+        "ACCENT_D_TX": "#93c5fd",
+        "ACCENT_TX": "#60a5fa",
+        "OK_TX": "#2dd4bf",
+        "WARN_TX": "#fbbf24",
+        "ERR_TX": "#fb7185",
+        "VIO_TX": "#a78bfa",
+        "FIELD_1": "#040a14",
+        "FIELD_2": "#0c1a2e",
+        "RING": "#26405c",
+        "TIP_BG": "#e8f0fb",
+        "TIP_FG": "#08111f",
     },
-
     # ── High contrast: meets AAA, for projectors and tired eyes ──
     # It is not a decorative theme: in a room with the projector on, the normal
     # light theme loses the 1 px borders and the secondary text greys.
     "contraste": {
-        "INK": "#000000", "INK2": "#16191d", "INK3": "#2b3138", "MUTED": "#464e57",
-        "RULE": "#24292f", "RULE_SOFT": "#8c959f",
-        "BG": "#ffffff", "BG_SOFT": "#ffffff",
-        "ACCENT": "#0a47a1", "ACCENT_D": "#062f6d", "ON_ACCENT": "#ffffff",
-        "OK": "#0b5138", "WARN": "#5c3d00", "ERR": "#9b0d1b", "VIO": "#42217d",
-        "ACCENT_D_TX": "#062f6d", "ACCENT_TX": "#0a47a1", "OK_TX": "#0b5138", "WARN_TX": "#5c3d00",
-        "ERR_TX": "#9b0d1b", "VIO_TX": "#42217d",
-        "FIELD_1": "#000000", "FIELD_2": "#101820", "RING": "#000000",
-        "TIP_BG": "#000000", "TIP_FG": "#ffffff",
+        "INK": "#000000",
+        "INK2": "#16191d",
+        "INK3": "#2b3138",
+        "MUTED": "#464e57",
+        "RULE": "#24292f",
+        "RULE_SOFT": "#8c959f",
+        "BG": "#ffffff",
+        "BG_SOFT": "#ffffff",
+        "ACCENT": "#0a47a1",
+        "ACCENT_D": "#062f6d",
+        "ON_ACCENT": "#ffffff",
+        "OK": "#0b5138",
+        "WARN": "#5c3d00",
+        "ERR": "#9b0d1b",
+        "VIO": "#42217d",
+        "ACCENT_D_TX": "#062f6d",
+        "ACCENT_TX": "#0a47a1",
+        "OK_TX": "#0b5138",
+        "WARN_TX": "#5c3d00",
+        "ERR_TX": "#9b0d1b",
+        "VIO_TX": "#42217d",
+        "FIELD_1": "#000000",
+        "FIELD_2": "#101820",
+        "RING": "#000000",
+        "TIP_BG": "#000000",
+        "TIP_FG": "#ffffff",
     },
 }
+
 
 # ════════════════════════════════════════════════════════════════════
 #  Fixed palette for generated documents
@@ -157,10 +223,10 @@ DEFAULT_THEME = "claro"
 #  Domain colours: the same in every theme
 # ════════════════════════════════════════════════════════════════════
 CLASS_COLOR_HEX = {
-    "PET":  "#e3342f",   # drawn red
-    "PP":   "#ff8c00",   # drawn orange
-    "LDPE": "#ffd700",   # drawn yellow
-    "PE":   "#ffd700",   # alias
+    "PET": "#e3342f",  # drawn red
+    "PP": "#ff8c00",  # drawn orange
+    "LDPE": "#ffd700",  # drawn yellow
+    "PE": "#ffd700",  # alias
 }
 
 
@@ -209,9 +275,7 @@ def set_animations(active: bool) -> None:
 
 def _save() -> None:
     try:
-        _FILE.write_text(
-            json.dumps({"tema": _theme, "animaciones": _animations}),
-            encoding="utf-8")
+        _FILE.write_text(json.dumps({"tema": _theme, "animaciones": _animations}), encoding="utf-8")
     except Exception:
         pass
 
@@ -509,9 +573,9 @@ def _mingle(a: str, b: str, t: float) -> str:
     """Mixes two hex colors. t=0 returns a; t=1 returns b."""
     ca, cb = QColor(a), QColor(b)
     return QColor(
-        round(ca.red()   + (cb.red()   - ca.red())   * t),
+        round(ca.red() + (cb.red() - ca.red()) * t),
         round(ca.green() + (cb.green() - ca.green()) * t),
-        round(ca.blue()  + (cb.blue()  - ca.blue())  * t),
+        round(ca.blue() + (cb.blue() - ca.blue()) * t),
     ).name()
 
 

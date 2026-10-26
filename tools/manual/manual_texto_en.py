@@ -6,27 +6,35 @@ Section ids match the Spanish file so both manuals share anchors and figures.
 """
 
 TITULO_DOC = "Poly-X Manual — Microplastics detection suite"
-DESCRIPCION = ("Complete Poly-X manual: step-by-step installation from GitHub on "
-               "Windows and macOS, and a guide to all four modules.")
+DESCRIPCION = (
+    "Complete Poly-X manual: step-by-step installation from GitHub on "
+    "Windows and macOS, and a guide to all four modules."
+)
 SELLO = "User manual · v2.0.0"
-TITULO_H1 = 'Poly-X <em>analytics</em>'
-BAJADA = ("Detection, sizing and classification of microplastics by Nile Red "
-          "fluorescence under UV light, with YOLO v8/v11 models. From the GitHub "
-          "download to a publication-ready report.")
-META = ("<b>Cristofher Ferrada</b> · PhD (c) in Chemistry<br>"
-        "Environmental Chemistry Laboratory · Pontificia Universidad Católica de Valparaíso<br>"
-        "Windows 10/11 and macOS · Python 3.11 · 2026")
+TITULO_H1 = "Poly-X <em>analytics</em>"
+BAJADA = (
+    "Detection, sizing and classification of microplastics by Nile Red "
+    "fluorescence under UV light, with YOLO v8/v11 models. From the GitHub "
+    "download to a publication-ready report."
+)
+META = (
+    "<b>Cristofher Ferrada</b> · PhD (c) in Chemistry<br>"
+    "Environmental Chemistry Laboratory · Pontificia Universidad Católica de Valparaíso<br>"
+    "Windows 10/11 and macOS · Python 3.11 · 2026"
+)
 
 ETIQUETA_INDICE = "Contents"
 ETIQUETA_FIGURA = "Figure"
 PALABRA_ESQUEMA = "Diagram"
 
-PIE = ("<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
-       "Repository: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
-       "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
-       "Contact: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
-       "Interface screenshots are regenerated against the installed program, so this "
-       "manual shows the version in front of you and not an earlier one.")
+PIE = (
+    "<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
+    "Repository: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
+    "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
+    "Contact: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
+    "Interface screenshots are regenerated against the installed program, so this "
+    "manual shows the version in front of you and not an earlier one."
+)
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -171,13 +179,12 @@ ESQUEMAS = {
 
 # ════════════════════════════════════════════════════════════════════
 SECCIONES = [
-
-# ── 1 ───────────────────────────────────────────────────────────────
-{
-"id": "que-es",
-"titulo": "What Poly-X is",
-"sub": "The problem it solves, what it does and what it does not.",
-"html": r"""
+    # ── 1 ───────────────────────────────────────────────────────────────
+    {
+        "id": "que-es",
+        "titulo": "What Poly-X is",
+        "sub": "The problem it solves, what it does and what it does not.",
+        "html": r"""
 <p>Poly-X is a desktop program that <b>counts, measures and classifies
 microplastics</b> in microscope photographs. Particles are stained with
 <b>Nile Red</b> and photographed under <b>254 nm UV light</b>: each polymer emits
@@ -246,15 +253,14 @@ the other three modules exist to build that model and to verify it.</p>
   Sections <b>7 to 15</b> walk through everything the program can do today,
   screen by screen. If you only came to install it, the first six are enough.</p>
 </div>
-"""
-},
-
-# ── 2 ───────────────────────────────────────────────────────────────
-{
-"id": "requisitos",
-"titulo": "Before you start",
-"sub": "What the machine needs, and how much space it will take.",
-"html": r"""
+""",
+    },
+    # ── 2 ───────────────────────────────────────────────────────────────
+    {
+        "id": "requisitos",
+        "titulo": "Before you start",
+        "sub": "What the machine needs, and how much space it will take.",
+        "html": r"""
 <div class="tabla-env">
 <table>
   <thead><tr><th>Component</th><th>Windows</th><th>macOS</th></tr></thead>
@@ -303,20 +309,21 @@ the other three modules exist to build that model and to verify it.</p>
   support</b>, downloaded separately, around <b>2.8 GB</b> compressed. The program
   itself is small; the numerical library is not.</p>
 </div>
-"""
-},
-
-# ── 3 ───────────────────────────────────────────────────────────────
-{
-"id": "instalar-windows",
-"titulo": "Installing on Windows, step by step",
-"sub": "Five steps, with a photograph of each. Done once.",
-"anclas": [("w-python", "Step 1 · Python 3.11"),
-           ("w-descargar", "Step 2 · Download from GitHub"),
-           ("w-extraer", "Step 3 · Unzip"),
-           ("w-setup", "Step 4 · Run SETUP.bat"),
-           ("w-arrancar", "Step 5 · First launch")],
-"html": r"""
+""",
+    },
+    # ── 3 ───────────────────────────────────────────────────────────────
+    {
+        "id": "instalar-windows",
+        "titulo": "Installing on Windows, step by step",
+        "sub": "Five steps, with a photograph of each. Done once.",
+        "anclas": [
+            ("w-python", "Step 1 · Python 3.11"),
+            ("w-descargar", "Step 2 · Download from GitHub"),
+            ("w-extraer", "Step 3 · Unzip"),
+            ("w-setup", "Step 4 · Run SETUP.bat"),
+            ("w-arrancar", "Step 5 · First launch"),
+        ],
+        "html": r"""
 <ol class="pasos">
 
 <li id="w-python"><span class="t">Install Python 3.11.9</span>
@@ -513,15 +520,14 @@ selector at the top right switches the language of the whole program.]]
   </tbody>
 </table>
 </div>
-"""
-},
-
-# ── 4 ───────────────────────────────────────────────────────────────
-{
-"id": "instalar-macos",
-"titulo": "Installing on macOS, step by step",
-"sub": "The same steps, with one important difference: Apple's security warning.",
-"html": r"""
+""",
+    },
+    # ── 4 ───────────────────────────────────────────────────────────────
+    {
+        "id": "instalar-macos",
+        "titulo": "Installing on macOS, step by step",
+        "sub": "The same steps, with one important difference: Apple's security warning.",
+        "html": r"""
 <div class="aviso vio">
   <span class="et">About the images in this section</span>
   <p>The web pages are real photographs, identical on both systems. The
@@ -634,15 +640,14 @@ detects the processor type on its own:</p>
   <code>Poly-X.app</code> that can be dragged to the Dock. Full detail in
   <code>LEEME_macOS.md</code>.</p>
 </div>
-"""
-},
-
-# ── 5 ───────────────────────────────────────────────────────────────
-{
-"id": "modelo-pt",
-"titulo": "The trained model: the one thing not in the download",
-"sub": "Without a .pt file the Detector and the Viewer have nothing to detect with.",
-"html": r"""
+""",
+    },
+    # ── 5 ───────────────────────────────────────────────────────────────
+    {
+        "id": "modelo-pt",
+        "titulo": "The trained model: the one thing not in the download",
+        "sub": "Without a .pt file the Detector and the Viewer have nothing to detect with.",
+        "html": r"""
 <div class="aviso err">
   <span class="et">Important</span>
   <p>Trained models (<code>*.pt</code>) are <b>not included in the GitHub
@@ -688,15 +693,14 @@ installation. The program creates it during setup, even if it stays empty:</p>
   it is worth verifying against a manual count before trusting the numbers.
   <a href="#flujos">Section 14</a> suggests how.</p>
 </div>
-"""
-},
-
-# ── 6 ───────────────────────────────────────────────────────────────
-{
-"id": "launcher",
-"titulo": "The Launcher: the entry screen",
-"sub": "Where each module is opened, and where the language is set.",
-"html": r"""
+""",
+    },
+    # ── 6 ───────────────────────────────────────────────────────────────
+    {
+        "id": "launcher",
+        "titulo": "The Launcher: the entry screen",
+        "sub": "Where each module is opened, and where the language is set.",
+        "html": r"""
 [[fig:ui/01_launcher|The Launcher. Each module opens in its own window, independent of the others.]]
 
 <p>Each module starts as a <b>separate process</b>. That means you can have the
@@ -725,20 +729,25 @@ is remembered between sessions; the first time it follows the system language.</
 it is, a button appears with the new version's identifier. The check <b>does not
 delay startup</b> and stays quiet on any failure: with no internet, or with GitHub
 down, the notice simply does not appear.</p>
-"""
-},
-
-# ── 7 ───────────────────────────────────────────────────────────────
-{
-"id": "detector",
-"titulo": "Detector module",
-"sub": "Batch analysis of a whole folder, and the final report. Nine screens.",
-"anclas": [("d-modelos", "Models"), ("d-imagenes", "Images"),
-           ("d-gt", "Manual GT"), ("d-parametros", "Parameters"),
-           ("d-ejecutar", "Run"), ("d-resultados", "Results"),
-           ("d-errores", "Errors"), ("d-comparar", "Compare"),
-           ("d-reporte", "Report")],
-"html": r"""
+""",
+    },
+    # ── 7 ───────────────────────────────────────────────────────────────
+    {
+        "id": "detector",
+        "titulo": "Detector module",
+        "sub": "Batch analysis of a whole folder, and the final report. Nine screens.",
+        "anclas": [
+            ("d-modelos", "Models"),
+            ("d-imagenes", "Images"),
+            ("d-gt", "Manual GT"),
+            ("d-parametros", "Parameters"),
+            ("d-ejecutar", "Run"),
+            ("d-resultados", "Results"),
+            ("d-errores", "Errors"),
+            ("d-comparar", "Compare"),
+            ("d-reporte", "Report"),
+        ],
+        "html": r"""
 <p>This is the main module: it takes a folder of photographs and a model, and
 returns the counts, the sizes and a report. The nine screens on the left are
 worked through from top to bottom, in that order.</p>
@@ -875,15 +884,14 @@ one's detections and — if ground truth exists — their hits, errors and overa
 is where the analysis becomes a document.]]
 <p>This is the module's output and deserves its own section: it is detailed in
 <a href="#informe">section 13</a>.</p>
-"""
-},
-
-# ── 8 ───────────────────────────────────────────────────────────────
-{
-"id": "entrenador",
-"titulo": "Trainer module",
-"sub": "Training your own YOLO model, with live curves. Nine screens.",
-"html": r"""
+""",
+    },
+    # ── 8 ───────────────────────────────────────────────────────────────
+    {
+        "id": "entrenador",
+        "titulo": "Trainer module",
+        "sub": "Training your own YOLO model, with live curves. Nine screens.",
+        "html": r"""
 <p>Used when the available model does not suit your photographs: a different
 microscope, stain or size range. It needs an already annotated dataset — the one
 the <a href="#etiquetador">Labeller</a> produces — and a fair amount of patience.</p>
@@ -953,15 +961,14 @@ configuration.]]
   <b>batch</b> to 4 or 2, and the resolution to 640. That is preferable to shrinking
   the model, which costs more in metrics.</p>
 </div>
-"""
-},
-
-# ── 9 ───────────────────────────────────────────────────────────────
-{
-"id": "etiquetador",
-"titulo": "Labeller module",
-"sub": "Annotating hundreds of images without losing track between sessions.",
-"html": r"""
+""",
+    },
+    # ── 9 ───────────────────────────────────────────────────────────────
+    {
+        "id": "etiquetador",
+        "titulo": "Labeller module",
+        "sub": "Annotating hundreds of images without losing track between sessions.",
+        "html": r"""
 [[fig:ui/20_etiquetador|The Labeller. The list on the left separates what is reviewed from what is
 pending, and that state is restored from disk when the folder is reopened.]]
 
@@ -1031,15 +1038,14 @@ time</b> compared with annotating from scratch.</p>
   <li>Thumbnails are generated in the background, so the window responds
       immediately.</li>
 </ul>
-"""
-},
-
-# ── 10 ──────────────────────────────────────────────────────────────
-{
-"id": "visor",
-"titulo": "Viewer module",
-"sub": "One image at a time: calibrating the scale and verifying every measurement.",
-"html": r"""
+""",
+    },
+    # ── 10 ──────────────────────────────────────────────────────────────
+    {
+        "id": "visor",
+        "titulo": "Viewer module",
+        "sub": "One image at a time: calibrating the scale and verifying every measurement.",
+        "html": r"""
 [[fig:ui/21_visor|The Viewer. The table lists every particle, and selecting a row shows <b>what was
 measured</b>: the clean crop and, beside it, the mask with the measurement drawn on top.]]
 
@@ -1095,15 +1101,14 @@ width and aspect ratio. Selecting a row shows <b>what was measured</b>:</p>
   <li><b>Export</b> the annotated image, <code>detecciones.csv</code> and
       <code>resumen.json</code>.</li>
 </ul>
-"""
-},
-
-# ── 11 ──────────────────────────────────────────────────────────────
-{
-"id": "medida",
-"titulo": "How a particle's size is measured",
-"sub": "The criterion, its exceptions, its accuracy and its declared limits.",
-"html": r"""
+""",
+    },
+    # ── 11 ──────────────────────────────────────────────────────────────
+    {
+        "id": "medida",
+        "titulo": "How a particle's size is measured",
+        "sub": "The criterion, its exceptions, its accuracy and its declared limits.",
+        "html": r"""
 <p>The general criterion is <b>the longest straight line that fits inside the
 particle</b>: the greatest distance between two points on its outline, or
 <i>maximum Feret diameter</i>. It does not depend on the orientation the particle
@@ -1205,15 +1210,14 @@ the figures, only in the image. It is pinned in
   <p>In a <b>tightly coiled fibre</b> the geodesic path cuts the corner inside each
   bend, underestimating by up to <b>19 %</b> in the tightest case tested.</p>
 </div>
-"""
-},
-
-# ── 12 ──────────────────────────────────────────────────────────────
-{
-"id": "polimeros",
-"titulo": "The three polymers, and why two get confused",
-"sub": "What you need to know to read the per-class recall.",
-"html": r"""
+""",
+    },
+    # ── 12 ──────────────────────────────────────────────────────────────
+    {
+        "id": "polimeros",
+        "titulo": "The three polymers, and why two get confused",
+        "sub": "What you need to know to read the per-class recall.",
+        "html": r"""
 <div class="tabla-env">
 <table>
   <thead><tr><th>ID</th><th>Class</th><th>Observed fluorescence</th><th>Box colour on screen</th></tr></thead>
@@ -1257,15 +1261,14 @@ dataset (mean RGB, n = 30 per class):</p>
   observed emission. It was corrected in August 2026 from the RGB measurement and
   direct observation.</p>
 </div>
-"""
-},
-
-# ── 13 ──────────────────────────────────────────────────────────────
-{
-"id": "informe",
-"titulo": "The detection report",
-"sub": "A self-contained HTML of publication quality, and its PDF.",
-"html": r"""
+""",
+    },
+    # ── 13 ──────────────────────────────────────────────────────────────
+    {
+        "id": "informe",
+        "titulo": "The detection report",
+        "sub": "A self-contained HTML of publication quality, and its PDF.",
+        "html": r"""
 [[fig:ui/10_det_reporte|The <b>Report</b> tab. Thirteen section checkboxes and three presets: Full,
 Short summary and Methodological.]]
 
@@ -1338,15 +1341,14 @@ photographs it shows.</p>
   <p>Titles, tables, figure captions, chart axes and the methods prose follow the
   language chosen in the Launcher — not just the interface.</p>
 </div>
-"""
-},
-
-# ── 14 ──────────────────────────────────────────────────────────────
-{
-"id": "flujos",
-"titulo": "Recommended workflows",
-"sub": "Three scenarios, depending on where you start from.",
-"html": r"""
+""",
+    },
+    # ── 14 ──────────────────────────────────────────────────────────────
+    {
+        "id": "flujos",
+        "titulo": "Recommended workflows",
+        "sub": "Three scenarios, depending on where you start from.",
+        "html": r"""
 <h3>A · You already have a model and just want to analyse photographs</h3>
 <p>The commonest case, and the shortest.</p>
 <ol>
@@ -1400,15 +1402,14 @@ photographs it shows.</p>
   section</b>, which is measured in the laboratory and does not come out of the
   photographs. The program cannot invent it.</p>
 </div>
-"""
-},
-
-# ── 15 ──────────────────────────────────────────────────────────────
-{
-"id": "atajos",
-"titulo": "Keyboard shortcuts",
-"sub": "Those of the Labeller and the Manual GT save the most time.",
-"html": r"""
+""",
+    },
+    # ── 15 ──────────────────────────────────────────────────────────────
+    {
+        "id": "atajos",
+        "titulo": "Keyboard shortcuts",
+        "sub": "Those of the Labeller and the Manual GT save the most time.",
+        "html": r"""
 <h3>Labeller and Manual GT</h3>
 <div class="tabla-env">
 <table>
@@ -1442,15 +1443,14 @@ photographs it shows.</p>
   </tbody>
 </table>
 </div>
-"""
-},
-
-# ── 16 ──────────────────────────────────────────────────────────────
-{
-"id": "actualizar",
-"titulo": "Updating and uninstalling",
-"sub": "Getting what is new without reinstalling, and removing the program cleanly.",
-"html": r"""
+""",
+    },
+    # ── 16 ──────────────────────────────────────────────────────────────
+    {
+        "id": "actualizar",
+        "titulo": "Updating and uninstalling",
+        "sub": "Getting what is new without reinstalling, and removing the program cleanly.",
+        "html": r"""
 <h3>Updating</h3>
 <p>Double-click the matching updater:</p>
 <div class="tabla-env">
@@ -1491,15 +1491,14 @@ program's.</p>
   A trained model can represent days of work and cannot be recovered from GitHub,
   because it was never there.</p>
 </div>
-"""
-},
-
-# ── 17 ──────────────────────────────────────────────────────────────
-{
-"id": "problemas",
-"titulo": "Troubleshooting",
-"sub": "What usually fails, why, and what to do.",
-"html": r"""
+""",
+    },
+    # ── 17 ──────────────────────────────────────────────────────────────
+    {
+        "id": "problemas",
+        "titulo": "Troubleshooting",
+        "sub": "What usually fails, why, and what to do.",
+        "html": r"""
 <h3>While installing</h3>
 <div class="tabla-env">
 <table>
@@ -1562,15 +1561,14 @@ program's.</p>
   <p>Start with <code>iniciar_polyx.bat</code> instead of the shortcut: it shows the
   console, and the whole message appears there instead of a window that closes.</p>
 </div>
-"""
-},
-
-# ── 18 ──────────────────────────────────────────────────────────────
-{
-"id": "estructura",
-"titulo": "Folder structure",
-"sub": "What is yours, what belongs to the program, and what can be deleted.",
-"html": r"""
+""",
+    },
+    # ── 18 ──────────────────────────────────────────────────────────────
+    {
+        "id": "estructura",
+        "titulo": "Folder structure",
+        "sub": "What is yours, what belongs to the program, and what can be deleted.",
+        "html": r"""
 <pre><code>Poly-X-Microplastics-main\
 ├── <span class="p">src\polyx\</span>               <span class="c">source code — the program's</span>
 │   ├── launcher.py
@@ -1623,15 +1621,14 @@ program's.</p>
   <code>polyx/core/plataforma.py</code>, not scattered through the code. That is why
   the program behaves the same on both without two versions to maintain.</p>
 </div>
-"""
-},
-
-# ── 19 ──────────────────────────────────────────────────────────────
-{
-"id": "referencias",
-"titulo": "References and contact",
-"sub": "The published method Poly-X rests on.",
-"html": r"""
+""",
+    },
+    # ── 19 ──────────────────────────────────────────────────────────────
+    {
+        "id": "referencias",
+        "titulo": "References and contact",
+        "sub": "The published method Poly-X rests on.",
+        "html": r"""
 <h3>Publications</h3>
 <ul>
   <li><b>Pérez M, Parra S, Ferrada C, Bravo M, Pérez PA, Quiroz W (2024).</b>
@@ -1670,7 +1667,6 @@ use-only installation does not need it.</p>
 Environmental Chemistry Laboratory · Pontificia Universidad Católica de Valparaíso<br>
 <a href="mailto:cristofher.ferrada@pucv.cl">cristofher.ferrada@pucv.cl</a><br>
 <a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a></p>
-"""
-},
-
+""",
+    },
 ]

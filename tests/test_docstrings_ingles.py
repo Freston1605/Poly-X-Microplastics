@@ -20,6 +20,7 @@ scanner used on the real package, the walked inventory must exceed a floor
 and a backticked Spanish literal must pass while the same text unbackticked
 fails.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -76,8 +77,7 @@ def _scan_docstring(content: str) -> list[str]:
 def inventory() -> list[tuple[Path, list[tuple[int, str]]]]:
     """Parse every polyx file once and enumerate its docstrings."""
     return [
-        (path, enumerate_docstrings(path.read_text(encoding="utf-8")))
-        for path in _polyx_files()
+        (path, enumerate_docstrings(path.read_text(encoding="utf-8"))) for path in _polyx_files()
     ]
 
 
@@ -91,7 +91,9 @@ def test_polyx_package_walk_finds_no_spanish_docstrings(
             findings = _scan_docstring(content)
             if findings:
                 first = content.splitlines()[0] if content else ""
-                offenders.append(f"{path.relative_to(REPO_ROOT).as_posix()} #{index} {first!r}: {findings}")
+                offenders.append(
+                    f"{path.relative_to(REPO_ROOT).as_posix()} #{index} {first!r}: {findings}"
+                )
     assert not offenders, "Spanish docstring remnants in polyx:\n" + "\n".join(offenders)
 
 

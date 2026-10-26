@@ -1,4 +1,5 @@
 """Entry point: python -m polyx.gui.labeler"""
+
 import sys
 
 from PySide6.QtWidgets import QApplication

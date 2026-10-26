@@ -11,6 +11,7 @@ Contents:
   8. Per-sample and per-plastic-type count
   9. Bibliographic references
 """
+
 from __future__ import annotations
 
 import base64
@@ -174,8 +175,7 @@ def _classes_views(results_planes) -> List[str]:
     model never detects would still be a table row, with a zero, which is
     exactly the figure worth looking at.
     """
-    views = {class_id_reported(d) for r in results_planes
-              for d in list(r.predictions) + list(r.gt)}
+    views = {class_id_reported(d) for r in results_planes for d in list(r.predictions) + list(r.gt)}
     order = [c for c in _ORDER_CLASSES if c in views]
     # `«no asignable»` goes at the end and not alphabetically among the polymers: it is not
     # a polymer, it is the absence of one.
@@ -196,8 +196,11 @@ def _sample_of(path_2) -> Optional[tuple]:
     if not m:
         return None
     range_value, witness, suffix = m.group(1), m.group(2), m.group(3)
-    return (_STATION.get(witness, f"Testigo {witness}"),
-            int(range_value), _PLATE.get(suffix, suffix))
+    return (
+        _STATION.get(witness, f"Testigo {witness}"),
+        int(range_value),
+        _PLATE.get(suffix, suffix),
+    )
 
 
 def _clue_order(path_2) -> tuple:
@@ -222,8 +225,7 @@ def _esc(v) -> str:
     return html.escape(str(v), quote=False)
 
 
-def _table_count(manual: Optional[Counter], detected: Counter,
-                  classes: List[str]) -> str:
+def _table_count(manual: Optional[Counter], detected: Counter, classes: List[str]) -> str:
     """Per-photo table: particles by polymer, counted by hand and by the model.
 
     It is a count, not an evaluation: the model column is **all** of its
@@ -238,8 +240,10 @@ def _table_count(manual: Optional[Counter], detected: Counter,
             man = manual.get(c, 0)
             dif = det - man
             css = "dif-pos" if dif > 0 else ("dif-neg" if dif < 0 else "")
-            rows_2 += (f"<tr><td>{_esc(tr(c))}</td><td>{man}</td><td>{det}</td>"
-                      f"<td class='{css}'>{dif:+d}</td></tr>")
+            rows_2 += (
+                f"<tr><td>{_esc(tr(c))}</td><td>{man}</td><td>{det}</td>"
+                f"<td class='{css}'>{dif:+d}</td></tr>"
+            )
         else:
             rows_2 += f"<tr><td>{_esc(tr(c))}</td><td>{det}</td></tr>"
 
@@ -248,10 +252,14 @@ def _table_count(manual: Optional[Counter], detected: Counter,
         tot_man = sum(manual.get(c, 0) for c in classes)
         dif = tot_det - tot_man
         css = "dif-pos" if dif > 0 else ("dif-neg" if dif < 0 else "")
-        rows_2 += (f"<tr class='tot'><td>Total</td><td>{tot_man}</td>"
-                  f"<td>{tot_det}</td><td class='{css}'>{dif:+d}</td></tr>")
-        cabecera = tr("<tr><th>Polímero</th><th>Conteo manual</th>"
-                      "<th>Detectadas por el modelo</th><th>Diferencia</th></tr>")
+        rows_2 += (
+            f"<tr class='tot'><td>Total</td><td>{tot_man}</td>"
+            f"<td>{tot_det}</td><td class='{css}'>{dif:+d}</td></tr>"
+        )
+        cabecera = tr(
+            "<tr><th>Polímero</th><th>Conteo manual</th>"
+            "<th>Detectadas por el modelo</th><th>Diferencia</th></tr>"
+        )
     else:
         rows_2 += f"<tr class='tot'><td>Total</td><td>{tot_det}</td></tr>"
         cabecera = tr("<tr><th>Polímero</th><th>Detectadas por el modelo</th></tr>")
@@ -281,6 +289,7 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
     """
     try:
         import cv2
+
         arr = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
         if arr is not None:
             if arr.shape[1] > width_max:
@@ -288,8 +297,7 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
                 arr = cv2.resize(arr, (width_max, height), interpolation=cv2.INTER_AREA)
             ok, buf = cv2.imencode(".jpg", arr, [cv2.IMWRITE_JPEG_QUALITY, 88])
             if ok:
-                return ("data:image/jpeg;base64,"
-                        + base64.b64encode(buf.tobytes()).decode("ascii"))
+                return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii")
     except Exception:
         pass
     return "data:image/png;base64," + _img_b64(data)
@@ -299,16 +307,19 @@ def _team() -> List[tuple]:
     """Machine components, so the report can state where it was run."""
     import platform
 
-    rows_2 = [(tr('Sistema operativo'), f"{platform.system()} {platform.release()}"),
-             (tr('Procesador'), platform.processor() or "—")]
+    rows_2 = [
+        (tr("Sistema operativo"), f"{platform.system()} {platform.release()}"),
+        (tr("Procesador"), platform.processor() or "—"),
+    ]
     try:
         import psutil
-        rows_2.append((tr('Memoria RAM'),
-                      f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
+
+        rows_2.append((tr("Memoria RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
     except Exception:
         pass
     try:
         import torch
+
         if torch.cuda.is_available():
             props = torch.cuda.get_device_properties(0)
             rows_2 += [
@@ -318,7 +329,7 @@ def _team() -> List[tuple]:
                 ("PyTorch", f"{torch.__version__} (CUDA {torch.version.cuda})"),
             ]
         else:
-            rows_2 += [("GPU", tr('no disponible')), ("PyTorch", torch.__version__)]
+            rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]
     except Exception:
         pass
     return rows_2
@@ -334,6 +345,7 @@ def _training_of(weight: Path) -> Optional[Dict]:
     """
     try:
         import torch
+
         ck = torch.load(str(weight), map_location="cpu", weights_only=False)
     except Exception:
         return None
@@ -359,9 +371,11 @@ def _training_of(weight: Path) -> Optional[Dict]:
 def _section_team(active) -> str:
     """Table of components and of how each loaded model was trained."""
     rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in _team())
-    html = (f"<h3>@@N@@.1 {tr('Equipo de cómputo')}</h3>"
-            f"<table class='data'><tr>{tr('<th>Componente</th><th>Detalle</th>')}</tr>"
-            f"{rows_eq}</table>")
+    html = (
+        f"<h3>@@N@@.1 {tr('Equipo de cómputo')}</h3>"
+        f"<table class='data'><tr>{tr('<th>Componente</th><th>Detalle</th>')}</tr>"
+        f"{rows_eq}</table>"
+    )
 
     training_runs = []
     for s in active:
@@ -383,17 +397,23 @@ def _section_team(active) -> str:
             f"<td class='r'>{_esc(i['imgsz'])}</td><td class='r'>{_esc(i['batch'])}</td>"
             f"<td class='r'>{_esc(i['epocas'])}</td><td>{_esc(i['optimizador'])}</td>"
             f"<td class='r'>{_n(i['precision'])}</td><td class='r'>{_n(i['recall'])}</td>"
-            f"<td class='r'>{_n(i['map50'])}</td><td class='r'>{_n(i['map'])}</td></tr>")
+            f"<td class='r'>{_n(i['map50'])}</td><td class='r'>{_n(i['map'])}</td></tr>"
+        )
 
     html += (
         f"<h3>@@N@@.2 {tr('Entrenamiento de cada modelo')}</h3>"
-        + tr("<p>Configuración y métricas de validación con que se entrenó cada peso, "
-             "leídas del propio archivo <code>.pt</code>.</p>")
+        + tr(
+            "<p>Configuración y métricas de validación con que se entrenó cada peso, "
+            "leídas del propio archivo <code>.pt</code>.</p>"
+        )
         + "<table class='data'>"
-        + tr("<tr><th>Modelo</th><th>Arquitectura base</th><th>imgsz</th><th>batch</th>"
-             "<th>épocas</th><th>optimizador</th><th>Precisión</th><th>Recall</th>"
-             "<th>mAP@50</th><th>mAP@50-95</th></tr>")
-        + f"{rows_2}</table>")
+        + tr(
+            "<tr><th>Modelo</th><th>Arquitectura base</th><th>imgsz</th><th>batch</th>"
+            "<th>épocas</th><th>optimizador</th><th>Precisión</th><th>Recall</th>"
+            "<th>mAP@50</th><th>mAP@50-95</th></tr>"
+        )
+        + f"{rows_2}</table>"
+    )
     return html
 
 
@@ -424,7 +444,10 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
                 preds = [p for p in r.predictions if p.conf >= u]
                 nd += len(preds)
                 m = match_image(preds, r.gt, iou_thr=iou_thr)
-                tp += m.tp; fp += m.fp; fn += m.fn; mc += m.miscls
+                tp += m.tp
+                fp += m.fp
+                fn += m.fn
+                mc += m.miscls
             # Strict: misclassification penalizes on both sides.
             p = tp / (tp + fp + mc) if (tp + fp + mc) else 0.0
             rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
@@ -440,11 +463,23 @@ def _fig_sweep(sweep: Dict[str, list]) -> str:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.4))
     for alias, rows_2 in sweep.items():
-        ax.plot([f[0] for f in rows_2], [f[3] for f in rows_2],
-                marker="o", markersize=3, label=alias, linewidth=1.6)
+        ax.plot(
+            [f[0] for f in rows_2],
+            [f[3] for f in rows_2],
+            marker="o",
+            markersize=3,
+            label=alias,
+            linewidth=1.6,
+        )
         best = max(rows_2, key=lambda f: f[3])
-        ax.plot([best[0]], [best[3]], marker="*", markersize=13, zorder=5,
-                color=ax.lines[-1].get_color())
+        ax.plot(
+            [best[0]],
+            [best[3]],
+            marker="*",
+            markersize=13,
+            zorder=5,
+            color=ax.lines[-1].get_color(),
+        )
     ax.set_xlabel(tr("Umbral de confianza"))
     ax.set_ylabel(tr("F1 (con clase)"))
     ax.grid(alpha=0.3)
@@ -471,13 +506,13 @@ def _fig_comparison_metrics(data_2: List[tuple]) -> str:
     labels_2 = [tr("Precisión"), "Recall", "F1"]
     x = np.arange(len(labels_2))
     width_2 = 0.8 / max(1, len(data_2))
-    for panel, (ax, offset, title) in enumerate((
-            (axes[0], 1, tr("Localización")), (axes[1], 4, tr("Con clase")))):
+    for panel, (ax, offset, title) in enumerate(
+        ((axes[0], 1, tr("Localización")), (axes[1], 4, tr("Con clase")))
+    ):
         for i, row in enumerate(data_2):
-            vals = row[offset:offset + 3]
+            vals = row[offset : offset + 3]
             pos = x - 0.4 + width_2 * (i + 0.5)
-            bars = ax.bar(pos, vals, width_2, label=row[0],
-                            color=_PALETTE[i % len(_PALETTE)])
+            bars = ax.bar(pos, vals, width_2, label=row[0], color=_PALETTE[i % len(_PALETTE)])
             if panel == 1 or len(data_2) <= 2:
                 ax.bar_label(bars, fmt="%.3f", fontsize=7, padding=1)
         ax.set_title(title, fontsize=10)
@@ -490,9 +525,15 @@ def _fig_comparison_metrics(data_2: List[tuple]) -> str:
     # The legend goes below the figure: inside the axes it overlapped the
     # bars, which with these values almost reach the ceiling in both halves.
     handlers, names_2 = axes[0].get_legend_handles_labels()
-    fig.legend(handlers, names_2, frameon=False, fontsize=9,
-               loc="lower center", ncol=len(data_2),
-               bbox_to_anchor=(0.5, -0.04))
+    fig.legend(
+        handlers,
+        names_2,
+        frameon=False,
+        fontsize=9,
+        loc="lower center",
+        ncol=len(data_2),
+        bbox_to_anchor=(0.5, -0.04),
+    )
     fig.tight_layout()
     return _fig_to_b64(fig)
 
@@ -515,15 +556,19 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: List[tuple]) -> s
     b = [p[1] for p in pares]
     max_size = max(max(a), max(b), 1)
     fig, ax = plt.subplots(figsize=(4.6, 4.2))
-    ax.plot([0, max_size], [0, max_size], "--", color="#999", linewidth=1,
-            label="acuerdo exacto")
-    ax.scatter(a, b, s=26, alpha=0.75, color=T.DOC.ACCENT, edgecolor="white",
-               linewidth=0.5)
+    ax.plot([0, max_size], [0, max_size], "--", color="#999", linewidth=1, label="acuerdo exacto")
+    ax.scatter(a, b, s=26, alpha=0.75, color=T.DOC.ACCENT, edgecolor="white", linewidth=0.5)
     # The plates that differ the most are labelled: those are the ones to go and inspect.
     for na, nb, name_2 in sorted(pares, key=lambda p: -abs(p[0] - p[1]))[:3]:
         if abs(na - nb) > 0:
-            ax.annotate(name_2, (na, nb), fontsize=7, color=T.DOC.INK2,
-                        xytext=(4, 4), textcoords="offset points")
+            ax.annotate(
+                name_2,
+                (na, nb),
+                fontsize=7,
+                color=T.DOC.INK2,
+                xytext=(4, 4),
+                textcoords="offset points",
+            )
     ax.set_xscale("symlog", linthresh=10)
     ax.set_yscale("symlog", linthresh=10)
     ax.set_xlim(-1, max_size * 1.6)
@@ -558,8 +603,13 @@ def _fig_metrics_by_class(by_model: Dict[str, Dict[str, tuple]]) -> str:
     width_2 = 0.8 / max(1, len(by_model))
     for i, (alias, metrics) in enumerate(by_model.items()):
         vals = [metrics.get(c, (0, 0, 0))[2] for c in classes]
-        bars = ax.bar(x - 0.4 + width_2 * (i + 0.5), vals, width_2, label=alias,
-                        color=_PALETTE[i % len(_PALETTE)])
+        bars = ax.bar(
+            x - 0.4 + width_2 * (i + 0.5),
+            vals,
+            width_2,
+            label=alias,
+            color=_PALETTE[i % len(_PALETTE)],
+        )
         ax.bar_label(bars, fmt="%.3f", fontsize=7, padding=1)
     ax.set_xticks(x)
     ax.set_xticklabels(classes)
@@ -636,9 +686,16 @@ def _fig_sizes_by_section(lengths_per_class: Dict[str, List[float]]) -> str:
         if not vals:
             continue
         account, _ = np.histogram(np.array(vals, dtype=float), bins=edges)
-        ax.bar(centers, account, width=widths, bottom=bottom_2, label=cls,
-               color=T.CLASS_COLOR_HEX.get(cls, "#8b949e"), edgecolor="white",
-               linewidth=0.6)
+        ax.bar(
+            centers,
+            account,
+            width=widths,
+            bottom=bottom_2,
+            label=cls,
+            color=T.CLASS_COLOR_HEX.get(cls, "#8b949e"),
+            edgecolor="white",
+            linewidth=0.6,
+        )
         bottom_2 += account
     ax.set_xscale("log")
     ax.set_xlabel(tr("talla (µm, dimensión mayor siguiendo la curva)"))
@@ -679,7 +736,7 @@ def _rankdata(a: np.ndarray) -> np.ndarray:
         j = i
         while j + 1 < len(a) and sorted_value[j + 1] == sorted_value[i]:
             j += 1
-        ranges_ord[i:j + 1] = (i + j) / 2.0 + 1.0
+        ranges_ord[i : j + 1] = (i + j) / 2.0 + 1.0
         i = j + 1
     ranges = np.empty(len(a), dtype=float)
     ranges[order] = ranges_ord
@@ -706,7 +763,7 @@ def _chi2_sf(h: float, df: int) -> float:
         a0, n = 1.0, (df - 2) // 2
     if n <= 0:
         return min(1.0, max(0.0, q))
-    term = (xa ** a0) * math.exp(-xa) / math.gamma(a0 + 1.0)
+    term = (xa**a0) * math.exp(-xa) / math.gamma(a0 + 1.0)
     q += term
     for k in range(1, n):
         term *= xa / (a0 + k)
@@ -719,11 +776,38 @@ def _chi2_sf(h: float, df: int) -> float:
 # using scipy.stats.t. Exact standard table values for df 1-30, plus
 # the usual reference points 40/60/120 for large batches.
 _TABLE_T95 = {
-    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365,
-    8: 2.306, 9: 2.262, 10: 2.228, 11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145,
-    15: 2.131, 16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
-    21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060, 26: 2.056,
-    27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042, 40: 2.021, 60: 2.000,
+    1: 12.706,
+    2: 4.303,
+    3: 3.182,
+    4: 2.776,
+    5: 2.571,
+    6: 2.447,
+    7: 2.365,
+    8: 2.306,
+    9: 2.262,
+    10: 2.228,
+    11: 2.201,
+    12: 2.179,
+    13: 2.160,
+    14: 2.145,
+    15: 2.131,
+    16: 2.120,
+    17: 2.110,
+    18: 2.101,
+    19: 2.093,
+    20: 2.086,
+    21: 2.080,
+    22: 2.074,
+    23: 2.069,
+    24: 2.064,
+    25: 2.060,
+    26: 2.056,
+    27: 2.052,
+    28: 2.048,
+    29: 2.045,
+    30: 2.042,
+    40: 2.021,
+    60: 2.000,
     120: 1.980,
 }
 
@@ -783,13 +867,13 @@ def _kruskal_wallis(groups: List[np.ndarray]) -> Optional[Tuple[float, float, in
     idx = 0
     for g in groups:
         n_i = len(g)
-        r_i = ranges[idx:idx + n_i].sum()
+        r_i = ranges[idx : idx + n_i].sum()
         h += (r_i * r_i) / n_i
         idx += n_i
     h = (12.0 / (n_total * (n_total + 1))) * h - 3 * (n_total + 1)
     _, counts = np.unique(all_value_2, return_counts=True)
-    draw = np.sum(counts ** 3 - counts)
-    denom = n_total ** 3 - n_total
+    draw = np.sum(counts**3 - counts)
+    denom = n_total**3 - n_total
     if denom > 0 and draw > 0:
         c = 1.0 - draw / denom
         if c > 0:
@@ -801,19 +885,26 @@ def _kruskal_wallis(groups: List[np.ndarray]) -> Optional[Tuple[float, float, in
 
 def _text_kruskal(result: Optional[Tuple[float, float, int]], n_groups: int) -> str:
     if result is None:
-        return tr("Sin datos suficientes para una prueba estadística (hace falta "
-                  "más de una observación por grupo).")
+        return tr(
+            "Sin datos suficientes para una prueba estadística (hace falta "
+            "más de una observación por grupo)."
+        )
     h, p, df = result
-    frase = (tr("<strong>diferencia significativa</strong>") if p < 0.05
-             else tr("sin diferencia significativa"))
-    return tr("Kruskal-Wallis entre los {n} grupos: {frase} (H={h}, gl={gl}, "
-              "p={p}). No dice CUÁL grupo difiere de cuál, solo que no todos "
-              "comparten la misma distribución de talla.").format(
-                  n=n_groups, frase=frase, h=f"{h:.2f}", gl=df, p=f"{p:.3g}")
+    frase = (
+        tr("<strong>diferencia significativa</strong>")
+        if p < 0.05
+        else tr("sin diferencia significativa")
+    )
+    return tr(
+        "Kruskal-Wallis entre los {n} grupos: {frase} (H={h}, gl={gl}, "
+        "p={p}). No dice CUÁL grupo difiere de cuál, solo que no todos "
+        "comparten la misma distribución de talla."
+    ).format(n=n_groups, frase=frase, h=f"{h:.2f}", gl=df, p=f"{p:.3g}")
 
 
-def _fig_boxplot_groups(groups: Dict[str, List[float]], title: str, xlabel: str,
-                        max_groups: int = _MAX_GROUPS_BOXPLOT) -> str:
+def _fig_boxplot_groups(
+    groups: Dict[str, List[float]], title: str, xlabel: str, max_groups: int = _MAX_GROUPS_BOXPLOT
+) -> str:
     """Boxplot of size by group (folder, or photo inside a folder).
 
     Truncated to the ``max_grupos`` with the most particles: a boxplot
@@ -829,8 +920,13 @@ def _fig_boxplot_groups(groups: Dict[str, List[float]], title: str, xlabel: str,
     labels_2 = [f"{k}\n(n={len(v)})" for k, v in items]
 
     fig, ax = plt.subplots(figsize=(max(5.5, 1.15 * len(items) + 2), 4.2), dpi=140)
-    bp = ax.boxplot(data_2, tick_labels=labels_2, patch_artist=True, showfliers=True,
-                    flierprops=dict(marker='o', markersize=3, alpha=0.35, markeredgewidth=0))
+    bp = ax.boxplot(
+        data_2,
+        tick_labels=labels_2,
+        patch_artist=True,
+        showfliers=True,
+        flierprops=dict(marker="o", markersize=3, alpha=0.35, markeredgewidth=0),
+    )
     for patch in bp["boxes"]:
         patch.set_facecolor(T.DOC.ACCENT)
         patch.set_alpha(0.30)
@@ -841,8 +937,9 @@ def _fig_boxplot_groups(groups: Dict[str, List[float]], title: str, xlabel: str,
     ax.set_yscale("log")
     ax.set_ylabel(tr("talla (µm, escala log)"))
     ax.set_xlabel(xlabel)
-    title_complete = title + (tr(" (las {n} con más partículas)").format(n=max_groups)
-                                if truncated else "")
+    title_complete = title + (
+        tr(" (las {n} con más partículas)").format(n=max_groups) if truncated else ""
+    )
     ax.set_title(title_complete, fontsize=10)
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", which="both", alpha=0.2)
@@ -910,10 +1007,10 @@ def _text_trend(x, y, que: str) -> str:
         # Capital initial letter: the sentence goes after the period that closes the station
         # name, and in lowercase it reads like a truncated line.
         verdict = tr("<strong>{que} {sentido} con la profundidad</strong>").format(
-            que=que[0].upper() + que[1:], sentido=direction)
+            que=que[0].upper() + que[1:], sentido=direction
+        )
     else:
-        verdict = tr("No se detecta tendencia en {que} con la profundidad").format(
-            que=que)
+        verdict = tr("No se detecta tendencia en {que} con la profundidad").format(que=que)
     # The operator travels with the value: with `p = {p}` and a small p it printed
     # `p = < 0.001`, with two signs in a row.
     #
@@ -921,7 +1018,8 @@ def _text_trend(x, y, que: str) -> str:
     # Python formats and carry a point; mixing them reads like a typo.
     p_txt = "< 0.001" if p is not None and p < 0.001 else f"= {p:.3f}"
     return tr("{veredicto} (Spearman ρ = {rho}, p {p}, n = {n} tramos).").format(
-        veredicto=verdict, rho=f"{rho:+.2f}", p=p_txt, n=len(x))
+        veredicto=verdict, rho=f"{rho:+.2f}", p=p_txt, n=len(x)
+    )
 
 
 def _fig_profile_depth(profiles: dict) -> str:
@@ -938,15 +1036,29 @@ def _fig_profile_depth(profiles: dict) -> str:
     for i, (station, rows_2) in enumerate(sorted(profiles.items())):
         ranges_2 = [f[0] for f in rows_2]
         color = colors_2[i % len(colors_2)]
-        ax1.plot([f[1] for f in rows_2], ranges_2, marker="o", markersize=4,
-                 linewidth=1.4, label=station, color=color)
+        ax1.plot(
+            [f[1] for f in rows_2],
+            ranges_2,
+            marker="o",
+            markersize=4,
+            linewidth=1.4,
+            label=station,
+            color=color,
+        )
         medians = [f[2] for f in rows_2]
-        ax2.plot(medians, ranges_2, marker="o", markersize=4, linewidth=1.4,
-                 label=station, color=color)
+        ax2.plot(
+            medians, ranges_2, marker="o", markersize=4, linewidth=1.4, label=station, color=color
+        )
         # Interquartile range as a band: the median alone hides whether the
         # size distribution widens or narrows with depth.
-        ax2.fill_betweenx(ranges_2, [f[3] for f in rows_2], [f[4] for f in rows_2],
-                          alpha=0.15, color=color, linewidth=0)
+        ax2.fill_betweenx(
+            ranges_2,
+            [f[3] for f in rows_2],
+            [f[4] for f in rows_2],
+            alpha=0.15,
+            color=color,
+            linewidth=0,
+        )
     ax1.set_xlabel(tr("partículas por tramo"))
     ax2.set_xlabel(tr("talla mediana (µm)  ·  banda = rango intercuartílico"))
     ax1.set_ylabel(tr("tramo (mayor = más profundo)"))
@@ -1021,20 +1133,18 @@ def choose_records(shapes: List[tuple], max_records: int) -> List[tuple]:
     def size_2(par) -> float:
         return par[0].length_um or 0.0
 
-    fibers = sorted([t for t in shapes if t[0].morphotype == "fibra"],
-                    key=size_2, reverse=True)
-    others = sorted([t for t in shapes if t[0].morphotype != "fibra"],
-                   key=size_2, reverse=True)
+    fibers = sorted([t for t in shapes if t[0].morphotype == "fibra"], key=size_2, reverse=True)
+    others = sorted([t for t in shapes if t[0].morphotype != "fibra"], key=size_2, reverse=True)
 
     half = max(1, max_records // 2)
     chosen = fibers[:half]
-    chosen += others[:max_records - len(chosen)]
+    chosen += others[: max_records - len(chosen)]
     # Gaps left by the scarce group are covered by the other one, so as not to deliver a
     # shorter sample than requested when material is available.
     if len(chosen) < max_records:
         ya = {id(d) for d, _ in chosen}
         leftovers = [t for t in fibers + others if id(t[0]) not in ya]
-        chosen += leftovers[:max_records - len(chosen)]
+        chosen += leftovers[: max_records - len(chosen)]
     return chosen
 
 
@@ -1105,12 +1215,14 @@ def section_depth(shapes, results_2) -> str:
         x = [f[0] for f in rows_2]
         n_part = [f[1] for f in rows_2]
         med = [f[2] for f in rows_2]
-        with_size = [(a, b) for a, b in zip(x, med) if b == b]   # discards NaN
+        with_size = [(a, b) for a, b in zip(x, med) if b == b]  # discards NaN
         parts = [_text_trend(x, n_part, tr("el número de partículas"))]
         if len(with_size) >= 3:
-            parts.append(_text_trend([a for a, _ in with_size],
-                                           [b for _, b in with_size],
-                                           tr("la talla mediana")))
+            parts.append(
+                _text_trend(
+                    [a for a, _ in with_size], [b for _, b in with_size], tr("la talla mediana")
+                )
+            )
         parts = [p for p in parts if p]
         if parts:
             paragraphs.append(f"<p><strong>{_esc(station)}.</strong> " + " ".join(parts) + "</p>")
@@ -1132,25 +1244,34 @@ def section_depth(shapes, results_2) -> str:
                 f"{median_2:.0f}" if vals else "—",
                 f"{max(vals):.0f}" if vals else "—",
             ]
-            rows_table += ("<tr><td>" + cells[0] + "</td>"
-                            + "".join(f"<td class='r'>{c}</td>" for c in cells[1:])
-                            + "</tr>")
+            rows_table += (
+                "<tr><td>"
+                + cells[0]
+                + "</td>"
+                + "".join(f"<td class='r'>{c}</td>" for c in cells[1:])
+                + "</tr>"
+            )
 
     return (
-        tr("<p>El tramo es la <strong>profundidad</strong> a la que se tomó el "
-           "sedimento, y a diferencia de una carpeta cualquiera está "
-           "<em>ordenado</em>. Eso permite preguntar por una tendencia —si hay "
-           "más partículas abajo que arriba, o si las de abajo son más "
-           "grandes— y no solo si los grupos difieren entre sí.</p>")
+        tr(
+            "<p>El tramo es la <strong>profundidad</strong> a la que se tomó el "
+            "sedimento, y a diferencia de una carpeta cualquiera está "
+            "<em>ordenado</em>. Eso permite preguntar por una tendencia —si hay "
+            "más partículas abajo que arriba, o si las de abajo son más "
+            "grandes— y no solo si los grupos difieren entre sí.</p>"
+        )
         + (f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>" if fig else "")
         + "".join(paragraphs)
-        + tr("<p class='caption' style='text-align:left'>La correlación se calcula "
-             "sobre los <strong>tramos</strong>, no sobre las partículas: dos "
-             "partículas de la misma placa no son observaciones independientes de la "
-             "profundidad, y contarlas como tales inflaría cualquier significación. "
-             "El valor de p sale de barajar la serie 20 000 veces, no de una "
-             "aproximación que con tan pocos tramos no valdría.</p>")
-        + f"<table class='data'><tr>{tr('<th>Estación</th><th>Tramo</th><th>Placas</th><th>Partículas</th><th>Con talla</th><th>Mediana (µm)</th><th>Mayor (µm)</th>')}</tr>{rows_table}</table>")
+        + tr(
+            "<p class='caption' style='text-align:left'>La correlación se calcula "
+            "sobre los <strong>tramos</strong>, no sobre las partículas: dos "
+            "partículas de la misma placa no son observaciones independientes de la "
+            "profundidad, y contarlas como tales inflaría cualquier significación. "
+            "El valor de p sale de barajar la serie 20 000 veces, no de una "
+            "aproximación que con tan pocos tramos no valdría.</p>"
+        )
+        + f"<table class='data'><tr>{tr('<th>Estación</th><th>Tramo</th><th>Placas</th><th>Partículas</th><th>Con talla</th><th>Mediana (µm)</th><th>Mayor (µm)</th>')}</tr>{rows_table}</table>"
+    )
 
 
 def _figure_calibration(state) -> str:
@@ -1177,10 +1298,13 @@ def _figure_calibration(state) -> str:
     from polyx.core.measure.calibration import DIAMETER_PLATE_MM, ORIGIN_PLATE
 
     cals = getattr(state, "calibrations", None) or {}
-    measurements = [(name_2, c) for name_2, c in cals.items()
-               if getattr(c, "valid", False)
-               and getattr(c, "origin", "") == ORIGIN_PLATE
-               and getattr(c, "radius_px", 0) > 0]
+    measurements = [
+        (name_2, c)
+        for name_2, c in cals.items()
+        if getattr(c, "valid", False)
+        and getattr(c, "origin", "") == ORIGIN_PLATE
+        and getattr(c, "radius_px", 0) > 0
+    ]
     if not measurements:
         return ""
 
@@ -1202,6 +1326,7 @@ def _figure_calibration(state) -> str:
         import cv2
 
         from polyx.core.measure.calibration import read_image
+
         bgr = read_image(path_2)
         if bgr is None:
             return ""
@@ -1215,16 +1340,17 @@ def _figure_calibration(state) -> str:
 
         # Fitted circumference + centre.
         cv2.circle(vis, (int(cx), int(cy)), int(r_px), (0, 255, 0), thickness)
-        cv2.drawMarker(vis, (int(cx), int(cy)), (0, 255, 0),
-                       cv2.MARKER_CROSS, thickness * 14, thickness)
+        cv2.drawMarker(
+            vis, (int(cx), int(cy)), (0, 255, 0), cv2.MARKER_CROSS, thickness * 14, thickness
+        )
         # The diameter, which is the known magnitude (100 mm nominal).
-        cv2.line(vis, (int(cx - r_px), int(cy)), (int(cx + r_px), int(cy)),
-                 (0, 210, 255), thickness)
+        cv2.line(
+            vis, (int(cx - r_px), int(cy)), (int(cx + r_px), int(cy)), (0, 210, 255), thickness
+        )
 
         scale = 900.0 / max(vis.shape[:2])
         if scale < 1:
-            vis = cv2.resize(vis, None, fx=scale, fy=scale,
-                             interpolation=cv2.INTER_AREA)
+            vis = cv2.resize(vis, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
         ok, buf = cv2.imencode(".jpg", vis, [cv2.IMWRITE_JPEG_QUALITY, 88])
         if not ok:
             return ""
@@ -1236,19 +1362,18 @@ def _figure_calibration(state) -> str:
     diam_px = 2.0 * r_px
     diam_mm = getattr(cal, "diameter_mm", 0) or DIAMETER_PLATE_MM
     return f"""
-<h3>{NUM}.1 {tr('Cómo se obtiene la escala, sobre una placa real')}</h3>
-<p>{tr('En verde, la circunferencia que el ajuste encontró para el borde externo del anillo; en amarillo, su diámetro. Ese diámetro es la magnitud conocida')}
-—<strong>{diam_mm:g} mm</strong>—{tr(' y de ahí sale todo lo demás.')}</p>
+<h3>{NUM}.1 {tr("Cómo se obtiene la escala, sobre una placa real")}</h3>
+<p>{tr("En verde, la circunferencia que el ajuste encontró para el borde externo del anillo; en amarillo, su diámetro. Ese diámetro es la magnitud conocida")}
+—<strong>{diam_mm:g} mm</strong>—{tr(" y de ahí sale todo lo demás.")}</p>
 <img src='data:image/jpeg;base64,{img64}' style='max-width:100%'>
 <p style='font-family:monospace;font-size:10pt'>
 {diam_mm:g} mm ÷ {diam_px:.1f} px = <strong>{cal.um_por_px:.4f} µm/px</strong>
 &nbsp;&nbsp;<span style='font-family:inherit;color:#656d76'>({_esc(name_2)},
-{tr('{n} puntos de borde').format(n=cal.n_points)})</span></p>
-<p>{tr('Conviene mirar si el círculo verde sigue el borde del anillo y no otra cosa —la sombra de la placa, un reflejo, o el borde del filtro de dentro—. Si cayera mal, <strong>todas</strong> las tallas de esa foto saldrían escaladas por el mismo factor equivocado, y ninguna otra cifra del informe lo delataría.')}</p>"""
+{tr("{n} puntos de borde").format(n=cal.n_points)})</span></p>
+<p>{tr("Conviene mirar si el círculo verde sigue el borde del anillo y no otra cosa —la sombra de la placa, un reflejo, o el borde del filtro de dentro—. Si cayera mal, <strong>todas</strong> las tallas de esa foto saldrían escaladas por el mismo factor equivocado, y ninguna otra cifra del informe lo delataría.")}</p>"""
 
 
-def _record_particle(det, image_path_2, um_por_px: Optional[float],
-                     title: str) -> str:
+def _record_particle(det, image_path_2, um_por_px: Optional[float], title: str) -> str:
     """Crop of a particle with its mask and the px-to-µm count.
 
     The complete conversion is shown — pixels measured, the scale of
@@ -1265,6 +1390,7 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float],
 
         from polyx.core.measure.calibration import read_image
         from polyx.core.measure.morphology import box_margin, segment
+
         bgr = read_image(image_path_2)
         if bgr is None:
             return ""
@@ -1274,26 +1400,26 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float],
         # photo. It already happened with a 0.35 copied by hand against the real 0.50, and it was seen
         # by eye in the report: `la mascara quedo corrida`.
         mg = box_margin(det.x2 - det.x1, det.y2 - det.y1)
-        x1 = max(0, int(det.x1) - mg); y1 = max(0, int(det.y1) - mg)
-        x2 = min(bgr.shape[1], int(det.x2) + mg); y2 = min(bgr.shape[0], int(det.y2) + mg)
+        x1 = max(0, int(det.x1) - mg)
+        y1 = max(0, int(det.y1) - mg)
+        x2 = min(bgr.shape[1], int(det.x2) + mg)
+        y2 = min(bgr.shape[0], int(det.y2) + mg)
         sub = bgr[y1:y2, x1:x2].copy()
         if sub.size == 0:
             return ""
         mask = segment(bgr, det.x1, det.y1, det.x2, det.y2)
         ov = sub.copy()
         if mask is not None:
-            h = min(ov.shape[0], mask.shape[0]); w = min(ov.shape[1], mask.shape[1])
+            h = min(ov.shape[0], mask.shape[0])
+            w = min(ov.shape[1], mask.shape[1])
             # Contour and not fill: covering the particle in green prevents judging
             # whether the mask really follows it, which is exactly what is shown.
-            cont, _ = cv2.findContours(mask[:h, :w], cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_NONE)
-            cv2.drawContours(ov[:h, :w], cont, -1, (0, 255, 0),
-                             max(1, min(ov.shape[:2]) // 90))
+            cont, _ = cv2.findContours(mask[:h, :w], cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            cv2.drawContours(ov[:h, :w], cont, -1, (0, 255, 0), max(1, min(ov.shape[:2]) // 90))
         par = np.hstack([sub, ov])
         scale = min(4.0, 620 / max(1, par.shape[1]))
         if scale > 1:
-            par = cv2.resize(par, None, fx=scale, fy=scale,
-                             interpolation=cv2.INTER_NEAREST)
+            par = cv2.resize(par, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
         ok, buf = cv2.imencode(".png", par)
         if not ok:
             return ""
@@ -1306,65 +1432,97 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float],
     length_px_2 = (det.length_um / um_por_px) if (det.length_um and um_por_px) else None
     account = ""
     if length_px_2 and um_por_px:
-        account = (f"<p style='font-family:monospace;font-size:10pt'>"
-                  f"{length_px_2:.1f} px &times; {um_por_px:.4f} µm/px = "
-                  f"<strong>{det.length_um:.0f} µm</strong></p>")
+        account = (
+            f"<p style='font-family:monospace;font-size:10pt'>"
+            f"{length_px_2:.1f} px &times; {um_por_px:.4f} µm/px = "
+            f"<strong>{det.length_um:.0f} µm</strong></p>"
+        )
         # The three measurements together: if the equivalent rectangle jumps
         # relative to the other two, the particle edge is jagged and the
         # size deserves a look.
         others = []
         if det.feret_um:
-            others.append(f"<tr><td>{tr('Feret máximo (cuerda)')}</td><td>{det.feret_um:.0f}</td></tr>")
+            others.append(
+                f"<tr><td>{tr('Feret máximo (cuerda)')}</td><td>{det.feret_um:.0f}</td></tr>"
+            )
         if det.geodesic_um:
-            others.append(f"<tr><td>{tr('Geodésico (sigue la curva)')}</td><td>{det.geodesic_um:.0f}</td></tr>")
+            others.append(
+                f"<tr><td>{tr('Geodésico (sigue la curva)')}</td><td>{det.geodesic_um:.0f}</td></tr>"
+            )
         if others:
-            account += (f"<table class='data'><tr>{tr('<th>Medida</th><th>µm</th>')}</tr>"
-                       f"{''.join(others)}</table>"
-                       f"<p>{tr('Se reporta la mayor de las dos primeras')}"
-                       + (tr(", en este caso por <strong>{metodo}</strong>").format(
-                           metodo=tr(det.method_length)) if det.method_length else "") + ".</p>")
-    return (f"<h3>{NUM}.{title}</h3>"
-            + tr("<p>A la izquierda la partícula; a la derecha, en verde, el "
-                 "contorno que se midió sobre ella.</p>") + f"{img}{account}")
+            account += (
+                f"<table class='data'><tr>{tr('<th>Medida</th><th>µm</th>')}</tr>"
+                f"{''.join(others)}</table>"
+                f"<p>{tr('Se reporta la mayor de las dos primeras')}"
+                + (
+                    tr(", en este caso por <strong>{metodo}</strong>").format(
+                        metodo=tr(det.method_length)
+                    )
+                    if det.method_length
+                    else ""
+                )
+                + ".</p>"
+            )
+    return (
+        f"<h3>{NUM}.{title}</h3>"
+        + tr(
+            "<p>A la izquierda la partícula; a la derecha, en verde, el "
+            "contorno que se midió sobre ella.</p>"
+        )
+        + f"{img}{account}"
+    )
 
 
 def _fig_confusion_matrix(cm: np.ndarray, class_names: List[str]) -> str:
     labels = list(class_names) + ["background"]
     fig, ax = plt.subplots(figsize=(5.5, 4.8))
     im = ax.imshow(cm, cmap="Blues")
-    ax.set_xticks(range(len(labels))); ax.set_yticks(range(len(labels)))
+    ax.set_xticks(range(len(labels)))
+    ax.set_yticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=45, ha="right")
     ax.set_yticklabels(labels)
-    ax.set_xlabel(tr("Predicción")); ax.set_ylabel("Ground Truth")
+    ax.set_xlabel(tr("Predicción"))
+    ax.set_ylabel("Ground Truth")
     ax.set_title(tr("Matriz de confusión"))
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
             val = cm[i, j]
             color = "white" if val > cm.max() * 0.5 else "black"
-            ax.text(j, i, str(int(val)), ha="center", va="center",
-                    fontsize=9, color=color)
+            ax.text(j, i, str(int(val)), ha="center", va="center", fontsize=9, color=color)
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     return _fig_to_b64(fig)
 
 
-def _table_width(rows_2: List[tuple], classes: List[str], title_col: str,
-                there_is_a_manual: bool, totals: bool = True) -> str:
+def _table_width(
+    rows_2: List[tuple],
+    classes: List[str],
+    title_col: str,
+    there_is_a_manual: bool,
+    totals: bool = True,
+) -> str:
     """Sample x polymer table with the manual and model columns side by side.
 
     ``filas`` is a list of (``etiqueta``, manual ``Counter``, model
     ``Counter``).
     """
     if there_is_a_manual:
-        header_line = (f"<tr><th rowspan='2'>{_esc(title_col)}</th>"
-               + "".join(f"<th colspan='2' style='text-align:center'>{_esc(tr(c))}</th>"
-                         for c in classes)
-               + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
-               + "".join("<th class='r'>manual</th><th class='r'>modelo</th>"
-                         for _ in classes + ["total"]) + "</tr>")
+        header_line = (
+            f"<tr><th rowspan='2'>{_esc(title_col)}</th>"
+            + "".join(
+                f"<th colspan='2' style='text-align:center'>{_esc(tr(c))}</th>" for c in classes
+            )
+            + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
+            + "".join(
+                "<th class='r'>manual</th><th class='r'>modelo</th>" for _ in classes + ["total"]
+            )
+            + "</tr>"
+        )
     else:
-        header_line = (f"<tr><th>{_esc(title_col)}</th>"
-               + "".join(f"<th class='r'>{_esc(tr(c))}</th>" for c in classes)
-               + "<th class='r'>Total</th></tr>")
+        header_line = (
+            f"<tr><th>{_esc(title_col)}</th>"
+            + "".join(f"<th class='r'>{_esc(tr(c))}</th>" for c in classes)
+            + "<th class='r'>Total</th></tr>"
+        )
 
     body = ""
     accumulated_man, accumulated_det = Counter(), Counter()
@@ -1389,8 +1547,10 @@ def _table_width(rows_2: List[tuple], classes: List[str], title_col: str,
         cells = ""
         for c in classes:
             if there_is_a_manual:
-                cells += (f"<td class='r'>{accumulated_man.get(c, 0)}</td>"
-                           f"<td class='r'>{accumulated_det.get(c, 0)}</td>")
+                cells += (
+                    f"<td class='r'>{accumulated_man.get(c, 0)}</td>"
+                    f"<td class='r'>{accumulated_det.get(c, 0)}</td>"
+                )
             else:
                 cells += f"<td class='r'>{accumulated_det.get(c, 0)}</td>"
         t_det = sum(accumulated_det.get(c, 0) for c in classes)
@@ -1399,14 +1559,12 @@ def _table_width(rows_2: List[tuple], classes: List[str], title_col: str,
             cells += f"<td class='r'>{t_man}</td><td class='r'>{t_det}</td>"
         else:
             cells += f"<td class='r'>{t_det}</td>"
-        body += (f"<tr style='font-weight:700;background:var(--bg_soft)'>"
-                   f"<td>TOTAL</td>{cells}</tr>")
+        body += f"<tr style='font-weight:700;background:var(--bg_soft)'><td>TOTAL</td>{cells}</tr>"
 
     return f"<table class='data'>{header_line}{body}</table>"
 
 
-def _section_count(results_2: Dict[int, list], state, active,
-                    classes: List[str]) -> str:
+def _section_count(results_2: Dict[int, list], state, active, classes: List[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
     It is the table requested for the manuscript: count by plastic type
@@ -1436,12 +1594,18 @@ def _section_count(results_2: Dict[int, list], state, active,
         label_2 = _esc(r.image_path.name)
         if sample:
             station, range_value, plate = sample
-            label_2 = (f"{_esc(r.image_path.name)}<br>"
-                        f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                        f"{_esc(station)} &middot; tramo {_esc(range_value)} &middot; placa {_esc(plate)}</span>")
-        rows_img.append((label_2,
-                          _count_per_class(r.gt) if r.has_gt else Counter(),
-                          _count_per_class(r.predictions)))
+            label_2 = (
+                f"{_esc(r.image_path.name)}<br>"
+                f"<span style='font-size:8.5pt;color:var(--ink3)'>"
+                f"{_esc(station)} &middot; tramo {_esc(range_value)} &middot; placa {_esc(plate)}</span>"
+            )
+        rows_img.append(
+            (
+                label_2,
+                _count_per_class(r.gt) if r.has_gt else Counter(),
+                _count_per_class(r.predictions),
+            )
+        )
     table_img = _table_width(rows_img, classes, "Sample (image)", there_is_a_manual)
 
     # -- Per stretch and per station, if the names follow the pattern --
@@ -1473,44 +1637,68 @@ def _section_count(results_2: Dict[int, list], state, active,
             items_2 = per_section[clue]
             man, det = _add(items_2)
             palabra = tr("imágenes") if len(items_2) != 1 else tr("imagen")
-            rows_t.append((f"{_esc(station)} &middot; tramo {_esc(range_value)} "
-                            f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                            f"({len(items_2)} {palabra})</span>",
-                            man, det))
-        table_range = ("<h3>@@N@@.2 " + tr("Por tramo de profundidad") + "</h3>"
-                       + tr("<p>Las placas del mismo tramo se <strong>suman</strong>: son "
-                            "submuestras de la misma masa de sedimento, no repeticiones "
-                            "fotográficas. El tramo es la unidad de análisis.</p>")
-                       + _table_width(rows_t, classes, tr("Tramo"), there_is_a_manual))
+            rows_t.append(
+                (
+                    f"{_esc(station)} &middot; tramo {_esc(range_value)} "
+                    f"<span style='font-size:8.5pt;color:var(--ink3)'>"
+                    f"({len(items_2)} {palabra})</span>",
+                    man,
+                    det,
+                )
+            )
+        table_range = (
+            "<h3>@@N@@.2 "
+            + tr("Por tramo de profundidad")
+            + "</h3>"
+            + tr(
+                "<p>Las placas del mismo tramo se <strong>suman</strong>: son "
+                "submuestras de la misma masa de sedimento, no repeticiones "
+                "fotográficas. El tramo es la unidad de análisis.</p>"
+            )
+            + _table_width(rows_t, classes, tr("Tramo"), there_is_a_manual)
+        )
 
         rows_e = []
         for station in sorted(per_station, key=_order_est):
             man, det = _add(per_station[station])
             rows_e.append((_esc(station), man, det))
-        table_station = ("<h3>@@N@@.3 " + tr("Por estación") + "</h3>"
-                          + _table_width(rows_e, classes, tr("Estación"), there_is_a_manual,
-                                         totals=False))
+        table_station = (
+            "<h3>@@N@@.3 "
+            + tr("Por estación")
+            + "</h3>"
+            + _table_width(rows_e, classes, tr("Estación"), there_is_a_manual, totals=False)
+        )
 
         outside = len(grouped) - len(parseable)
         if outside:
-            note_grouping = ("<p class='caption'>" + tr(
-                "{n} imagen(es) no siguen la nomenclatura <code>tramo.testigo</code> y "
-                "quedan fuera de las tablas agrupadas; sí están en la tabla por "
-                "imagen.").format(n=outside) + "</p>")
+            note_grouping = (
+                "<p class='caption'>"
+                + tr(
+                    "{n} imagen(es) no siguen la nomenclatura <code>tramo.testigo</code> y "
+                    "quedan fuera de las tablas agrupadas; sí están en la tabla por "
+                    "imagen."
+                ).format(n=outside)
+                + "</p>"
+            )
 
     tagline = tr(", el primer modelo activo.") if len(active) > 1 else "."
     intro = (
-        tr("<p>Partículas contadas en cada muestra, desglosadas por polímero. "
-           "La columna <em>manual</em> es la anotación humana (Ground Truth) y la "
-           "columna <em>modelo</em> son todas las detecciones de "
-           "<strong>{alias}</strong>{coletilla}</p>").format(
-               alias=_esc(active[0].alias), coletilla=tagline)
-        + tr("<p><strong>Léase como conteo, no como evaluación.</strong> La "
-             "columna del modelo no descuenta falsos positivos ni empareja caja a caja: "
-             "es cuántas partículas de cada polímero reportó. Coincidir en el total no "
-             "implica haber acertado partícula por partícula; para eso está el análisis "
-             "de errores.</p>")
-        + "<h3>@@N@@.1 " + tr("Por imagen") + "</h3>"
+        tr(
+            "<p>Partículas contadas en cada muestra, desglosadas por polímero. "
+            "La columna <em>manual</em> es la anotación humana (Ground Truth) y la "
+            "columna <em>modelo</em> son todas las detecciones de "
+            "<strong>{alias}</strong>{coletilla}</p>"
+        ).format(alias=_esc(active[0].alias), coletilla=tagline)
+        + tr(
+            "<p><strong>Léase como conteo, no como evaluación.</strong> La "
+            "columna del modelo no descuenta falsos positivos ni empareja caja a caja: "
+            "es cuántas partículas de cada polímero reportó. Coincidir en el total no "
+            "implica haber acertado partícula por partícula; para eso está el análisis "
+            "de errores.</p>"
+        )
+        + "<h3>@@N@@.1 "
+        + tr("Por imagen")
+        + "</h3>"
     )
     return intro + table_img + note_grouping + table_range + table_station
 
@@ -1525,19 +1713,19 @@ def _section_count(results_2: Dict[int, list], state, active,
 # by reading this list, so there is no second list to keep in
 # sync.
 SECTIONS = [
-    ("resumen",     "Resumen"),
-    ("metodos",     "Métodos"),
+    ("resumen", "Resumen"),
+    ("metodos", "Métodos"),
     ("calibracion", "Calibración de escala"),
-    ("forma",       "Forma y talla de las partículas"),
+    ("forma", "Forma y talla de las partículas"),
     ("talla_carpetas", "Talla por carpeta y por foto (comparación entre sitios)"),
     ("profundidad", "Perfil en profundidad del testigo"),
-    ("fichas",      "Ficha de partículas medidas (muestra)"),
-    ("resultados",  "Resultados generales"),
-    ("modelos",     "Resumen por modelo"),
-    ("errores",     "Análisis de errores"),
+    ("fichas", "Ficha de partículas medidas (muestra)"),
+    ("resultados", "Resultados generales"),
+    ("modelos", "Resumen por modelo"),
+    ("errores", "Análisis de errores"),
     ("comparacion", "Comparación entre modelos"),
-    ("galeria",     "Galería por imagen"),
-    ("conteo",      "Conteo por muestra y tipo de plástico"),
+    ("galeria", "Galería por imagen"),
+    ("conteo", "Conteo por muestra y tipo de plástico"),
     ("referencias", "Referencias bibliográficas"),
 ]
 
@@ -1549,8 +1737,17 @@ IDS_SECTIONS = [s[0] for s in SECTIONS]
 PRESETS = {
     "completo": IDS_SECTIONS,
     "resumen": ["resumen", "calibracion", "forma", "conteo", "galeria"],
-    "metodologico": ["resumen", "metodos", "calibracion", "forma", "fichas",
-                     "modelos", "errores", "comparacion", "referencias"],
+    "metodologico": [
+        "resumen",
+        "metodos",
+        "calibracion",
+        "forma",
+        "fichas",
+        "modelos",
+        "errores",
+        "comparacion",
+        "referencias",
+    ],
 }
 
 # Marker that is replaced by the final section number during assembly.
@@ -1577,8 +1774,9 @@ def _pr_f1(tp: int, fp: int, fn: int):
     return p, r, (2 * p * r / (p + r) if (p + r) else 0.0)
 
 
-def _section_summary(total_imgs: int, total_dets: int, avg_conf: float,
-                     avg_size: float, active, any_gt: bool) -> str:
+def _section_summary(
+    total_imgs: int, total_dets: int, avg_conf: float, avg_size: float, active, any_gt: bool
+) -> str:
     """Body of the 'resumen' section: KPI cards plus the abstract paragraph.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
@@ -1591,16 +1789,20 @@ def _section_summary(total_imgs: int, total_dets: int, avg_conf: float,
         "YOLO entrenado para detectar microplásticos de PET, PP y LDPE bajo "
         "fluorescencia Nile Red (254 nm). El total de detecciones fue "
         "<strong>{dets}</strong> con una confianza media de <strong>{conf}</strong>."
-    ).format(imgs=total_imgs, n=len(active),
-             modelos=tr("modelos") if len(active) != 1 else tr("modelo"),
-             dets=total_dets, conf=f"{avg_conf:.3f}")
+    ).format(
+        imgs=total_imgs,
+        n=len(active),
+        modelos=tr("modelos") if len(active) != 1 else tr("modelo"),
+        dets=total_dets,
+        conf=f"{avg_conf:.3f}",
+    )
 
     return f"""
 <div class='kpis'>
-  <div class='kpi'><div class='l'>{tr('Imágenes')}</div><div class='v'>{total_imgs}</div><div class='b' style='background:var(--accent)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Detecciones')}</div><div class='v'>{total_dets}</div><div class='b' style='background:var(--accent)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Conf. media')}</div><div class='v'>{avg_conf:.3f}</div><div class='b' style='background:var(--vio)'></div></div>
-  <div class='kpi'><div class='l'>{tr('Tamaño medio (μm)')}</div><div class='v'>{(f"{avg_size:.1f}" if avg_size else "—")}</div><div class='b' style='background:var(--warn)'></div></div>
+  <div class='kpi'><div class='l'>{tr("Imágenes")}</div><div class='v'>{total_imgs}</div><div class='b' style='background:var(--accent)'></div></div>
+  <div class='kpi'><div class='l'>{tr("Detecciones")}</div><div class='v'>{total_dets}</div><div class='b' style='background:var(--accent)'></div></div>
+  <div class='kpi'><div class='l'>{tr("Conf. media")}</div><div class='v'>{avg_conf:.3f}</div><div class='b' style='background:var(--vio)'></div></div>
+  <div class='kpi'><div class='l'>{tr("Tamaño medio (μm)")}</div><div class='v'>{(f"{avg_size:.1f}" if avg_size else "—")}</div><div class='b' style='background:var(--warn)'></div></div>
 </div>
 <p>{_summary_paragraph}
 {tr("Se incluyó análisis de errores con Ground Truth (Verdaderos Positivos, Falsos Positivos, Falsos Negativos y Mal Clasificados).") if any_gt else tr("No se aportó Ground Truth, por lo que no se reportan métricas de error.")}
@@ -1623,10 +1825,15 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
     cls_names = []
     for cid in cls_ids:
-        name = next((d.class_name for lst in gts_only + preds_only for d in lst if d.class_id == cid), str(cid))
+        name = next(
+            (d.class_name for lst in gts_only + preds_only for d in lst if d.class_id == cid),
+            str(cid),
+        )
         cls_names.append(name)
     cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
-    per_class_metrics = aggregate_per_class(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
+    per_class_metrics = aggregate_per_class(
+        preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp
+    )
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
     rows = ""
@@ -1649,20 +1856,22 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     if missing:
         note_missing = (
             "<p class='caption' style='text-align:left'>"
-            + tr("Sin fila para {clases}: no aparece ni en la anotación manual ni "
-                 "entre las predicciones de este lote, de modo que no hay métrica "
-                 "que informar. El modelo sí está entrenado para esa clase.").format(
-                     clases=_esc(", ".join(missing)))
-            + "</p>")
+            + tr(
+                "Sin fila para {clases}: no aparece ni en la anotación manual ni "
+                "entre las predicciones de este lote, de modo que no hay métrica "
+                "que informar. El modelo sí está entrenado para esa clase."
+            ).format(clases=_esc(", ".join(missing)))
+            + "</p>"
+        )
 
     return f"""
         
-        <h3>@@N@@.1 {tr('Matriz de confusión')}</h3>
+        <h3>@@N@@.1 {tr("Matriz de confusión")}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{tr('Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).').format(modelo=_esc(active[0].alias), iou=state.params.iou_tp)}</div></div>
-        <h3>@@N@@.2 {tr('Precisión / Recall / F1 por clase')}</h3>
-        <table class='data'><tr>{tr('<th>Clase</th>')}<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
-        {tr('<th>Precisión</th><th>Recall</th><th>F1</th>')}</tr>{rows}</table>
+            <div class='caption'>{tr("Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).").format(modelo=_esc(active[0].alias), iou=state.params.iou_tp)}</div></div>
+        <h3>@@N@@.2 {tr("Precisión / Recall / F1 por clase")}</h3>
+        <table class='data'><tr>{tr("<th>Clase</th>")}<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
+        {tr("<th>Precisión</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
         {note_missing}
         """
 
@@ -1686,17 +1895,20 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
     rows_models = ""
     total_mc = 0
     for mi, slot in enumerate(state.model_slots):
-        if slot.path is None: continue
+        if slot.path is None:
+            continue
         rs = results_2.get(mi, [])
         n_img = len({r.image_path for r in rs})
         n_det = sum(len(r.predictions) for r in rs)
         cf = [p.conf for r in rs for p in r.predictions]
-        tp = sum(r.tp for r in rs); fp = sum(r.fp for r in rs)
-        fn = sum(r.fn for r in rs); mc = sum(r.miscls for r in rs)
+        tp = sum(r.tp for r in rs)
+        fp = sum(r.fp for r in rs)
+        fn = sum(r.fn for r in rs)
+        mc = sum(r.miscls for r in rs)
         total_mc += mc
         _, _, f1_loc = _pr_f1(tp, fp, fn)
         _, _, f1_cls = _pr_f1(tp, fp + mc, fn + mc)
-        avg_cf = (sum(cf)/len(cf)) if cf else 0
+        avg_cf = (sum(cf) / len(cf)) if cf else 0
         there_is_gt = any(r.has_gt for r in rs)
         c_loc = f"{f1_loc:.3f}" if there_is_gt else "—"
         c_cls = f"{f1_cls:.3f}" if there_is_gt else "—"
@@ -1727,16 +1939,22 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
             "<p>La diferencia corresponde a <strong>{mc}</strong> "
             "partícula(s) bien localizada(s) pero asignada(s) a la clase "
             "incorrecta. Es la cifra que concilia esta tabla con la de "
-            "precisión por clase de la sección de errores.</p>").format(
-                pl=f"{p_loc:.3f}", rl=f"{r_loc:.3f}", fl=f"{f_loc:.3f}",
-                pc=f"{p_cls:.3f}", rc=f"{r_cls:.3f}", fc=f"{f_cls:.3f}",
-                mc=total_mc)
+            "precisión por clase de la sección de errores.</p>"
+        ).format(
+            pl=f"{p_loc:.3f}",
+            rl=f"{r_loc:.3f}",
+            fl=f"{f_loc:.3f}",
+            pc=f"{p_cls:.3f}",
+            rc=f"{r_cls:.3f}",
+            fc=f"{f_cls:.3f}",
+            mc=total_mc,
+        )
 
     return f"""
-<table class='data'><tr>{tr('<th>Modelo</th><th>Imágenes</th><th>Detecciones</th><th>Conf. media</th>')}
+<table class='data'><tr>{tr("<th>Modelo</th><th>Imágenes</th><th>Detecciones</th><th>Conf. media</th>")}
 <th>True Positives</th><th>False Positives</th><th>False Negatives</th>
-<th>Misclassified</th><th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('localización')}</span></th>
-<th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr('con clase')}</span></th></tr>{rows_models}</table>
+<th>Misclassified</th><th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr("localización")}</span></th>
+<th>F1<br><span style='font-weight:400;font-size:8.5pt'>{tr("con clase")}</span></th></tr>{rows_models}</table>
 {note_miscls}"""
 
 
@@ -1746,8 +1964,7 @@ def _section_verdict(results_2, state) -> str:
     consumed before extraction."""
     text_2 = ""
     if any(r.has_gt for rs in results_2.values() for r in rs):
-        sweep = _sweep_confidence(results_2, state, state.params.iou_tp,
-                                     state.params.conf)
+        sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
         if sweep:
             summary = []
             for alias, rows_2 in sweep.items():
@@ -1758,10 +1975,16 @@ def _section_verdict(results_2, state) -> str:
             # Verdict: the winner is whoever has the best F1 with class at their best threshold.
             summary.sort(key=lambda x: x[2][3], reverse=True)
             g_alias, g_act, g_best = summary[0]
-            text_2 = tr("<p><strong>Mejor desempeño: {alias}</strong>, con F1 {f1} "
-                       "al umbral {umbral} (P {p} · R {r}).</p>").format(
-                           alias=_esc(g_alias), f1=f"{g_best[3]:.3f}", umbral=f"{g_best[0]:.2f}",
-                           p=f"{g_best[1]:.3f}", r=f"{g_best[2]:.3f}")
+            text_2 = tr(
+                "<p><strong>Mejor desempeño: {alias}</strong>, con F1 {f1} "
+                "al umbral {umbral} (P {p} · R {r}).</p>"
+            ).format(
+                alias=_esc(g_alias),
+                f1=f"{g_best[3]:.3f}",
+                umbral=f"{g_best[0]:.2f}",
+                p=f"{g_best[1]:.3f}",
+                r=f"{g_best[2]:.3f}",
+            )
             if len(summary) > 1:
                 p_alias, _, p_best = summary[-1]
                 d = g_best[3] - p_best[3]
@@ -1770,7 +1993,8 @@ def _section_verdict(results_2, state) -> str:
                     "un solo entrenamiento por arquitectura, una diferencia pequeña no "
                     "distingue el diseño de la red del azar de inicialización: haría "
                     "falta repetir con distintas semillas para afirmar que una es "
-                    "superior.</p>").format(otro=_esc(p_alias), d=f"{d:.3f}")
+                    "superior.</p>"
+                ).format(otro=_esc(p_alias), d=f"{d:.3f}")
 
             return text_2
     return text_2
@@ -1797,10 +2021,12 @@ def _section_comparison(state, results_2) -> str:
         header_line = "<tr><th>Image</th>"
         for mi in active_2:
             alias = state.model_slots[mi].alias
-            header_line += (f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>")
+            header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
             if there_is_gt:
-                header_line += ("<th><span style='font-weight:400;font-size:8.5pt'>"
-                        "True Positives/False Positives/False Negatives</span></th>")
+                header_line += (
+                    "<th><span style='font-weight:400;font-size:8.5pt'>"
+                    "True Positives/False Positives/False Negatives</span></th>"
+                )
         header_line += "</tr>"
 
         rows_2 = ""
@@ -1815,7 +2041,7 @@ def _section_comparison(state, results_2) -> str:
                     continue
                 rows_2 += f"<td class='r'>{len(r.predictions)}</td>"
                 if there_is_gt:
-                    cell = (f"{r.tp}/{r.fp}/{r.fn}" if r.has_gt else "—")
+                    cell = f"{r.tp}/{r.fp}/{r.fn}" if r.has_gt else "—"
                     rows_2 += f"<td class='r'>{cell}</td>"
             rows_2 += "</tr>"
 
@@ -1826,12 +2052,14 @@ def _section_comparison(state, results_2) -> str:
             marker_2 = []
             for mi in active_2:
                 rs = results_2.get(mi, [])
-                tp = sum(r.tp for r in rs); fp = sum(r.fp for r in rs)
+                tp = sum(r.tp for r in rs)
+                fp = sum(r.fp for r in rs)
                 fn = sum(r.fn for r in rs)
-                pr = tp/(tp+fp) if (tp+fp) else 0
-                rc = tp/(tp+fn) if (tp+fn) else 0
-                marker_2.append((2*pr*rc/(pr+rc) if (pr+rc) else 0,
-                                 state.model_slots[mi].alias))
+                pr = tp / (tp + fp) if (tp + fp) else 0
+                rc = tp / (tp + fn) if (tp + fn) else 0
+                marker_2.append(
+                    (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
+                )
             marker_2.sort(reverse=True)
             best_f1, best = marker_2[0]
             # This F1 is the permissive one (localization). It used to say only `F1 global` and
@@ -1840,13 +2068,19 @@ def _section_comparison(state, results_2) -> str:
             verdict = tr(
                 "<p><b>Mejor F1 de localización:</b> {alias} ({f1}) — encontrar la "
                 "partícula, sin exigir que acierte el polímero. El veredicto con clase "
-                "está más arriba.</p>").format(alias=_esc(best), f1=f"{best_f1:.3f}")
+                "está más arriba.</p>"
+            ).format(alias=_esc(best), f1=f"{best_f1:.3f}")
         else:
-            verdict = ("<p class='caption' style='text-align:left'>"
-                         + tr("Sin ground truth no se puede declarar un ganador: un "
-                              "modelo con más detecciones puede estar acertando o "
-                              "inventando. Carga anotaciones para obtener F1 por "
-                              "modelo.") + "</p>")
+            verdict = (
+                "<p class='caption' style='text-align:left'>"
+                + tr(
+                    "Sin ground truth no se puede declarar un ganador: un "
+                    "modelo con más detecciones puede estar acertando o "
+                    "inventando. Carga anotaciones para obtener F1 por "
+                    "modelo."
+                )
+                + "</p>"
+            )
 
         # ── Side-by-side figures ──
         figures_cmp = ""
@@ -1856,8 +2090,10 @@ def _section_comparison(state, results_2) -> str:
             for mi in active_2:
                 alias = state.model_slots[mi].alias
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
-                tp = sum(r.tp for r in rs); fp = sum(r.fp for r in rs)
-                fn = sum(r.fn for r in rs); mc = sum(r.miscls for r in rs)
+                tp = sum(r.tp for r in rs)
+                fp = sum(r.fp for r in rs)
+                fn = sum(r.fn for r in rs)
+                mc = sum(r.miscls for r in rs)
                 p_l, r_l, f_l = _pr_f1(tp, fp, fn)
                 p_c, r_c, f_c = _pr_f1(tp, fp + mc, fn + mc)
                 data_bars.append((alias, p_l, r_l, f_l, p_c, r_c, f_c))
@@ -1866,36 +2102,52 @@ def _section_comparison(state, results_2) -> str:
                 preds_m = [r.predictions for r in rs]
                 ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
                 if ids:
-                    metrics = aggregate_per_class(preds_m, gts_m, ids,
-                                                   iou_thr=state.params.iou_tp)
+                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
                     names_cls = {
-                        cid: next((d.class_name for lst in gts_m + preds_m
-                                   for d in lst if d.class_id == cid), str(cid))
-                        for cid in ids}
+                        cid: next(
+                            (
+                                d.class_name
+                                for lst in gts_m + preds_m
+                                for d in lst
+                                if d.class_id == cid
+                            ),
+                            str(cid),
+                        )
+                        for cid in ids
+                    }
                     by_model_class[alias] = {
-                        names_cls[cid]: (metrics[cid].precision,
-                                           metrics[cid].recall,
-                                           metrics[cid].f1) for cid in ids}
+                        names_cls[cid]: (
+                            metrics[cid].precision,
+                            metrics[cid].recall,
+                            metrics[cid].f1,
+                        )
+                        for cid in ids
+                    }
 
             f_bars = _fig_comparison_metrics(data_bars)
             if f_bars:
                 figures_cmp += (
                     f"<div class='fig'><img src='data:image/png;base64,{f_bars}' />"
                     "<div class='caption'>"
-                    + tr("Figura. Precisión, Recall y F1 de cada modelo al umbral "
-                         "{umbral}, en los dos criterios. La distancia entre paneles es "
-                         "la confusión entre polímeros.").format(
-                             umbral=f"{state.params.conf:g}")
-                    + "</div></div>")
+                    + tr(
+                        "Figura. Precisión, Recall y F1 de cada modelo al umbral "
+                        "{umbral}, en los dos criterios. La distancia entre paneles es "
+                        "la confusión entre polímeros."
+                    ).format(umbral=f"{state.params.conf:g}")
+                    + "</div></div>"
+                )
 
             f_class_id = _fig_metrics_by_class(by_model_class)
             if f_class_id:
                 figures_cmp += (
                     f"<div class='fig'><img src='data:image/png;base64,{f_class_id}' />"
                     "<div class='caption'>"
-                    + tr("Figura. F1 por clase. Un modelo puede ganar en el agregado y "
-                         "perder en el polímero que interesa.")
-                    + "</div></div>")
+                    + tr(
+                        "Figura. F1 por clase. Un modelo puede ganar en el agregado y "
+                        "perder en el polímero que interesa."
+                    )
+                    + "</div></div>"
+                )
 
             # Photo-by-photo agreement between the first two models.
             if len(active_2) >= 2:
@@ -1904,53 +2156,70 @@ def _section_comparison(state, results_2) -> str:
                 for path_2 in sorted(by_photo):
                     ra, rb = by_photo[path_2].get(a), by_photo[path_2].get(b)
                     if ra is not None and rb is not None:
-                        pares.append((len(ra.predictions), len(rb.predictions),
-                                      Path(path_2).name))
+                        pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
                 f_agreement = _fig_agreement_by_image(
-                    state.model_slots[a].alias, state.model_slots[b].alias, pares)
+                    state.model_slots[a].alias, state.model_slots[b].alias, pares
+                )
                 if f_agreement:
                     figures_cmp += (
                         f"<div class='fig'><img src='data:image/png;base64,{f_agreement}' />"
                         "<div class='caption'>"
-                        + tr("Figura. Detecciones por imagen de un modelo frente al "
-                             "otro; la diagonal es el acuerdo exacto. Escala "
-                             "simétrica-logarítmica, porque casi todas las placas "
-                             "tienen pocas partículas y unas pocas cientos.")
-                        + "</div></div>")
+                        + tr(
+                            "Figura. Detecciones por imagen de un modelo frente al "
+                            "otro; la diagonal es el acuerdo exacto. Escala "
+                            "simétrica-logarítmica, porque casi todas las placas "
+                            "tienen pocas partículas y unas pocas cientos."
+                        )
+                        + "</div></div>"
+                    )
 
             # F1 curve against the threshold: it supports the choice of the operating
             # point with evidence, instead of asserting it.
-            sweep = _sweep_confidence(results_2, state, state.params.iou_tp,
-                                         state.params.conf)
+            sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
             f_sweep = _fig_sweep(sweep)
             if f_sweep:
                 figures_cmp += (
                     f"<div class='fig'><img src='data:image/png;base64,{f_sweep}' />"
                     "<div class='caption'>"
-                    + tr("Figura. F1 (con clase) frente al umbral de confianza; la "
-                         "estrella marca el máximo de cada modelo. La curva arranca en "
-                         "{umbral}, el umbral con que se ejecutó: por debajo las "
-                         "detecciones no se calcularon.").format(
-                             umbral=f"{state.params.conf:g}")
-                    + "</div></div>")
+                    + tr(
+                        "Figura. F1 (con clase) frente al umbral de confianza; la "
+                        "estrella marca el máximo de cada modelo. La curva arranca en "
+                        "{umbral}, el umbral con que se ejecutó: por debajo las "
+                        "detecciones no se calcularon."
+                    ).format(umbral=f"{state.params.conf:g}")
+                    + "</div></div>"
+                )
 
         compare_html = (
-            tr("<p>Detecciones de cada modelo imagen por imagen. El total puede "
-               "estar dominado por unas pocas fotos densas, así que conviene mirar "
-               "el detalle antes de elegir modelo.</p>")
+            tr(
+                "<p>Detecciones de cada modelo imagen por imagen. El total puede "
+                "estar dominado por unas pocas fotos densas, así que conviene mirar "
+                "el detalle antes de elegir modelo.</p>"
+            )
             + verdict
             + figures_cmp
-            + f"<table class='data'>{header_line}{rows_2}</table>")
+            + f"<table class='data'>{header_line}{rows_2}</table>"
+        )
     elif len(active_2) == 1:
-        compare_html = ("<p class='caption' style='text-align:left'>"
-                        + tr("Solo se ejecutó un modelo, así que no hay comparación. "
-                             "Carga un segundo modelo en la pestaña Modelos para "
-                             "compararlos sobre las mismas imágenes.") + "</p>")
+        compare_html = (
+            "<p class='caption' style='text-align:left'>"
+            + tr(
+                "Solo se ejecutó un modelo, así que no hay comparación. "
+                "Carga un segundo modelo en la pestaña Modelos para "
+                "compararlos sobre las mismas imágenes."
+            )
+            + "</p>"
+        )
     return compare_html
 
 
-def _section_gallery(results_2: Dict[int, list], state, classes_batch,
-                     max_gallery: int = 60, include_gallery: bool = True) -> str:
+def _section_gallery(
+    results_2: Dict[int, list],
+    state,
+    classes_batch,
+    max_gallery: int = 60,
+    include_gallery: bool = True,
+) -> str:
     """Body of the 'galeria' section: side-by-side prediction vs Ground Truth.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
@@ -2021,17 +2290,23 @@ def _section_gallery(results_2: Dict[int, list], state, classes_batch,
                 where = ""
                 if sample:
                     station, range_value, plate = sample
-                    where = (f" &nbsp;<span class='tag'>{_esc(station)} · tramo {_esc(range_value)} "
-                             f"· placa {_esc(plate)}</span>")
-                meta = (f"<strong>{_esc(r.image_path.name)}</strong>{where}"
-                        f"&nbsp;<span class='tag'>modelo: {_esc(slot.alias)}</span>")
+                    where = (
+                        f" &nbsp;<span class='tag'>{_esc(station)} · tramo {_esc(range_value)} "
+                        f"· placa {_esc(plate)}</span>"
+                    )
+                meta = (
+                    f"<strong>{_esc(r.image_path.name)}</strong>{where}"
+                    f"&nbsp;<span class='tag'>modelo: {_esc(slot.alias)}</span>"
+                )
 
                 # Photo table: particles per polymer. Matches and
                 # failures paired box by box are another question and live in
                 # the error analysis section.
-                table = _table_count(_count_per_class(r.gt) if r.has_gt else None,
-                                      _count_per_class(r.predictions),
-                                      classes_batch)
+                table = _table_count(
+                    _count_per_class(r.gt) if r.has_gt else None,
+                    _count_per_class(r.predictions),
+                    classes_batch,
+                )
 
                 blocks.append(
                     f"<div class='compare'><div class='compare-pair'>{left}{right}</div>"
@@ -2042,25 +2317,31 @@ def _section_gallery(results_2: Dict[int, list], state, classes_batch,
             note = ""
             if omitted:
                 n_shown = len({r.image_path for _, r in candidates})
-                note = ("<p class='caption'>" + tr(
-                    "Se muestran las primeras {n} imágenes, cada una con todos los "
-                    "modelos; {fuera} quedaron fuera de la galería para que el archivo "
-                    "siga siendo manejable. Las métricas de las secciones anteriores "
-                    "sí incluyen todas.").format(n=n_shown, fuera=omitted)
-                        + "</p>")
+                note = (
+                    "<p class='caption'>"
+                    + tr(
+                        "Se muestran las primeras {n} imágenes, cada una con todos los "
+                        "modelos; {fuera} quedaron fuera de la galería para que el archivo "
+                        "siga siendo manejable. Las métricas de las secciones anteriores "
+                        "sí incluyen todas."
+                    ).format(n=n_shown, fuera=omitted)
+                    + "</p>"
+                )
             gallery_html = (
-                tr("<p>Cada bloque muestra, a la izquierda, las detecciones del "
-                   "modelo (<em>bounding boxes</em> dibujadas por YOLO con su clase y "
-                   "confianza) y, a la derecha, las etiquetas reales de control "
-                   "(<em>Ground Truth</em>). Esta vista lado a lado permite evaluar "
-                   "visualmente dónde acertó o falló el modelo.</p>")
-                + note + "".join(blocks)
+                tr(
+                    "<p>Cada bloque muestra, a la izquierda, las detecciones del "
+                    "modelo (<em>bounding boxes</em> dibujadas por YOLO con su clase y "
+                    "confianza) y, a la derecha, las etiquetas reales de control "
+                    "(<em>Ground Truth</em>). Esta vista lado a lado permite evaluar "
+                    "visualmente dónde acertó o falló el modelo.</p>"
+                )
+                + note
+                + "".join(blocks)
             )
     return gallery_html
 
 
-def _section_results(per_class: Dict[str, int], confs: List[float],
-                        sizes: List[float]) -> str:
+def _section_results(per_class: Dict[str, int], confs: List[float], sizes: List[float]) -> str:
     """Body of the ``'resultados'`` section: aggregate figures plus captions.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns
@@ -2082,8 +2363,9 @@ def _section_results(per_class: Dict[str, int], confs: List[float],
     return figures_html
 
 
-def _section_methods(state, active, all_results, total_imgs: int,
-                     total_dets: int, any_gt: bool) -> tuple:
+def _section_methods(
+    state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
+) -> tuple:
     """Body of the 'metodos' section: parameters table, team and redacted paragraph.
 
     Returns ``(methods_html, equipo_html, methods_para)`` — the three pieces
@@ -2103,15 +2385,17 @@ def _section_methods(state, active, all_results, total_imgs: int,
     if p.um_per_px > 0:
         um_px_txt = f"{p.um_per_px:g}"
     else:
-        _ums_methods = [c.um_por_px for c in (getattr(state, "calibrations", None) or {}).values()
-                        if getattr(c, "valid", False)]
+        _ums_methods = [
+            c.um_por_px
+            for c in (getattr(state, "calibrations", None) or {}).values()
+            if getattr(c, "valid", False)
+        ]
         _mic = _average_ic95(_ums_methods)
         if _mic:
             _average_m, _margin_m, _n_m = _mic
             um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
         elif _ums_methods:
-            um_px_txt = (f"{_ums_methods[0]:.4f} "
-                         + tr("(una sola foto calibrada, sin IC)"))
+            um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
         else:
             um_px_txt = "—"
     methods_rows = [
@@ -2122,23 +2406,32 @@ def _section_methods(state, active, all_results, total_imgs: int,
         (tr("Tamaño de imagen (imgsz)"), f"{p.imgsz}"),
         (tr("Dispositivo"), p.device),
         (tr("μm por píxel"), um_px_txt),
-        (tr("Filtro tamaño (μm)"), f"{p.size_min_um} – {p.size_max_um}" if (p.size_min_um or p.size_max_um) else tr("sin filtro")),
+        (
+            tr("Filtro tamaño (μm)"),
+            f"{p.size_min_um} – {p.size_max_um}"
+            if (p.size_min_um or p.size_max_um)
+            else tr("sin filtro"),
+        ),
         (tr("Imágenes procesadas"), str(total_imgs)),
         (tr("Total de detecciones"), str(total_dets)),
     ]
     # Abstention: how many particles were counted without attributing a polymer to them. It goes in
     # Methods and not buried in a results table because it is an analysis
     # decision, and whoever reads the report needs to know it was taken.
-    _res_assignment = resume([d for r in all_results for d in r.predictions],
-                        getattr(p, "conf_assignment", 0.0))
+    _res_assignment = resume(
+        [d for r in all_results for d in r.predictions], getattr(p, "conf_assignment", 0.0)
+    )
     if _res_assignment.active:
-        methods_rows.append((
-            tr("Confianza mínima para asignar polímero"),
-            f"{p.conf_assignment:g}"))
-        methods_rows.append((
-            tr("Partículas sin polímero asignable"),
-            f"{_res_assignment.no_assignables} / {_res_assignment.total} "
-            f"({_res_assignment.percentage_no_assignable:.1f} %)"))
+        methods_rows.append(
+            (tr("Confianza mínima para asignar polímero"), f"{p.conf_assignment:g}")
+        )
+        methods_rows.append(
+            (
+                tr("Partículas sin polímero asignable"),
+                f"{_res_assignment.no_assignables} / {_res_assignment.total} "
+                f"({_res_assignment.percentage_no_assignable:.1f} %)",
+            )
+        )
     methods_html = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in methods_rows)
     team_html = _section_team(active)
 
@@ -2146,6 +2439,7 @@ def _section_methods(state, active, all_results, total_imgs: int,
     # (reproducibility: model, version and exact parameters).
     try:
         import ultralytics
+
         _ul_see = ultralytics.__version__
     except Exception:
         _ul_see = "—"
@@ -2154,18 +2448,33 @@ def _section_methods(state, active, all_results, total_imgs: int,
         "<p><strong>" + tr("Resumen de la configuración empleada:") + "</strong></p>"
         "<blockquote style='border-left:3px solid var(--accent); margin:8px 0; "
         "padding:6px 14px; color:#424a53; background:#f6f8fa; border-radius:0 6px 6px 0;'>"
-        + tr("La detección automatizada se realizó con el modelo YOLO «{modelos}» "
-             "(Ultralytics {ul}) a una resolución de entrada de {imgsz} px, umbral de "
-             "confianza {conf} y supresión de no-máximos con IoU {iou}. ").format(
-                 modelos=_model_names, ul=_ul_see, imgsz=p.imgsz,
-                 conf=f"{p.conf:g}", iou=f"{p.iou_nms:g}")
-        + (tr("Las métricas de error se calcularon contra anotación manual "
-              "independiente, emparejando predicciones y etiquetas con IoU ≥ {iou}. "
-              ).format(iou=f"{p.iou_tp:g}") if any_gt else "")
-        + (tr("La calibración óptica fue de {um} μm/píxel. ").format(
-            um=f"{p.um_per_px:g}") if p.um_per_px > 0 else "")
-        + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones."
-             ).format(imgs=total_imgs, dets=total_dets)
+        + tr(
+            "La detección automatizada se realizó con el modelo YOLO «{modelos}» "
+            "(Ultralytics {ul}) a una resolución de entrada de {imgsz} px, umbral de "
+            "confianza {conf} y supresión de no-máximos con IoU {iou}. "
+        ).format(
+            modelos=_model_names,
+            ul=_ul_see,
+            imgsz=p.imgsz,
+            conf=f"{p.conf:g}",
+            iou=f"{p.iou_nms:g}",
+        )
+        + (
+            tr(
+                "Las métricas de error se calcularon contra anotación manual "
+                "independiente, emparejando predicciones y etiquetas con IoU ≥ {iou}. "
+            ).format(iou=f"{p.iou_tp:g}")
+            if any_gt
+            else ""
+        )
+        + (
+            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=f"{p.um_per_px:g}")
+            if p.um_per_px > 0
+            else ""
+        )
+        + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones.").format(
+            imgs=total_imgs, dets=total_dets
+        )
         + "</blockquote>"
     )
     return methods_html, team_html, methods_for
@@ -2219,58 +2528,66 @@ def _section_calibration(state) -> str:
             THICKNESS_WALL_MM,
             summary_batch,
         )
+
         res = summary_batch(list(cals.values()))
         if res["n"]:
-            label_2 = {"placa": tr("medida sobre la placa Petri de esta foto"),
-                        "indice": tr("heredada del recorte (índice de calibración)"),
-                        "manual": tr("introducida a mano en Parámetros")}
+            label_2 = {
+                "placa": tr("medida sobre la placa Petri de esta foto"),
+                "indice": tr("heredada del recorte (índice de calibración)"),
+                "manual": tr("introducida a mano en Parámetros"),
+            }
             rows_2 = "".join(
                 f"<tr><td>{label_2.get(o, o)}</td>"
                 f"<td>{k} {tr('imágenes') if k != 1 else tr('imagen')}</td></tr>"
-                for o, k in sorted(res["origenes"].items()))
+                for o, k in sorted(res["origenes"].items())
+            )
             warning = ""
             if res["variacion"] > 1.05:
                 warning = tr(
                     "<p><strong>La escala no es común a todo el lote:</strong> varía "
                     "{var}× entre la foto más cercana y la más lejana. Por eso cada "
                     "imagen se convierte con su propio factor; usar uno solo para todas "
-                    "daría tamaños con hasta un {pct}% de error.</p>").format(
-                        var=f"{res['variacion']:.2f}",
-                        pct=f"{100 * (res['variacion'] - 1):.0f}")
+                    "daría tamaños con hasta un {pct}% de error.</p>"
+                ).format(var=f"{res['variacion']:.2f}", pct=f"{100 * (res['variacion'] - 1):.0f}")
             _mic_calib = _average_ic95(
-                [c.um_por_px for c in cals.values() if getattr(c, "valid", False)])
+                [c.um_por_px for c in cals.values() if getattr(c, "valid", False)]
+            )
             _row_average = ""
             if _mic_calib:
                 _average_c, _margin_c, _n_c = _mic_calib
-                _row_average = (f"<tr>{tr('<td>media ± IC 95%</td>')}"
-                               f"<td>{_average_c:.4f} ± {_margin_c:.4f} (n={_n_c})</td></tr>")
+                _row_average = (
+                    f"<tr>{tr('<td>media ± IC 95%</td>')}"
+                    f"<td>{_average_c:.4f} ± {_margin_c:.4f} (n={_n_c})</td></tr>"
+                )
             calib_html = f"""
-<table class='data'><tr>{tr('<th>Procedencia de la escala</th><th>Imágenes</th>')}</tr>{rows_2}</table>
+<table class='data'><tr>{tr("<th>Procedencia de la escala</th><th>Imágenes</th>")}</tr>{rows_2}</table>
 <table class='data'>
-<tr>{tr('<th>µm por píxel</th><th>Valor</th>')}</tr>
-<tr>{tr('<td>mínimo</td>')}<td>{res['min']:.4f}</td></tr>
-<tr>{tr('<td>mediana</td>')}<td>{res['mediana']:.4f}</td></tr>
-<tr>{tr('<td>máximo</td>')}<td>{res['max']:.4f}</td></tr>
+<tr>{tr("<th>µm por píxel</th><th>Valor</th>")}</tr>
+<tr>{tr("<td>mínimo</td>")}<td>{res["min"]:.4f}</td></tr>
+<tr>{tr("<td>mediana</td>")}<td>{res["mediana"]:.4f}</td></tr>
+<tr>{tr("<td>máximo</td>")}<td>{res["max"]:.4f}</td></tr>
 {_row_average}
 </table>
 {warning}
-<p>{tr('El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.')}</p>
+<p>{tr("El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.")}</p>
 
 <p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>
-{tr('<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles.').format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)}</p>
+{tr("<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles.").format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)}</p>
 {_figure_calibration(state)}"""
             if res["avisos"]:
                 items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
                 if items:
-                    calib_html += (f"<p>{tr('Incidencias durante la calibración:')}"
-                                   f"</p><ul>{items}</ul>")
+                    calib_html += (
+                        f"<p>{tr('Incidencias durante la calibración:')}</p><ul>{items}</ul>"
+                    )
     elif p.um_per_px > 0:
         calib_html = tr(
             "<p>Escala única para todo el lote, introducida a mano: "
             "<strong>{um} µm/píxel</strong>. No se midió ninguna placa, "
             "de modo que este factor no está trazado a un patrón de longitud y "
             "cualquier variación en la distancia de disparo entre fotos queda sin "
-            "corregir.</p>").format(um=f"{p.um_per_px:g}")
+            "corregir.</p>"
+        ).format(um=f"{p.um_per_px:g}")
     return calib_html
 
 
@@ -2301,16 +2618,20 @@ def _lot_forms(state, all_results):
     _cals = getattr(state, "calibrations", None) or {}
 
     def _en_el_aro(det, path_2) -> bool:
-        return about_the_ring(_cals.get(Path(path_2).name),
-                               det.x1, det.y1, det.x2, det.y2)
+        return about_the_ring(_cals.get(Path(path_2).name), det.x1, det.y1, det.x2, det.y2)
 
     # Each particle with its source image, so it can be found later.
-    _shaped = [(p_, r.image_path) for r in all_results for p_ in r.predictions
-                  if getattr(p_, "aspect", None)]
+    _shaped = [
+        (p_, r.image_path)
+        for r in all_results
+        for p_ in r.predictions
+        if getattr(p_, "aspect", None)
+    ]
     shapes = [(d, path_2) for d, path_2 in _shaped if not _en_el_aro(d, path_2)]
     n_en_el_aro = len(_shaped) - len(shapes)
-    n_formless = sum(1 for r in all_results for p_ in r.predictions
-                      if getattr(p_, "aspect", None) is None)
+    n_formless = sum(
+        1 for r in all_results for p_ in r.predictions if getattr(p_, "aspect", None) is None
+    )
     return shapes, n_en_el_aro, n_formless
 
 
@@ -2337,16 +2658,21 @@ def _size_per_folder(with_size):
 
     if len(groups_folder) >= 2:
         fig_folder = _fig_boxplot_groups(
-            groups_folder, tr("Talla por carpeta"), tr("carpeta de origen"))
+            groups_folder, tr("Talla por carpeta"), tr("carpeta de origen")
+        )
         verdict_folder = _text_kruskal(
-            _kruskal_wallis(list(groups_folder.values())), len(groups_folder))
+            _kruskal_wallis(list(groups_folder.values())), len(groups_folder)
+        )
         by_html_folder = (
             f"<h3>{NUM}.1 {tr('Talla por carpeta')}</h3>"
-            + tr("<p>Compara la talla entre las carpetas del lote analizado: "
-                 "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
-                 "es un sitio de muestreo, una estación o una condición.</p>")
+            + tr(
+                "<p>Compara la talla entre las carpetas del lote analizado: "
+                "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
+                "es un sitio de muestreo, una estación o una condición.</p>"
+            )
             + f"<img src='data:image/png;base64,{fig_folder}' style='max-width:100%'>"
-            f"<p>{verdict_folder}</p>")
+            f"<p>{verdict_folder}</p>"
+        )
 
         # -- Per photo, within folders with more than one image --
         parts_photo = []
@@ -2363,30 +2689,42 @@ def _size_per_folder(with_size):
                 folder_photos,
                 tr("Talla por foto — {carpeta}").format(carpeta=folder),
                 tr("foto"),
-                max_groups=20)
+                max_groups=20,
+            )
             verdict_photo = _text_kruskal(
-                _kruskal_wallis(list(folder_photos.values())), len(folder_photos))
+                _kruskal_wallis(list(folder_photos.values())), len(folder_photos)
+            )
             parts_photo.append(
                 f"<p><strong>{_esc(folder)}</strong> "
-                + tr("({n} fotos)").format(n=len(folder_photos)) + "</p>"
+                + tr("({n} fotos)").format(n=len(folder_photos))
+                + "</p>"
                 f"<img src='data:image/png;base64,{fig_photo}' style='max-width:100%'>"
-                f"<p>{verdict_photo}</p>")
+                f"<p>{verdict_photo}</p>"
+            )
         if parts_photo:
             n_folders_with_photos = sum(
-                1 for c in groups_folder
-                if len({Path(r).name for d, r in with_size if Path(r).parent.name == c}) >= 2)
-            note_tope = (tr(" Se muestran las {n} carpetas con más partículas "
-                            "de las {total} que tienen más de una foto.").format(
-                                n=_MAX_FOLDER_PER_PHOTO,
-                                total=n_folders_with_photos)
-                         if n_folders_with_photos > _MAX_FOLDER_PER_PHOTO else "")
+                1
+                for c in groups_folder
+                if len({Path(r).name for d, r in with_size if Path(r).parent.name == c}) >= 2
+            )
+            note_tope = (
+                tr(
+                    " Se muestran las {n} carpetas con más partículas "
+                    "de las {total} que tienen más de una foto."
+                ).format(n=_MAX_FOLDER_PER_PHOTO, total=n_folders_with_photos)
+                if n_folders_with_photos > _MAX_FOLDER_PER_PHOTO
+                else ""
+            )
             by_html_folder += (
                 f"<h3>{NUM}.2 {tr('Talla por foto, dentro de cada carpeta')}</h3>"
-                + tr("<p>Compara la talla entre las fotos individuales de una "
-                     "misma carpeta: por ejemplo, si el tamaño cambia con la "
-                     "profundidad o el momento de muestreo dentro de un mismo "
-                     "sitio.{nota}</p>").format(nota=note_tope)
-                + "".join(parts_photo))
+                + tr(
+                    "<p>Compara la talla entre las fotos individuales de una "
+                    "misma carpeta: por ejemplo, si el tamaño cambia con la "
+                    "profundidad o el momento de muestreo dentro de un mismo "
+                    "sitio.{nota}</p>"
+                ).format(nota=note_tope)
+                + "".join(parts_photo)
+            )
     return by_html_folder
 
 
@@ -2442,36 +2780,44 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             warning_review = (
                 f"<p style='border-left:3px solid {T.DOC.WARN};padding:6px 12px;"
                 f"background:#fff8e6'>"
-                + tr("<strong>{n} de {total} partículas ({pct}&nbsp;%) tienen una talla "
-                     "que pide comprobación</strong>: al segmentarlas, la máscara se "
-                     "salía bastante más allá de la caja del detector, casi siempre "
-                     "porque el umbral enganchó una partícula vecina o una zona "
-                     "brillante del fondo. En esos casos la máscara se <em>recorta a la "
-                     "caja</em>, de modo que la talla reportada no está inflada; lo que "
-                     "puede es quedarse <em>corta</em>, si la partícula seguía de verdad "
-                     "más allá de la caja. Van marcadas con ⚠ en sus fichas.").format(
-                         n=n_review, total=len(shapes), pct=_pc_txt)
-                + "</p>")
+                + tr(
+                    "<strong>{n} de {total} partículas ({pct}&nbsp;%) tienen una talla "
+                    "que pide comprobación</strong>: al segmentarlas, la máscara se "
+                    "salía bastante más allá de la caja del detector, casi siempre "
+                    "porque el umbral enganchó una partícula vecina o una zona "
+                    "brillante del fondo. En esos casos la máscara se <em>recorta a la "
+                    "caja</em>, de modo que la talla reportada no está inflada; lo que "
+                    "puede es quedarse <em>corta</em>, si la partícula seguía de verdad "
+                    "más allá de la caja. Van marcadas con ⚠ en sus fichas."
+                ).format(n=n_review, total=len(shapes), pct=_pc_txt)
+                + "</p>"
+            )
 
         # ── What was set apart for falling on the ring ──
         if n_en_el_aro:
             warning_review += (
                 f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
                 f"background:var(--bg_soft)'>"
-                + tr("<strong>{n} detección(es) caen sobre el anillo de la placa</strong> "
-                     "—más allá del {pct} % del radio ajustado— y quedan fuera de esta "
-                     "sección: el aro es una banda brillante que el detector confunde "
-                     "con material, y como sale enorme desplazaría a las partículas de "
-                     "verdad del extremo grande. Siguen contadas en la sección de "
-                     "conteo.").format(n=n_en_el_aro, pct=f"{100 * FRACTION_AREA_USEFUL:.0f}")
-                + "</p>")
+                + tr(
+                    "<strong>{n} detección(es) caen sobre el anillo de la placa</strong> "
+                    "—más allá del {pct} % del radio ajustado— y quedan fuera de esta "
+                    "sección: el aro es una banda brillante que el detector confunde "
+                    "con material, y como sale enorme desplazaría a las partículas de "
+                    "verdad del extremo grande. Siguen contadas en la sección de "
+                    "conteo."
+                ).format(n=n_en_el_aro, pct=f"{100 * FRACTION_AREA_USEFUL:.0f}")
+                + "</p>"
+            )
 
         # ── Distribution by morphotype ──
-        table_morphotype = warning_review + f"""
-<table class='data'><tr>{tr('<th>Morfotipo</th><th>Cuántas</th><th>%</th>')}</tr>
-<tr>{tr('<td>Fibra (relación de aspecto ≥ 3)</td>')}<td>{fibers}</td><td>{pc_f:.1f} %</td></tr>
-<tr>{tr('<td>Partícula (no fibrosa)</td>')}<td>{len(shapes) - fibers}</td><td>{100 - pc_f:.1f} %</td></tr>
+        table_morphotype = (
+            warning_review
+            + f"""
+<table class='data'><tr>{tr("<th>Morfotipo</th><th>Cuántas</th><th>%</th>")}</tr>
+<tr>{tr("<td>Fibra (relación de aspecto ≥ 3)</td>")}<td>{fibers}</td><td>{pc_f:.1f} %</td></tr>
+<tr>{tr("<td>Partícula (no fibrosa)</td>")}<td>{len(shapes) - fibers}</td><td>{100 - pc_f:.1f} %</td></tr>
 </table>"""
+        )
 
         if with_size:
             lengths = np.array([d.length_um for d, _ in with_size], dtype=float)
@@ -2483,28 +2829,30 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
                 return f"{v:.{dec}f}" if v else "—"
 
             def _row(label_3, d, path_2):
-                return (f"<tr><td><strong>{label_3}</strong></td><td>{_esc(d.class_name)}</td>"
-                        f"<td>{_num(d.length_um)}</td><td>{_num(d.width_um)}</td>"
-                        f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspect, 1)}</td>"
-                        f"<td>{_num(d.curvature, 2)}</td><td>{_morphotype(d.morphotype)}</td>"
-                        f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>")
+                return (
+                    f"<tr><td><strong>{label_3}</strong></td><td>{_esc(d.class_name)}</td>"
+                    f"<td>{_num(d.length_um)}</td><td>{_num(d.width_um)}</td>"
+                    f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspect, 1)}</td>"
+                    f"<td>{_num(d.curvature, 2)}</td><td>{_morphotype(d.morphotype)}</td>"
+                    f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>"
+                )
 
             tables = f"""
-<h3>{NUM}.4 {tr('Partícula mayor y menor')}</h3>
+<h3>{NUM}.4 {tr("Partícula mayor y menor")}</h3>
 <table class='data'>
-<tr>{tr('<th></th><th>Clase</th><th>Largo</th><th>Ancho</th><th>Área</th><th>Aspecto</th><th>Curvatura</th><th>Morfotipo</th><th>Imagen</th>')}</tr>
-{_row(tr('Mayor'), elderly, path_elderly)}
-{_row(tr('Menor'), minor_2, path_minor)}
+<tr>{tr("<th></th><th>Clase</th><th>Largo</th><th>Ancho</th><th>Área</th><th>Aspecto</th><th>Curvatura</th><th>Morfotipo</th><th>Imagen</th>")}</tr>
+{_row(tr("Mayor"), elderly, path_elderly)}
+{_row(tr("Menor"), minor_2, path_minor)}
 </table>
 
-<h3>{NUM}.5 {tr('Distribución de tallas')}</h3>
+<h3>{NUM}.5 {tr("Distribución de tallas")}</h3>
 <table class='data'>
-<tr>{tr('<th>Estadístico</th><th>Largo (µm)</th>')}</tr>
-<tr>{tr('<td>mínimo</td>')}<td>{lengths.min():.0f}</td></tr>
-<tr>{tr('<td>percentil 10</td>')}<td>{np.percentile(lengths, 10):.0f}</td></tr>
-<tr>{tr('<td>mediana</td>')}<td>{np.median(lengths):.0f}</td></tr>
-<tr>{tr('<td>percentil 90</td>')}<td>{np.percentile(lengths, 90):.0f}</td></tr>
-<tr>{tr('<td>máximo</td>')}<td>{lengths.max():.0f}</td></tr>
+<tr>{tr("<th>Estadístico</th><th>Largo (µm)</th>")}</tr>
+<tr>{tr("<td>mínimo</td>")}<td>{lengths.min():.0f}</td></tr>
+<tr>{tr("<td>percentil 10</td>")}<td>{np.percentile(lengths, 10):.0f}</td></tr>
+<tr>{tr("<td>mediana</td>")}<td>{np.median(lengths):.0f}</td></tr>
+<tr>{tr("<td>percentil 90</td>")}<td>{np.percentile(lengths, 90):.0f}</td></tr>
+<tr>{tr("<td>máximo</td>")}<td>{lengths.max():.0f}</td></tr>
 </table>"""
 
             # ── Sizes by stretch, stacked by class ──
@@ -2521,23 +2869,26 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
                 v = sorted(per_class_2.get(cls, []))
                 if not v:
                     continue
-                nf = sum(1 for d, _r in with_size
-                         if d.class_name == cls and d.morphotype == "fibra")
-                rows_cls += (f"<tr><td>{cls}</td><td>{len(v)}</td>"
-                              f"<td>{v[0]:.0f}</td><td>{v[len(v) // 2]:.0f}</td>"
-                              f"<td>{v[-1]:.0f}</td><td>{nf}</td></tr>")
+                nf = sum(
+                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibra"
+                )
+                rows_cls += (
+                    f"<tr><td>{cls}</td><td>{len(v)}</td>"
+                    f"<td>{v[0]:.0f}</td><td>{v[len(v) // 2]:.0f}</td>"
+                    f"<td>{v[-1]:.0f}</td><td>{nf}</td></tr>"
+                )
             if rows_cls:
                 tables += (
                     f"<h3>{NUM}.6 {tr('Talla por tipo de plástico')}</h3>"
                     f"<table class='data'><tr><th>Class</th><th>n</th>"
                     f"<th>smallest<br>(µm)</th><th>median<br>(µm)</th>"
-                    f"<th>largest<br>(µm)</th><th>Fibers</th></tr>{rows_cls}</table>")
+                    f"<th>largest<br>(µm)</th><th>Fibers</th></tr>{rows_cls}</table>"
+                )
 
             # The example card is drawn further below, AFTER explaining the
             # method: showing the crop with a yellow line on top before
             # saying that this line is the Feret diameter explains nothing.
-            cal_elderly = (getattr(state, "calibrations", {}) or {}).get(
-                Path(path_elderly).name)
+            cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
             um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
             record_elderly = (elderly, path_elderly, um_elderly)
 
@@ -2545,8 +2896,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             # without a photo cannot be distinguished from noise, or the shape card
             # and a reader has no way to check that there really is a
             # particle there and not a background speck that was badly segmented.
-            cal_minor = (getattr(state, "calibrations", {}) or {}).get(
-                Path(path_minor).name)
+            cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
             um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
             record_minor = (minor_2, path_minor, um_minor)
             by_html_folder = _size_per_folder(with_size)
@@ -2567,7 +2917,8 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
                 f"<tr><td style='font-size:9pt'>{_esc(name_2)}</td><td>{len(ds)}</td>"
                 f"<td>{nf}</td><td>{len(ds) - nf}</td>"
                 f"<td>{(f'{np.median(lengths_i):.0f}' if lengths_i else '—')}</td>"
-                f"<td>{(f'{max(lengths_i):.0f}' if lengths_i else '—')}</td></tr>")
+                f"<td>{(f'{max(lengths_i):.0f}' if lengths_i else '—')}</td></tr>"
+            )
         # The first column is renamed `Total` and not `Partículas`: with the
         # nomenclature change there would be two columns with the same name, one
         # as a sum and another as a morphotype. `Total = Fibras + Partículas`.
@@ -2576,69 +2927,84 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             f"<table class='data'><tr>"
             f"{tr('<th>Imagen</th><th>Total</th><th>Fibras</th><th>Partículas</th>')}"
             f"{tr('<th>Largo mediano<br>(µm)</th><th>Mayor<br>(µm)</th>')}"
-            f"</tr>{rows_img}</table>")
+            f"</tr>{rows_img}</table>"
+        )
 
         # An `—` in the size columns is not an analysis failure: the
         # particle WAS measured, in pixels, but without µm/px there is no way to
         # turn it into micrometres. Before, the dash appeared without explanation and
         # it looked as if the measurement had failed. It says what is missing and how
         # to fix it, instead of inventing a number or saying nothing.
-        no_scale = [n for n, ds in por_img.items()
-                      if not any(d.length_um for d in ds)]
+        no_scale = [n for n, ds in por_img.items() if not any(d.length_um for d in ds)]
         if no_scale:
             all_value = len(no_scale) == len(por_img)
-            which_2 = (tr("<strong>Ninguna imagen tiene escala</strong>")
-                      if all_value else
-                      tr("<strong>{n} de {total} imágenes no tienen escala</strong> "
-                         "({cuales})").format(
-                             n=len(no_scale), total=len(por_img),
-                             cuales=", ".join(sorted(no_scale)[:6])
-                             + (", …" if len(no_scale) > 6 else "")))
+            which_2 = (
+                tr("<strong>Ninguna imagen tiene escala</strong>")
+                if all_value
+                else tr(
+                    "<strong>{n} de {total} imágenes no tienen escala</strong> ({cuales})"
+                ).format(
+                    n=len(no_scale),
+                    total=len(por_img),
+                    cuales=", ".join(sorted(no_scale)[:6]) + (", …" if len(no_scale) > 6 else ""),
+                )
+            )
             count_2 += (
-                "<p>" + which_2
-                + tr(", y por eso su largo aparece como «—». Las partículas <em>sí</em> "
-                     "se midieron —el conteo y la forma de la tabla son correctos—, pero "
-                     "una medida en píxeles no se puede pasar a micrómetros sin saber "
-                     "cuántos µm mide cada píxel.</p>")
-                + tr("<p>Para obtenerlo, en <em>Parámetros</em>: activa <strong>«Medir "
-                     "la placa Petri»</strong> —cada foto obtiene su propia escala del "
-                     "anillo de la placa, que es lo más fiable— o escribe un valor de "
-                     "<strong>µm/píxel</strong>")
-                + ("." if all_value else
-                   tr(". Si ya está activo, en esas fotos concretas no se encontró el "
-                      "anillo de la placa: revisa que se vea entero en el encuadre."))
-                + "</p>")
+                "<p>"
+                + which_2
+                + tr(
+                    ", y por eso su largo aparece como «—». Las partículas <em>sí</em> "
+                    "se midieron —el conteo y la forma de la tabla son correctos—, pero "
+                    "una medida en píxeles no se puede pasar a micrómetros sin saber "
+                    "cuántos µm mide cada píxel.</p>"
+                )
+                + tr(
+                    "<p>Para obtenerlo, en <em>Parámetros</em>: activa <strong>«Medir "
+                    "la placa Petri»</strong> —cada foto obtiene su propia escala del "
+                    "anillo de la placa, que es lo más fiable— o escribe un valor de "
+                    "<strong>µm/píxel</strong>"
+                )
+                + (
+                    "."
+                    if all_value
+                    else tr(
+                        ". Si ya está activo, en esas fotos concretas no se encontró el "
+                        "anillo de la placa: revisa que se vea entero en el encuadre."
+                    )
+                )
+                + "</p>"
+            )
 
         # Outside the f-string: inside it we would have to nest quotes of the same type.
         pct_curves = f"{100.0 * curves / len(shapes):.1f}"
         method_2 = f"""
-<h3>{NUM}.1 {tr('Cómo se mide el largo')}</h3>
-{tr('<p>Las magnitudes se miden sobre la <strong>máscara de cada partícula</strong>, no sobre la caja del detector. La caja de una partícula alargada está casi vacía y depende de cómo haya caído: una fibra tumbada en diagonal tiene caja cuadrada, de modo que medir sobre la caja la reportaría como si no fuera fibra, y con una talla equivocada. La máscara se obtiene umbralizando cada recorte a medio camino entre el nivel del fondo —la mediana del anillo que rodea la caja— y el de la partícula —el percentil 90 dentro de ella—.</p>')}
+<h3>{NUM}.1 {tr("Cómo se mide el largo")}</h3>
+{tr("<p>Las magnitudes se miden sobre la <strong>máscara de cada partícula</strong>, no sobre la caja del detector. La caja de una partícula alargada está casi vacía y depende de cómo haya caído: una fibra tumbada en diagonal tiene caja cuadrada, de modo que medir sobre la caja la reportaría como si no fuera fibra, y con una talla equivocada. La máscara se obtiene umbralizando cada recorte a medio camino entre el nivel del fondo —la mediana del anillo que rodea la caja— y el de la partícula —el percentil 90 dentro de ella—.</p>")}
 
-{tr('<p><strong>El criterio general es la línea recta más larga que cabe en la partícula</strong>, es decir la mayor distancia entre dos puntos de su contorno: el <em>diámetro de Feret máximo</em>. Para una partícula de forma irregular pero no doblada, esa recta es su talla, y tiene dos propiedades que la hacen fiable: no depende de la orientación con que la partícula haya caído, y un borde dentado no la altera.</p>')}
+{tr("<p><strong>El criterio general es la línea recta más larga que cabe en la partícula</strong>, es decir la mayor distancia entre dos puntos de su contorno: el <em>diámetro de Feret máximo</em>. Para una partícula de forma irregular pero no doblada, esa recta es su talla, y tiene dos propiedades que la hacen fiable: no depende de la orientación con que la partícula haya caído, y un borde dentado no la altera.</p>")}
 
-{tr('<p><strong>Esa recta deja de servir cuando la partícula está contorsionada.</strong> En una fibra doblada la distancia entre sus extremos es la cuerda, no su longitud: en un arco de media circunferencia se queda un 35&nbsp;% corta. Para esos casos se mide el <em>diámetro geodésico</em>, que es el camino más largo que cabe <strong>dentro</strong> de la partícula. Al no poder salirse de la máscara, ese camino rodea la curva y devuelve la longitud recorrida.</p>')}
+{tr("<p><strong>Esa recta deja de servir cuando la partícula está contorsionada.</strong> En una fibra doblada la distancia entre sus extremos es la cuerda, no su longitud: en un arco de media circunferencia se queda un 35&nbsp;% corta. Para esos casos se mide el <em>diámetro geodésico</em>, que es el camino más largo que cabe <strong>dentro</strong> de la partícula. Al no poder salirse de la máscara, ese camino rodea la curva y devuelve la longitud recorrida.</p>")}
 
 <table class='data'>
-<tr>{tr('<th>Forma de la partícula</th><th>Qué se reporta como largo</th>')}</tr>
-<tr>{tr('<td>Compacta o irregular, pero no doblada</td><td>Feret máximo (la recta más larga)</td>')}</tr>
-<tr>{tr('<td>Alargada y contorsionada (fibra)</td><td>Diámetro geodésico (sigue la curva)</td>')}</tr>
+<tr>{tr("<th>Forma de la partícula</th><th>Qué se reporta como largo</th>")}</tr>
+<tr>{tr("<td>Compacta o irregular, pero no doblada</td><td>Feret máximo (la recta más larga)</td>")}</tr>
+<tr>{tr("<td>Alargada y contorsionada (fibra)</td><td>Diámetro geodésico (sigue la curva)</td>")}</tr>
 </table>
 
-{tr('<p>La distinción se hace por el <strong>grosor</strong>: solo se usa el geodésico si el largo supera al menos cuatro veces el grosor máximo inscrito de la partícula. La razón es que en una partícula gruesa cualquier concavidad obliga al camino geodésico a bordearla en vez de atravesarla, y entonces el número se infla; en una fibra delgada eso no puede ocurrir.</p>')}
+{tr("<p>La distinción se hace por el <strong>grosor</strong>: solo se usa el geodésico si el largo supera al menos cuatro veces el grosor máximo inscrito de la partícula. La razón es que en una partícula gruesa cualquier concavidad obliga al camino geodésico a bordearla en vez de atravesarla, y entonces el número se infla; en una fibra delgada eso no puede ocurrir.</p>")}
 
-{tr('<p>Contrastado con formas de talla conocida —rectas, rectas giradas 45&nbsp;°, arcos de 60, 120 y 180&nbsp;°, un círculo y una recta de borde dentado— el largo así medido da un <strong>error mediano del 0,8&nbsp;% y del 4,7&nbsp;% en el peor caso</strong>.</p>')}
+{tr("<p>Contrastado con formas de talla conocida —rectas, rectas giradas 45&nbsp;°, arcos de 60, 120 y 180&nbsp;°, un círculo y una recta de borde dentado— el largo así medido da un <strong>error mediano del 0,8&nbsp;% y del 4,7&nbsp;% en el peor caso</strong>.</p>")}
 
-{tr('<p><strong>{n} partículas ({pct} %) están contorsionadas</strong>, entendiendo por tal que su largo supera en más de un 15&nbsp;% su extensión en línea recta.</p>').format(n=curves, pct=pct_curves)}
+{tr("<p><strong>{n} partículas ({pct} %) están contorsionadas</strong>, entendiendo por tal que su largo supera en más de un 15&nbsp;% su extensión en línea recta.</p>").format(n=curves, pct=pct_curves)}
 
-{tr('<p><em>Partículas en contacto.</em> Dos partículas que se tocan forman una sola mancha, y medirlas juntas sumaría sus tallas. Se separan por <em>watershed</em> sobre la transformada de distancia: el centro de cada una queda lejos del fondo y el cuello que las une queda cerca, de modo que el corte cae por el cuello. Sobre círculos de talla conocida las separa hasta un 27&nbsp;% de solapamiento del diámetro, sin partir ninguna partícula de una sola pieza.</p>')}
+{tr("<p><em>Partículas en contacto.</em> Dos partículas que se tocan forman una sola mancha, y medirlas juntas sumaría sus tallas. Se separan por <em>watershed</em> sobre la transformada de distancia: el centro de cada una queda lejos del fondo y el cuello que las une queda cerca, de modo que el corte cae por el cuello. Sobre círculos de talla conocida las separa hasta un 27&nbsp;% de solapamiento del diámetro, sin partir ninguna partícula de una sola pieza.</p>")}
 
-{tr('<p><em>Limitaciones conocidas.</em> Dos partículas solapadas más allá de un 40&nbsp;% de su diámetro se siguen midiendo como una sola: a esa altura ya no hay un cuello por el que cortar. Y en una fibra muy enroscada el camino geodésico ataja por el interior de cada codo, subestimando la longitud hasta un 19&nbsp;% en el caso más cerrado que se ensayó.</p>')}"""
+{tr("<p><em>Limitaciones conocidas.</em> Dos partículas solapadas más allá de un 40&nbsp;% de su diámetro se siguen midiendo como una sola: a esa altura ya no hay un cuello por el que cortar. Y en una fibra muy enroscada el camino geodésico ataja por el interior de cada codo, subestimando la longitud hasta un 19&nbsp;% en el caso más cerrado que se ensayó.</p>")}"""
         if n_formless:
             method_2 += tr(
                 "<p>En {n} partículas no se pudo separar la partícula del fondo; su "
-                "talla proviene de la caja y no es comparable con el resto.</p>").format(
-                    n=n_formless)
+                "talla proviene de la caja y no es comparable con el resto.</p>"
+            ).format(n=n_formless)
 
         # ── The examples, once the method is explained ──
         # Both, not only the largest: a minimum size without a photo cannot be
@@ -2646,10 +3012,12 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # questioned in a review.
         if record_elderly is not None:
             example = _record_particle(
-                *record_elderly, f"2 {tr('Un ejemplo: la partícula mayor, medida')}")
+                *record_elderly, f"2 {tr('Un ejemplo: la partícula mayor, medida')}"
+            )
         if record_minor is not None:
             example += _record_particle(
-                *record_minor, f"3 {tr('Un ejemplo: la partícula menor, medida')}")
+                *record_minor, f"3 {tr('Un ejemplo: la partícula menor, medida')}"
+            )
 
         # Section order: first how it is measured, then a measured case, and
         # finally the figures. The other way round, the tables arrive before anything has
@@ -2687,6 +3055,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
             bgr = None
             try:
                 from polyx.core.measure.calibration import read_image
+
                 bgr = read_image(path_2)
             except Exception:
                 bgr = None
@@ -2695,7 +3064,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
             cal = (getattr(state, "calibrations", {}) or {}).get(Path(path_2).name)
             um = cal.um_por_px if cal and cal.valid else None
             cards = ""
-            for d in sorted(por_img_f[path_2], key=lambda z: (z.number or 0)):
+            for d in sorted(por_img_f[path_2], key=lambda z: z.number or 0):
                 if made >= max_records:
                     break
                 img, m = draw_measurement(bgr, d)
@@ -2707,8 +3076,10 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
                 made += 1
                 account = ""
                 if d.length_um and um:
-                    account = (f"{m.length_px:.1f} px &times; {um:.4f} = "
-                              f"<strong>{d.length_um:.0f} µm</strong>")
+                    account = (
+                        f"{m.length_px:.1f} px &times; {um:.4f} = "
+                        f"<strong>{d.length_um:.0f} µm</strong>"
+                    )
                 # d.aspecto/morfotipo are filled by segmentation alone (they do not need
                 # calibration), but d.ancho_um only if the photo had a valid um_por_px
                 # when it was measured -- a photo with no detected plate leaves
@@ -2722,8 +3093,11 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
                 # number. Below 5% it is contour discretization and
                 # saying it would only add noise to the card.
                 if getattr(m, "feret_outside", 0) > 0.05:
-                    detail.append(tr("{pct} % de la recta fuera del contorno").format(
-                        pct=f"{100 * m.feret_outside:.0f}"))
+                    detail.append(
+                        tr("{pct} % de la recta fuera del contorno").format(
+                            pct=f"{100 * m.feret_outside:.0f}"
+                        )
+                    )
                 color = "#1f6b5e" if d.morphotype == "fibra" else "#656d76"
                 label_morph = _morphotype(d.morphotype, lowercase=True)
                 # The warning is SHOWN. Before, it was computed and thrown away: a size
@@ -2738,7 +3112,8 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
                 if getattr(d, "review", False):
                     alerta = (
                         f"<div style='font-size:8.5pt;color:{T.DOC.WARN};margin-top:3px'>"
-                        f"⚠ {d.warning_shape or tr('la máscara se salía de la caja y se recortó a ella')}</div>")
+                        f"⚠ {d.warning_shape or tr('la máscara se salía de la caja y se recortó a ella')}</div>"
+                    )
                 cards += (
                     f"<div style='display:inline-block;vertical-align:top;margin:0 14px 18px 0;"
                     f"max-width:290px'>"
@@ -2746,7 +3121,8 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
                     f"<span style='color:{color}'>{label_morph}</span></div>"
                     f"<img src='data:image/png;base64,{_img_b64(buf.tobytes())}' style='max-width:100%'>"
                     f"<div style='font-size:9pt;color:#656d76'>{account}<br>"
-                    f"{' · '.join(detail)}</div>{alerta}</div>")
+                    f"{' · '.join(detail)}</div>{alerta}</div>"
+                )
             if cards:
                 parts.append(f"<h3>{_esc(Path(path_2).name)}</h3>{cards}")
         if parts:
@@ -2755,36 +3131,46 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
             # towards the large ones and towards fibres.
             n_others_sample = made - n_fibers_sample
             if n_fibers_sample:
-                criterion = tr("Se muestran las <strong>{fibras} fibra(s) y las {otras} "
-                              "partículas más grandes</strong>").format(
-                                  fibras=n_fibers_sample, otras=n_others_sample)
+                criterion = tr(
+                    "Se muestran las <strong>{fibras} fibra(s) y las {otras} "
+                    "partículas más grandes</strong>"
+                ).format(fibras=n_fibers_sample, otras=n_others_sample)
             else:
-                criterion = tr("Se muestran las <strong>{otras} partículas más "
-                              "grandes</strong>. En este lote no se detectó ninguna "
-                              "fibra, así que la muestra no incluye ninguna").format(
-                                  otras=n_others_sample)
+                criterion = tr(
+                    "Se muestran las <strong>{otras} partículas más "
+                    "grandes</strong>. En este lote no se detectó ninguna "
+                    "fibra, así que la muestra no incluye ninguna"
+                ).format(otras=n_others_sample)
             records_html = (
-                tr("<p>Cada partícula con el número que lleva en la imagen anotada, su "
-                   "recorte y la medida dibujada <strong>sobre ella</strong>: en "
-                   "amarillo la recta de Feret, en magenta el camino geodésico, según "
-                   "cuál de las dos haya decidido su talla. El contorno verde es la "
-                   "máscara que se midió. A la izquierda va la partícula sin marcas, "
-                   "para poder juzgar si el contorno la sigue.</p>")
-                + tr("<p>En una partícula <strong>cóncava</strong> la recta amarilla "
-                     "cruza por fuera del contorno, y eso es correcto: Feret es la "
-                     "separación de dos mordazas de calibre, no un camino por dentro "
-                     "de la partícula. Para que se vea, el tramo que cae fuera va "
-                     "<strong>a trazos</strong>. El camino que sí va por dentro es el "
-                     "geodésico, en magenta, y se usa cuando la partícula es delgada "
-                     "y está doblada.</p>")
-                + "<p>" + criterion
-                + tr(". El reparto es deliberado: las fibras son el caso donde actúa el "
-                     "método geodésico —y son minoría, de modo que una muestra tomada al "
-                     "azar podría no enseñar ninguna—, y la mayor de cada tipo es la que "
-                     "sostiene cualquier afirmación sobre talla máxima. <strong>No es "
-                     "una muestra representativa del lote</strong>, sino la selección "
-                     "que permite comprobar el método donde más puede fallar.</p>")
-                + "".join(parts))
+                tr(
+                    "<p>Cada partícula con el número que lleva en la imagen anotada, su "
+                    "recorte y la medida dibujada <strong>sobre ella</strong>: en "
+                    "amarillo la recta de Feret, en magenta el camino geodésico, según "
+                    "cuál de las dos haya decidido su talla. El contorno verde es la "
+                    "máscara que se midió. A la izquierda va la partícula sin marcas, "
+                    "para poder juzgar si el contorno la sigue.</p>"
+                )
+                + tr(
+                    "<p>En una partícula <strong>cóncava</strong> la recta amarilla "
+                    "cruza por fuera del contorno, y eso es correcto: Feret es la "
+                    "separación de dos mordazas de calibre, no un camino por dentro "
+                    "de la partícula. Para que se vea, el tramo que cae fuera va "
+                    "<strong>a trazos</strong>. El camino que sí va por dentro es el "
+                    "geodésico, en magenta, y se usa cuando la partícula es delgada "
+                    "y está doblada.</p>"
+                )
+                + "<p>"
+                + criterion
+                + tr(
+                    ". El reparto es deliberado: las fibras son el caso donde actúa el "
+                    "método geodésico —y son minoría, de modo que una muestra tomada al "
+                    "azar podría no enseñar ninguna—, y la mayor de cada tipo es la que "
+                    "sostiene cualquier afirmación sobre talla máxima. <strong>No es "
+                    "una muestra representativa del lote</strong>, sino la selección "
+                    "que permite comprobar el método donde más puede fallar.</p>"
+                )
+                + "".join(parts)
+            )
     return records_html
 
 
@@ -2803,16 +3189,17 @@ def _batch_metrics(state, solo_images):
         results_2 = dict(state.results)
     else:
         chosen = {Path(p) for p in solo_images}
-        results_2 = {mi: [r for r in rs if Path(r.image_path) in chosen]
-                      for mi, rs in state.results.items()}
+        results_2 = {
+            mi: [r for r in rs if Path(r.image_path) in chosen] for mi, rs in state.results.items()
+        }
 
     all_results = [r for rs in results_2.values() for r in rs]
     total_imgs = len({r.image_path for r in all_results})
     total_dets = sum(len(r.predictions) for r in all_results)
     confs = [p.conf for r in all_results for p in r.predictions]
     sizes = [p.diam_um for r in all_results for p in r.predictions if p.diam_um]
-    avg_conf = sum(confs)/len(confs) if confs else 0
-    avg_size = sum(sizes)/len(sizes) if sizes else 0
+    avg_conf = sum(confs) / len(confs) if confs else 0
+    avg_size = sum(sizes) / len(sizes) if sizes else 0
     any_gt = any(r.has_gt for r in all_results)
 
     classes_batch = _classes_views(all_results)
@@ -2823,8 +3210,19 @@ def _batch_metrics(state, solo_images):
         for p in r.predictions:
             per_class[p.class_name] += 1
 
-    return (results_2, all_results, total_imgs, total_dets, confs, sizes,
-            avg_conf, avg_size, any_gt, classes_batch, per_class)
+    return (
+        results_2,
+        all_results,
+        total_imgs,
+        total_dets,
+        confs,
+        sizes,
+        avg_conf,
+        avg_size,
+        any_gt,
+        classes_batch,
+        per_class,
+    )
 
 
 # Legacy anchor names, to avoid breaking links to reports already
@@ -2832,9 +3230,17 @@ def _batch_metrics(state, solo_images):
 # serves as an anchor. This dictionary was a second list to keep in
 # sync with SECCIONES, and adding `profundidad` crashed with
 # KeyError -- exactly what SECCIONES avoids by being a single list.
-_ANCHORS = {"resumen": "abstract", "metodos": "methods", "calibracion": "calib",
-           "resultados": "results", "modelos": "models", "errores": "errors",
-           "comparacion": "compare", "galeria": "gallery", "referencias": "refs"}
+_ANCHORS = {
+    "resumen": "abstract",
+    "metodos": "methods",
+    "calibracion": "calib",
+    "resultados": "results",
+    "modelos": "models",
+    "errores": "errors",
+    "comparacion": "compare",
+    "galeria": "gallery",
+    "referencias": "refs",
+}
 
 
 def anchor(sid: str) -> str:
@@ -2852,46 +3258,49 @@ def _document_html(alive, active) -> str:
     the only place that knows the final order; moving or reordering them is
     byte-visible in the frozen render (MEM090).
     """
-    toc_html = "".join(
-        f"<li><a href='#{anchor(sid)}'>{title}</a></li>" for sid, title, _ in alive)
+    toc_html = "".join(f"<li><a href='#{anchor(sid)}'>{title}</a></li>" for sid, title, _ in alive)
     sections_html = "".join(
         f"<h2 id='{anchor(sid)}'>{i}. {title}</h2>\n{body.replace(NUM, str(i))}\n"
-        for i, (sid, title, body) in enumerate(alive, start=1))
+        for i, (sid, title, body) in enumerate(alive, start=1)
+    )
 
     return f"""<!doctype html>
 <html lang='{language()}'><head><meta charset='utf-8'>
-<title>{tr('Informe de detección')} · Poly-X</title>
+<title>{tr("Informe de detección")} · Poly-X</title>
 <style>{REPORT_CSS}</style></head><body>
 <div class='container'>
 
 <header class='cover'>
-  <div class='kicker'>Poly-X · {tr('Informe de detección')}</div>
-  <h1>{tr('Informe de detección de microplásticos')}<br>{tr('por fluorescencia Nile Red')}</h1>
-  <p class='meta'><strong>{tr('Autor:')}</strong> Cristofher Ferrada &middot;
-    <strong>{tr('Modelos:')}</strong> {_esc(', '.join(s.alias for s in active)) or '—'}</p>
+  <div class='kicker'>Poly-X · {tr("Informe de detección")}</div>
+  <h1>{tr("Informe de detección de microplásticos")}<br>{tr("por fluorescencia Nile Red")}</h1>
+  <p class='meta'><strong>{tr("Autor:")}</strong> Cristofher Ferrada &middot;
+    <strong>{tr("Modelos:")}</strong> {_esc(", ".join(s.alias for s in active)) or "—"}</p>
 </header>
 
 <div class='toc'>
-  <h3>📑 {tr('Índice')}</h3>
+  <h3>📑 {tr("Índice")}</h3>
   <ol>{toc_html}</ol>
 </div>
 
 {sections_html}
 <footer>
-  © Cristofher Ferrada · {tr('Generado por Poly-X')}<br>
-  {tr('Suite de detección de microplásticos por fluorescencia Nile Red (254 nm) e IA (YOLO v8/v11).')}
+  © Cristofher Ferrada · {tr("Generado por Poly-X")}<br>
+  {tr("Suite de detección de microplásticos por fluorescencia Nile Red (254 nm) e IA (YOLO v8/v11).")}
 </footer>
 </div></body></html>
 """
 
 
-def _generate_report_impl(state, output_path: Path,
-                    include_refs: bool = True,
-                    include_gallery: bool = True,
-                    max_gallery: int = 60,
-                    max_records: int = 12,
-                    solo_images=None,
-                    sections=None) -> Path:
+def _generate_report_impl(
+    state,
+    output_path: Path,
+    include_refs: bool = True,
+    include_gallery: bool = True,
+    max_gallery: int = 60,
+    max_records: int = 12,
+    solo_images=None,
+    sections=None,
+) -> Path:
     """Generates the HTML report. `state` is a ``DetectorState`` with results.
 
     ``max_gallery`` limits how many images are embedded in the gallery.
@@ -2928,9 +3337,19 @@ def _generate_report_impl(state, output_path: Path,
     # unpacks. The tuple order is the order in which the assembler
     # consumes them, so the unpacking names the same variables as
     # always.
-    (results_2, all_results, total_imgs, total_dets, confs, sizes,
-     avg_conf, avg_size, any_gt, classes_batch, per_class) = _batch_metrics(
-        state, solo_images)
+    (
+        results_2,
+        all_results,
+        total_imgs,
+        total_dets,
+        confs,
+        sizes,
+        avg_conf,
+        avg_size,
+        any_gt,
+        classes_batch,
+        per_class,
+    ) = _batch_metrics(state, solo_images)
 
     # ── Error analysis: matrix + per-class metrics (main model) ──
     err_section = _section_errors(state, results_2, active, any_gt)
@@ -2942,16 +3361,17 @@ def _generate_report_impl(state, output_path: Path,
     compare_html = _section_comparison(state, results_2)
 
     # ── Side-by-side gallery: Prediction vs Ground Truth ──
-    gallery_html = _section_gallery(results_2, state, classes_batch,
-                                    max_gallery=max_gallery,
-                                    include_gallery=include_gallery)
+    gallery_html = _section_gallery(
+        results_2, state, classes_batch, max_gallery=max_gallery, include_gallery=include_gallery
+    )
 
     # ── Aggregate figures ──
     figures_html = _section_results(per_class, confs, sizes)
 
     # ── Methods ──
     methods_html, team_html, methods_for = _section_methods(
-        state, active, all_results, total_imgs, total_dets, any_gt)
+        state, active, all_results, total_imgs, total_dets, any_gt
+    )
 
     count_html = _section_count(results_2, state, active, classes_batch)
 
@@ -2969,8 +3389,7 @@ def _generate_report_impl(state, output_path: Path,
     shapes, n_en_el_aro, n_formless = _lot_forms(state, all_results)
     # The depth profile only exists if the names carry the stretch.
     depth_html = section_depth(shapes, all_results) if shapes else ""
-    shape_html, by_html_folder = _section_shape(state, shapes, n_en_el_aro,
-                                                  n_formless)
+    shape_html, by_html_folder = _section_shape(state, shapes, n_en_el_aro, n_formless)
     # ── Card for each particle ──
     records_html = _section_records(state, shapes, max_records)
 
@@ -2979,10 +3398,9 @@ def _generate_report_impl(state, output_path: Path,
     # number are set by the assembler, which is the only one that knows which sections
     # survived the filter and therefore which number belongs to each one.
     bodies = {
-        "resumen": _section_summary(total_imgs, total_dets, avg_conf, avg_size,
-                                    active, any_gt),
+        "resumen": _section_summary(total_imgs, total_dets, avg_conf, avg_size, active, any_gt),
         "metodos": f"""
-<table class='data'><tr>{tr('<th>Parámetro</th><th>Valor</th>')}</tr>{methods_html}</table>
+<table class='data'><tr>{tr("<th>Parámetro</th><th>Valor</th>")}</tr>{methods_html}</table>
 {team_html}
 {methods_for}""",
         "calibracion": calib_html,
@@ -3004,9 +3422,11 @@ def _generate_report_impl(state, output_path: Path,
     # tr() on the title: SECCIONES stores the Spanish version, which is the
     # dictionary key. The interface already translated it for its checkboxes; the
     # document did not, and came out with the titles in Spanish even though the rest did not.
-    alive = [(sid, tr(title), bodies.get(sid, ""))
-             for sid, title in SECTIONS
-             if sid in requested and (bodies.get(sid) or "").strip()]
+    alive = [
+        (sid, tr(title), bodies.get(sid, ""))
+        for sid, title in SECTIONS
+        if sid in requested and (bodies.get(sid) or "").strip()
+    ]
 
     # Cover, table of contents, section numbering and footer live in _documento_html:
     # the impl remains the ordered list of calls that feeds cuerpos.
@@ -3015,13 +3435,16 @@ def _generate_report_impl(state, output_path: Path,
     return out_path
 
 
-def generate_report(state, output_path: Path,
-                    include_refs: bool = True,
-                    include_gallery: bool = True,
-                    max_gallery: int = 60,
-                    max_records: int = 12,
-                    solo_images=None,
-                    sections=None) -> Path:
+def generate_report(
+    state,
+    output_path: Path,
+    include_refs: bool = True,
+    include_gallery: bool = True,
+    max_gallery: int = 60,
+    max_records: int = 12,
+    solo_images=None,
+    sections=None,
+) -> Path:
     """Generates the HTML report with an observability wrapper.
 
     Generates the HTML report, measuring it and recording report.generate /
@@ -3029,16 +3452,23 @@ def generate_report(state, output_path: Path,
     the caller decides what to do, the log keeps the diagnosis.
     """
     from polyx.core.observability import logger_for, timer
+
     n_results = sum(len(rs) for rs in (state.results or {}).values())
-    with timer(logger_for("detector"), "report",
-                    results_2=n_results, output=str(output_path),
-                    sections=sorted(sections) if sections else None,
-                    solo_images=(len(solo_images)
-                                   if solo_images is not None else None)):
-        return _generate_report_impl(state, output_path,
-                                     include_refs=include_refs,
-                                     include_gallery=include_gallery,
-                                     max_gallery=max_gallery,
-                                     max_records=max_records,
-                                     solo_images=solo_images,
-                                     sections=sections)
+    with timer(
+        logger_for("detector"),
+        "report",
+        results_2=n_results,
+        output=str(output_path),
+        sections=sorted(sections) if sections else None,
+        solo_images=(len(solo_images) if solo_images is not None else None),
+    ):
+        return _generate_report_impl(
+            state,
+            output_path,
+            include_refs=include_refs,
+            include_gallery=include_gallery,
+            max_gallery=max_gallery,
+            max_records=max_records,
+            solo_images=solo_images,
+            sections=sections,
+        )

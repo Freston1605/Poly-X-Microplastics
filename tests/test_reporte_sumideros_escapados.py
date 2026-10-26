@@ -51,6 +51,7 @@ LEEN del checkpoint .pt) si es de datos y se prueba aqui: como torch no esta
 instalado en la suite, la fuente se aislÃ³ en el monkeypatch del propio
 _entrenamiento_de; el sink probado es la interpolacion, no la lectura del .pt.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -75,7 +76,7 @@ ALIAS_HOSTIL = "<img src=x onerror=alert(1)>"
 NOMBRE_FOTO_HOSTIL = "<img src=x onerror=alert(2)>.png"
 # Sinks extra que no comparten concatenacion con el par de P001:
 CLASE_HOSTIL = "<img src=x onerror=alert(3)>"
-NOTA_HOSTIL = "<b>Fijkstra</b>"   # sink del nombre de clase C en nota_ausentes
+NOTA_HOSTIL = "<b>Fijkstra</b>"  # sink del nombre de clase C en nota_ausentes
 TITULO_HOSTIL = "?<script>alert(0)</script>"
 
 
@@ -110,6 +111,7 @@ def rh(tmp_path, monkeypatch):
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
+
     importlib.reload(rh)
 
     logger = obs.logger_for("detector")
@@ -147,6 +149,7 @@ def _render_de(seccion: str, st, destino: Path) -> str:
 # A. _tabla_conteo — nombre de clase en la tabla por imagen (galeria, conteo)
 # ════════════════════════════════════════════════════════════════════════
 
+
 def test_tabla_conteo_escapa_el_nombre_de_clase():
     """alert(4) del sink de clase de _tabla_conteo: solo la primera celda."""
     det = Counter({CLASE_HOSTIL: 2, "PET": 1})
@@ -154,8 +157,9 @@ def test_tabla_conteo_escapa_el_nombre_de_clase():
 
     assert CLASE_HOSTIL not in html, "markup crudo del sink de clase"
     assert "<script>" not in html
-    assert f"<tr><td>{CLASE_ESCAPADA}</td><td>2</td></tr>" in html, \
+    assert f"<tr><td>{CLASE_ESCAPADA}</td><td>2</td></tr>" in html, (
         "celda de clase no escapada como texto"
+    )
     # El sink no muta la columna del modelo: la fija del lote va intacta.
     # Y sin doble escape: escapar la forma ya escapada daria &amp;lt;.
     assert _e(CLASE_ESCAPADA) not in html, "doble escape prohibido"
@@ -173,6 +177,7 @@ def test_tabla_conteo_sin_doble_escape_benigno():
 # B. _tabla_ancha — titulo de columna y cabeceras; etiquetas pasan tal cual (P002)
 # ════════════════════════════════════════════════════════════════════════
 
+
 def test_tabla_ancha_escapa_titulo_y_clases_y_mantiene_las_etiquetas_compuestas():
     """titulo_col y los nombre de clase se _esc'ean; la etiqueta de fila NO.
 
@@ -181,9 +186,11 @@ def test_tabla_ancha_escapa_titulo_y_clases_y_mantiene_las_etiquetas_compuestas(
     derompe el markup del informe. La prueba del sink de etiqueta vive a
     traves de _seccion_conteo (sumidero C), no aqui.
     """
-    etiqueta_compuesta = ("<b>2.3x</b><br>"
-                          "<span style='font-size:8.5pt;color:var(--ink3)'>"
-                          "Taira &middot; tramo 2</span>")
+    etiqueta_compuesta = (
+        "<b>2.3x</b><br>"
+        "<span style='font-size:8.5pt;color:var(--ink3)'>"
+        "Taira &middot; tramo 2</span>"
+    )
     html = _table_width(
         [(etiqueta_compuesta, Counter({"PET": 1}), Counter({"PET": 2}))],
         ["PET", ALIAS_HOSTIL],
@@ -195,8 +202,7 @@ def test_tabla_ancha_escapa_titulo_y_clases_y_mantiene_las_etiquetas_compuestas(
     assert ALIAS_HOSTIL not in html, "clase hostil cruda"
     assert f"<th rowspan='2'>{TITULO_ESCAPADO}</th>" in html
     assert f"<th colspan='2' style='text-align:center'>{ALIAS_ESCAPADO}</th>" in html
-    assert etiqueta_compuesta in html, \
-        "P002: la etiqueta compuesta pasa VERBATIM por _tabla_ancha"
+    assert etiqueta_compuesta in html, "P002: la etiqueta compuesta pasa VERBATIM por _tabla_ancha"
     # Y el call local de PET tampoco se escapa a mano:
     assert "<th colspan='2' style='text-align:center'>PET</th>" in html
 
@@ -204,6 +210,7 @@ def test_tabla_ancha_escapa_titulo_y_clases_y_mantiene_las_etiquetas_compuestas(
 # ════════════════════════════════════════════════════════════════════════
 # C. _seccion_conteo — intro del modelo + fila por imagen
 # ════════════════════════════════════════════════════════════════════════
+
 
 def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_path):
     """alert(1) escapa solo en la etiqueta intro de la seccion; alert(2)
@@ -215,10 +222,12 @@ def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_p
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
-    assert f"<strong>{ALIAS_ESCAPADO}</strong>" in html, \
+    assert f"<strong>{ALIAS_ESCAPADO}</strong>" in html, (
         "el alias del modelo en la intro debe salir escapado"
-    assert f"<td>{NOMBRE_ESCAPADO}</td><td class='r'>" in html, \
+    )
+    assert f"<td>{NOMBRE_ESCAPADO}</td><td class='r'>" in html, (
         "el nombre de archivo en la tabla de conteo debe salir escapado"
+    )
     # Y exactamente un sitio para cada uno (1 modelo x 1 imagen):
     assert html.count(ALIAS_ESCAPADO) == 1, "solo la intro de la seccion nombra al modelo"
     assert html.count(NOMBRE_ESCAPADO) == 1, "solo la fila por imagen"
@@ -245,6 +254,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
 # D. _seccion_equipo — alias y datos del checkpoint .pt (_entrenamiento_de)
 # ════════════════════════════════════════════════════════════════════════
 
+
 def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_path, monkeypatch):
     """alert(1) en el alias del modelo y en base/optimizador del .pt.
 
@@ -253,19 +263,31 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
     Con falso encontrado:
       <tr><td>{alias}</td><td>{base}</td> --- <td>{optimizador}</td>
     """
-    entrenamiento = {"base": ALIAS_HOSTIL, "imgsz": 640, "batch": 8, "epocas": 3,
-                     "optimizador": ALIAS_HOSTIL, "lr0": "—", "amp": "—",
-                     "precision": 0.9, "recall": 0.8, "map50": 0.7, "map": 0.6}
+    entrenamiento = {
+        "base": ALIAS_HOSTIL,
+        "imgsz": 640,
+        "batch": 8,
+        "epocas": 3,
+        "optimizador": ALIAS_HOSTIL,
+        "lr0": "—",
+        "amp": "—",
+        "precision": 0.9,
+        "recall": 0.8,
+        "map50": 0.7,
+        "map": 0.6,
+    }
     monkeypatch.setattr(rh, "_training_of", lambda peso: entrenamiento)
 
     from polyx.gui.detector.state import ModelSlot
+
     slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("peso_falso.pt"))
     html = _section_team([slot])
 
     assert ALIAS_HOSTIL not in html, "sink de entrenamiento con markup crudo"
     # 3 apariciones: alias + base + optimizador (todas con la misma cadena):
-    assert html.count(ALIAS_ESCAPADO) == 3, \
+    assert html.count(ALIAS_ESCAPADO) == 3, (
         "alias/base/optimizador del .pt deben salir escapados y sin mas"
+    )
     assert f"<tr><td>{ALIAS_ESCAPADO}</td><td>{ALIAS_ESCAPADO}</td>" in html
     assert f"<td>{ALIAS_ESCAPADO}</td><td class='r'>0.9000" in html
 
@@ -273,6 +295,7 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
 def test_seccion_equipo_sin_checkpoint_no_nombra_al_modelo():
     """Sin datos de .pt el sink de entrenamiento no se emite en absoluto."""
     from polyx.gui.detector.state import ModelSlot
+
     slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("vacio.pt"))
     html = _section_team([slot])
     assert ALIAS_HOSTIL not in html
@@ -282,6 +305,7 @@ def test_seccion_equipo_sin_checkpoint_no_nombra_al_modelo():
 # ════════════════════════════════════════════════════════════════════════
 # E. _figura_calibracion — nombre de la placa en el rotulo monoespaciado
 # ════════════════════════════════════════════════════════════════════════
+
 
 def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
     """alert(2) del sink de ''nombre de placa'' de _figura_calibracion.
@@ -293,22 +317,22 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     st.calibrations[NOMBRE_FOTO_HOSTIL] = Calibration(
-        um_por_px=30.0, origin=ORIGIN_PLATE,
-        cx=160.0, cy=130.0, radius_px=22.0, n_points=12)
+        um_por_px=30.0, origin=ORIGIN_PLATE, cx=160.0, cy=130.0, radius_px=22.0, n_points=12
+    )
 
     html = _figure_calibration(st)
     assert NOMBRE_FOTO_HOSTIL not in html
     assert ALIAS_HOSTIL not in html, "la figura nombraria al alias del sink"
     # La composicion del rotulo parte el nombre y la cuenta en dos lineas
     # del codigo fuente: el ancla cierra en la coma del nombre.
-    assert f"({_e(NOMBRE_FOTO_HOSTIL)}," in html, \
-        "el nombre de la placa en el rotulo monoespaciado"
+    assert f"({_e(NOMBRE_FOTO_HOSTIL)}," in html, "el nombre de la placa en el rotulo monoespaciado"
     assert html.count(_e(NOMBRE_FOTO_HOSTIL)) == 1
 
 
 # ════════════════════════════════════════════════════════════════════════
 # F..M. Bloques del render parcial via _generate_report_impl(secciones=[...])
 # ════════════════════════════════════════════════════════════════════════
+
 
 def test_metodos_declara_el_alias_escapado_en_los_tres_sitios(rh, tmp_path):
     """Cabecera Models: + fila Modelos cargados + blockquote «{modelos}».
@@ -339,7 +363,7 @@ def test_forma_muestra_el_nombre_escapado_en_fichas_y_recuento(rh, tmp_path):
     assert NOMBRE_FOTO_HOSTIL not in html
     assert ALIAS_HOSTIL not in html, "la seccion de forma no nombra alias"
     fila_ficha = f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td></tr>"
-    fila_recuento = (f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td><td>1</td>")
+    fila_recuento = f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td><td>1</td>"
     assert html.count(NOMBRE_ESCAPADO) == 3, "fichas mayor/menor + recuento"
     assert html.count(fila_ficha) == 2
     assert html.count(fila_recuento) == 1
@@ -417,9 +441,9 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
-    assert f"Model prediction · {ALIAS_ESCAPADO}" in html   # figcaption
-    assert f"modelo: {ALIAS_ESCAPADO}</span>" in html       # tag
-    assert f"<strong>{NOMBRE_ESCAPADO}</strong>" in html    # meta
+    assert f"Model prediction · {ALIAS_ESCAPADO}" in html  # figcaption
+    assert f"modelo: {ALIAS_ESCAPADO}</span>" in html  # tag
+    assert f"<strong>{NOMBRE_ESCAPADO}</strong>" in html  # meta
     # 3 = cabecera global (Models:) + figcaption + tag del meta
     assert html.count(ALIAS_ESCAPADO) == 3
     assert html.count(NOMBRE_ESCAPADO) == 1
@@ -434,6 +458,7 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
 
     class _NombresFicticios:
         """Complemento minimo del modelo: solo el dict ``names`` que lee el impl."""
+
         names = {0: "PET", 5: CLASE_HOSTIL}
 
     st = estado_hostil(directorio=tmp_path / "fotos")
@@ -453,10 +478,10 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
 
     assert CLASE_HOSTIL not in html
     assert ALIAS_HOSTIL not in html
-    assert f"(main model: {ALIAS_ESCAPADO}," in html      # caption de la matriz
-    assert f"No row for {CLASE_ESCAPADA}:" in html         # nota_ausentes
+    assert f"(main model: {ALIAS_ESCAPADO}," in html  # caption de la matriz
+    assert f"No row for {CLASE_ESCAPADA}:" in html  # nota_ausentes
     assert html.count(CLASE_ESCAPADA) == 1
-    assert html.count(ALIAS_ESCAPADO) == 2                 # cabecera + caption
+    assert html.count(ALIAS_ESCAPADO) == 2  # cabecera + caption
 
 
 def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_path):
@@ -464,8 +489,7 @@ def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_pa
     tabla veredicto localizable... &gt; arriba y abajo."""
     from tests.fixtures_informe import deteccion_medida, estado_hostil, foto_sintetica
 
-    st = estado_hostil(directorio=tmp_path / "fotos",
-                        alias=[ALIAS_HOSTIL, "m2"])
+    st = estado_hostil(directorio=tmp_path / "fotos", alias=[ALIAS_HOSTIL, "m2"])
     for rs in st.results.values():
         for r in rs:
             gt = deteccion_medida(foto_sintetica())
@@ -475,9 +499,9 @@ def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_pa
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
-    assert f"Best performance: {ALIAS_ESCAPADO}</strong>" in html   # veredicto estricto
-    assert f"<th>{ALIAS_ESCAPADO}<br>" in html                      # cabecera de la tabla
-    assert f"<td>{NOMBRE_ESCAPADO}</td>" in html                    # fila por imagen
+    assert f"Best performance: {ALIAS_ESCAPADO}</strong>" in html  # veredicto estricto
+    assert f"<th>{ALIAS_ESCAPADO}<br>" in html  # cabecera de la tabla
+    assert f"<td>{NOMBRE_ESCAPADO}</td>" in html  # fila por imagen
     assert html.count(ALIAS_ESCAPADO) == 3
     assert html.count(NOMBRE_ESCAPADO) == 1
 

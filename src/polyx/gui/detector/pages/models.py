@@ -1,4 +1,5 @@
 """Page 1 — `Modelos`. Up to 3 .pt slots + quick load."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -44,7 +45,9 @@ class _ModelSlotCard(QFrame):
         head_icon.setPixmap(iconos.pixmap("modelo", 17, T.INK2, 1.85))
         head_icon.setStyleSheet("font-size: 14pt; border: none;")
         head_title = QLabel(tr("Modelo {n}").format(n=idx + 1))
-        head_title.setStyleSheet(f"color: {T.INK}; font-size: 12.5pt; font-weight: 600; border: none;")
+        head_title.setStyleSheet(
+            f"color: {T.INK}; font-size: 12.5pt; font-weight: 600; border: none;"
+        )
         head.addWidget(head_icon)
         head.addWidget(head_title)
         head.addStretch(1)
@@ -89,8 +92,7 @@ class _ModelSlotCard(QFrame):
 
     def _browse(self):
         f, _ = QFileDialog.getOpenFileName(
-            self, "Seleccionar modelo YOLO (.pt)", "",
-            "Pesos PyTorch (*.pt);;Todos (*.*)"
+            self, "Seleccionar modelo YOLO (.pt)", "", "Pesos PyTorch (*.pt);;Todos (*.*)"
         )
         if f:
             self.ed_path.setText(f)
@@ -141,9 +143,9 @@ class _ModelSlotCard(QFrame):
 class ModelsPage(DetectorPage):
     STEP_N = 1
     STEP_TITLE = tr("Modelos")
-    STEP_DESCRIPTION = (
-        tr("Carga hasta 3 modelos .pt entrenados para detectar microplásticos. "
-        "Si cargas más de uno, se compararán automáticamente en el reporte final.")
+    STEP_DESCRIPTION = tr(
+        "Carga hasta 3 modelos .pt entrenados para detectar microplásticos. "
+        "Si cargas más de uno, se compararán automáticamente en el reporte final."
     )
 
     def __init__(self, state, parent=None):
@@ -212,9 +214,10 @@ class ModelsPage(DetectorPage):
     def _load_default(self):
         if not DEFAULT_MODEL.exists():
             QMessageBox.warning(
-                self, tr("No encontrado"),
+                self,
+                tr("No encontrado"),
                 f"No se encontró {DEFAULT_MODEL}.\n"
-                "Cópialo a la raíz del proyecto e intenta de nuevo."
+                "Cópialo a la raíz del proyecto e intenta de nuevo.",
             )
             return
         # Load into slot 1

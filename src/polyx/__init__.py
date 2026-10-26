@@ -1,4 +1,5 @@
 """Poly-X — Microplastics detection suite."""
+
 import os as _os
 import sys as _sys
 

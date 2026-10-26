@@ -30,6 +30,7 @@ se admite ``polyx.core.*`` (nivel 1) y el ``from ..`` que apunta al propio
 (``polyx.gui`` o el paquete de re-export del ``core``) o que escape por arriba
 (nivel >= 3).
 """
+
 from __future__ import annotations
 
 import ast
@@ -52,37 +53,39 @@ PAQUETES_PROHIBIDOS = ("polyx.gui",)
 
 # Los doce modulos que T01 movio a polyx.core. Si falta alguno, el escaneo
 # AST de mas abajo quedaria vacio y pasaria por no tener nada que mirar.
-MODULOS_ESPERADOS = frozenset({
-    # detect/
-    "yolo",
-    "native",
-    "sam",
-    "factory",
-    "protocol",
-    # measure/
-    "morphology",
-    "calibration",
-    # quality/
-    "metrics",
-    "assignment",
-    "dataset_audit",
-    # provenance/
-    "observability",
-    "provenance",
-    # data/
-    "labels",
-    # root modules
-    "i18n",
-    "translations_en",
-    "paths",
-    "platform",
-})
+MODULOS_ESPERADOS = frozenset(
+    {
+        # detect/
+        "yolo",
+        "native",
+        "sam",
+        "factory",
+        "protocol",
+        # measure/
+        "morphology",
+        "calibration",
+        # quality/
+        "metrics",
+        "assignment",
+        "dataset_audit",
+        # provenance/
+        "observability",
+        "provenance",
+        # data/
+        "labels",
+        # root modules
+        "i18n",
+        "translations_en",
+        "paths",
+        "platform",
+    }
+)
 
 
 def _modulos_del_motor() -> list[Path]:
     """Rutas de los .py del motor, ordenadas y sin __pycache__.
-    
-    Busca recursivamente en subdirectorios (detect/, measure/, quality/, 
+
+    Busca recursivamente en subdirectorios (detect/, measure/, quality/,
     provenance/, data/).
     """
     return sorted(p for p in MOTOR.rglob("*.py") if "__pycache__" not in p.parts)
@@ -96,8 +99,7 @@ def _es_qt(nombre: str) -> bool:
 def _es_prohibido(nombre: str) -> bool:
     """True si el nombre importado es (o cuelga de) un paquete vetado."""
     return any(
-        nombre == paquete or nombre.startswith(paquete + ".")
-        for paquete in PAQUETES_PROHIBIDOS
+        nombre == paquete or nombre.startswith(paquete + ".") for paquete in PAQUETES_PROHIBIDOS
     )
 
 
@@ -155,9 +157,7 @@ def _relativos_fuera_de_alcance(arbol: ast.AST) -> list[str]:
             continue
         destino = _destino_relativo(nodo.level, nodo.module)
         permitido = (
-            destino == "polyx"
-            or destino == "polyx.core"
-            or destino.startswith("polyx.core.")
+            destino == "polyx" or destino == "polyx.core" or destino.startswith("polyx.core.")
         )
         if not permitido:
             fuera.append(destino or f"nivel {nodo.level}")
@@ -185,7 +185,9 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
     entorno = dict(os.environ)
     entorno["QT_QPA_PLATFORM"] = "offscreen"
     # El worktree primero, para no importar un polyx instalado y viejo.
-    entorno["PYTHONPATH"] = str(RAIZ / "src") + os.pathsep + str(RAIZ) + os.pathsep + entorno.get("PYTHONPATH", "")
+    entorno["PYTHONPATH"] = (
+        str(RAIZ / "src") + os.pathsep + str(RAIZ) + os.pathsep + entorno.get("PYTHONPATH", "")
+    )
 
     resultado = subprocess.run(
         [sys.executable, "-c", guion],
@@ -220,9 +222,7 @@ def test_el_motor_no_importa_qt_ni_la_gui(ruta: Path):
     assert not prohibidos, f"{ruta.name} importa Qt o la GUI: {prohibidos}"
 
     fuera = _relativos_fuera_de_alcance(arbol)
-    assert not fuera, (
-        f"{ruta.name} tiene imports relativos fuera del motor: {fuera}"
-    )
+    assert not fuera, f"{ruta.name} tiene imports relativos fuera del motor: {fuera}"
 
 
 def test_el_escanner_detecta_violaciones_sinteticas():
@@ -257,17 +257,20 @@ def test_el_escanner_detecta_violaciones_sinteticas():
 # No debe ser un paquete de re-export vacio, sino que debe contener los
 # modulos del motor: detect, measure, quality, provenance, data, etc.
 
+
 def test_el_paquete_core_es_el_motor():
     """El paquete ``polyx.core`` existe y es el motor puro.
-    
+
     Debe ser importable sin Qt y contener los submodulos del motor.
     """
     import sys
+
     # Only NEW Qt modules loaded by this import count: earlier tests in this
     # process legitimately imported PySide6, so a whole-process sys.modules
     # check would fail by contamination, not because polyx.core dragged Qt.
     qt_antes = {m for m in sys.modules if m.startswith("PySide6")}
     import polyx.core
+
     # El paquete debe existir en disco
     assert (RAIZ / "src" / "polyx" / "core").exists(), "polyx/core no existe en disco"
     qt_nuevos = {m for m in sys.modules if m.startswith("PySide6")} - qt_antes

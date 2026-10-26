@@ -8,6 +8,7 @@ Antes entraban las primeras por orden de archivo, y con eso la particula
 mayor podia no salir y las fibras no salian nunca -- son ~1% del material.
 Estas pruebas fijan el reparto para que no se pierda al editar el informe.
 """
+
 from __future__ import annotations
 
 from polyx.gui.report_html import choose_records

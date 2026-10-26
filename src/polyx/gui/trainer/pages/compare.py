@@ -1,4 +1,5 @@
 """Page 7 — `Comparar`. Table of all the previous runs with their metrics."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,20 +27,26 @@ def _runs_root() -> Path:
 
 def _read_results_csv(run_dir: Path) -> dict | None:
     csv = run_dir / "results.csv"
-    if not csv.exists(): return None
+    if not csv.exists():
+        return None
     try:
         lines = csv.read_text(encoding="utf-8").splitlines()
-        if len(lines) < 2: return None
+        if len(lines) < 2:
+            return None
         header = [c.strip() for c in lines[0].split(",")]
         last = [c.strip() for c in lines[-1].split(",")]
         d = dict(zip(header, last))
+
         # extract the ones we care about (tolerate v8/v11 names)
         def pick(*keys):
             for k in keys:
                 if k in d:
-                    try: return float(d[k])
-                    except ValueError: pass
+                    try:
+                        return float(d[k])
+                    except ValueError:
+                        pass
             return None
+
         return {
             "epochs": pick("epoch") or 0,
             "mAP50": pick("metrics/mAP50(B)", "metrics/mAP_0.5"),
@@ -55,9 +62,9 @@ def _read_results_csv(run_dir: Path) -> dict | None:
 class ComparePage(TrainerPage):
     PAGE_ICON = "resultados"
     PAGE_TITLE = tr("Comparar runs")
-    PAGE_DESCRIPTION = (
-        tr("Tabla con todos los entrenamientos anteriores en runs_train/. Útil para comparar "
-        "configuraciones y elegir el mejor modelo.")
+    PAGE_DESCRIPTION = tr(
+        "Tabla con todos los entrenamientos anteriores en runs_train/. Útil para comparar "
+        "configuraciones y elegir el mejor modelo."
     )
 
     def __init__(self, state, parent=None):
@@ -95,18 +102,24 @@ class ComparePage(TrainerPage):
     def refresh(self):
         root = _runs_root()
         if not root.exists():
-            self.table.setRowCount(0); return
-        runs = sorted([d for d in root.iterdir() if d.is_dir()],
-                      key=lambda p: p.stat().st_mtime, reverse=True)
+            self.table.setRowCount(0)
+            return
+        runs = sorted(
+            [d for d in root.iterdir() if d.is_dir()], key=lambda p: p.stat().st_mtime, reverse=True
+        )
         self.table.setRowCount(len(runs))
         for r, d in enumerate(runs):
             self.table.setItem(r, 0, QTableWidgetItem(d.name))
             metrics = _read_results_csv(d)
             if metrics:
                 self.table.setItem(r, 1, QTableWidgetItem(f"{int(metrics.get('epochs') or 0)}"))
-                for col, k in enumerate(["mAP50", "mAP50-95", "precision", "recall", "box_loss"], start=2):
+                for col, k in enumerate(
+                    ["mAP50", "mAP50-95", "precision", "recall", "box_loss"], start=2
+                ):
                     v = metrics.get(k)
-                    self.table.setItem(r, col, QTableWidgetItem(f"{v:.3f}" if v is not None else "—"))
+                    self.table.setItem(
+                        r, col, QTableWidgetItem(f"{v:.3f}" if v is not None else "—")
+                    )
             else:
                 for col in range(1, 7):
                     self.table.setItem(r, col, QTableWidgetItem("—"))

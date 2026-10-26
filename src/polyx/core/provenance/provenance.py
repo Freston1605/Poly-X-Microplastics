@@ -10,6 +10,7 @@ prove which weights produced a table of the paper.
 Everything here is informational and must not take down a run: if git is not
 installed or the .pt is on a disk that got disconnected, the gap is left
 blank and the run continues."""
+
 from __future__ import annotations
 
 import hashlib
@@ -66,10 +67,10 @@ def versions() -> Dict[str, str]:
 
 def commit_git(root: Optional[Path] = None) -> Dict[str, str]:
     """Current commit of the repository and whether the tree had uncommitted
-changes.
+    changes.
 
-    ``sucio`` matters as much as the hash: a run made on modified,
-    uncommitted code is not reproducible even with the commit recorded.
+        ``sucio`` matters as much as the hash: a run made on modified,
+        uncommitted code is not reproducible even with the commit recorded.
     """
     root = Path(root) if root is not None else ROOT
     output = {"commit": "", "sucio": ""}
@@ -78,7 +79,9 @@ changes.
         try:
             r = subprocess.run(
                 ["git", "-C", str(root), *args],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
                 # No black console when running under pythonw.
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )

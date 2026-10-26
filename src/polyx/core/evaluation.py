@@ -5,6 +5,7 @@ report with per-class P/R/AP50 and mAP. The metric-extraction half is a
 pure function on the Ultralytics result object so it can be unit-tested
 without loading a model.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,7 +21,7 @@ class EvalConfig:
     split: str = "val"
     imgsz: int = 640
     batch: int = 16
-    device: Optional[str] = None      # None = let Ultralytics auto-select
+    device: Optional[str] = None  # None = let Ultralytics auto-select
     iou: float = 0.5
     extra: dict = field(default_factory=dict)
 
@@ -48,8 +49,13 @@ def _metrics_from_results(results: Any, names: dict) -> dict:
         # Ultralytics names the mapping "ap_class_index" (the class id for
         # each entry of p/r/ap50); older/newer shapes are guarded, and the
         # dense fallback only applies when the mapping is absent.
-        ap_classes = list(getattr(results.box, "ap_class_index",
-                                  getattr(results.box, "ap_class", range(len(p))) or range(len(p))))
+        ap_classes = list(
+            getattr(
+                results.box,
+                "ap_class_index",
+                getattr(results.box, "ap_class", range(len(p))) or range(len(p)),
+            )
+        )
         for i, cid in enumerate(ap_classes):
             name = names.get(int(cid), str(cid))
             per_class[str(name)] = {

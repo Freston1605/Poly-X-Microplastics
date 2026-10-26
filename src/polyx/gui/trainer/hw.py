@@ -4,6 +4,7 @@ Heuristic to answer quickly "what is the highest imgsz I can train on
 without OOM?". By default the user wants to train as large as possible.
 Here we compute a sensible value from the available VRAM.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -19,9 +20,9 @@ class GPUInfo:
     # ── Diagnostics ──
     index: int = 0
     n_gpus: int = 0
-    capacity: str = ""          # compute capability, e.g. "8.9"
+    capacity: str = ""  # compute capability, e.g. "8.9"
     torch_version: str = ""
-    torch_cuda: str = ""         # CUDA version torch was built with
+    torch_cuda: str = ""  # CUDA version torch was built with
     driver: str = ""
     # The card exists but torch cannot use it (torch installed without CUDA).
     # This is the most common and most confusing failure: the machine has a GPU and the
@@ -48,12 +49,17 @@ def _nvidia_smi() -> Optional[dict]:
     without CUDA", which are different problems with different solutions.
     """
     import subprocess
+
     try:
         out = subprocess.run(
-            ["nvidia-smi",
-             "--query-gpu=name,memory.total,memory.free,driver_version",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=15,
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total,memory.free,driver_version",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         if out.returncode != 0 or not out.stdout.strip():
             return None
@@ -65,10 +71,13 @@ def _nvidia_smi() -> Optional[dict]:
                 continue
             total = float(parts_2[1]) / 1024.0
             if best is None or total > best["total_gb"]:
-                best = {"name": parts_2[0], "total_gb": total,
-                         "free_gb": float(parts_2[2]) / 1024.0,
-                         "driver": parts_2[3],
-                         "n": len(out.stdout.strip().splitlines())}
+                best = {
+                    "name": parts_2[0],
+                    "total_gb": total,
+                    "free_gb": float(parts_2[2]) / 1024.0,
+                    "driver": parts_2[3],
+                    "n": len(out.stdout.strip().splitlines()),
+                }
         return best
     except Exception:
         return None
@@ -83,6 +92,7 @@ def detect_gpu() -> GPUInfo:
     torch_v = torch_cuda = ""
     try:
         import torch
+
         torch_v = torch.__version__
         torch_cuda = getattr(torch.version, "cuda", None) or ""
         if torch.cuda.is_available():
@@ -104,9 +114,11 @@ def detect_gpu() -> GPUInfo:
                 name=props.name,
                 vram_total_gb=total / (1024**3),
                 vram_free_gb=free / (1024**3),
-                index=idx, n_gpus=n,
+                index=idx,
+                n_gpus=n,
                 capacity=f"{props.major}.{props.minor}",
-                torch_version=torch_v, torch_cuda=torch_cuda,
+                torch_version=torch_v,
+                torch_cuda=torch_cuda,
                 driver=(smi or {}).get("driver", ""),
             )
         # ── Apple Silicon Mac: the GPU is used through Metal (MPS) ──
@@ -121,56 +133,79 @@ def detect_gpu() -> GPUInfo:
             total_gb = free_gb = 0.0
             try:
                 import psutil
+
                 vm = psutil.virtual_memory()
-                total_gb = vm.total / (1024 ** 3)
-                free_gb = vm.available / (1024 ** 3)
+                total_gb = vm.total / (1024**3)
+                free_gb = vm.available / (1024**3)
             except Exception:
                 pass
             import platform as _pl
+
             return GPUInfo(
-                available=True, is_mps=True,
+                available=True,
+                is_mps=True,
                 name=f"GPU integrada de Apple ({_pl.machine()})",
-                vram_total_gb=total_gb, vram_free_gb=free_gb,
-                n_gpus=1, torch_version=torch_v,
-                detail=("Memoria unificada: la GPU comparte la RAM del sistema, "
-                         "asi que la cifra de arriba es la RAM total y no una VRAM "
-                         "dedicada. MPS no soporta todas las operaciones de CUDA; "
-                         "si el entrenamiento falla, prueba con CPU."),
+                vram_total_gb=total_gb,
+                vram_free_gb=free_gb,
+                n_gpus=1,
+                torch_version=torch_v,
+                detail=(
+                    "Memoria unificada: la GPU comparte la RAM del sistema, "
+                    "asi que la cifra de arriba es la RAM total y no una VRAM "
+                    "dedicada. MPS no soporta todas las operaciones de CUDA; "
+                    "si el entrenamiento falla, prueba con CPU."
+                ),
             )
     except Exception as e:
         torch_v = torch_v or "no importable"
-        return GPUInfo(available=False, torch_version=torch_v,
-                       detail=f"{type(e).__name__}: {e}")
+        return GPUInfo(available=False, torch_version=torch_v, detail=f"{type(e).__name__}: {e}")
 
     # torch does not see CUDA: is the card missing, or was torch built without CUDA?
     smi = _nvidia_smi()
     if smi:
         return GPUInfo(
-            available=False, gpu_sin_torch=True,
-            name=smi["name"], vram_total_gb=smi["total_gb"],
-            vram_free_gb=smi["free_gb"], driver=smi["driver"],
+            available=False,
+            gpu_sin_torch=True,
+            name=smi["name"],
+            vram_total_gb=smi["total_gb"],
+            vram_free_gb=smi["free_gb"],
+            driver=smi["driver"],
             n_gpus=smi.get("n", 1),
-            torch_version=torch_v, torch_cuda=torch_cuda,
-            detail=(f"nvidia-smi ve la tarjeta (driver {smi['driver']}) pero "
-                     f"torch {torch_v} está compilado "
-                     f"{'sin CUDA' if not torch_cuda else f'para CUDA {torch_cuda}'}."),
+            torch_version=torch_v,
+            torch_cuda=torch_cuda,
+            detail=(
+                f"nvidia-smi ve la tarjeta (driver {smi['driver']}) pero "
+                f"torch {torch_v} está compilado "
+                f"{'sin CUDA' if not torch_cuda else f'para CUDA {torch_cuda}'}."
+            ),
         )
     # On a Mac talking about `NVIDIA GPU` means nothing: there the path is MPS and
     # it only exists with Apple Silicon. Saying so keeps someone from going
     # looking for NVIDIA drivers on a machine that will never have them.
     import sys as _sys
+
     if _sys.platform == "darwin":
         import platform as _pl
+
         intel = _pl.machine().lower() not in ("arm64", "aarch64")
         return GPUInfo(
-            available=False, torch_version=torch_v,
-            detail=("Este Mac tiene procesador Intel: no dispone de MPS, que "
-                     "requiere Apple Silicon (M1 o posterior). Se entrena y "
-                     "detecta por CPU." if intel else
-                     "Apple Silicon detectado pero torch no expone MPS. "
-                     "Reinstala PyTorch desde el instalador de Poly-X."))
-    return GPUInfo(available=False, torch_version=torch_v, torch_cuda=torch_cuda,
-                   detail="Ni torch ni nvidia-smi encuentran una GPU NVIDIA.")
+            available=False,
+            torch_version=torch_v,
+            detail=(
+                "Este Mac tiene procesador Intel: no dispone de MPS, que "
+                "requiere Apple Silicon (M1 o posterior). Se entrena y "
+                "detecta por CPU."
+                if intel
+                else "Apple Silicon detectado pero torch no expone MPS. "
+                "Reinstala PyTorch desde el instalador de Poly-X."
+            ),
+        )
+    return GPUInfo(
+        available=False,
+        torch_version=torch_v,
+        torch_cuda=torch_cuda,
+        detail="Ni torch ni nvidia-smi encuentran una GPU NVIDIA.",
+    )
 
 
 # Approximate VRAM footprint per architecture.
@@ -203,13 +238,13 @@ def estimate_vram_gb(size: str, imgsz: int, batch: int, amp: bool = True) -> flo
         act_gb *= 1.8
         static_gb *= 1.5
     activations = act_gb * max(1, batch) * (imgsz / 640.0) ** 2
-    overhead = 0.5   # CUDA/cuDNN/allocator
+    overhead = 0.5  # CUDA/cuDNN/allocator
     return static_gb + activations + overhead
 
 
-def recommend_max_imgsz(size: str, batch: int, vram_free_gb: float,
-                        amp: bool = True,
-                        safety: float = 0.85) -> int:
+def recommend_max_imgsz(
+    size: str, batch: int, vram_free_gb: float, amp: bool = True, safety: float = 0.85
+) -> int:
     """Returns the highest imgsz in steps of 32 that fits in VRAM.
 
     Args:
@@ -226,8 +261,9 @@ def recommend_max_imgsz(size: str, batch: int, vram_free_gb: float,
     return 320
 
 
-def recommend_batch(size: str, imgsz: int, vram_free_gb: float,
-                    amp: bool = True, safety: float = 0.85) -> int:
+def recommend_batch(
+    size: str, imgsz: int, vram_free_gb: float, amp: bool = True, safety: float = 0.85
+) -> int:
     """Suggests the maximum batch for a given imgsz."""
     cap = vram_free_gb * safety
     for b in (64, 48, 32, 24, 16, 12, 8, 6, 4, 2, 1):
@@ -236,21 +272,38 @@ def recommend_batch(size: str, imgsz: int, vram_free_gb: float,
     return 1
 
 
-IMGSZ_LADDER = [4096, 3840, 3200, 2560, 2080, 1920, 1664, 1600, 1280,
-                  1024, 960, 800, 640, 512, 416, 320]
+IMGSZ_LADDER = [
+    4096,
+    3840,
+    3200,
+    2560,
+    2080,
+    1920,
+    1664,
+    1600,
+    1280,
+    1024,
+    960,
+    800,
+    640,
+    512,
+    416,
+    320,
+]
 
 
 @dataclass
 class Recommendation:
     """Suggested configuration and what limited each part."""
+
     imgsz: int
     batch: int
     amp: bool
     workers: int
-    cache: str                  # "ram" | "disk" | ""
+    cache: str  # "ram" | "disk" | ""
     vram_est_gb: float
     vram_cap_gb: float
-    limited_by: str           # "vram" | "resolucion_nativa" | "tope_batch"
+    limited_by: str  # "vram" | "resolucion_nativa" | "tope_batch"
     notes: list = None
 
     def __post_init__(self):
@@ -258,12 +311,17 @@ class Recommendation:
             self.notes = []
 
 
-def recommend_config(size: str, vram_free_gb: float,
-                      imgsz_native: int = 0,
-                      batch_min: int = 2, batch_max: int = 32,
-                      n_cpus: int = 0, dataset_gb: float = 0.0,
-                      ram_free_gb: float = 0.0,
-                      safety: float = 0.85) -> Recommendation:
+def recommend_config(
+    size: str,
+    vram_free_gb: float,
+    imgsz_native: int = 0,
+    batch_min: int = 2,
+    batch_max: int = 32,
+    n_cpus: int = 0,
+    dataset_gb: float = 0.0,
+    ram_free_gb: float = 0.0,
+    safety: float = 0.85,
+) -> Recommendation:
     """Training config with priority **imgsz → batch → speed**.
 
     The order is not negotiable and follows the physics of the problem: the
@@ -315,21 +373,25 @@ def recommend_config(size: str, vram_free_gb: float,
                     imgsz, batch_min = sz, b
                     notes.append(
                         f"No cabía batch {request} ni al mínimo de resolución: se bajó "
-                        f"el batch a {b} para no sacrificar imgsz.")
+                        f"el batch a {b} para no sacrificar imgsz."
+                    )
                     break
             if imgsz:
                 break
     if imgsz == 0:
         imgsz, batch_min = min(ladder), 1
-        notes.append("La VRAM no alcanza ni para el caso mínimo; el entrenamiento "
-                     "probablemente dé OOM. Considera un modelo más pequeño.")
+        notes.append(
+            "La VRAM no alcanza ni para el caso mínimo; el entrenamiento "
+            "probablemente dé OOM. Considera un modelo más pequeño."
+        )
     elif max_size and imgsz == max(ladder):
         # The dataset ceiling was reached, not the card's: the leftover VRAM
         # must go to batch, not to interpolating invented pixels.
         limited = "resolucion_nativa"
         notes.append(
             f"imgsz topado en {imgsz} px porque las imágenes miden {imgsz_native} px "
-            f"de lado: más allá solo se interpola y se gasta VRAM sin añadir señal.")
+            f"de lado: más allá solo se interpola y se gasta VRAM sin añadir señal."
+        )
 
     # ── 2. batch afterwards, with imgsz already fixed ──
     batch = batch_min
@@ -346,10 +408,12 @@ def recommend_config(size: str, vram_free_gb: float,
             f"batch topado en {batch_max}: por encima, las mejoras son marginales y "
             f"el batch grande promedia gradientes de objetos pequeños. "
             f"Ultralytics acumula a batch nominal 64, así que un batch chico "
-            f"penaliza menos de lo que parece.")
+            f"penaliza menos de lo que parece."
+        )
 
     # ── 3. speed, at the end and without touching the previous steps ──
     import os
+
     cpus = int(n_cpus) if n_cpus else (os.cpu_count() or 8)
     # 8 workers is the useful ceiling: more loading threads do not speed things up if the GPU is already
     # saturated, and each one reserves page memory.
@@ -362,12 +426,19 @@ def recommend_config(size: str, vram_free_gb: float,
             cache = "disk"
             notes.append(
                 f"El dataset (~{dataset_gb:.1f} GB) no cabe holgado en RAM: cache en "
-                f"disco en vez de RAM, para no arriesgar el swap a mitad del entreno.")
+                f"disco en vez de RAM, para no arriesgar el swap a mitad del entreno."
+            )
 
     return Recommendation(
-        imgsz=imgsz, batch=batch, amp=amp, workers=workers, cache=cache,
+        imgsz=imgsz,
+        batch=batch,
+        amp=amp,
+        workers=workers,
+        cache=cache,
         vram_est_gb=estimate_vram_gb(size, imgsz, batch, amp),
-        vram_cap_gb=cap, limited_by=limited, notes=notes,
+        vram_cap_gb=cap,
+        limited_by=limited,
+        notes=notes,
     )
 
 

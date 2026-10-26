@@ -25,6 +25,7 @@ must pass while the same text bare fails, protected directives must stay
 invisible to the scan, code-shaped identifiers must not be read as prose, and
 the walked inventory must exceed a floor and include known real modules.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -197,9 +198,7 @@ def test_code_shaped_identifiers_are_not_prose() -> None:
     """Constants such as SECCIONES_INFORME are code, not Spanish prose."""
     body = "The report reads SECCIONES_INFORME and TAMANO_TOTAL from the module."
     assert _scan_comment_body(body) == []
-    assert _scan_comment_body(
-        body, ("SECCIONES_INFORME", "TAMANO_TOTAL")
-    ) == []
+    assert _scan_comment_body(body, ("SECCIONES_INFORME", "TAMANO_TOTAL")) == []
 
 
 def test_allowlist_drops_only_listed_tokens() -> None:

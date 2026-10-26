@@ -14,6 +14,7 @@ entreno y no detecta nada.
 Comprobado sobre 10.3x.jpg con el peso yolov11m: con troceo automatico da 64
 detecciones sanas, y con troceo forzado daba 0.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -30,7 +31,8 @@ def test_forzar_el_troceo_no_encoge_la_tesela():
     assert plan is not None
     assert plan["tile"] >= IMGSZ // 2, (
         f"tesela de {plan['tile']} px: se reescalaria "
-        f"{IMGSZ / plan['tile']:.0f}x hasta imgsz y el modelo no reconoceria nada")
+        f"{IMGSZ / plan['tile']:.0f}x hasta imgsz y el modelo no reconoceria nada"
+    )
 
 
 def test_forzar_el_troceo_no_dispara_el_numero_de_teselas():

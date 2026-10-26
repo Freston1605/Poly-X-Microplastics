@@ -38,6 +38,7 @@ la segunda pasada produce las mismas mascaras, no escribe nada.
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -120,8 +121,7 @@ def _limites_mascara(m: np.ndarray) -> tuple[int, int, int, int] | None:
         return None
     filas = np.flatnonzero(m.any(axis=1))
     cols = np.flatnonzero(m.any(axis=0))
-    return (int(filas[0]), int(filas[-1]) + 1,
-            int(cols[0]), int(cols[-1]) + 1)
+    return (int(filas[0]), int(filas[-1]) + 1, int(cols[0]), int(cols[-1]) + 1)
 
 
 def _stem_de_label(nombre: str) -> str:
@@ -134,8 +134,7 @@ def _stem_de_label(nombre: str) -> str:
     return nombre[5:] if len(nombre) > 5 and nombre[:4].isdigit() and nombre[4] == "_" else nombre
 
 
-def capturar(runs: Path, fotos: Path, destino: Path,
-             reforzar: bool = False) -> dict:
+def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> dict:
     """Recorre ``runs`` y serializa una mascara .npy por caja anotada.
 
     Nunca lanza por caja particular: cada anomalía se apunta en ``resumen``
@@ -171,17 +170,20 @@ def capturar(runs: Path, fotos: Path, destino: Path,
             imgstem = _stem_de_label(stem)
             if not imgstem:
                 resumen["saltadas"][SK_TXT_SIN_STEM] = (
-                    resumen["saltadas"].get(SK_TXT_SIN_STEM, 0) + 1)
+                    resumen["saltadas"].get(SK_TXT_SIN_STEM, 0) + 1
+                )
                 continue
             ruta_foto = _buscar_foto(imgstem, inventario)
             if ruta_foto is None:
                 resumen["saltadas"][SK_FOTO_AUSENTE] = (
-                    resumen["saltadas"].get(SK_FOTO_AUSENTE, 0) + 1)
+                    resumen["saltadas"].get(SK_FOTO_AUSENTE, 0) + 1
+                )
                 continue
             img_bgr = _cargar_bgr(ruta_foto)
             if img_bgr is None or img_bgr.size == 0:
                 resumen["saltadas"][SK_FOTO_ILEGIBLE] = (
-                    resumen["saltadas"].get(SK_FOTO_ILEGIBLE, 0) + 1)
+                    resumen["saltadas"].get(SK_FOTO_ILEGIBLE, 0) + 1
+                )
                 continue
             resumen["fotos_encontradas"] += 1
             alto, ancho = img_bgr.shape[:2]
@@ -190,47 +192,49 @@ def capturar(runs: Path, fotos: Path, destino: Path,
                 dets = read_yolo_txt(ruta_txt, ancho, alto, clases)
             except Exception as exc:  # noqa: BLE001 - todo lo parseable va por SK_*
                 resumen["saltadas"][f"{SK_ERROR} (read_yolo_txt: {type(exc).__name__})"] = (
-                    resumen["saltadas"].get(SK_ERROR, 0) + 1)
+                    resumen["saltadas"].get(SK_ERROR, 0) + 1
+                )
                 continue
             if not dets:
-                resumen["saltadas"][SK_TXT_VACIO] = (
-                    resumen["saltadas"].get(SK_TXT_VACIO, 0) + 1)
+                resumen["saltadas"][SK_TXT_VACIO] = resumen["saltadas"].get(SK_TXT_VACIO, 0) + 1
                 continue
 
             for idx, det in enumerate(dets):
                 resumen["cajas"] += 1
                 try:
-                    mascara = morphology.segment(
-                        img_bgr, det.x1, det.y1, det.x2, det.y2)
+                    mascara = morphology.segment(img_bgr, det.x1, det.y1, det.x2, det.y2)
                 except Exception as exc:  # noqa: BLE001
                     motivo = f"{SK_ERROR} ({type(exc).__name__})"
-                    resumen["saltadas"][motivo] = (
-                        resumen["saltadas"].get(motivo, 0) + 1)
+                    resumen["saltadas"][motivo] = resumen["saltadas"].get(motivo, 0) + 1
                     continue
                 if mascara is None:
                     resumen["saltadas"][SK_SIN_MASCARA] = (
-                        resumen["saltadas"].get(SK_SIN_MASCARA, 0) + 1)
+                        resumen["saltadas"].get(SK_SIN_MASCARA, 0) + 1
+                    )
                     continue
                 limite = _limites_mascara(mascara)
                 if limite is None:
                     resumen["saltadas"][SK_MASCARA_VACIA] = (
-                        resumen["saltadas"].get(SK_MASCARA_VACIA, 0) + 1)
+                        resumen["saltadas"].get(SK_MASCARA_VACIA, 0) + 1
+                    )
                     continue
                 f0, f1, c0, c1 = limite
-                recorte = np.ascontiguousarray(
-                    (mascara > 0)[f0:f1, c0:c1].astype(np.uint8) * 255)
+                recorte = np.ascontiguousarray((mascara > 0)[f0:f1, c0:c1].astype(np.uint8) * 255)
                 if recorte.size == 0:
                     resumen["saltadas"][SK_TILE_VACIO] = (
-                        resumen["saltadas"].get(SK_TILE_VACIO, 0) + 1)
+                        resumen["saltadas"].get(SK_TILE_VACIO, 0) + 1
+                    )
                     continue
 
                 nombre = f"{alias.name}__{imgstem}__{idx:03d}.npy"
                 fichero = destino / nombre
                 if fichero.exists() and not reforzar:
                     vieja = np.load(fichero, allow_pickle=False)
-                    if (vieja.shape == recorte.shape
-                            and vieja.dtype == recorte.dtype
-                            and np.array_equal(vieja, recorte)):
+                    if (
+                        vieja.shape == recorte.shape
+                        and vieja.dtype == recorte.dtype
+                        and np.array_equal(vieja, recorte)
+                    ):
                         resumen["reutilizadas"] += 1
                         continue
                     # Difiere y no hay permiso: se guarda la capturada por el
@@ -247,8 +251,7 @@ def _cargar_classes(ruta: Path) -> dict[int, str]:
     nombres: dict[int, str] = {}
     if ruta.exists():
         try:
-            for i, linea in enumerate(
-                    ruta.read_text(encoding="utf-8").splitlines()):
+            for i, linea in enumerate(ruta.read_text(encoding="utf-8").splitlines()):
                 if linea.strip():
                     nombres[i] = linea.strip()
         except UnicodeDecodeError:
@@ -274,20 +277,28 @@ def imprimir_resumen(resumen: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Serializa mascaras de particulas reales "
-                    "(runs/detect_*/) para tests/test_geodesia.py.",
+        "(runs/detect_*/) para tests/test_geodesia.py.",
     )
-    parser.add_argument("--runs", type=Path, required=True,
-                        help="carpeta del run (p.ej. runs/detect_20260812_1030)")
-    parser.add_argument("--fotos", type=Path, required=True,
-                        help="carpeta con las fotos ORIGINALES del lote "
-                             "(se busca recursivamente por stem)")
-    parser.add_argument("--destino", type=Path, default=Path(__file__).resolve().parent
-                        / "fixtures" / "geodesia",
-                        help="donde escribir los .npy (por defecto "
-                             "tests/fixtures/geodesia)")
-    parser.add_argument("--reforzar", action="store_true",
-                        help="sobreescribe fixtures existentes cuyo contenido "
-                             "difera del recien reproducido")
+    parser.add_argument(
+        "--runs", type=Path, required=True, help="carpeta del run (p.ej. runs/detect_20260812_1030)"
+    )
+    parser.add_argument(
+        "--fotos",
+        type=Path,
+        required=True,
+        help="carpeta con las fotos ORIGINALES del lote (se busca recursivamente por stem)",
+    )
+    parser.add_argument(
+        "--destino",
+        type=Path,
+        default=Path(__file__).resolve().parent / "fixtures" / "geodesia",
+        help="donde escribir los .npy (por defecto tests/fixtures/geodesia)",
+    )
+    parser.add_argument(
+        "--reforzar",
+        action="store_true",
+        help="sobreescribe fixtures existentes cuyo contenido difera del recien reproducido",
+    )
     args = parser.parse_args(argv)
     resumen = capturar(args.runs, args.fotos, args.destino, args.reforzar)
     imprimir_resumen(resumen)

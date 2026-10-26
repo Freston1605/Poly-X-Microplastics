@@ -3,6 +3,7 @@
 Filterable list + preview. Internally the short codes FP/FN/MISCLS are still
 used for the logic; the user is shown the full names.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,10 +29,10 @@ from ._base import DetectorPage
 class ErrorsPage(DetectorPage):
     STEP_N = 7
     STEP_TITLE = tr("Errores")
-    STEP_DESCRIPTION = (
-        tr("Lista de cajas problemáticas (solo si hay Ground Truth). "
+    STEP_DESCRIPTION = tr(
+        "Lista de cajas problemáticas (solo si hay Ground Truth). "
         "Falsos Positivos: detección sin GT cercano. Falsos Negativos: GT no detectado. "
-        "Mal Clasificados: bien localizado, mala clase.")
+        "Mal Clasificados: bien localizado, mala clase."
     )
 
     def __init__(self, state, parent=None):
@@ -108,7 +109,8 @@ class ErrorsPage(DetectorPage):
                 continue
             alias = state.model_slots[mi].alias
             for r in rs:
-                if not r.has_gt: continue
+                if not r.has_gt:
+                    continue
                 m = match_image(r.predictions, r.gt, iou_thr=iou_tp)
                 # False Positives
                 if type_code in ("ALL", "FP"):
@@ -123,17 +125,23 @@ class ErrorsPage(DetectorPage):
                 # Misclassified
                 if type_code in ("ALL", "MISCLS"):
                     for pi, gi in m.miscls_pairs:
-                        rows.append((
-                            alias, r.image_path, "MISCLS",
-                            r.gt[gi].class_name, r.predictions[pi].class_name,
-                            f"{r.predictions[pi].conf:.2f}"
-                        ))
+                        rows.append(
+                            (
+                                alias,
+                                r.image_path,
+                                "MISCLS",
+                                r.gt[gi].class_name,
+                                r.predictions[pi].class_name,
+                                f"{r.predictions[pi].conf:.2f}",
+                            )
+                        )
 
-        self.lbl_count.setText(f"{len(rows)} error{'es' if len(rows)!=1 else ''}")
+        self.lbl_count.setText(f"{len(rows)} error{'es' if len(rows) != 1 else ''}")
         self.table.setRowCount(len(rows))
         badge_colors = {"FP": T.WARN, "FN": T.ERR, "MISCLS": T.VIO}
         label_by_code = {"FP": LABEL_FP, "FN": LABEL_FN, "MISCLS": LABEL_MISCLS}
         from PySide6.QtGui import QBrush, QColor
+
         for i, (alias, p, code, cgt, cpr, cf) in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(alias))
             self.table.setItem(i, 1, QTableWidgetItem(p.name))
@@ -148,7 +156,8 @@ class ErrorsPage(DetectorPage):
             self.table.item(i, 1).setData(Qt.UserRole, str(p))
 
     def _open_image(self, row: int, col: int):
-        if row < 0 or self.state.run_dir is None: return
+        if row < 0 or self.state.run_dir is None:
+            return
         alias = self.table.item(row, 0).data(Qt.UserRole)
         img = Path(self.table.item(row, 1).data(Qt.UserRole))
         annot = self.state.run_dir / alias / f"{img.stem}_annot.png"

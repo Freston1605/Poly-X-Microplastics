@@ -11,6 +11,7 @@ taken from ``summary["per_image"]`` (written by ``run_batch``) and never
 from the run aggregate. An aggregate copied into every row would be
 multiplied by the number of images.
 """
+
 from __future__ import annotations
 
 import csv
@@ -62,20 +63,23 @@ def build_state_from_run(run_dir: Path, image_dir: Path):
         state.params.device = params_raw["device"]
     state.run_dir = run_dir
 
-    images = sorted(p for p in Path(image_dir).rglob("*")
-                    if p.suffix.lower() in IMAGE_EXTS)
+    images = sorted(p for p in Path(image_dir).rglob("*") if p.suffix.lower() in IMAGE_EXTS)
     results: dict[int, list] = {}
     for img_path in images:
         preds = []
         for r in by_image.get(img_path.name, []):
-            preds.append(Detection(
-                class_id=int(r.get("class_id", 0) or 0),
-                class_name=r.get("class", "0"),
-                conf=float(r.get("conf", 0.0) or 0.0),
-                x1=float(r["x1"]), y1=float(r["y1"]),
-                x2=float(r["x2"]), y2=float(r["y2"]),
-                diam_um=float(r["diam_um"]) if r.get("diam_um") not in (None, "") else None,
-            ))
+            preds.append(
+                Detection(
+                    class_id=int(r.get("class_id", 0) or 0),
+                    class_name=r.get("class", "0"),
+                    conf=float(r.get("conf", 0.0) or 0.0),
+                    x1=float(r["x1"]),
+                    y1=float(r["y1"]),
+                    x2=float(r["x2"]),
+                    y2=float(r["y2"]),
+                    diam_um=float(r["diam_um"]) if r.get("diam_um") not in (None, "") else None,
+                )
+            )
         counts = per_image.get(img_path.name) or {}
         img_result = ImageResult(
             image_path=img_path,

@@ -59,7 +59,7 @@ from .training import train as train_model
 __all__ = [
     # detect
     "Instance",
-    "DetectionSource", 
+    "DetectionSource",
     "Detections",
     "make_detector",
     "list_detectors",
@@ -67,7 +67,7 @@ __all__ = [
     "NativeDetector",
     # measure
     "measure",
-    "segment", 
+    "segment",
     "Calibration",
     "calibrate_from_plate",
     "resolver",
@@ -88,7 +88,7 @@ __all__ = [
     "timer",
     "provenance",
     "sha256_file",
-"observability",
+    "observability",
     "quality",
     "detect",
     "data",

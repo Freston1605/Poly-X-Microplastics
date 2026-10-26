@@ -1,4 +1,5 @@
 """Labeller state — images, annotations, undo/redo."""
+
 from __future__ import annotations
 
 import copy
@@ -16,7 +17,7 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
 @dataclass
 class BBox:
     class_id: int
-    cx: float   # scaled to [0, 1]
+    cx: float  # scaled to [0, 1]
     cy: float
     w: float
     h: float
@@ -27,17 +28,18 @@ class BBox:
     @classmethod
     def from_yolo_line(cls, line: str) -> "BBox":
         parts = line.strip().split()
-        return cls(int(parts[0]), float(parts[1]), float(parts[2]),
-                   float(parts[3]), float(parts[4]))
+        return cls(
+            int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+        )
 
 
 class LabelerState(QObject):
-    images_loaded      = Signal(list)   # List[Path]
-    image_changed      = Signal(int)    # current_idx
+    images_loaded = Signal(list)  # List[Path]
+    image_changed = Signal(int)  # current_idx
     annotations_changed = Signal()
-    classes_changed    = Signal(list)   # List[str]
+    classes_changed = Signal(list)  # List[str]
     active_class_changed = Signal(int)
-    progress_changed   = Signal()       # the set of reviewed images changed
+    progress_changed = Signal()  # the set of reviewed images changed
 
     def __init__(self):
         super().__init__()
@@ -79,9 +81,7 @@ class LabelerState(QObject):
         self.annotations_changed.emit()
 
     def _push_undo(self, key: str):
-        self._undo_stacks.setdefault(key, []).append(
-            copy.deepcopy(self._annotations.get(key, []))
-        )
+        self._undo_stacks.setdefault(key, []).append(copy.deepcopy(self._annotations.get(key, [])))
         self._redo_stacks.setdefault(key, []).clear()
 
     def undo(self):

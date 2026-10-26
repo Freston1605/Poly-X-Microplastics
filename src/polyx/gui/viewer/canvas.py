@@ -1,4 +1,5 @@
 """Viewer canvas — image + detection overlays + calibration modes."""
+
 from __future__ import annotations
 
 import math
@@ -24,10 +25,14 @@ from polyx.gui import theme as T
 from .state import ViewerState, _circumscribed_center, _circumscribed_radius
 
 _CLASS_COLORS = [
-    T.CLASS_COLOR_HEX.get("PET",  "#e3342f"),
-    T.CLASS_COLOR_HEX.get("PP",   "#ff8c00"),
+    T.CLASS_COLOR_HEX.get("PET", "#e3342f"),
+    T.CLASS_COLOR_HEX.get("PP", "#ff8c00"),
     T.CLASS_COLOR_HEX.get("LDPE", "#ffd700"),
-    "#00b4d8", "#48cae4", "#0077b6", "#023e8a", "#7b2d8b",
+    "#00b4d8",
+    "#48cae4",
+    "#0077b6",
+    "#023e8a",
+    "#7b2d8b",
 ]
 
 
@@ -57,14 +62,14 @@ class ViewerCanvas(QWidget):
         self.setMouseTracking(True)
         self.setMinimumSize(500, 500)
 
-        self._pixmap:   Optional[QPixmap] = None
-        self._scale:    float             = 1.0
-        self._offset:   QPointF           = QPointF(0.0, 0.0)
-        self._filter_cls: Optional[str]   = None
+        self._pixmap: Optional[QPixmap] = None
+        self._scale: float = 1.0
+        self._offset: QPointF = QPointF(0.0, 0.0)
+        self._filter_cls: Optional[str] = None
 
         # Pan
-        self._panning          = False
-        self._pan_start:       Optional[QPointF] = None
+        self._panning = False
+        self._pan_start: Optional[QPointF] = None
         self._pan_offset_start = QPointF(0.0, 0.0)
 
         # Calibration cursor (current mouse position in calibration mode)
@@ -81,6 +86,7 @@ class ViewerCanvas(QWidget):
             try:
                 import numpy as np
                 from PIL import Image
+
                 arr = np.array(Image.open(str(path)).convert("RGB"))
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
@@ -138,14 +144,12 @@ class ViewerCanvas(QWidget):
         if self._pixmap is None:
             p.setPen(QColor(T.INK3))
             p.setFont(QFont(T.APP_FONT_FAMILY, 12))
-            p.drawText(self.rect(), Qt.AlignCenter,
-                       "Abre una imagen o una carpeta para comenzar")
+            p.drawText(self.rect(), Qt.AlignCenter, "Abre una imagen o una carpeta para comenzar")
             return
 
         # Image
         iw, ih = self._pixmap.width(), self._pixmap.height()
-        dest = QRectF(self._offset.x(), self._offset.y(),
-                      iw * self._scale, ih * self._scale)
+        dest = QRectF(self._offset.x(), self._offset.y(), iw * self._scale, ih * self._scale)
         p.drawPixmap(dest, self._pixmap, QRectF(self._pixmap.rect()))
 
         # Detections
@@ -166,7 +170,8 @@ class ViewerCanvas(QWidget):
             br = self._i2w_pt(det.x2, det.y2)
             rect_w = QRectF(tl, br)
 
-            fill = QColor(color); fill.setAlpha(40)
+            fill = QColor(color)
+            fill.setAlpha(40)
             p.fillRect(rect_w, fill)
             p.setPen(QPen(color, 2.0))
             p.setBrush(Qt.NoBrush)
@@ -215,8 +220,9 @@ class ViewerCanvas(QWidget):
                 dx = pts[1].x() - pts[0].x()
                 dy = pts[1].y() - pts[0].y()
                 dist = math.hypot(dx, dy)
-                mid = QPointF((w_pts[0].x() + w_pts[1].x()) / 2,
-                              (w_pts[0].y() + w_pts[1].y()) / 2 - 10)
+                mid = QPointF(
+                    (w_pts[0].x() + w_pts[1].x()) / 2, (w_pts[0].y() + w_pts[1].y()) / 2 - 10
+                )
                 p.setPen(QPen(accent))
                 p.setFont(QFont(T.APP_FONT_FAMILY, 9, QFont.Bold))
                 p.drawText(mid, f"{dist:.1f} px")
@@ -239,7 +245,8 @@ class ViewerCanvas(QWidget):
                 radius_img = _circumscribed_radius(pts)
                 cw = self._i2w(center_img)
                 r_w = radius_img * self._scale
-                circ_color = QColor(T.ACCENT); circ_color.setAlpha(180)
+                circ_color = QColor(T.ACCENT)
+                circ_color.setAlpha(180)
                 p.setPen(QPen(circ_color, 1.5, Qt.DashLine))
                 p.setBrush(Qt.NoBrush)
                 p.drawEllipse(cw, r_w, r_w)

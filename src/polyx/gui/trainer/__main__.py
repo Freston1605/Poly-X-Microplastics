@@ -1,4 +1,5 @@
 """Enables `python -m polyx.gui.trainer`."""
+
 import sys
 
 from PySide6.QtWidgets import QApplication

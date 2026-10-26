@@ -4,6 +4,7 @@ Generates a self-contained .html with curves, final metrics, parameters
 used and a gallery of the figures produced by Ultralytics (results.png,
 confusion_matrix, PR_curve, F1_curve, etc.).
 """
+
 from __future__ import annotations
 
 import base64
@@ -43,9 +44,11 @@ def _b64_image(path: Path) -> str:
 
 def _read_results_csv_full(run_dir: Path) -> tuple[list[str], list[list[float]]]:
     csv = run_dir / "results.csv"
-    if not csv.exists(): return [], []
+    if not csv.exists():
+        return [], []
     lines = csv.read_text(encoding="utf-8").splitlines()
-    if len(lines) < 2: return [], []
+    if len(lines) < 2:
+        return [], []
     header = [c.strip() for c in lines[0].split(",")]
     rows = []
     for line in lines[1:]:
@@ -103,11 +106,12 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
                         return rows[-1][idx]
                     return None
             return None
+
         last_epoch = int(col("epoch") or len(rows))
         map50 = col("metrics/mAP50(B)", "metrics/mAP_0.5")
         map95 = col("metrics/mAP50-95(B)", "metrics/mAP_0.5:0.95")
-        prec  = col("metrics/precision(B)", "metrics/precision")
-        rec   = col("metrics/recall(B)", "metrics/recall")
+        prec = col("metrics/precision(B)", "metrics/precision")
+        rec = col("metrics/recall(B)", "metrics/recall")
         kpi_html = f"""
         <div class='kpis'>
           <div class='kpi'><div class='l'>Épocas</div><div class='v'>{last_epoch}</div><div class='b'></div></div>
@@ -121,14 +125,14 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
     # Figures produced by Ultralytics
     figs = []
     for name, label in [
-        ("results.png",          "Curvas de entrenamiento (loss + métricas)"),
+        ("results.png", "Curvas de entrenamiento (loss + métricas)"),
         ("confusion_matrix.png", "Matriz de confusión"),
-        ("PR_curve.png",         "Curva Precision–Recall"),
-        ("F1_curve.png",         "Curva F1 vs confianza"),
-        ("P_curve.png",          "Curva Precision vs confianza"),
-        ("R_curve.png",          "Curva Recall vs confianza"),
-        ("labels.jpg",           "Distribución de etiquetas en train"),
-        ("val_batch0_pred.jpg",  "Predicciones del batch 0 de validación"),
+        ("PR_curve.png", "Curva Precision–Recall"),
+        ("F1_curve.png", "Curva F1 vs confianza"),
+        ("P_curve.png", "Curva Precision vs confianza"),
+        ("R_curve.png", "Curva Recall vs confianza"),
+        ("labels.jpg", "Distribución de etiquetas en train"),
+        ("val_batch0_pred.jpg", "Predicciones del batch 0 de validación"),
     ]:
         p = run_dir / name
         if p.exists():
@@ -188,7 +192,9 @@ class _ReportWorker(QThread):
 
     def __init__(self, run_dir: Path, out_path: Path, include_refs: bool, parent=None):
         super().__init__(parent)
-        self.run_dir = run_dir; self.out_path = out_path; self.include_refs = include_refs
+        self.run_dir = run_dir
+        self.out_path = out_path
+        self.include_refs = include_refs
 
     def run(self):
         try:
@@ -201,9 +207,9 @@ class _ReportWorker(QThread):
 class ReportPage(TrainerPage):
     PAGE_ICON = "reporte"
     PAGE_TITLE = tr("Informe del entrenamiento")
-    PAGE_DESCRIPTION = (
-        tr("Genera un informe HTML autocontenido con las curvas y métricas del run "
-        "elegido. Listo para convertir a PDF (Ctrl+P en el navegador).")
+    PAGE_DESCRIPTION = tr(
+        "Genera un informe HTML autocontenido con las curvas y métricas del run "
+        "elegido. Listo para convertir a PDF (Ctrl+P en el navegador)."
     )
 
     def __init__(self, state, parent=None):
@@ -211,11 +217,15 @@ class ReportPage(TrainerPage):
         self.worker: _ReportWorker | None = None
 
         c1, l1 = self.card(tr("Selección de run"), "dataset")
-        row = QHBoxLayout(); row.setSpacing(8)
+        row = QHBoxLayout()
+        row.setSpacing(8)
         row.addWidget(QLabel(tr("Run:")))
-        self.combo = QComboBox(); self.combo.setMinimumWidth(360)
+        self.combo = QComboBox()
+        self.combo.setMinimumWidth(360)
         row.addWidget(self.combo, 1)
-        btn = QPushButton("🔄"); btn.setFixedWidth(36); btn.clicked.connect(self._refresh)
+        btn = QPushButton("🔄")
+        btn.setFixedWidth(36)
+        btn.clicked.connect(self._refresh)
         row.addWidget(btn)
         l1.addLayout(row)
         self.chk_refs = QCheckBox(tr("Incluir referencias bibliográficas"))
@@ -224,7 +234,8 @@ class ReportPage(TrainerPage):
         self.body.addWidget(c1)
 
         c2, l2 = self.card(tr("Generar"), "texto")
-        rr = QHBoxLayout(); rr.setSpacing(8)
+        rr = QHBoxLayout()
+        rr.setSpacing(8)
         b1 = QPushButton(tr("Generar reporte HTML"))
         b1.setIcon(iconos.icon("reporte", 15, T.ON_ACCENT))
         b1.setStyleSheet(
@@ -250,15 +261,18 @@ class ReportPage(TrainerPage):
     def _refresh(self):
         self.combo.clear()
         root = _runs_root()
-        if not root.exists(): return
-        runs = sorted([d for d in root.iterdir() if d.is_dir()],
-                      key=lambda p: p.stat().st_mtime, reverse=True)
+        if not root.exists():
+            return
+        runs = sorted(
+            [d for d in root.iterdir() if d.is_dir()], key=lambda p: p.stat().st_mtime, reverse=True
+        )
         for d in runs:
             self.combo.addItem(d.name, str(d))
         # auto-select the last run from the state if it exists
         if self.state.run_dir:
             idx = self.combo.findData(str(self.state.run_dir))
-            if idx >= 0: self.combo.setCurrentIndex(idx)
+            if idx >= 0:
+                self.combo.setCurrentIndex(idx)
 
     def _current_run(self) -> Path | None:
         s = self.combo.currentData()
@@ -267,14 +281,16 @@ class ReportPage(TrainerPage):
     def _generate(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles.")); return
+            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            return
         out = run / "reporte_entrenamiento.html"
         self._run_worker(run, out)
 
     def _save_as(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles.")); return
+            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            return
         f, _ = QFileDialog.getSaveFileName(
             self, "Guardar reporte", str(run / "reporte_entrenamiento.html"), "HTML (*.html)"
         )
@@ -290,8 +306,10 @@ class ReportPage(TrainerPage):
 
     def _on_ok(self, p: str):
         self.lbl_status.setText(f"✓ Generado: {p}")
-        try: webbrowser.open(Path(p).as_uri())
-        except Exception: pass
+        try:
+            webbrowser.open(Path(p).as_uri())
+        except Exception:
+            pass
 
     def _on_fail(self, msg: str):
         self.lbl_status.setText(tr("✗ Error"))

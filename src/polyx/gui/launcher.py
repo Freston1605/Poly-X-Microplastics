@@ -3,6 +3,7 @@
 Hero with kicker, 'Poly-X analytics' title, subtitle, 4 KPI chips,
 and 4 large module cards (Detector, Trainer, Labeler, Viewer).
 """
+
 from __future__ import annotations
 
 import logging
@@ -66,6 +67,7 @@ def _register_boot() -> None:
     try:
         from polyx.core import observability
         from polyx.core.platform import name_system
+
         log = observability.logger_for("app")
         observability.event(
             log,
@@ -88,6 +90,7 @@ def _spawn_module(dotted: str) -> bool:
     """
     try:
         import importlib.util
+
         spec = importlib.util.find_spec(dotted)
         if spec is None:
             return False
@@ -102,6 +105,7 @@ def _spawn_module(dotted: str) -> bool:
     except Exception as e:
         try:
             from polyx.core import observability
+
             observability.event(
                 observability.logger_for("app"),
                 "module.launch.error",
@@ -114,9 +118,8 @@ def _spawn_module(dotted: str) -> bool:
         return False
     try:
         from polyx.core import observability
-        observability.event(
-            observability.logger_for("app"), "module.launch", modulo=dotted
-        )
+
+        observability.event(observability.logger_for("app"), "module.launch", modulo=dotted)
     except Exception:
         pass
     return True
@@ -168,7 +171,7 @@ class MicroscopePanel(QWidget):
 
         rnd = random.Random(11)
         classes = ("PET", "PP", "LDPE")
-        planes = (0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2)   # 4 background, 5 middle, 4 foreground
+        planes = (0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2)  # 4 background, 5 middle, 4 foreground
 
         # Distribution by rings, not by free draw. Thirteen random positions
         # inside a circle leave half the field empty and a clump in the other
@@ -193,22 +196,24 @@ class MicroscopePanel(QWidget):
         self._particles: list[dict] = []
         for plane, (dx, dy), class_id in zip(planes, sites, shift):
             scale = (0.55, 0.82, 1.0)[plane]
-            self._particles.append({
-                "x": 0.5 + dx,
-                "y": 0.5 + dy,
-                "r": rnd.uniform(5.5, 15.0) * scale,
-                "clase": class_id,
-                "forma": rnd.choices((0, 1, 2), weights=(5, 3, 2))[0],
-                "giro": rnd.uniform(0, 360),
-                "plano": plane,
-                "conf": rnd.uniform(0.71, 0.97),
-                "ax": rnd.uniform(0.006, 0.020) * scale,
-                "ay": rnd.uniform(0.006, 0.020) * scale,
-                "wx": rnd.uniform(0.20, 0.44),
-                "wy": rnd.uniform(0.20, 0.44),
-                "fx": rnd.uniform(0, 2 * math.pi),
-                "fy": rnd.uniform(0, 2 * math.pi),
-            })
+            self._particles.append(
+                {
+                    "x": 0.5 + dx,
+                    "y": 0.5 + dy,
+                    "r": rnd.uniform(5.5, 15.0) * scale,
+                    "clase": class_id,
+                    "forma": rnd.choices((0, 1, 2), weights=(5, 3, 2))[0],
+                    "giro": rnd.uniform(0, 360),
+                    "plano": plane,
+                    "conf": rnd.uniform(0.71, 0.97),
+                    "ax": rnd.uniform(0.006, 0.020) * scale,
+                    "ay": rnd.uniform(0.006, 0.020) * scale,
+                    "wx": rnd.uniform(0.20, 0.44),
+                    "wy": rnd.uniform(0.20, 0.44),
+                    "fx": rnd.uniform(0, 2 * math.pi),
+                    "fy": rnd.uniform(0, 2 * math.pi),
+                }
+            )
 
         # The two smallest are left without a box: they are the ones that get lost.
         for i, part in enumerate(sorted(self._particles, key=lambda q: q["r"])):
@@ -256,8 +261,10 @@ class MicroscopePanel(QWidget):
         return None
 
     def _pos(self, part: dict, t: float):
-        return (part["x"] + part["ax"] * math.sin(part["wx"] * t + part["fx"]),
-                part["y"] + part["ay"] * math.sin(part["wy"] * t + part["fy"]))
+        return (
+            part["x"] + part["ax"] * math.sin(part["wx"] * t + part["fx"]),
+            part["y"] + part["ay"] * math.sin(part["wy"] * t + part["fy"]),
+        )
 
     def _alpha_box(self, phase: float, y_rel: float) -> float:
         """Opacity of the box of a particle located at height y_rel."""
@@ -266,7 +273,7 @@ class MicroscopePanel(QWidget):
         if phase >= self._START_OUTPUT:
             return max(0.0, 1.0 - (phase - self._START_OUTPUT) / (1.0 - self._START_OUTPUT))
         advance = self._advance_sweep(phase)
-        if advance is None:          # the sweep has already crossed the whole field
+        if advance is None:  # the sweep has already crossed the whole field
             return 1.0
         if advance < y_rel:
             return 0.0
@@ -313,10 +320,14 @@ class MicroscopePanel(QWidget):
         p.setPen(QPen(T.with_alpha("#ffffff", 12), 1))
         paso = side / 6
         for i in range(1, 6):
-            p.drawLine(QPointF(field.left() + i * paso, field.top()),
-                       QPointF(field.left() + i * paso, field.bottom()))
-            p.drawLine(QPointF(field.left(), field.top() + i * paso),
-                       QPointF(field.right(), field.top() + i * paso))
+            p.drawLine(
+                QPointF(field.left() + i * paso, field.top()),
+                QPointF(field.left() + i * paso, field.bottom()),
+            )
+            p.drawLine(
+                QPointF(field.left(), field.top() + i * paso),
+                QPointF(field.right(), field.top() + i * paso),
+            )
 
         # ── Particles, from back to front ──
         for part in sorted(self._particles, key=lambda q: q["plano"]):
@@ -355,10 +366,14 @@ class MicroscopePanel(QWidget):
         intensity = (115, 155, 195)[part["plano"]]
         radius_halo = r * 3.4
         halo = QRadialGradient(QPointF(x, y), radius_halo)
-        center_2 = QColor(base); center_2.setAlpha(intensity)
-        half = QColor(base); half.setAlpha(int(intensity * 0.30))
-        tenue = QColor(base); tenue.setAlpha(int(intensity * 0.10))
-        edge = QColor(base); edge.setAlpha(0)
+        center_2 = QColor(base)
+        center_2.setAlpha(intensity)
+        half = QColor(base)
+        half.setAlpha(int(intensity * 0.30))
+        tenue = QColor(base)
+        tenue.setAlpha(int(intensity * 0.10))
+        edge = QColor(base)
+        edge.setAlpha(0)
         halo.setColorAt(0.00, center_2)
         halo.setColorAt(0.30, half)
         halo.setColorAt(0.62, tenue)
@@ -376,16 +391,15 @@ class MicroscopePanel(QWidget):
         p.setBrush(QBrush(body_2))
 
         shape = part["forma"]
-        if shape == 0:                                    # rounded fragment
+        if shape == 0:  # rounded fragment
             p.drawEllipse(QPointF(x, y), r, r * 0.92)
-        elif shape == 1:                                  # fibre
+        elif shape == 1:  # fibre
             p.save()
             p.translate(x, y)
             p.rotate(part["giro"] + 9 * math.sin(0.35 * t + part["fx"]))
-            p.drawRoundedRect(QRectF(-r * 1.9, -r * 0.24, r * 3.8, r * 0.48),
-                              r * 0.24, r * 0.24)
+            p.drawRoundedRect(QRectF(-r * 1.9, -r * 0.24, r * 3.8, r * 0.48), r * 0.24, r * 0.24)
             p.restore()
-        else:                                             # irregular fragment
+        else:  # irregular fragment
             p.save()
             p.translate(x, y)
             p.rotate(part["giro"])
@@ -441,7 +455,7 @@ class MicroscopePanel(QWidget):
 
         if not part["etiqueta"] or alpha < 0.5:
             return
-        text = f'{part["clase"]} {part["conf"]:.2f}'
+        text = f"{part['clase']} {part['conf']:.2f}"
         p.setFont(QFont(T.APP_FONT_FAMILY, 7, QFont.DemiBold))
         fm = p.fontMetrics()
         width_2 = fm.horizontalAdvance(text) + 8
@@ -528,8 +542,16 @@ class ModuleCard(QFrame):
     mouse.
     """
 
-    def __init__(self, number: int, icon_name: str, title: str, description: str,
-                 accent: str, on_open, shortcut: str = ""):
+    def __init__(
+        self,
+        number: int,
+        icon_name: str,
+        title: str,
+        description: str,
+        accent: str,
+        on_open,
+        shortcut: str = "",
+    ):
         super().__init__()
         self._on_open = on_open
         self._accent = accent
@@ -542,7 +564,7 @@ class ModuleCard(QFrame):
         lay.setSpacing(8)
 
         top = QHBoxLayout()
-        tag = QLabel(f'{tr("MÓDULO")} 0{number}')
+        tag = QLabel(f"{tr('MÓDULO')} 0{number}")
         tag.setStyleSheet(
             f"color: white; background: {accent}; padding: 3px 8px; "
             f"border-radius: 4px; font-size: 8.5pt; font-weight: 700; "
@@ -569,9 +591,7 @@ class ModuleCard(QFrame):
         icon_lbl.setPixmap(iconos.pixmap(icon_name, 30, accent, 1.85))
         icon_lbl.setStyleSheet("border: none;")
         title_lbl = QLabel(title)
-        title_lbl.setStyleSheet(
-            f"color: {T.INK}; font-size: 17pt; font-weight: 600; border: none;"
-        )
+        title_lbl.setStyleSheet(f"color: {T.INK}; font-size: 17pt; font-weight: 600; border: none;")
         title_row.addWidget(icon_lbl)
         title_row.addWidget(title_lbl)
         title_row.addStretch(1)
@@ -591,8 +611,10 @@ class ModuleCard(QFrame):
     def _qss(self, active_2: bool) -> str:
         edge = self._accent if active_2 else T.RULE
         background = T.on_background(self._accent, 0.05) if active_2 else T.BG
-        return (f"ModuleCard {{ background: {background}; border: 1px solid {edge};"
-                f" border-radius: 10px; }}")
+        return (
+            f"ModuleCard {{ background: {background}; border: 1px solid {edge};"
+            f" border-radius: 10px; }}"
+        )
 
     def enterEvent(self, ev):
         # Without this, a whole clickable card gave no signal of being clickable.
@@ -712,7 +734,8 @@ class LauncherWindow(QMainWindow):
             f"QPushButton {{ background: {T.WARN}; color: white; border: none; "
             f"border-radius: 4px; padding: 4px 10px; font-size: 9pt; "
             f"font-weight: 600; }}"
-            f"QPushButton:hover {{ background: {T.ERR}; }}")
+            f"QPushButton:hover {{ background: {T.ERR}; }}"
+        )
         self.btn_update.setVisible(False)
         self.btn_update.clicked.connect(self._launch_updater)
         tb.addWidget(self.btn_update)
@@ -752,30 +775,30 @@ class LauncherWindow(QMainWindow):
         t1 = QLabel(tr("Poly-X"))
         t1.setStyleSheet(f"color: {T.INK}; font-size: 38pt; font-weight: 700; border: none;")
         t2 = QLabel(tr("analytics"))
-        t2.setStyleSheet(
-            f"color: {T.ACCENT_TX}; font-size: 38pt; font-weight: 300; border: none;"
-        )
+        t2.setStyleSheet(f"color: {T.ACCENT_TX}; font-size: 38pt; font-weight: 300; border: none;")
         title_row.addWidget(t1)
         title_row.addWidget(t2)
         title_row.addStretch(1)
         left.addLayout(title_row)
 
         subtitle = QLabel(tr("Plataforma de detección y clasificación de microplásticos"))
-        subtitle.setStyleSheet(
-            f"color: {T.INK2}; font-size: 13pt; font-weight: 500; border: none;"
-        )
+        subtitle.setStyleSheet(f"color: {T.INK2}; font-size: 13pt; font-weight: 500; border: none;")
         left.addWidget(subtitle)
 
         descr = QLabel(
-            tr("Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) "
-               "e inteligencia artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo.")
+            tr(
+                "Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) "
+                "e inteligencia artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo."
+            )
         )
         descr.setWordWrap(True)
         descr.setStyleSheet(f"color: {T.INK3}; font-size: 10.5pt; border: none;")
         left.addWidget(descr)
 
         # Authorship credit (just below the descriptor)
-        author = QLabel(tr("Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026"))
+        author = QLabel(
+            tr("Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026")
+        )
         author.setTextFormat(Qt.RichText)
         author.setStyleSheet(
             f"color: {T.ACCENT_D_TX}; font-size: 9.5pt; border: none; "
@@ -807,26 +830,70 @@ class LauncherWindow(QMainWindow):
 
         grid = QGridLayout()
         grid.setSpacing(16)
-        grid.addWidget(ModuleCard(
-            1, "detector", tr("Detector"),
-            tr("Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, "
-               "CSV con centroides y diámetros, métricas globales e informe HTML de detección."),
-            T.ACCENT, self.open_detector, "Alt+1"), 0, 0)
-        grid.addWidget(ModuleCard(
-            2, "entrenador", tr("Entrenador"),
-            tr("Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas "
-               "de calidad y comparación con runs anteriores."),
-            T.OK, self.open_trainer, "Alt+2"), 0, 1)
-        grid.addWidget(ModuleCard(
-            3, "etiquetador", tr("Etiquetador"),
-            tr("Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo "
-               "existente y atajos de teclado, ahorra ~80 % del tiempo manual."),
-            T.WARN, self.open_labeler, "Alt+3"), 1, 0)
-        grid.addWidget(ModuleCard(
-            4, "visor", tr("Visor"),
-            tr("Inspección de una imagen a la vez con calibración interactiva μm/píxel "
-               "(línea o círculo) y medición precisa por partícula."),
-            T.VIO, self.open_viewer, "Alt+4"), 1, 1)
+        grid.addWidget(
+            ModuleCard(
+                1,
+                "detector",
+                tr("Detector"),
+                tr(
+                    "Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, "
+                    "CSV con centroides y diámetros, métricas globales e informe HTML de detección."
+                ),
+                T.ACCENT,
+                self.open_detector,
+                "Alt+1",
+            ),
+            0,
+            0,
+        )
+        grid.addWidget(
+            ModuleCard(
+                2,
+                "entrenador",
+                tr("Entrenador"),
+                tr(
+                    "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas "
+                    "de calidad y comparación con runs anteriores."
+                ),
+                T.OK,
+                self.open_trainer,
+                "Alt+2",
+            ),
+            0,
+            1,
+        )
+        grid.addWidget(
+            ModuleCard(
+                3,
+                "etiquetador",
+                tr("Etiquetador"),
+                tr(
+                    "Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo "
+                    "existente y atajos de teclado, ahorra ~80 % del tiempo manual."
+                ),
+                T.WARN,
+                self.open_labeler,
+                "Alt+3",
+            ),
+            1,
+            0,
+        )
+        grid.addWidget(
+            ModuleCard(
+                4,
+                "visor",
+                tr("Visor"),
+                tr(
+                    "Inspección de una imagen a la vez con calibración interactiva μm/píxel "
+                    "(línea o círculo) y medición precisa por partícula."
+                ),
+                T.VIO,
+                self.open_viewer,
+                "Alt+4",
+            ),
+            1,
+            1,
+        )
         body.addLayout(grid)
 
         # ── Footer ──
@@ -856,11 +923,13 @@ class LauncherWindow(QMainWindow):
         # Keyboard shortcuts for the four modules. People who use the program
         # daily always open the same one, and reaching it with Alt+1 saves the trip to the
         # mouse every time.
-        for tecla, action in (("Alt+1", self.open_detector),
-                              ("Alt+2", self.open_trainer),
-                              ("Alt+3", self.open_labeler),
-                              ("Alt+4", self.open_viewer),
-                              ("Ctrl+,", self._open_preferences)):
+        for tecla, action in (
+            ("Alt+1", self.open_detector),
+            ("Alt+2", self.open_trainer),
+            ("Alt+3", self.open_labeler),
+            ("Alt+4", self.open_viewer),
+            ("Ctrl+,", self._open_preferences),
+        ):
             QShortcut(QKeySequence(tecla), self, activated=action)
 
     # ── Preferences ────────────────────────────────────────────
@@ -874,9 +943,13 @@ class LauncherWindow(QMainWindow):
             # text when it was built. The user is warned once, on close, and not on every
             # dialog click.
             QMessageBox.information(
-                self, tr("Idioma"),
-                tr("El idioma se aplicará al reabrir Poly-X. Los módulos que "
-                   "abras desde ahora ya salen en el idioma nuevo."))
+                self,
+                tr("Idioma"),
+                tr(
+                    "El idioma se aplicará al reabrir Poly-X. Los módulos que "
+                    "abras desde ahora ya salen en el idioma nuevo."
+                ),
+            )
 
     # ── Updates ────────────────────────────────────────────────
     def _notify_version_new(self, sha_short: str):
@@ -884,39 +957,58 @@ class LauncherWindow(QMainWindow):
         self._sha_version_new = sha_short
         self.btn_update.setText(tr("Actualizar") + f" · {sha_short}")
         self.btn_update.setToolTip(
-            tr("Hay una versión nueva disponible en GitHub. "
-               "Pulsa para descargarla e instalarla."))
+            tr("Hay una versión nueva disponible en GitHub. Pulsa para descargarla e instalarla.")
+        )
         self.btn_update.setVisible(True)
 
     def _launch_updater(self):
         if not can_update():
             QMessageBox.information(
-                self, tr("Actualizar"),
-                tr("No se encontró {} en la carpeta de instalación. Descarga "
-                   "la versión nueva manualmente desde GitHub.").format(
-                       UPDATER.name))
+                self,
+                tr("Actualizar"),
+                tr(
+                    "No se encontró {} en la carpeta de instalación. Descarga "
+                    "la versión nueva manualmente desde GitHub."
+                ).format(UPDATER.name),
+            )
             return
-        if QMessageBox.question(
-                self, tr("Actualizar"),
-                tr("Se descargará la versión nueva y se cerrará Poly-X.\n\n"
-                   "Tus modelos, resultados y datos no se tocan. ¿Continuar?"),
-        ) != QMessageBox.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                tr("Actualizar"),
+                tr(
+                    "Se descargará la versión nueva y se cerrará Poly-X.\n\n"
+                    "Tus modelos, resultados y datos no se tocan. ¿Continuar?"
+                ),
+            )
+            != QMessageBox.Yes
+        ):
             return
         # The updater overwrites program files; Poly-X has to be released
         # first so it does not clash with the .py files that are in use.
         if not launch_updater(UPDATER):
             QMessageBox.warning(
-                self, tr("Actualizar"),
-                tr("No se pudo lanzar {}. Ejecútalo a mano desde la carpeta "
-                   "de instalación.").format(UPDATER.name))
+                self,
+                tr("Actualizar"),
+                tr(
+                    "No se pudo lanzar {}. Ejecútalo a mano desde la carpeta de instalación."
+                ).format(UPDATER.name),
+            )
             return
         self.close()
 
     # ── Launchers ──────────────────────────────────────────────
-    def open_detector(self): self._launch_module("polyx.gui.detector")
-    def open_trainer(self):  self._launch_module("polyx.gui.trainer")
-    def open_labeler(self):  self._launch_module("polyx.gui.labeler")
-    def open_viewer(self):   self._launch_module("polyx.gui.viewer")
+    def open_detector(self):
+        self._launch_module("polyx.gui.detector")
+
+    def open_trainer(self):
+        self._launch_module("polyx.gui.trainer")
+
+    def open_labeler(self):
+        self._launch_module("polyx.gui.labeler")
+
+    def open_viewer(self):
+        self._launch_module("polyx.gui.viewer")
 
     def _launch_module(self, dotted: str, fallback: str = ""):
         """Spawns the module in a separate process so the launcher does not block.
@@ -932,6 +1024,7 @@ class LauncherWindow(QMainWindow):
         manual = Path(__file__).resolve().parents[3] / "docs" / "manual" / "Manual_PolyX.html"
         if manual.exists():
             import webbrowser
+
             webbrowser.open(manual.as_uri())
         else:
             self._toast("Manual_PolyX.html no encontrado")
@@ -945,6 +1038,7 @@ class LauncherWindow(QMainWindow):
 
     def _toast(self, msg: str):
         from PySide6.QtWidgets import QMessageBox
+
         QMessageBox.information(self, tr("Poly-X"), msg)
 
 

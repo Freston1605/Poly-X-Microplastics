@@ -21,6 +21,7 @@ Anti-vacuity guards: the walk must see the real package, a synthetic Spanish
 tuple must be flagged, known English/API names must stay clean, and a local
 ``iconos`` binding must be scanned while its import path is not.
 """
+
 from __future__ import annotations
 
 import ast
@@ -158,8 +159,7 @@ def _all_entries(tree: ast.Module) -> list[str]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             if any(
-                isinstance(target, ast.Name) and target.id == "__all__"
-                for target in node.targets
+                isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
             ):
                 collect(node.value)
         elif isinstance(node, ast.AugAssign):
@@ -196,18 +196,14 @@ def test_polyx_package_walk_finds_no_spanish_identifiers(
             findings = _allowed(spanish_identifier_findings(name))
             if findings:
                 offenders.append(f"{relative}:{line} {name!r} -> {findings}")
-    assert not offenders, "Spanish identifier remnants in polyx:\n" + "\n".join(
-        offenders
-    )
+    assert not offenders, "Spanish identifier remnants in polyx:\n" + "\n".join(offenders)
 
 
 def test_inventory_exceeds_floors_and_covers_known_modules(
     inventory: list[tuple[Path, str, list[tuple[int, str]], ast.Module]],
 ) -> None:
     """Anti-vacuity: the scan must actually see a substantial package."""
-    relative_paths = {
-        path.relative_to(REPO_ROOT).as_posix() for path, *_rest in inventory
-    }
+    relative_paths = {path.relative_to(REPO_ROOT).as_posix() for path, *_rest in inventory}
     unique_names: set[str] = set()
     for _path, _source, occurrences, _tree in inventory:
         unique_names |= _unique_names(occurrences)
@@ -219,9 +215,7 @@ def test_inventory_exceeds_floors_and_covers_known_modules(
         assert known in relative_paths, f"known module missing from the walk: {known}"
 
 
-@pytest.mark.parametrize(
-    "name", ["mascara", "umbral_px", "calibraciones", "morfotipo"]
-)
+@pytest.mark.parametrize("name", ["mascara", "umbral_px", "calibraciones", "morfotipo"])
 def test_scanner_flags_synthetic_spanish_identifiers(name: str) -> None:
     """Anti-vacuity: the Spanish scanner must flag real Spanish words."""
     findings = _allowed(spanish_identifier_findings(name))

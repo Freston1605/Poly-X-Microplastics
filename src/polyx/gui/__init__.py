@@ -6,6 +6,7 @@ readable message (``pip install polyx-microplastics[gui]``).
 
 Headless consumers should stay in ``polyx.core``, which does not import Qt.
 """
+
 from .qt import qt_available, require_qt
 
 __all__ = [

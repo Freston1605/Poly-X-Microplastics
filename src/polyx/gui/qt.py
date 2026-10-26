@@ -5,6 +5,7 @@ PySide6 lives behind the ``[gui]`` packaging extra so headless consumers
 This single helper is where the import errors are converted into a
 readable message; the Qt-touching modules keep importing PySide6 directly.
 """
+
 from __future__ import annotations
 
 from importlib.util import find_spec

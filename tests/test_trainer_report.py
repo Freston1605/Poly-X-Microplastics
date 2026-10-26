@@ -18,6 +18,7 @@ Two latent bugs are pinned here:
 - XSS via the run name: the ``<title>`` sink rendered ``run_dir.name`` raw;
   it is now HTML-escaped like the ``<h1>`` and meta sinks.
 """
+
 from __future__ import annotations
 
 import base64
@@ -64,6 +65,7 @@ CSV_3_EPOCAS = [
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
+
 def _run_dir(root: Path, name: str, *, csv_rows=None, figures=None) -> Path:
     """Creates ``runs_train/<name>/`` with a realistic results.csv and figures.
 
@@ -78,7 +80,7 @@ def _run_dir(root: Path, name: str, *, csv_rows=None, figures=None) -> Path:
     if csv_rows is not False:
         lineas = [",".join(str(c) for c in fila) for fila in csv_rows]
         (run_dir / "results.csv").write_text("\n".join(lineas) + "\n", encoding="utf-8")
-    for fname in (figures or []):
+    for fname in figures or []:
         (run_dir / fname).write_bytes(PNG_MINI)
     return run_dir
 
@@ -90,6 +92,7 @@ def _generar(run_dir: Path, destino: Path, **kwargs) -> str:
 
 
 # ── 1. Self-contained HTML ───────────────────────────────────────────
+
 
 class TestHtmlAutocontenido:
     def test_reporte_genera_html_autocontenido(self, tmp_path):
@@ -119,6 +122,7 @@ class TestHtmlAutocontenido:
 
 # ── 2. Metrics extraction and KPI rendering ──────────────────────────
 
+
 class TestMetricas:
     def test_metricas_extraidas_de_results_csv(self, tmp_path):
         """KPIs show the LAST row's mAP50, mAP50-95, precision and recall."""
@@ -127,9 +131,9 @@ class TestMetricas:
         html = _generar(run_dir, tmp_path / "reporte.html")
 
         assert "mAP@50" in html and "mAP@50-95" in html and "P / R" in html
-        assert "0.650" in html          # mAP50  last row (0.65 → :.3f)
-        assert "0.350" in html          # mAP95  last row (0.35 → :.3f)
-        assert "0.55/0.46" in html      # P / R  last row (0.55/0.46 → :.2f)
+        assert "0.650" in html  # mAP50  last row (0.65 → :.3f)
+        assert "0.350" in html  # mAP95  last row (0.35 → :.3f)
+        assert "0.55/0.46" in html  # P / R  last row (0.55/0.46 → :.2f)
 
     def test_kpi_con_metricas_ausentes(self, tmp_path):
         """CSV with only the epoch column: metric KPIs show the em-dash."""
@@ -138,17 +142,19 @@ class TestMetricas:
         html = _generar(run_dir, tmp_path / "reporte.html")
 
         assert "Épocas" in html
-        assert "<div class='v'>3</div>" in html   # epoch KPI still reads data
-        assert html.count("—") == 3               # mAP50, mAP50-95, P/R → em-dash
+        assert "<div class='v'>3</div>" in html  # epoch KPI still reads data
+        assert html.count("—") == 3  # mAP50, mAP50-95, P/R → em-dash
 
 
 # ── 3. Figures ────────────────────────────────────────────────────────
+
 
 class TestFiguras:
     def test_figuras_embebidas_como_base64(self, tmp_path):
         """Existing PNGs are embedded as data:image/png;base64, blocks."""
         run_dir = _run_dir(
-            tmp_path, "figuras",
+            tmp_path,
+            "figuras",
             figures=["results.png", "confusion_matrix.png"],
         )
 
@@ -172,7 +178,7 @@ class TestFiguras:
         report still completes with the remaining content.
         """
         run_dir = _run_dir(tmp_path, "figura_rota")
-        (run_dir / "results.png").mkdir()   # directorio donde PNG: read_bytes revienta
+        (run_dir / "results.png").mkdir()  # directorio donde PNG: read_bytes revienta
 
         html = _generar(run_dir, tmp_path / "reporte.html")
 
@@ -181,6 +187,7 @@ class TestFiguras:
 
 
 # ── 4. Hostile input ─────────────────────────────────────────────────
+
 
 class TestEntradaHostil:
     def test_nombre_de_run_hostil_escapado(self, tmp_path):
@@ -191,7 +198,7 @@ class TestEntradaHostil:
         texto = _generar(run_dir, tmp_path / "reporte.html")
 
         assert payload not in texto
-        assert html.escape(payload) in texto   # rendered escaped (h1/title/meta)
+        assert html.escape(payload) in texto  # rendered escaped (h1/title/meta)
 
     def test_csv_con_ultima_fila_corta_no_revienta(self, tmp_path):
         """Truncated last row: no IndexError; missing columns show em-dash.
@@ -203,18 +210,19 @@ class TestEntradaHostil:
         filas = [
             ULTRALYTICS_HEADER,
             [1, 0.50, 0.40, 0.60, 0.30, 0.100, 0.050, 0.030, 0.110, 0.060, 0.040, 0.01, 0.02, 0.03],
-            [2],   # corrida corta a mitad: la ultima fila viene truncada
+            [2],  # corrida corta a mitad: la ultima fila viene truncada
         ]
         run_dir = _run_dir(tmp_path, "truncada", csv_rows=filas)
 
-        html = _generar(run_dir, tmp_path / "reporte.html")   # no IndexError
+        html = _generar(run_dir, tmp_path / "reporte.html")  # no IndexError
 
         assert "Épocas" in html
-        assert "<div class='v'>2</div>" in html   # epoch still read from the short row
-        assert html.count("—") == 3               # mAP50, mAP50-95, P/R → em-dash
+        assert "<div class='v'>2</div>" in html  # epoch still read from the short row
+        assert html.count("—") == 3  # mAP50, mAP50-95, P/R → em-dash
 
 
 # ── 5. Absence and failure paths ─────────────────────────────────────
+
 
 class TestAusenciaYFalla:
     def test_run_dir_ausente_lanza_runtime_error(self, tmp_path):
@@ -229,7 +237,7 @@ class TestAusenciaYFalla:
         html = _generar(run_dir, tmp_path / "reporte.html")
 
         assert "Sin results.csv legible." in html
-        assert "mAP@50" not in html      # KPI block omitted entirely
+        assert "mAP@50" not in html  # KPI block omitted entirely
 
     def test_results_csv_ilegible_propaga_el_error(self, tmp_path):
         """Unreadable results.csv (a directory) bubbles OSError, not silent garbage."""
@@ -241,6 +249,7 @@ class TestAusenciaYFalla:
 
 
 # ── 6. References flag ───────────────────────────────────────────────
+
 
 class TestReferencias:
     def test_include_refs_false_omite_referencias(self, tmp_path):
@@ -258,6 +267,7 @@ class TestReferencias:
 
 # ── 7. Runner-to-report contract (S02 → S03) ─────────────────────────
 
+
 class TestContratoRunner:
     def test_contrato_runner_a_reporte(self, tmp_path):
         """A run dir shaped exactly as TrainerRunner leaves it is consumed.
@@ -269,12 +279,58 @@ class TestContratoRunner:
         """
         filas_runner = [
             ULTRALYTICS_HEADER,
-            [3, 0.790, 0.740, 0.870, 0.520, 0.061, 0.021, 0.014, 0.070, 0.025, 0.017, 0.005, 0.005, 0.005],
-            [4, 0.800, 0.750, 0.880, 0.530, 0.058, 0.020, 0.013, 0.067, 0.024, 0.016, 0.005, 0.005, 0.005],
-            [5, 0.812, 0.764, 0.891, 0.543, 0.055, 0.019, 0.012, 0.064, 0.023, 0.015, 0.005, 0.005, 0.005],
+            [
+                3,
+                0.790,
+                0.740,
+                0.870,
+                0.520,
+                0.061,
+                0.021,
+                0.014,
+                0.070,
+                0.025,
+                0.017,
+                0.005,
+                0.005,
+                0.005,
+            ],
+            [
+                4,
+                0.800,
+                0.750,
+                0.880,
+                0.530,
+                0.058,
+                0.020,
+                0.013,
+                0.067,
+                0.024,
+                0.016,
+                0.005,
+                0.005,
+                0.005,
+            ],
+            [
+                5,
+                0.812,
+                0.764,
+                0.891,
+                0.543,
+                0.055,
+                0.019,
+                0.012,
+                0.064,
+                0.023,
+                0.015,
+                0.005,
+                0.005,
+                0.005,
+            ],
         ]
         run_dir = _run_dir(
-            tmp_path, "runner",
+            tmp_path,
+            "runner",
             csv_rows=filas_runner,
             figures=["results.png", "confusion_matrix.png", "F1_curve.png"],
         )
@@ -284,7 +340,7 @@ class TestContratoRunner:
         html = _generar(run_dir, tmp_path / "reporte.html")
 
         assert (run_dir / "weights" / "best.pt").exists()
-        assert "0.891" in html           # mAP50 last row
-        assert "0.543" in html           # mAP50-95 last row
-        assert "0.81/0.76" in html       # P / R last row
+        assert "0.891" in html  # mAP50 last row
+        assert "0.543" in html  # mAP50-95 last row
+        assert "0.81/0.76" in html  # P / R last row
         assert html.count("data:image/png;base64,") == 3

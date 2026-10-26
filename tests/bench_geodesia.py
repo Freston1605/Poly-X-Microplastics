@@ -20,6 +20,7 @@ calentamiento descartado, y el peor caso entre repeticiones.
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
+
 from __future__ import annotations
 
 import platform
@@ -45,7 +46,8 @@ TIMING_MD = FIXTURES / "TIMING.md"
 # usuario; aca solo se CITA en el artefacto, no se re-mide.
 BASELINE_EXTERNA = (
     "~5.9 ms/particula y 7.1 s para el lote de 10 placas "
-    "(medido en la maquina Windows del usuario, ANTES de la reescritura)")
+    "(medido en la maquina Windows del usuario, ANTES de la reescritura)"
+)
 
 
 def _mascara_a_lote(mascara: np.ndarray) -> tuple:
@@ -54,7 +56,7 @@ def _mascara_a_lote(mascara: np.ndarray) -> tuple:
     idx = np.argwhere(mascara > 0)
     y0, x0 = idx.min(axis=0)
     y1_, x1_ = idx.max(axis=0) + 1
-    dentro = (mascara[y0:y1_, x0:x1_] > 0)
+    dentro = mascara[y0:y1_, x0:x1_] > 0
     semilla = tuple(np.argwhere(dentro)[0])
     return dentro, semilla
 
@@ -63,8 +65,7 @@ def _propagaciones(dentro: np.ndarray, semilla: tuple, propagar) -> float:
     """Corre las DOS propagaciones como `largo_geodesico` (d1 y d2) y
     devuelve su suma, el costo que el pipeline paga por particula."""
     d1 = propagar(dentro, semilla)
-    fin = np.unravel_index(
-        np.argmax(np.where(np.isfinite(d1), d1, -1)), d1.shape)
+    fin = np.unravel_index(np.argmax(np.where(np.isfinite(d1), d1, -1)), d1.shape)
     d2 = propagar(dentro, fin)
     return float(d1.sum() + d2.sum())  # suma arbitraria: fuerza a computar
 
@@ -103,10 +104,14 @@ def _corpus() -> list[tuple[str, str, np.ndarray]]:
     #    procesa de verdad. Mismos generadores, distinto lado del lienzo.
     for lado in (30, 80, 150, 300, 500):
         rng = np.random.default_rng(400 + lado)
-        corpus.append((f"escala {lado}px", "espiral",
-                       G._espiral(rng, lado=lado)))
-        corpus.append((f"escala {lado}px", "blob borde ruidoso",
-                       G._blob_borde_ruidoso(rng, lado=lado, radio=max(8, lado // 3))))
+        corpus.append((f"escala {lado}px", "espiral", G._espiral(rng, lado=lado)))
+        corpus.append(
+            (
+                f"escala {lado}px",
+                "blob borde ruidoso",
+                G._blob_borde_ruidoso(rng, lado=lado, radio=max(8, lado // 3)),
+            )
+        )
 
     return corpus
 
@@ -123,20 +128,26 @@ def correr_bench(repeticiones: int = 5):
         px = int(dentro.sum())
         # A mayor mascaron, menos repeticiones para no eternizarnos; al menos
         # 2 en el peor caso para que la mediana no dependa de un solo pico.
-        reps = 2 if h * w > 200000 else min(
-            repeticiones, max(2, int(3.0e6 / max(h * w, 1))))
+        reps = 2 if h * w > 200000 else min(repeticiones, max(2, int(3.0e6 / max(h * w, 1))))
 
-        t_ref = _medir_ms(lambda: _propagaciones(dentro, semilla,
-                                                 G._propagar_geodesico_referencia), reps)
-        t_new = _medir_ms(lambda: _propagaciones(dentro, semilla,
-                                                 M._spread_geodesic), reps)
+        t_ref = _medir_ms(
+            lambda: _propagaciones(dentro, semilla, G._propagar_geodesico_referencia), reps
+        )
+        t_new = _medir_ms(lambda: _propagaciones(dentro, semilla, M._spread_geodesic), reps)
         ratio = t_ref["mediana"] / t_new["mediana"] if t_new["mediana"] else float("inf")
-        filas.append({
-            "clase": clase, "nombre": nombre, "px": px, "lado": f"{h}x{w}",
-            "ref_ms": t_ref["mediana"], "ref_max": t_ref["max"],
-            "new_ms": t_new["mediana"], "new_max": t_new["max"],
-            "ratio": ratio,
-        })
+        filas.append(
+            {
+                "clase": clase,
+                "nombre": nombre,
+                "px": px,
+                "lado": f"{h}x{w}",
+                "ref_ms": t_ref["mediana"],
+                "ref_max": t_ref["max"],
+                "new_ms": t_new["mediana"],
+                "new_max": t_new["max"],
+                "ratio": ratio,
+            }
+        )
 
     # Tabla por clase completa. Los fixture reales van indicados uno a uno.
     lineas = [
@@ -147,8 +158,7 @@ def correr_bench(repeticiones: int = 5):
         "",
         "## Contexto de la maquina",
         "",
-        f"- Python {platform.python_version()} | numpy {np.__version__} | "
-        f"OpenCV {cv2.__version__}",
+        f"- Python {platform.python_version()} | numpy {np.__version__} | OpenCV {cv2.__version__}",
         f"- {platform.system()} {platform.release()} ({platform.machine()})",
         "",
         "## Que mide este artefacto (y que NO)",
@@ -180,30 +190,36 @@ def correr_bench(repeticiones: int = 5):
         lineas.append(
             f"| {f['clase']} | {f['nombre']} | {f['px']} | {f['lado']} "
             f"| {f['ref_ms']:.3f} | {f['new_ms']:.3f} | {f['ratio']:.2f}x "
-            f"| {f['ref_max']:.3f} | {f['new_max']:.3f} |")
+            f"| {f['ref_max']:.3f} | {f['new_max']:.3f} |"
+        )
 
     por_clase: dict[str, list[dict]] = {}
     for f in filas:
         por_clase.setdefault(f["clase"], []).append(f)
-    lineas += ["", "## Resumen por clase", "",
-               "| clase | mascaras | ref ms total | new ms total | ratio |",
-               "|---|---|---|---|---|"]
+    lineas += [
+        "",
+        "## Resumen por clase",
+        "",
+        "| clase | mascaras | ref ms total | new ms total | ratio |",
+        "|---|---|---|---|---|",
+    ]
     for clase, fs in por_clase.items():
         tr = sum(f["ref_ms"] for f in fs)
         tn = sum(f["new_ms"] for f in fs)
-        lineas.append(
-            f"| {clase} | {len(fs)} | {tr:.3f} | {tn:.3f} | {tr / tn:.2f}x |")
+        lineas.append(f"| {clase} | {len(fs)} | {tr:.3f} | {tn:.3f} | {tr / tn:.2f}x |")
     tr = sum(f["ref_ms"] for f in filas)
     tn = sum(f["new_ms"] for f in filas)
-    lineas += ["", "## Global", "",
-               f"- Tiempo total referencia: **{tr:.2f} ms**",
-               f"- Tiempo total reescrita: **{tn:.2f} ms**",
-               f"- Ratio global: **{tr / tn:.2f}x** (ref/new, sobre "
-               f"{len(filas)} mascaras)",
-               "",
-               "> Citado como contexto externo, NO re-medido aqui: " +
-               BASELINE_EXTERNA + ".",
-               ""]
+    lineas += [
+        "",
+        "## Global",
+        "",
+        f"- Tiempo total referencia: **{tr:.2f} ms**",
+        f"- Tiempo total reescrita: **{tn:.2f} ms**",
+        f"- Ratio global: **{tr / tn:.2f}x** (ref/new, sobre {len(filas)} mascaras)",
+        "",
+        "> Citado como contexto externo, NO re-medido aqui: " + BASELINE_EXTERNA + ".",
+        "",
+    ]
     return "\n".join(lineas), filas
 
 

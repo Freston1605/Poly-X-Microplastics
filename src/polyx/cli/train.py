@@ -3,6 +3,7 @@
 Usage:
     polyx-train --weights yolov8m.pt --data data.yaml --epochs 100 --batch 16 --imgsz 640
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,8 +20,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--batch", type=int, default=16)
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--device", default=None,
-                   help="'cpu', a CUDA index, or empty = auto-select (default: auto)")
+    p.add_argument(
+        "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
+    )
     p.add_argument("--optimizer", default="SGD")
     p.add_argument("--lr0", type=float, default=0.01)
     p.add_argument("--project", default="runs")

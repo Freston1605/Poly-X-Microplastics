@@ -17,6 +17,7 @@ Three scanners live side by side:
 The vocabulary is data, not logic: extend a word list when a real Spanish term
 survives, never loosen a regex.
 """
+
 from __future__ import annotations
 
 import ast
@@ -69,9 +70,9 @@ def split_comment(raw: str) -> Tuple[str, str, str]:
         # value as the body so nothing is silently dropped.
         return "", raw, ""
     prefix = match.group(0)
-    rest = raw[len(prefix):]
+    rest = raw[len(prefix) :]
     body = rest.rstrip(" \t")
-    trailing = rest[len(body):]
+    trailing = rest[len(body) :]
     return prefix, body, trailing
 
 
@@ -182,31 +183,188 @@ SPANISH_CONTENT_WORDS = re.compile(
 
 SPANISH_STOPWORDS = frozenset(
     {
-        "a", "al", "algo", "algunos", "ambos", "ante", "antes", "aqui",
-        "asi", "aun", "cada", "como", "con", "contra", "cual", "cuando",
-        "de", "del", "desde", "donde", "dos", "durante", "e", "el", "ella",
-        "ellas", "ellos", "en", "entre", "era", "eran", "es", "esa", "ese",
-        "eso", "esos", "esta", "estas", "este", "esto", "estos", "fue",
-        "ha", "han", "hasta", "hay", "la", "las", "le", "les", "lo", "los",
-        "mas", "me", "mi", "muy", "no", "nos", "o", "otra", "otro", "para",
-        "pero", "por", "porque", "que", "se", "ser", "si", "sin", "sobre",
-        "son", "su", "sus", "te", "tiene", "tienen", "todo", "todos", "tras",
-        "tu", "un", "una", "uno", "unos", "y", "ya",
+        "a",
+        "al",
+        "algo",
+        "algunos",
+        "ambos",
+        "ante",
+        "antes",
+        "aqui",
+        "asi",
+        "aun",
+        "cada",
+        "como",
+        "con",
+        "contra",
+        "cual",
+        "cuando",
+        "de",
+        "del",
+        "desde",
+        "donde",
+        "dos",
+        "durante",
+        "e",
+        "el",
+        "ella",
+        "ellas",
+        "ellos",
+        "en",
+        "entre",
+        "era",
+        "eran",
+        "es",
+        "esa",
+        "ese",
+        "eso",
+        "esos",
+        "esta",
+        "estas",
+        "este",
+        "esto",
+        "estos",
+        "fue",
+        "ha",
+        "han",
+        "hasta",
+        "hay",
+        "la",
+        "las",
+        "le",
+        "les",
+        "lo",
+        "los",
+        "mas",
+        "me",
+        "mi",
+        "muy",
+        "no",
+        "nos",
+        "o",
+        "otra",
+        "otro",
+        "para",
+        "pero",
+        "por",
+        "porque",
+        "que",
+        "se",
+        "ser",
+        "si",
+        "sin",
+        "sobre",
+        "son",
+        "su",
+        "sus",
+        "te",
+        "tiene",
+        "tienen",
+        "todo",
+        "todos",
+        "tras",
+        "tu",
+        "un",
+        "una",
+        "uno",
+        "unos",
+        "y",
+        "ya",
     }
 )
 
 ENGLISH_STOPWORDS = frozenset(
     {
-        "a", "after", "all", "also", "an", "and", "any", "are", "as", "at",
-        "be", "because", "been", "before", "being", "between", "both", "but",
-        "by", "can", "could", "did", "do", "does", "each", "for", "from",
-        "had", "has", "have", "here", "how", "if", "in", "into", "is", "it",
-        "its", "may", "might", "more", "most", "must", "new", "not", "of",
-        "off", "on", "once", "one", "only", "or", "other", "out", "over",
-        "per", "same", "should", "so", "some", "such", "than", "that", "the",
-        "their", "then", "there", "these", "they", "this", "those", "three",
-        "to", "two", "under", "up", "use", "used", "using", "via", "was",
-        "were", "what", "when", "where", "which", "who", "why", "will", "with",
+        "a",
+        "after",
+        "all",
+        "also",
+        "an",
+        "and",
+        "any",
+        "are",
+        "as",
+        "at",
+        "be",
+        "because",
+        "been",
+        "before",
+        "being",
+        "between",
+        "both",
+        "but",
+        "by",
+        "can",
+        "could",
+        "did",
+        "do",
+        "does",
+        "each",
+        "for",
+        "from",
+        "had",
+        "has",
+        "have",
+        "here",
+        "how",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "may",
+        "might",
+        "more",
+        "most",
+        "must",
+        "new",
+        "not",
+        "of",
+        "off",
+        "on",
+        "once",
+        "one",
+        "only",
+        "or",
+        "other",
+        "out",
+        "over",
+        "per",
+        "same",
+        "should",
+        "so",
+        "some",
+        "such",
+        "than",
+        "that",
+        "the",
+        "their",
+        "then",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "three",
+        "to",
+        "two",
+        "under",
+        "up",
+        "use",
+        "used",
+        "using",
+        "via",
+        "was",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "will",
+        "with",
         "would",
     }
 )
@@ -226,8 +384,10 @@ def _is_code_shaped(token: str) -> bool:
         return True
     if any(character.isdigit() for character in token):
         return True
-    if len(token) > 1 and token[0].islower() and any(
-        character.isupper() for character in token[1:]
+    if (
+        len(token) > 1
+        and token[0].islower()
+        and any(character.isupper() for character in token[1:])
     ):
         return True
     # All-caps constants such as PET or JSONL are code-shaped too.
@@ -252,9 +412,7 @@ def _strip_code_like(text: str, identifiers: Sequence[str]) -> str:
     )
 
 
-def spanish_comment_findings(
-    text: str, identifiers: Sequence[str] = ()
-) -> List[str]:
+def spanish_comment_findings(text: str, identifiers: Sequence[str] = ()) -> List[str]:
     """Return Spanish markers found in a comment body ([] = clean)."""
     cleaned = _strip_code_like(text, identifiers)
     findings = spanish_findings(cleaned)
@@ -266,9 +424,7 @@ def spanish_comment_findings(
     spanish_hits = sum(1 for word in words if word in SPANISH_STOPWORDS)
     english_hits = sum(1 for word in words if word in ENGLISH_STOPWORDS)
     if spanish_hits >= 3 and spanish_hits >= english_hits + 2:
-        findings.append(
-            f"stopword-ratio:es={spanish_hits},en={english_hits}"
-        )
+        findings.append(f"stopword-ratio:es={spanish_hits},en={english_hits}")
     # Preserve order but avoid reporting the same marker twice.
     return list(dict.fromkeys(findings))
 
@@ -335,9 +491,7 @@ def scan_comments(text: str) -> List[Tuple[str, List[str]]]:
             continue
         findings = spanish_comment_findings(" ".join(bodies), identifiers)
         if findings:
-            results.append(
-                (f"{block[0].start[0]}-{block[-1].start[0]}", findings)
-            )
+            results.append((f"{block[0].start[0]}-{block[-1].start[0]}", findings))
     return results
 
 
@@ -383,9 +537,7 @@ def enumerate_docstrings(text: str) -> List[Tuple[int, str]]:
     def visit(node: ast.AST) -> None:
         nonlocal counter
         index: Optional[int] = None
-        if isinstance(
-            node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
-        ):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             index = counter
             counter += 1
             body = getattr(node, "body", None)
@@ -470,13 +622,71 @@ HOMOGRAPH_ALLOWLIST = frozenset(
 
 UNIT_ALLOWLIST = frozenset(
     {
-        "api", "ap", "amp", "ascii", "b64", "bgr", "cm", "cpu", "crlf", "csv",
-        "cuda", "cudnn", "cv", "dpi", "eof", "fps", "gpu", "gt", "gui", "hsv",
-        "html", "http", "https", "id", "ids", "io", "jpeg", "jpg", "json",
-        "jsonl", "llm", "mac", "map", "md5", "ml", "mm", "nms", "nm", "np",
-        "os", "pc", "pdf", "png", "pt", "px", "qt", "qss", "ram", "rgb", "roi",
-        "sep", "sha", "sql", "txt", "ui", "um", "uri", "url", "utf", "util",
-        "uuid", "ws", "yaml", "yolo", "yolov8",
+        "api",
+        "ap",
+        "amp",
+        "ascii",
+        "b64",
+        "bgr",
+        "cm",
+        "cpu",
+        "crlf",
+        "csv",
+        "cuda",
+        "cudnn",
+        "cv",
+        "dpi",
+        "eof",
+        "fps",
+        "gpu",
+        "gt",
+        "gui",
+        "hsv",
+        "html",
+        "http",
+        "https",
+        "id",
+        "ids",
+        "io",
+        "jpeg",
+        "jpg",
+        "json",
+        "jsonl",
+        "llm",
+        "mac",
+        "map",
+        "md5",
+        "ml",
+        "mm",
+        "nms",
+        "nm",
+        "np",
+        "os",
+        "pc",
+        "pdf",
+        "png",
+        "pt",
+        "px",
+        "qt",
+        "qss",
+        "ram",
+        "rgb",
+        "roi",
+        "sep",
+        "sha",
+        "sql",
+        "txt",
+        "ui",
+        "um",
+        "uri",
+        "url",
+        "utf",
+        "util",
+        "uuid",
+        "ws",
+        "yaml",
+        "yolo",
+        "yolov8",
     }
 )
 
@@ -585,8 +795,15 @@ SPANISH_SUBWORDS = frozenset(
 
 MORPHOLOGY_EXCEPTIONS = frozenset(
     {
-        "avocado", "bonanza", "colorado", "coercion", "desperado", "metadata",
-        "mikado", "suspicion", "tornado",
+        "avocado",
+        "bonanza",
+        "colorado",
+        "coercion",
+        "desperado",
+        "metadata",
+        "mikado",
+        "suspicion",
+        "tornado",
     }
 )
 
@@ -705,8 +922,13 @@ def module_stem_bindings(text: str, stems: Iterable[str] = ()) -> Set[str]:
 
 def _ignored_token(token: tokenize.TokenInfo) -> bool:
     return token.type in {
-        tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT,
-        tokenize.COMMENT, tokenize.ENCODING, tokenize.ENDMARKER,
+        tokenize.NL,
+        tokenize.NEWLINE,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.COMMENT,
+        tokenize.ENCODING,
+        tokenize.ENDMARKER,
     }
 
 

@@ -13,6 +13,7 @@ Full bounding-box annotator with:
 - Navigation with left/right arrows (auto-saves)
 - Exports YOLO .txt + classes.txt
 """
+
 from __future__ import annotations
 
 import copy
@@ -84,8 +85,8 @@ def _qpixmap_de(path: Path) -> QPixmap:
     rgb = np.ascontiguousarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
     # .copy() so the QImage owns its bytes: the numpy array is
     # freed on exit, and without the copy it would point to dead memory.
-    return QPixmap.fromImage(
-        QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
+    return QPixmap.fromImage(QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
+
 
 DEFAULT_CLASSES = ["PET", "PP", "LDPE"]
 
@@ -98,22 +99,23 @@ MODE_PAN = 4
 
 # Resize handles (order matters for the cursors)
 HANDLE_NONE = -1
-HANDLE_TL = 0   # top-left
+HANDLE_TL = 0  # top-left
 HANDLE_TR = 1
 HANDLE_BR = 2
 HANDLE_BL = 3
-HANDLE_T  = 4   # top
-HANDLE_R  = 5
-HANDLE_B  = 6
-HANDLE_L  = 7
+HANDLE_T = 4  # top
+HANDLE_R = 5
+HANDLE_B = 6
+HANDLE_L = 7
 
-HANDLE_SIZE = 8   # px on screen
+HANDLE_SIZE = 8  # px on screen
 
 
 # ────────────────────────────────────────────────────────────────────
 @dataclass
 class Box:
     """Annotation box in absolute image coordinates."""
+
     x1: float
     y1: float
     x2: float
@@ -121,8 +123,10 @@ class Box:
     class_id: int = 0
 
     def normalize(self):
-        if self.x1 > self.x2: self.x1, self.x2 = self.x2, self.x1
-        if self.y1 > self.y2: self.y1, self.y2 = self.y2, self.y1
+        if self.x1 > self.x2:
+            self.x1, self.x2 = self.x2, self.x1
+        if self.y1 > self.y2:
+            self.y1, self.y2 = self.y2, self.y1
 
     def rect(self) -> QRectF:
         return QRectF(self.x1, self.y1, self.x2 - self.x1, self.y2 - self.y1)
@@ -131,8 +135,9 @@ class Box:
 # ────────────────────────────────────────────────────────────────────
 class AnnotCanvas(QGraphicsView):
     """Advanced canvas: zoom, pan, draw/move/resize boxes."""
+
     boxes_changed = Signal()
-    selection_changed = Signal(int)   # idx or -1
+    selection_changed = Signal(int)  # idx or -1
     status_changed = Signal(str)
 
     def __init__(self):
@@ -143,9 +148,7 @@ class AnnotCanvas(QGraphicsView):
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.setStyleSheet(
-            f"QGraphicsView {{ border: 1px solid {T.RULE}; background: #1a1d22; }}"
-        )
+        self.setStyleSheet(f"QGraphicsView {{ border: 1px solid {T.RULE}; background: #1a1d22; }}")
         self.setDragMode(QGraphicsView.NoDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
@@ -204,12 +207,10 @@ class AnnotCanvas(QGraphicsView):
         self._pixmap_item = self.scene_.addPixmap(pm)
         self.setSceneRect(QRectF(0, 0, pm.width(), pm.height()))
         # Map Detection -> Box
-        self.boxes = [
-            Box(d.x1, d.y1, d.x2, d.y2, class_id=d.class_id)
-            for d in existing
-        ]
+        self.boxes = [Box(d.x1, d.y1, d.x2, d.y2, class_id=d.class_id) for d in existing]
         self.selected_idx = -1
-        self._undo.clear(); self._redo.clear()
+        self._undo.clear()
+        self._redo.clear()
         # Initial fit
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
         self._refresh()
@@ -218,15 +219,27 @@ class AnnotCanvas(QGraphicsView):
     def detections(self) -> List[Detection]:
         out = []
         for b in self.boxes:
-            name = self.class_names[b.class_id] if b.class_id < len(self.class_names) else str(b.class_id)
-            out.append(Detection(
-                class_id=b.class_id, class_name=name, conf=1.0,
-                x1=b.x1, y1=b.y1, x2=b.x2, y2=b.y2,
-            ))
+            name = (
+                self.class_names[b.class_id]
+                if b.class_id < len(self.class_names)
+                else str(b.class_id)
+            )
+            out.append(
+                Detection(
+                    class_id=b.class_id,
+                    class_name=name,
+                    conf=1.0,
+                    x1=b.x1,
+                    y1=b.y1,
+                    x2=b.x2,
+                    y2=b.y2,
+                )
+            )
         return out
 
     def clear_boxes(self):
-        if not self.boxes: return
+        if not self.boxes:
+            return
         self._push_undo()
         self.boxes = []
         self.selected_idx = -1
@@ -234,7 +247,8 @@ class AnnotCanvas(QGraphicsView):
         self.boxes_changed.emit()
 
     def delete_selected(self):
-        if not (0 <= self.selected_idx < len(self.boxes)): return
+        if not (0 <= self.selected_idx < len(self.boxes)):
+            return
         self._push_undo()
         del self.boxes[self.selected_idx]
         self.selected_idx = -1
@@ -243,7 +257,8 @@ class AnnotCanvas(QGraphicsView):
         self.selection_changed.emit(-1)
 
     def undo(self):
-        if not self._undo: return
+        if not self._undo:
+            return
         self._redo.append(self._snapshot())
         self.boxes = self._undo.pop()
         if self.selected_idx >= len(self.boxes):
@@ -252,7 +267,8 @@ class AnnotCanvas(QGraphicsView):
         self.boxes_changed.emit()
 
     def redo(self):
-        if not self._redo: return
+        if not self._redo:
+            return
         self._undo.append(self._snapshot())
         self.boxes = self._redo.pop()
         if self.selected_idx >= len(self.boxes):
@@ -292,18 +308,23 @@ class AnnotCanvas(QGraphicsView):
 
         for i, b in enumerate(self.boxes):
             color = self._class_color(b.class_id)
-            sel = (i == self.selected_idx)
+            sel = i == self.selected_idx
             pen = QPen(color, 3 if sel else 2)
             if sel:
                 pen.setStyle(Qt.SolidLine)
             rect = QGraphicsRectItem(b.rect())
             rect.setPen(pen)
-            fill = QColor(color); fill.setAlpha(45 if sel else 0)
+            fill = QColor(color)
+            fill.setAlpha(45 if sel else 0)
             rect.setBrush(QBrush(fill))
             self.scene_.addItem(rect)
 
             # Label
-            name = self.class_names[b.class_id] if b.class_id < len(self.class_names) else str(b.class_id)
+            name = (
+                self.class_names[b.class_id]
+                if b.class_id < len(self.class_names)
+                else str(b.class_id)
+            )
             label_bg = QGraphicsRectItem(QRectF(b.x1, b.y1 - 18, len(name) * 9 + 12, 18))
             label_bg.setPen(QPen(color, 1))
             label_bg.setBrush(QBrush(color))
@@ -320,7 +341,7 @@ class AnnotCanvas(QGraphicsView):
                 hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)  # size in scene
                 points = self._handle_points(b, hs)
                 for hidx, (hx, hy) in enumerate(points):
-                    h = QGraphicsRectItem(QRectF(hx - hs/2, hy - hs/2, hs, hs))
+                    h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
                     h.setPen(QPen(Qt.white, 1.2))
                     h.setBrush(QBrush(color))
                     h.setZValue(10)
@@ -334,10 +355,10 @@ class AnnotCanvas(QGraphicsView):
             (b.x2, b.y1),  # TR
             (b.x2, b.y2),  # BR
             (b.x1, b.y2),  # BL
-            (cx,   b.y1),  # T
-            (b.x2, cy  ),  # R
-            (cx,   b.y2),  # B
-            (b.x1, cy  ),  # L
+            (cx, b.y1),  # T
+            (b.x2, cy),  # R
+            (cx, b.y2),  # B
+            (b.x1, cy),  # L
         ]
 
     def _hit_handle(self, b: Box, pos: QPointF) -> int:
@@ -362,10 +383,14 @@ class AnnotCanvas(QGraphicsView):
 
     def _set_cursor_for_handle(self, h: int):
         cursors = {
-            HANDLE_TL: Qt.SizeFDiagCursor, HANDLE_BR: Qt.SizeFDiagCursor,
-            HANDLE_TR: Qt.SizeBDiagCursor, HANDLE_BL: Qt.SizeBDiagCursor,
-            HANDLE_T : Qt.SizeVerCursor,   HANDLE_B : Qt.SizeVerCursor,
-            HANDLE_L : Qt.SizeHorCursor,   HANDLE_R : Qt.SizeHorCursor,
+            HANDLE_TL: Qt.SizeFDiagCursor,
+            HANDLE_BR: Qt.SizeFDiagCursor,
+            HANDLE_TR: Qt.SizeBDiagCursor,
+            HANDLE_BL: Qt.SizeBDiagCursor,
+            HANDLE_T: Qt.SizeVerCursor,
+            HANDLE_B: Qt.SizeVerCursor,
+            HANDLE_L: Qt.SizeHorCursor,
+            HANDLE_R: Qt.SizeHorCursor,
         }
         self.setCursor(cursors.get(h, Qt.CrossCursor))
 
@@ -402,7 +427,8 @@ class AnnotCanvas(QGraphicsView):
         elif k == Qt.Key_F:
             self.zoom_fit()
         else:
-            super().keyPressEvent(ev); return
+            super().keyPressEvent(ev)
+            return
         ev.accept()
 
     def keyReleaseEvent(self, ev):
@@ -413,7 +439,8 @@ class AnnotCanvas(QGraphicsView):
 
     def mousePressEvent(self, ev):
         if self._pixmap_item is None:
-            super().mousePressEvent(ev); return
+            super().mousePressEvent(ev)
+            return
         scene_pos = self.mapToScene(ev.position().toPoint())
         self._mouse_press_scene = scene_pos
 
@@ -422,7 +449,8 @@ class AnnotCanvas(QGraphicsView):
             self._mode = MODE_PAN
             self._last_pan_pos = ev.position()
             self.setCursor(Qt.ClosedHandCursor)
-            ev.accept(); return
+            ev.accept()
+            return
 
         if ev.button() == Qt.LeftButton:
             # Am I over a handle of the selected box?
@@ -434,7 +462,8 @@ class AnnotCanvas(QGraphicsView):
                     self._mouse_press_box = copy.copy(self.boxes[self.selected_idx])
                     self._push_undo()
                     self._set_cursor_for_handle(h)
-                    ev.accept(); return
+                    ev.accept()
+                    return
 
             # Am I over a box?
             hit = self._hit_box(scene_pos)
@@ -446,18 +475,25 @@ class AnnotCanvas(QGraphicsView):
                 self.setCursor(Qt.ClosedHandCursor)
                 self._refresh()
                 self.selection_changed.emit(self.selected_idx)
-                ev.accept(); return
+                ev.accept()
+                return
 
             # Otherwise, draw a new one
             self._mode = MODE_DRAW
             self.selected_idx = -1
             self._push_undo()
-            new_box = Box(scene_pos.x(), scene_pos.y(), scene_pos.x(), scene_pos.y(),
-                          class_id=self.active_class)
+            new_box = Box(
+                scene_pos.x(),
+                scene_pos.y(),
+                scene_pos.x(),
+                scene_pos.y(),
+                class_id=self.active_class,
+            )
             self.boxes.append(new_box)
             self.selected_idx = len(self.boxes) - 1
             self._refresh()
-            ev.accept(); return
+            ev.accept()
+            return
 
         if ev.button() == Qt.RightButton:
             # assign the active class to the box under the cursor
@@ -469,13 +505,15 @@ class AnnotCanvas(QGraphicsView):
                 self._refresh()
                 self.boxes_changed.emit()
                 self.selection_changed.emit(hit)
-            ev.accept(); return
+            ev.accept()
+            return
 
         super().mousePressEvent(ev)
 
     def mouseMoveEvent(self, ev):
         if self._pixmap_item is None:
-            super().mouseMoveEvent(ev); return
+            super().mouseMoveEvent(ev)
+            return
         scene_pos = self.mapToScene(ev.position().toPoint())
 
         if self._mode == MODE_PAN and self._last_pan_pos is not None:
@@ -483,19 +521,23 @@ class AnnotCanvas(QGraphicsView):
             self._last_pan_pos = ev.position()
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - int(delta.x()))
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - int(delta.y()))
-            ev.accept(); return
+            ev.accept()
+            return
 
         if self._mode == MODE_DRAW and self.selected_idx >= 0:
             b = self.boxes[self.selected_idx]
             b.x2 = scene_pos.x()
             b.y2 = scene_pos.y()
             self._refresh()
-            self.status_changed.emit(
-                f"Dibujando: {abs(b.x2-b.x1):.0f}×{abs(b.y2-b.y1):.0f} px"
-            )
-            ev.accept(); return
+            self.status_changed.emit(f"Dibujando: {abs(b.x2 - b.x1):.0f}×{abs(b.y2 - b.y1):.0f} px")
+            ev.accept()
+            return
 
-        if self._mode == MODE_MOVE and self._mouse_press_box and 0 <= self.selected_idx < len(self.boxes):
+        if (
+            self._mode == MODE_MOVE
+            and self._mouse_press_box
+            and 0 <= self.selected_idx < len(self.boxes)
+        ):
             dx = scene_pos.x() - self._mouse_press_scene.x()
             dy = scene_pos.y() - self._mouse_press_scene.y()
             base = self._mouse_press_box
@@ -503,28 +545,39 @@ class AnnotCanvas(QGraphicsView):
             b.x1, b.x2 = base.x1 + dx, base.x2 + dx
             b.y1, b.y2 = base.y1 + dy, base.y2 + dy
             self._refresh()
-            ev.accept(); return
+            ev.accept()
+            return
 
-        if self._mode == MODE_RESIZE and self._mouse_press_box and 0 <= self.selected_idx < len(self.boxes):
+        if (
+            self._mode == MODE_RESIZE
+            and self._mouse_press_box
+            and 0 <= self.selected_idx < len(self.boxes)
+        ):
             base = self._mouse_press_box
             b = self.boxes[self.selected_idx]
             mx, my = scene_pos.x(), scene_pos.y()
             x1, y1, x2, y2 = base.x1, base.y1, base.x2, base.y2
             h = self._drag_handle
-            if h in (HANDLE_TL, HANDLE_T, HANDLE_TR): y1 = my
-            if h in (HANDLE_TR, HANDLE_R, HANDLE_BR): x2 = mx
-            if h in (HANDLE_BR, HANDLE_B, HANDLE_BL): y2 = my
-            if h in (HANDLE_BL, HANDLE_L, HANDLE_TL): x1 = mx
+            if h in (HANDLE_TL, HANDLE_T, HANDLE_TR):
+                y1 = my
+            if h in (HANDLE_TR, HANDLE_R, HANDLE_BR):
+                x2 = mx
+            if h in (HANDLE_BR, HANDLE_B, HANDLE_BL):
+                y2 = my
+            if h in (HANDLE_BL, HANDLE_L, HANDLE_TL):
+                x1 = mx
             b.x1, b.y1, b.x2, b.y2 = x1, y1, x2, y2
             self._refresh()
-            ev.accept(); return
+            ev.accept()
+            return
 
         # No button: update the cursor according to hover
         if 0 <= self.selected_idx < len(self.boxes):
             h = self._hit_handle(self.boxes[self.selected_idx], scene_pos)
             if h != HANDLE_NONE:
                 self._set_cursor_for_handle(h)
-                ev.accept(); return
+                ev.accept()
+                return
         # Hover over a box: hand cursor
         if self._hit_box(scene_pos) >= 0 or self._space_pressed:
             self.setCursor(Qt.OpenHandCursor)
@@ -545,8 +598,10 @@ class AnnotCanvas(QGraphicsView):
             else:
                 # Clip to the image
                 W, H = self._image_size
-                b.x1 = max(0, min(W, b.x1)); b.x2 = max(0, min(W, b.x2))
-                b.y1 = max(0, min(H, b.y1)); b.y2 = max(0, min(H, b.y2))
+                b.x1 = max(0, min(W, b.x1))
+                b.x2 = max(0, min(W, b.x2))
+                b.y1 = max(0, min(H, b.y1))
+                b.y2 = max(0, min(H, b.y2))
             self._refresh()
             self.boxes_changed.emit()
             self.selection_changed.emit(self.selected_idx)
@@ -555,8 +610,10 @@ class AnnotCanvas(QGraphicsView):
             b = self.boxes[self.selected_idx]
             b.normalize()
             W, H = self._image_size
-            b.x1 = max(0, min(W, b.x1)); b.x2 = max(0, min(W, b.x2))
-            b.y1 = max(0, min(H, b.y1)); b.y2 = max(0, min(H, b.y2))
+            b.x1 = max(0, min(W, b.x1))
+            b.x2 = max(0, min(W, b.x2))
+            b.y1 = max(0, min(H, b.y1))
+            b.y2 = max(0, min(H, b.y2))
             self._refresh()
             self.boxes_changed.emit()
 
@@ -573,11 +630,11 @@ class AnnotCanvas(QGraphicsView):
 class GTManualPage(DetectorPage):
     STEP_N = 3
     STEP_TITLE = tr("GT manual")
-    STEP_DESCRIPTION = (
-        tr("Anotador completo de Ground Truth. Click izquierdo para dibujar, click sobre una "
+    STEP_DESCRIPTION = tr(
+        "Anotador completo de Ground Truth. Click izquierdo para dibujar, click sobre una "
         "caja para seleccionar, arrastra los handles para redimensionar, Espacio o botón "
         "medio para pan, rueda para zoom. Teclas 1..9: clase activa · Supr: borrar · "
-        "Ctrl+Z/Y: undo/redo · ←/→: imagen anterior/siguiente (autoguarda).")
+        "Ctrl+Z/Y: undo/redo · ←/→: imagen anterior/siguiente (autoguarda)."
     )
 
     def __init__(self, state, parent=None):
@@ -720,13 +777,15 @@ class GTManualPage(DetectorPage):
             self.list.setCurrentRow(0)
 
     def _go_prev(self):
-        if self.list.count() == 0: return
+        if self.list.count() == 0:
+            return
         r = max(0, self.list.currentRow() - 1)
         self.list.setCurrentRow(r)
         self.canvas.setFocus()
 
     def _go_next(self):
-        if self.list.count() == 0: return
+        if self.list.count() == 0:
+            return
         r = min(self.list.count() - 1, self.list.currentRow() + 1)
         self.list.setCurrentRow(r)
         self.canvas.setFocus()
@@ -755,7 +814,9 @@ class GTManualPage(DetectorPage):
             wh = size_image(path)
             if wh:
                 existing = read_yolo_txt(
-                    gt_txt, wh[0], wh[1],
+                    gt_txt,
+                    wh[0],
+                    wh[1],
                     {i: n for i, n in enumerate(DEFAULT_CLASSES)},
                 )
         self.canvas.load_image(path, existing)
@@ -770,7 +831,8 @@ class GTManualPage(DetectorPage):
         if not self.canvas.boxes:
             return
         r = QMessageBox.question(
-            self, tr("Limpiar todo"),
+            self,
+            tr("Limpiar todo"),
             f"¿Borrar las {len(self.canvas.boxes)} cajas de esta imagen?\n"
             "(se puede deshacer con Ctrl+Z)",
             QMessageBox.Yes | QMessageBox.No,
@@ -800,8 +862,8 @@ class GTManualPage(DetectorPage):
         for d in dets:
             cx = (d.x1 + d.x2) / 2 / W
             cy = (d.y1 + d.y2) / 2 / H
-            w  = (d.x2 - d.x1) / W
-            h  = (d.y2 - d.y1) / H
+            w = (d.x2 - d.x1) / W
+            h = (d.y2 - d.y1) / H
             lines.append(f"{d.class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}")
         out_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -840,11 +902,16 @@ class GTManualPage(DetectorPage):
             # the old annotation as if nothing had happened. Also, the detector only counts the
             # false positives of an empty plate if its .txt exists.
             r = QMessageBox.question(
-                self, tr("GT manual"),
-                tr("No hay ninguna caja dibujada. ¿Guardar esta imagen como "
-                   "revisada con cero partículas? Se sobrescribirá la anotación "
-                   "anterior, si la hubiera."),
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                self,
+                tr("GT manual"),
+                tr(
+                    "No hay ninguna caja dibujada. ¿Guardar esta imagen como "
+                    "revisada con cero partículas? Se sobrescribirá la anotación "
+                    "anterior, si la hubiera."
+                ),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
             if r != QMessageBox.Yes:
                 return
         out_path = self._save_to_txt(path, dets)
@@ -852,7 +919,9 @@ class GTManualPage(DetectorPage):
         # Without this warning, relabeling and regenerating the report seems to do nothing.
         warning_2 = ""
         if any(self.state.results.values()):
-            warning_2 = tr("   ⚠ Vuelve a Ejecutar la detección: el informe usa el "
-                       "GT leído en la última corrida.")
+            warning_2 = tr(
+                "   ⚠ Vuelve a Ejecutar la detección: el informe usa el "
+                "GT leído en la última corrida."
+            )
         self.lbl_canvas_status.setText(f"✓ Guardado en: {out_path}{warning_2}")
         self._refresh_list()

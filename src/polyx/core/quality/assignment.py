@@ -29,6 +29,7 @@ It is not a new model class either. A trained `«desconocido»` class is defined
 by the annotator's doubt, not by what the image shows: the same particle would
 end up labelled LDPE one day and unknown the next, and that noise would land
 right on PP and LDPE, already the classes with the worst recall."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -98,17 +99,23 @@ class SummaryAssignment:
     def __str__(self) -> str:
         if not self.active:
             return "abstención desactivada"
-        return (f"{self.no_assignables} de {self.total} partículas sin polímero "
-                f"asignable ({self.percentage_no_assignable:.1f} %), "
-                f"umbral {self.threshold_2:.2f}")
+        return (
+            f"{self.no_assignables} de {self.total} partículas sin polímero "
+            f"asignable ({self.percentage_no_assignable:.1f} %), "
+            f"umbral {self.threshold_2:.2f}"
+        )
 
 
 def resume(detections: Iterable, threshold_2: float) -> SummaryAssignment:
     """Counts assigned and unassignable over an already-marked batch."""
     dets: List = list(detections)
     no_assignment = sum(1 for d in dets if not getattr(d, "assignable", True))
-    return SummaryAssignment(total=len(dets), assigned=len(dets) - no_assignment,
-                             no_assignables=no_assignment, threshold_2=threshold_2)
+    return SummaryAssignment(
+        total=len(dets),
+        assigned=len(dets) - no_assignment,
+        no_assignables=no_assignment,
+        threshold_2=threshold_2,
+    )
 
 
 def count_reported(detections: Iterable) -> Counter:

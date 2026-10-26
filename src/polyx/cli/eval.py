@@ -3,6 +3,7 @@
 Usage:
     polyx-eval --weights best.pt --data data.yaml --split val --output metrics.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,8 +20,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--split", default="val")
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--batch", type=int, default=16)
-    p.add_argument("--device", default=None,
-                   help="'cpu', a CUDA index, or empty = auto-select (default: auto)")
+    p.add_argument(
+        "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
+    )
     p.add_argument("--iou", type=float, default=0.5)
     p.add_argument("--output", default="metrics.json")
     args = p.parse_args(argv)

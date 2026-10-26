@@ -19,6 +19,7 @@ valor: el compare de bytes no depende del locale de la maquina ni de
 superseded por la recaptura de M006/S05 tras pasar los doce rotulos crudos
 del informe a literales en ingles.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -31,8 +32,7 @@ from pathlib import Path
 
 import pytest
 
-BASELINE = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
-    / "benigna"
+BASELINE = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" / "benigna"
 BASELINE_HTML = BASELINE / "informe.html"
 BASELINE_SHA = BASELINE / "informe.sha256"
 
@@ -114,6 +114,7 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
+
     importlib.reload(rh)
 
     # Pin the machine-equipment table to the same canonical rows the
@@ -165,6 +166,7 @@ def test_el_baseline_existe(tmp_path):
     archivo que falta.
     """
     import polyx.gui.report_html as rh  # el fixture ya valido el reload
+
     assert rh is not None
     assert BASELINE_HTML.is_file(), f"falta el baseline: {BASELINE_HTML}"
     assert BASELINE_SHA.is_file(), f"falta el sha256 del baseline: {BASELINE_SHA}"
@@ -186,7 +188,8 @@ def test_render_benigno_es_byte_identico_al_baseline(tmp_path):
         f"el render benigno divergio del baseline "
         f"({len(datos)} B vs {len(baseline)} B despues de normalizar figuras): "
         f"hubo un cambio de informe no registrado o el baseline quedo "
-        f"desactualizado")
+        f"desactualizado"
+    )
 
 
 def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
@@ -204,8 +207,8 @@ def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
     ).hexdigest()
     esperado = BASELINE_SHA.read_text(encoding="utf-8").strip()
     assert digest == esperado, (
-        f"sha256 del render benigno (figuras normalizadas) {digest} != "
-        f"baseline {esperado}")
+        f"sha256 del render benigno (figuras normalizadas) {digest} != baseline {esperado}"
+    )
 
 
 def test_el_propio_baseline_coincide_con_su_registro():
@@ -225,7 +228,8 @@ def test_el_propio_baseline_coincide_con_su_registro():
     esperado = BASELINE_SHA.read_text(encoding="utf-8").strip()
     assert digest == esperado, (
         f"el baseline esta corrupto: su sha256 normalizado es {digest} y el "
-        f"archivo informe.sha256 dice {esperado}")
+        f"archivo informe.sha256 dice {esperado}"
+    )
 
 
 def test_el_baseline_pesa_exactamente_lo_registrado():
@@ -247,11 +251,11 @@ def test_el_baseline_pesa_exactamente_lo_registrado():
     cambio es intencional hay que recapturar y actualizar sha256, pin y
     README juntos.
     """
-    tamano_real = len(_normalizar_figuras(
-        BASELINE_HTML.read_text(encoding="utf-8")))
+    tamano_real = len(_normalizar_figuras(BASELINE_HTML.read_text(encoding="utf-8")))
     assert tamano_real == TAMANO_BASELINE, (
         f"el baseline benigno (normalizado) pesa {tamano_real} B y el "
         f"registro dice {TAMANO_BASELINE} B: informe.html fue editado o "
         f"regenerado -- si el cambio de informe no fue intencional, se "
         f"arregla el codigo; si lo fue, se recaptura y se actualizan "
-        f"sha256, pin y README juntos")
+        f"sha256, pin y README juntos"
+    )

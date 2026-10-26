@@ -1,4 +1,5 @@
 """Interactive canvas to draw and edit YOLO bounding boxes."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -23,10 +24,14 @@ from .state import BBox, LabelerState
 
 # Extended palette: PET, PP, LDPE + extra colors for custom classes
 _CLASS_COLORS = [
-    T.CLASS_COLOR_HEX.get("PET",  "#e3342f"),
-    T.CLASS_COLOR_HEX.get("PP",   "#ff8c00"),
+    T.CLASS_COLOR_HEX.get("PET", "#e3342f"),
+    T.CLASS_COLOR_HEX.get("PP", "#ff8c00"),
     T.CLASS_COLOR_HEX.get("LDPE", "#ffd700"),
-    "#00b4d8", "#48cae4", "#0077b6", "#023e8a", "#7b2d8b",
+    "#00b4d8",
+    "#48cae4",
+    "#0077b6",
+    "#023e8a",
+    "#7b2d8b",
 ]
 
 
@@ -53,7 +58,7 @@ class BboxCanvas(QWidget):
     """
 
     box_drawn = Signal()
-    box_rejected = Signal(float)   # side in px of the discarded box
+    box_rejected = Signal(float)  # side in px of the discarded box
 
     # Minimum box side, in image pixels. The smallest particles in the
     # study measure ~8 px, so a 5 px threshold discarded legitimate marks.
@@ -77,7 +82,7 @@ class BboxCanvas(QWidget):
         # New box drawing
         self._drawing = False
         self._draw_start: Optional[QPointF] = None  # image coords (pixels)
-        self._draw_end:   Optional[QPointF] = None
+        self._draw_end: Optional[QPointF] = None
 
         # Pan
         self._panning = False
@@ -104,6 +109,7 @@ class BboxCanvas(QWidget):
             try:
                 import numpy as np
                 from PIL import Image
+
                 arr = np.array(Image.open(str(img_path)).convert("RGB"))
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
@@ -120,8 +126,9 @@ class BboxCanvas(QWidget):
         if previous is not None and self._pixmap is not None:
             da = abs(previous.width() - self._pixmap.width())
             db = abs(previous.height() - self._pixmap.height())
-            same_size = (da <= max(4, previous.width() * 0.02)
-                            and db <= max(4, previous.height() * 0.02))
+            same_size = da <= max(4, previous.width() * 0.02) and db <= max(
+                4, previous.height() * 0.02
+            )
         if not (self.keep_zoom and self._zoom_user and same_size):
             self._fit_to_window()
         self.update()
@@ -182,14 +189,12 @@ class BboxCanvas(QWidget):
         if self._pixmap is None:
             p.setPen(QColor(T.INK3))
             p.setFont(QFont(T.APP_FONT_FAMILY, 12))
-            p.drawText(self.rect(), Qt.AlignCenter,
-                       "Abre una carpeta de imágenes para comenzar")
+            p.drawText(self.rect(), Qt.AlignCenter, "Abre una carpeta de imágenes para comenzar")
             return
 
         # Image
         iw, ih = self._pixmap.width(), self._pixmap.height()
-        dest = QRectF(self._offset.x(), self._offset.y(),
-                      iw * self._scale, ih * self._scale)
+        dest = QRectF(self._offset.x(), self._offset.y(), iw * self._scale, ih * self._scale)
         p.drawPixmap(dest, self._pixmap, QRectF(self._pixmap.rect()))
 
         # Saved bboxes
@@ -198,7 +203,7 @@ class BboxCanvas(QWidget):
         for i, box in enumerate(self.state.current_boxes):
             rect_w = self._norm_to_widget_rect(box.cx, box.cy, box.w, box.h)
             color = _cls_color(box.class_id)
-            is_sel = (i == self._selected_idx)
+            is_sel = i == self._selected_idx
 
             fill = QColor(color)
             fill.setAlpha(55 if is_sel else 35)
@@ -212,9 +217,11 @@ class BboxCanvas(QWidget):
             p.drawRect(rect_w)
 
             # Class label
-            cls_name = (self.state.class_names[box.class_id]
-                        if box.class_id < len(self.state.class_names)
-                        else str(box.class_id))
+            cls_name = (
+                self.state.class_names[box.class_id]
+                if box.class_id < len(self.state.class_names)
+                else str(box.class_id)
+            )
             tag = QRectF(rect_w.x(), rect_w.y() - 17, max(50, len(cls_name) * 7 + 8), 17)
             p.fillRect(tag, color)
             p.setPen(QColor("white"))
@@ -304,8 +311,8 @@ class BboxCanvas(QWidget):
                     # Clamp to [0,1]
                     cx = max(0.0, min(1.0, cx))
                     cy = max(0.0, min(1.0, cy))
-                    w  = max(0.001, min(1.0, w))
-                    h  = max(0.001, min(1.0, h))
+                    w = max(0.001, min(1.0, w))
+                    h = max(0.001, min(1.0, h))
                     new_box = BBox(self.state.active_class, cx, cy, w, h)
                     boxes = list(self.state.current_boxes) + [new_box]
                     self.state.set_current_boxes(boxes)

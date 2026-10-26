@@ -18,6 +18,7 @@ underscores must NOT be flagged (word boundaries do not fire inside them),
 and every scoped file must exist and be non-empty so the scan can never
 silently pass over an empty set.
 """
+
 from __future__ import annotations
 
 import re
@@ -148,8 +149,7 @@ def test_readme_en_twin_is_gone() -> None:
 def test_scanner_flags_synthetic_spanish_sentence() -> None:
     """Anti-vacuity: a deliberately Spanish sentence must be detected."""
     synthetic = (
-        "La detección de partículas genera imágenes del informe "
-        "en el directorio de resultados."
+        "La detección de partículas genera imágenes del informe en el directorio de resultados."
     )
     findings = _spanish_findings(synthetic)
     assert findings, "scanner failed to flag a synthetic Spanish sentence"

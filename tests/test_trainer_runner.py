@@ -24,6 +24,7 @@ Nota lateral: el runner crea sus corridas bajo ``<repo>/runs_train``, asi que
 estas pruebas dejan ahi ``weights/best.pt`` falsos. Es el comportamiento real
 del codigo bajo prueba, no un efecto del doble.
 """
+
 from __future__ import annotations
 
 import json
@@ -164,8 +165,7 @@ def _dataset_minimo(root: Path) -> Path:
             (lbls / f"{split}_{i}.txt").write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
     yaml = root / "data.yaml"
     yaml.write_text(
-        "path: .\ntrain: images/train\nval: images/val\n"
-        "names:\n  0: particula\n",
+        "path: .\ntrain: images/train\nval: images/val\nnames:\n  0: particula\n",
         encoding="utf-8",
     )
     return yaml
@@ -227,7 +227,9 @@ class TestCicloDeVidaFeliz:
         eventos = _eventos(tmp_path)
         assert [e["event"] for e in eventos] == [
             "train.config",
-            "train.progress", "train.progress", "train.progress",
+            "train.progress",
+            "train.progress",
+            "train.progress",
             "train.complete",
         ]
         # Ingles core schema: ts/level/module/event/run_id en TODAS las lineas.
@@ -235,11 +237,11 @@ class TestCicloDeVidaFeliz:
             assert isinstance(e["ts"], str) and e["ts"].endswith("Z")
             assert e["level"] == "INFO"
             assert e["module"] == "polyx.trainer"
-            assert e["run_id"] == "yolov8m.pt"   # el base_weights_name del modelo
+            assert e["run_id"] == "yolov8m.pt"  # el base_weights_name del modelo
         # El nombre viejo no puede quedar en ninguna parte del archivo.
-        assert "train.finish" not in (
-            tmp_path / "_polyx_logs" / "trainer.jsonl"
-        ).read_text(encoding="utf-8")
+        assert "train.finish" not in (tmp_path / "_polyx_logs" / "trainer.jsonl").read_text(
+            encoding="utf-8"
+        )
 
     def test_config_declara_modelo_e_hiperparametros(self, qapp, tmp_path, deps_falsos):
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz2")
@@ -282,7 +284,7 @@ class TestCicloDeVidaFeliz:
         peso = completa["data"]["weights"]
         esperado = RUNS_ENTRENAMIENTO / "feliz4" / "weights" / "best.pt"
         assert peso == str(esperado)
-        assert esperado.exists()            # el doble escribio donde el runner busca
+        assert esperado.exists()  # el doble escribio donde el runner busca
         assert completa["data"]["familias"] == 1
         assert isinstance(completa["ms"], int)
         assert recolector.finales == [peso]
@@ -291,7 +293,7 @@ class TestCicloDeVidaFeliz:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz5")
         _correr(st)
 
-        assert st.best_map50 == pytest.approx(0.70)   # 0.60 + 0.05 * 2 epocas
+        assert st.best_map50 == pytest.approx(0.70)  # 0.60 + 0.05 * 2 epocas
         assert st.best_epoch == 3
 
 
@@ -316,7 +318,7 @@ class TestAborto:
             recolector.progreso.append((ep, total))
             if ep >= 1 and not estado["pedido"]:
                 estado["pedido"] = True
-                st.request_abort()   # el usuario pulso «Detener» tras la epoca 1
+                st.request_abort()  # el usuario pulso «Detener» tras la epoca 1
 
         runner.epoch_metrics.connect(recolector.metricas.append)
         runner.progress.connect(_al_progreso)
@@ -327,14 +329,14 @@ class TestAborto:
         eventos = _eventos(tmp_path)
         assert [e["event"] for e in eventos] == [
             "train.config",
-            "train.progress",   # epoca 1 completa: ahi llego la solicitud
-            "train.aborted",    # y ahi mismo se honro: epocas 2 y 3 no corren
+            "train.progress",  # epoca 1 completa: ahi llego la solicitud
+            "train.aborted",  # y ahi mismo se honro: epocas 2 y 3 no corren
         ]
         assert recolector.abortados == 1
-        assert recolector.finales == []          # un abort NO es un train.complete
+        assert recolector.finales == []  # un abort NO es un train.complete
         assert recolector.progreso == [(1, 3)]
         assert [m.epoch for m in recolector.metricas] == [1]
-        assert estado["pedido"]                  # la solicitud se hizo en mitad del run
+        assert estado["pedido"]  # la solicitud se hizo en mitad del run
         assert st._abort is False, "la bandera quedo consumida exacta vez, no clavada"
         assert any("Solicitud de detención" in l for l in recolector.lineas)
 
@@ -343,7 +345,9 @@ class TestAborto:
         assert isinstance(abortado["ms"], int)
         assert abortado["run_id"] == "yolov8m.pt"
 
-    def test_keyboard_interrupt_emite_train_aborted_sin_completar(self, qapp, tmp_path, deps_falsos):
+    def test_keyboard_interrupt_emite_train_aborted_sin_completar(
+        self, qapp, tmp_path, deps_falsos
+    ):
         def _ctrl_c(_modelo, _kwargs) -> None:
             raise KeyboardInterrupt
 
@@ -382,9 +386,11 @@ class TestErrores:
         assert "RuntimeError" in recolector.fallos[0]
         assert recolector.finales == []
         assert recolector.abortados == 0
-        assert recolector.progreso == []        # ni una epoca completa
+        assert recolector.progreso == []  # ni una epoca completa
 
-    def test_ultralytics_inexistente_falla_antes_de_train_config(self, qapp, tmp_path, deps_falsos, monkeypatch):
+    def test_ultralytics_inexistente_falla_antes_de_train_config(
+        self, qapp, tmp_path, deps_falsos, monkeypatch
+    ):
         """sys.modules['ultralytics'] = None: el import revienta y no se escribe nada."""
         monkeypatch.setitem(sys.modules, "ultralytics", None)
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="sinultra")
@@ -396,7 +402,7 @@ class TestErrores:
         assert not (tmp_path / "_polyx_logs" / "trainer.jsonl").exists()
 
     def test_sin_data_yaml_falla_sin_escribir_eventos(self, qapp, tmp_path, deps_falsos):
-        st = _estado(None, run_name="sinyaml")   # TrainerState sin dataset
+        st = _estado(None, run_name="sinyaml")  # TrainerState sin dataset
         recolector = _correr(st)
 
         assert len(recolector.fallos) == 1
@@ -406,7 +412,9 @@ class TestErrores:
 
 # ── Comparación de familias: v8 + v11 en la misma corrida ────────────
 class TestComparacionDeFamilias:
-    def test_comparar_familias_entrena_las_dos_y_reporta_la_ultima(self, qapp, tmp_path, deps_falsos):
+    def test_comparar_familias_entrena_las_dos_y_reporta_la_ultima(
+        self, qapp, tmp_path, deps_falsos
+    ):
         st = _dataset_minimo(tmp_path / "dataset") and _estado(
             _dataset_minimo(tmp_path / "dataset"), epochs=2, run_name="corrida"
         )
@@ -422,13 +430,15 @@ class TestComparacionDeFamilias:
         eventos = _eventos(tmp_path)
         assert [e["event"] for e in eventos] == [
             "train.config",
-            "train.progress", "train.progress",
-            "train.progress", "train.progress",
+            "train.progress",
+            "train.progress",
+            "train.progress",
+            "train.progress",
             "train.complete",
         ]
         completa = next(e for e in eventos if e["event"] == "train.complete")
         esperado = RUNS_ENTRENAMIENTO / "corrida_v11" / "weights" / "best.pt"
-        assert completa["data"]["weights"] == str(esperado)   # la ultima familia manda
+        assert completa["data"]["weights"] == str(esperado)  # la ultima familia manda
         assert completa["data"]["familias"] == 2
         assert recolector.finales == [str(esperado)]
         assert esperado.exists()

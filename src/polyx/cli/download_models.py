@@ -10,6 +10,7 @@ Model weights (.pt) are PyTorch pickles: running one executes code. For any
 untrusted source, pass --sha256 with the digest published alongside the
 release; the download aborts on mismatch.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,9 +35,9 @@ def _progress(done: int, total: int) -> None:
     if total > 0:
         pct = min(100, int(done * 100 / total))
         bar = "#" * (pct // 2) + "-" * (50 - pct // 2)
-        sys.stdout.write(f"\r[{bar}] {pct:3d}%  {done/1e6:6.1f}/{total/1e6:6.1f} MB")
+        sys.stdout.write(f"\r[{bar}] {pct:3d}%  {done / 1e6:6.1f}/{total / 1e6:6.1f} MB")
     else:
-        sys.stdout.write(f"\rDownloaded {done/1e6:6.1f} MB")
+        sys.stdout.write(f"\rDownloaded {done / 1e6:6.1f} MB")
     sys.stdout.flush()
 
 
@@ -62,9 +63,7 @@ def download(url: str, dest: Path, expected_sha256: str | None = None) -> Path:
             print()
         if expected_sha256 and h.hexdigest().lower() != expected_sha256.lower():
             tmp.unlink(missing_ok=True)
-            raise RuntimeError(
-                f"SHA-256 mismatch: got {h.hexdigest()}, expected {expected_sha256}"
-            )
+            raise RuntimeError(f"SHA-256 mismatch: got {h.hexdigest()}, expected {expected_sha256}")
         tmp.replace(dest)
     except (URLError, OSError) as exc:
         tmp.unlink(missing_ok=True)

@@ -20,6 +20,7 @@ class Instance:
 
     This is the canonical representation used throughout the pipeline.
     """
+
     class_id: int
     class_name: str
     conf: float
@@ -50,8 +51,8 @@ class Instance:
     # Stored as a cropped array + offset when memory matters; None means
     # "no mask available, fall back to box-derived segmentation".
     mask: Optional[np.ndarray] = None
-    mask_rle: Optional[str] = None          # COCO RLE for persistence
-    mask_source: Optional[str] = None        # "yolo-seg"|"sam2"|"otsu-box"|...
+    mask_rle: Optional[str] = None  # COCO RLE for persistence
+    mask_source: Optional[str] = None  # "yolo-seg"|"sam2"|"otsu-box"|...
     mask_offset: Optional[Tuple[int, int]] = None  # (x0, y0) of cropped mask
 
     @property
@@ -127,6 +128,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
     """Read image dimensions without loading full image."""
     try:
         import cv2
+
         h, w = cv2.imread(str(image_path)).shape[:2]
         return w, h
     except Exception:
@@ -175,8 +177,7 @@ def read_yolo_txt(
                 nums = [float(x) for x in parts[1:]]
                 # YOLO-seg polygon: class x1 y1 x2 y2 ... (normalized)
                 if len(nums) >= 6 and len(nums) % 2 == 0:
-                    pts = [(nums[k] * img_w, nums[k + 1] * img_h)
-                           for k in range(0, len(nums), 2)]
+                    pts = [(nums[k] * img_w, nums[k + 1] * img_h) for k in range(0, len(nums), 2)]
                     xs = [p[0] for p in pts]
                     ys = [p[1] for p in pts]
                     x1, x2 = min(xs), max(xs)
@@ -188,14 +189,19 @@ def read_yolo_txt(
                     arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
                     cv2.fillPoly(mask_u8, [arr], 1)
                     mask = mask_u8.astype(bool)
-                    instances.append(Instance(
-                        class_id=cid,
-                        class_name=class_names.get(cid, str(cid)),
-                        conf=1.0,
-                        x1=x1, y1=y1, x2=x2, y2=y2,
-                        mask=mask,
-                        mask_source="gt-polygon",
-                    ))
+                    instances.append(
+                        Instance(
+                            class_id=cid,
+                            class_name=class_names.get(cid, str(cid)),
+                            conf=1.0,
+                            x1=x1,
+                            y1=y1,
+                            x2=x2,
+                            y2=y2,
+                            mask=mask,
+                            mask_source="gt-polygon",
+                        )
+                    )
                 else:
                     # YOLO detection: class cx cy w h (normalized)
                     if len(nums) < 4:
@@ -209,12 +215,17 @@ def read_yolo_txt(
                     y1 = cy - h / 2
                     x2 = cx + w / 2
                     y2 = cy + h / 2
-                    instances.append(Instance(
-                        class_id=cid,
-                        class_name=class_names.get(cid, str(cid)),
-                        conf=1.0,
-                        x1=x1, y1=y1, x2=x2, y2=y2,
-                    ))
+                    instances.append(
+                        Instance(
+                            class_id=cid,
+                            class_name=class_names.get(cid, str(cid)),
+                            conf=1.0,
+                            x1=x1,
+                            y1=y1,
+                            x2=x2,
+                            y2=y2,
+                        )
+                    )
     except Exception:
         pass
     return instances
@@ -237,12 +248,13 @@ def compute_box_size_um(det: Instance, um_per_px: float) -> None:
     w = det.w
     h = det.h
     det.diam_um = ((w + h) / 2) * um_per_px
-    det.area_um2 = (w * h) * (um_per_px ** 2)
+    det.area_um2 = (w * h) * (um_per_px**2)
 
 
 @dataclass
 class SegmentationPrompts:
     """Prompts fed to a segmentation backend."""
+
     boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
     points: Optional[List[Tuple[float, float]]] = None
     point_labels: Optional[List[int]] = None
@@ -255,29 +267,24 @@ class SegmentationSource(Protocol):
     (typically boxes from a detector) and returns Instance objects carrying masks.
     """
 
-    def load(self) -> "SegmentationSource":
-        ...
+    def load(self) -> "SegmentationSource": ...
 
     def segment(
         self,
         image_path: str | Path,
         prompts: SegmentationPrompts,
         **kwargs,
-    ) -> List[Instance]:
-        ...
+    ) -> List[Instance]: ...
 
     def segment_from_boxes(
         self,
         image_path: str | Path,
         boxes: List[Tuple[float, float, float, float]],
         **kwargs,
-    ) -> List[Instance]:
-        ...
+    ) -> List[Instance]: ...
 
     @property
-    def names(self) -> Dict[int, str]:
-        ...
+    def names(self) -> Dict[int, str]: ...
 
     @property
-    def last_imgsz(self) -> int:
-        ...
+    def last_imgsz(self) -> int: ...

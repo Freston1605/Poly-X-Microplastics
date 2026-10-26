@@ -7,6 +7,7 @@ Usage:
 Requires PyInstaller in the active environment:
     pip install pyinstaller
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,8 +38,17 @@ def main() -> int:
             if d.exists():
                 shutil.rmtree(d)
 
-    cmd = [sys.executable, "-m", "PyInstaller", str(SPEC), "--noconfirm",
-           "--distpath", str(DIST), "--workpath", str(WORK)]
+    cmd = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        str(SPEC),
+        "--noconfirm",
+        "--distpath",
+        str(DIST),
+        "--workpath",
+        str(WORK),
+    ]
     print("Running:", " ".join(cmd))
     return subprocess.call(cmd)
 

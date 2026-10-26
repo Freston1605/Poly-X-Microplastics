@@ -8,6 +8,7 @@ are honored where available: measurement uses them before falling back to
 box-derived Otsu segmentation, and GT matching switches to mask IoU when
 both sides of a comparison carry a mask.
 """
+
 from __future__ import annotations
 
 import csv
@@ -36,22 +37,42 @@ def _draw(img, dets):
     for d in dets:
         cv2.rectangle(out, (int(d.x1), int(d.y1)), (int(d.x2), int(d.y2)), (0, 200, 0), 2)
         label = f"{d.class_name} {d.conf:.2f}"
-        cv2.putText(out, label, (int(d.x1), max(12, int(d.y1) - 4)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1, cv2.LINE_AA)
+        cv2.putText(
+            out,
+            label,
+            (int(d.x1), max(12, int(d.y1) - 4)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 200, 0),
+            1,
+            cv2.LINE_AA,
+        )
     return out
 
 
 def _measure(det: Instance, img: np.ndarray, um_per_px: Optional[float]) -> None:
     """Box-size (+ shape) measurement, preferring an attached mask."""
     compute_box_size_um(det, um_per_px if um_per_px and um_per_px > 0 else None)
-    apply_to_detection(det, img, um_per_px if um_per_px and um_per_px > 0 else None,
-                       mask=getattr(det, "mask", None))
+    apply_to_detection(
+        det,
+        img,
+        um_per_px if um_per_px and um_per_px > 0 else None,
+        mask=getattr(det, "mask", None),
+    )
 
 
-def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
-              conf: float = 0.25, iou: float = 0.45, imgsz: int = 1280,
-              device: Optional[str] = None, um_per_px: float = 0.0,
-              measure_shape: bool = True, gt_folder: Optional[Path] = None) -> dict:
+def run_batch(
+    model: DetectionSource,
+    image_dir: Path,
+    output_dir: Path,
+    conf: float = 0.25,
+    iou: float = 0.45,
+    imgsz: int = 1280,
+    device: Optional[str] = None,
+    um_per_px: float = 0.0,
+    measure_shape: bool = True,
+    gt_folder: Optional[Path] = None,
+) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     img_dir = output_dir / "images"
     img_dir.mkdir(exist_ok=True)
@@ -85,8 +106,9 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
             # Mask IoU when either side carries masks: mask_iou falls back to
             # box IoU per pair, so one failed segmentation cannot disable
             # mask matching for the whole image.
-            use_masks = any(getattr(d, "mask", None) is not None for d in dets) or \
-                any(getattr(g, "mask", None) is not None for g in gts)
+            use_masks = any(getattr(d, "mask", None) is not None for d in dets) or any(
+                getattr(g, "mask", None) is not None for g in gts
+            )
             m = match_image(dets, gts, iou_thr=0.5, use_mask_iou=use_masks)
             metrics_agg["tp"] += m.tp
             metrics_agg["fp"] += m.fp
@@ -96,7 +118,10 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
             # sums stay honest (an aggregate copied into every row would
             # multiply by the number of images).
             per_image[img_path.name] = {
-                "tp": m.tp, "fp": m.fp, "fn": m.fn, "miscls": m.miscls,
+                "tp": m.tp,
+                "fp": m.fp,
+                "fn": m.fn,
+                "miscls": m.miscls,
             }
 
         # save annotated
@@ -105,24 +130,43 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
         cv2.imencode(".png", annotated)[1].tofile(str(out_img))
 
         for d in dets:
-            rows.append({
-                "image": img_path.name,
-                "class_id": int(d.class_id),
-                "class": d.class_name,
-                "conf": round(float(d.conf), 4),
-                "x1": int(d.x1), "y1": int(d.y1), "x2": int(d.x2), "y2": int(d.y2),
-                "diam_um": d.diam_um,
-                "area_um2": d.area_um2,
-                "length_um": d.length_um,
-                "width_um": d.width_um,
-                "aspect": d.aspect,
-                "has_mask": bool(getattr(d, "mask", None) is not None),
-            })
+            rows.append(
+                {
+                    "image": img_path.name,
+                    "class_id": int(d.class_id),
+                    "class": d.class_name,
+                    "conf": round(float(d.conf), 4),
+                    "x1": int(d.x1),
+                    "y1": int(d.y1),
+                    "x2": int(d.x2),
+                    "y2": int(d.y2),
+                    "diam_um": d.diam_um,
+                    "area_um2": d.area_um2,
+                    "length_um": d.length_um,
+                    "width_um": d.width_um,
+                    "aspect": d.aspect,
+                    "has_mask": bool(getattr(d, "mask", None) is not None),
+                }
+            )
 
     # centroids.csv (always written, even empty, so downstream tools can rely on it)
     csv_path = output_dir / "centroids.csv"
-    fieldnames = ["image", "class_id", "class", "conf", "x1", "y1", "x2", "y2",
-                  "diam_um", "area_um2", "length_um", "width_um", "aspect", "has_mask"]
+    fieldnames = [
+        "image",
+        "class_id",
+        "class",
+        "conf",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "diam_um",
+        "area_um2",
+        "length_um",
+        "width_um",
+        "aspect",
+        "has_mask",
+    ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()

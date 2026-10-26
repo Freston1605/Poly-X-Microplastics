@@ -20,6 +20,7 @@ Aqui queda probado, contra un layout ``runs/detect_*`` en miniatura montado en
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
+
 from __future__ import annotations
 
 import sys
@@ -37,8 +38,9 @@ from polyx.core import morphology as M
 
 
 # ── helpers: foto sintetica y layout de run en miniatura ─────────────────
-def _foto_particula(centro: tuple[int, int], radio: int = 6,
-                    lado: int = 64, valor: int = 240) -> np.ndarray:
+def _foto_particula(
+    centro: tuple[int, int], radio: int = 6, lado: int = 64, valor: int = 240
+) -> np.ndarray:
     """Foto BGR en miniatura con UNA particula brillante nitida.
 
     Fondo oscuro, disco claro: cruza de sobra el CONTRASTE_MINIMO=12 de
@@ -63,10 +65,14 @@ def _guardar_foto(tmp: Path, foto: np.ndarray, stem: str) -> Path:
     return ruta
 
 
-def _escribir_labels(carpeta_labels: Path, stem: str, idx_img: int,
-                     W: int, H: int, cajas: list[tuple[int, float, float,
-                                                     float, float, float]],
-                     ) -> Path:
+def _escribir_labels(
+    carpeta_labels: Path,
+    stem: str,
+    idx_img: int,
+    W: int,
+    H: int,
+    cajas: list[tuple[int, float, float, float, float, float]],
+) -> Path:
     """Escribe el .txt en el layout EXACTO de runner._guardar_labels.
 
     Se reimplementan a mano las 6 columnas (class cx cy w h conf, en
@@ -78,29 +84,34 @@ def _escribir_labels(carpeta_labels: Path, stem: str, idx_img: int,
     carpeta_labels.mkdir(parents=True, exist_ok=True)
     lineas = []
     for cls, cx, cy, w, h, conf in cajas:
-        lineas.append(f"{cls} {cx / W:.6f} {cy / H:.6f} "
-                      f"{w / W:.6f} {h / H:.6f} {conf:.4f}")
+        lineas.append(f"{cls} {cx / W:.6f} {cy / H:.6f} {w / W:.6f} {h / H:.6f} {conf:.4f}")
     ruta = carpeta_labels / f"{idx_img:04d}_{stem}.txt"
     ruta.write_text("\n".join(lineas), encoding="utf-8")
     return ruta
 
 
-def _montar_run(tmp: Path, stem: str, idx_img: int, alias: str,
-                cajas: list[tuple[float, float, float, float]],
-                conf: float = 0.87) -> Path:
+def _montar_run(
+    tmp: Path,
+    stem: str,
+    idx_img: int,
+    alias: str,
+    cajas: list[tuple[float, float, float, float]],
+    conf: float = 0.87,
+) -> Path:
     """Layout runs/detect_* en miniatura: run/<alias>/{labels,classes.txt}."""
     run = tmp / "runs" / "detect_20260812_1030"
     alias_dir = run / alias
     alias_dir.mkdir(parents=True, exist_ok=True)
     # caja como (x1, y1, x2, y2) -> cx, cy, w, h en px absolutos: misma
     # conversion que hace detector.runner._guardar_labels antes de normalizar.
-    dets = [(1, x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2, x2 - x1, y2 - y1, conf)
-            for (x1, y1, x2, y2) in cajas]
+    dets = [
+        (1, x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2, x2 - x1, y2 - y1, conf)
+        for (x1, y1, x2, y2) in cajas
+    ]
     # dimensiones de la foto de referencia del runner (el test usa siempre
     # una de lado 64: ver _foto_particula por defecto).
     _escribir_labels(alias_dir / "labels", stem, idx_img, 64, 64, dets)
-    (alias_dir / "classes.txt").write_text("no_clasificado\nparticula\n",
-                                           encoding="utf-8")
+    (alias_dir / "classes.txt").write_text("no_clasificado\nparticula\n", encoding="utf-8")
     return alias_dir
 
 
@@ -113,8 +124,7 @@ def _recorte_rect(mascara: np.ndarray) -> np.ndarray:
     encendidos = mascara > 0
     filas = np.flatnonzero(encendidos.any(axis=1))
     cols = np.flatnonzero(encendidos.any(axis=0))
-    return (encendidos[filas[0]:filas[-1] + 1, cols[0]:cols[-1] + 1]
-            ).astype(np.uint8) * 255
+    return (encendidos[filas[0] : filas[-1] + 1, cols[0] : cols[-1] + 1]).astype(np.uint8) * 255
 
 
 # ── capturas ─────────────────────────────────────────────────────────────
@@ -124,12 +134,12 @@ def test_captura_encuentra_foto_y_serializa_segmentar(tmp_path):
     stem = "placa_101_1"
     _guardar_foto(tmp_path, foto, stem)
 
-    _montar_run(tmp_path, stem, idx_img=7, alias="y11n",
-                cajas=[(20, 16, 40, 28)])
+    _montar_run(tmp_path, stem, idx_img=7, alias="y11n", cajas=[(20, 16, 40, 28)])
     destino = tmp_path / "fixtures" / "geodesia"
 
-    resumen = CFG.capturar(runs=tmp_path / "runs" / "detect_20260812_1030",
-                           fotos=tmp_path / "fotos", destino=destino)
+    resumen = CFG.capturar(
+        runs=tmp_path / "runs" / "detect_20260812_1030", fotos=tmp_path / "fotos", destino=destino
+    )
     assert resumen["cajas"] == 1
     # La mascara se serializo, con el nombre <alias>__<stem>__<idx>.npy
     ficheros = sorted(destino.glob("*.npy"))
@@ -144,10 +154,12 @@ def test_captura_encuentra_foto_y_serializa_segmentar(tmp_path):
     recorte_ref = _recorte_rect(mascara_referencia)
     # BIT-identico: forma, dtype y 0/255 identicos.
     assert capturada.shape == recorte_ref.shape, (
-        "el fixture debe ser el recorte al rectangulo de la mascara")
+        "el fixture debe ser el recorte al rectangulo de la mascara"
+    )
     assert capturada.dtype == np.uint8
     assert np.array_equal(capturada, recorte_ref), (
-        "la mascara capturada debe ser la misma que segmentar devuelve")
+        "la mascara capturada debe ser la misma que segmentar devuelve"
+    )
 
 
 def test_captura_idempotente_sin_reforzar(tmp_path):
@@ -155,19 +167,16 @@ def test_captura_idempotente_sin_reforzar(tmp_path):
     foto = _foto_particula(centro=(30, 22))
     stem = "f2_batch"
     _guardar_foto(tmp_path, foto, stem)
-    _montar_run(tmp_path, stem, idx_img=0, alias="y11n",
-                cajas=[(20, 16, 40, 28)])
+    _montar_run(tmp_path, stem, idx_img=0, alias="y11n", cajas=[(20, 16, 40, 28)])
     destino = tmp_path / "fixtures" / "geodesia"
     runs = tmp_path / "runs" / "detect_20260812_1030"
 
-    primera = CFG.capturar(runs=runs, fotos=tmp_path / "fotos",
-                           destino=destino)
+    primera = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino)
     assert primera["serializadas"] == 1
 
     fichero = sorted(destino.glob("*.npy"))[0]
     mtime1 = fichero.stat().st_mtime_ns
-    segunda = CFG.capturar(runs=runs, fotos=tmp_path / "fotos",
-                           destino=destino)
+    segunda = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino)
     # sin --reforzar: la misma mascara, ya capturada, NO se reescribe
     assert segunda["serializadas"] == 0
     assert segunda["reutilizadas"] == 1
@@ -179,8 +188,7 @@ def test_captura_fixture_distinto_se_protege_y_reforzar_pisa(tmp_path):
     foto = _foto_particula(centro=(30, 22))
     stem = "f3_batch"
     _guardar_foto(tmp_path, foto, stem)
-    _montar_run(tmp_path, stem, idx_img=0, alias="y11n",
-                cajas=[(20, 16, 40, 28)])
+    _montar_run(tmp_path, stem, idx_img=0, alias="y11n", cajas=[(20, 16, 40, 28)])
     runs = tmp_path / "runs" / "detect_20260812_1030"
     destino = tmp_path / "fixtures" / "geodesia"
 
@@ -201,8 +209,7 @@ def test_captura_fixture_distinto_se_protege_y_reforzar_pisa(tmp_path):
     # El fixture queda intacto (por debajo, sin avisar, no se pisa).
     assert _leer_npy(fichero)[0, 0] == 255
 
-    con_ = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino,
-                        reforzar=True)
+    con_ = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino, reforzar=True)
     assert con_["serializadas"] == 1
     # Ahora SI se pisa y vuelve a cuadrar con lo que hoy produce segmentar.
     assert np.array_equal(_leer_npy(fichero), original)
@@ -214,12 +221,12 @@ def test_captura_foto_ausente_reporta_salto(tmp_path):
     foto = _foto_particula(centro=(30, 22))
     _guardar_foto(tmp_path, foto, "placa_B")
     # El label apunta a un stem que NO existe entre las fotos.
-    _montar_run(tmp_path, "foto_que_no_existe", idx_img=3, alias="y11n",
-                cajas=[(20, 16, 40, 28)])
+    _montar_run(tmp_path, "foto_que_no_existe", idx_img=3, alias="y11n", cajas=[(20, 16, 40, 28)])
     destino = tmp_path / "fixtures" / "geodesia"
 
-    resumen = CFG.capturar(runs=tmp_path / "runs" / "detect_20260812_1030",
-                           fotos=tmp_path / "fotos", destino=destino)
+    resumen = CFG.capturar(
+        runs=tmp_path / "runs" / "detect_20260812_1030", fotos=tmp_path / "fotos", destino=destino
+    )
     assert resumen["labels"] == 1
     assert resumen["fotos_encontradas"] == 0
     assert resumen["cajas"] == 0
@@ -242,8 +249,9 @@ def test_captura_sin_mascara_y_metodos(tmp_path):
     _montar_run(tmp_path, stem, idx_img=1, alias="y11n", cajas=[caixa_fondo])
     destino = tmp_path / "fixtures" / "geodesia"
 
-    resumen = CFG.capturar(runs=tmp_path / "runs" / "detect_20260812_1030",
-                           fotos=tmp_path / "fotos", destino=destino)
+    resumen = CFG.capturar(
+        runs=tmp_path / "runs" / "detect_20260812_1030", fotos=tmp_path / "fotos", destino=destino
+    )
     assert not list(destino.glob("*.npy"))
     # El salto se attribution a uno de los dos motivos esperados cuando
     # segmentar no saca una particula de fondo: None devuelto (SK_SIN_MASCARA)
@@ -269,13 +277,12 @@ def test_sufijo_recursivo_y_stem_de_label(tmp_path):
     assert is_ok
     archivo.write_bytes(bytes(buf))
     stem = "placa_101_1"
-    _montar_run(tmp_path, stem, idx_img=1, alias="y11n",
-                cajas=[(20, 16, 40, 28)])
+    _montar_run(tmp_path, stem, idx_img=1, alias="y11n", cajas=[(20, 16, 40, 28)])
     destino = tmp_path / "fixtures" / "geodesia"
-    resumen = CFG.capturar(runs=tmp_path / "runs" / "detect_20260812_1030",
-                           fotos=tmp_path / "fotos", destino=destino)
-    assert resumen["serializadas"] == 1, (
-        "debe encontrar la foto aun con mayusculas y subcarpetas")
+    resumen = CFG.capturar(
+        runs=tmp_path / "runs" / "detect_20260812_1030", fotos=tmp_path / "fotos", destino=destino
+    )
+    assert resumen["serializadas"] == 1, "debe encontrar la foto aun con mayusculas y subcarpetas"
 
 
 def test_generador_fixtures_reproducible(tmp_path):
@@ -308,4 +315,3 @@ def test_generador_fixtures_reproducible(tmp_path):
     resumen2 = GFG.generar_fixtures(destino=destino, reforzar=False)
     assert resumen2["serializadas"] == 0
     assert resumen2["reutilizadas"] == 8
-

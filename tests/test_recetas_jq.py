@@ -6,6 +6,7 @@ filtrado por run_id, auditoria de errores/warnings y correlacion cross-module)
 operen correctamente, y cubre modos de fallo (Q5), perfil de carga 10x (Q6)
 y pruebas negativas (Q7).
 """
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,7 @@ def log_env(tmp_path, monkeypatch):
     carpeta.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("POLYX_LOG_DIR", str(carpeta))
     import polyx.core.observability as ob
+
     ob._close_loggers()
     monkeypatch.delenv("POLYX_LOG", raising=False)
     ob._run_local.__dict__.pop("run_id", None)
@@ -61,7 +63,12 @@ def _simular_lote_10_placas(log_env: Path) -> str:
 
     # Evento de warning y error para pruebas negativas / auditoria
     ob.event(log_det, "detector.warning", level=logging.WARNING, msg="baja confianza en placa 3")
-    log_det._log(logging.ERROR, "detector.error", (), extra={"event": "detector.error", "data": {"code": 500}, "ms": 12})
+    log_det._log(
+        logging.ERROR,
+        "detector.error",
+        (),
+        extra={"event": "detector.error", "data": {"code": 500}, "ms": 12},
+    )
 
     ob.clear_run_id()
     return run_id
@@ -89,8 +96,12 @@ def test_10_plate_batch_log_generation(log_env):
             for fijo in ("ts", "level", "module", "pid", "thread", "event"):
                 assert fijo in rec
 
-    det_recs = [json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()]
-    all_finishes = [r for r in det_recs if r["event"].endswith(".finish") and r.get("run_id") == run_id]
+    det_recs = [
+        json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()
+    ]
+    all_finishes = [
+        r for r in det_recs if r["event"].endswith(".finish") and r.get("run_id") == run_id
+    ]
     assert len(all_finishes) == 40
     for r in all_finishes:
         assert isinstance(r["ms"], int)
@@ -104,29 +115,36 @@ def test_jq_recetas_subprocess(log_env):
     det_path = str(log_env / "detector.jsonl")
 
     # 1. Finish event tailing
-    cmd1 = ["jq", "-c", "select(.event | endswith(\".finish\")) | {ts, event, ms}", det_path]
+    cmd1 = ["jq", "-c", 'select(.event | endswith(".finish")) | {ts, event, ms}', det_path]
     res1 = subprocess.run(cmd1, capture_output=True, text=True, check=True)
     lines1 = [json.loads(l) for l in res1.stdout.splitlines() if l.strip()]
     assert len(lines1) >= 40
 
     # 2. Batch run_id filtering
-    cmd2 = ["jq", "-c", "select(.run_id == \"batch-test-10-plates-2026\") | {ts, event, ms}", det_path]
+    cmd2 = [
+        "jq",
+        "-c",
+        'select(.run_id == "batch-test-10-plates-2026") | {ts, event, ms}',
+        det_path,
+    ]
     res2 = subprocess.run(cmd2, capture_output=True, text=True, check=True)
     lines2 = [json.loads(l) for l in res2.stdout.splitlines() if l.strip()]
     assert len(lines2) > 0
 
     # 3. Error/warning queries
-    cmd3 = ["jq", "-c", "select(.level == \"ERROR\" or .level == \"WARNING\")", det_path]
+    cmd3 = ["jq", "-c", 'select(.level == "ERROR" or .level == "WARNING")', det_path]
     res3 = subprocess.run(cmd3, capture_output=True, text=True, check=True)
     lines3 = [json.loads(l) for l in res3.stdout.splitlines() if l.strip()]
     assert len(lines3) >= 2
 
     # 4. Cross-module correlation query
     cmd4 = [
-        "jq", "-s", "flatten | map(select(.run_id == \"batch-test-10-plates-2026\"))",
+        "jq",
+        "-s",
+        'flatten | map(select(.run_id == "batch-test-10-plates-2026"))',
         str(log_env / "detector.jsonl"),
         str(log_env / "reporte.jsonl"),
-        str(log_env / "trainer.jsonl")
+        str(log_env / "trainer.jsonl"),
     ]
     res4 = subprocess.run(cmd4, capture_output=True, text=True, check=True)
     correlated = json.loads(res4.stdout)
@@ -135,6 +153,7 @@ def test_jq_recetas_subprocess(log_env):
 
 
 # ── Q5 Failure Modes ──────────────────────────────────────────────────
+
 
 def test_q5_missing_jq_fallback_handling(log_env):
     """Q5: Si jq no esta disponible o falla, la prueba gestiona el error limpiamente."""
@@ -149,12 +168,15 @@ def test_q5_missing_jq_fallback_handling(log_env):
         pass  # capturado correctamente
 
     # Fallback con python puro
-    recs = [json.loads(l) for l in Path(det_path).read_text(encoding="utf-8").splitlines() if l.strip()]
+    recs = [
+        json.loads(l) for l in Path(det_path).read_text(encoding="utf-8").splitlines() if l.strip()
+    ]
     finishes = [r for r in recs if r["event"].endswith(".finish")]
     assert len(finishes) == 40
 
 
 # ── Q6 Load Profile (10x load breakpoint) ─────────────────────────────
+
 
 def test_q6_10x_load_profile_batch(log_env):
     """Q6: Valida rendimiento y estabilidad bajo carga de 10x (100 placas simuladas)."""
@@ -179,13 +201,16 @@ def test_q6_10x_load_profile_batch(log_env):
 
 # ── Q7 Negative Tests ────────────────────────────────_________________
 
+
 def test_q7_malformed_jsonl_records_handled(log_env):
     """Q7: Registros corruptos o lineas malformadas en JSONL se filtran sin colapsar."""
     det_file = log_env / "detector.jsonl"
-    det_file.write_text('{"ts":"2026-10-16T00:00:00.000Z","event":"valid.event"}\n'
-                        'CORRUPTED_NON_JSON_LINE\n'
-                        '{"ts":"2026-10-16T00:00:01.000Z","event":"valid.event2"}\n',
-                        encoding="utf-8")
+    det_file.write_text(
+        '{"ts":"2026-10-16T00:00:00.000Z","event":"valid.event"}\n'
+        "CORRUPTED_NON_JSON_LINE\n"
+        '{"ts":"2026-10-16T00:00:01.000Z","event":"valid.event2"}\n',
+        encoding="utf-8",
+    )
 
     parsed = []
     for line in det_file.read_text(encoding="utf-8").splitlines():
@@ -207,6 +232,6 @@ def test_q7_non_matching_run_id_returns_empty(log_env):
     _simular_lote_10_placas(log_env)
     det_path = str(log_env / "detector.jsonl")
 
-    cmd = ["jq", "-c", "select(.run_id == \"run-inexistente-xyz\")", det_path]
+    cmd = ["jq", "-c", 'select(.run_id == "run-inexistente-xyz")', det_path]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert res.stdout.strip() == ""

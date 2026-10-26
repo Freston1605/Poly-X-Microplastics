@@ -7,6 +7,7 @@ previously had only translation-walker coverage, which let a silent
 zero-mask bug through — see the fillPoly note in
 ``core/detect/protocol.py``.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,8 +28,18 @@ from polyx.core.report_simple import generate as generate_report
 # small box against it scores IoU ~0.13, so box IoU and mask IoU can be
 # told apart unambiguously in the tests below.
 CROSS_POINTS_PX = [
-    [90, 0], [110, 0], [110, 90], [200, 90], [200, 110], [110, 110],
-    [110, 150], [90, 150], [90, 110], [0, 110], [0, 90], [90, 90],
+    [90, 0],
+    [110, 0],
+    [110, 90],
+    [200, 90],
+    [200, 110],
+    [110, 110],
+    [110, 150],
+    [90, 150],
+    [90, 110],
+    [0, 110],
+    [0, 90],
+    [90, 90],
 ]
 
 
@@ -71,18 +82,24 @@ class _FakeDetector:
     def last_imgsz(self) -> int:
         return 1280
 
-    def predict(self, image_path, conf=0.25, iou=0.45, imgsz=1280,
-                device=None, **kwargs) -> List[Instance]:
+    def predict(
+        self, image_path, conf=0.25, iou=0.45, imgsz=1280, device=None, **kwargs
+    ) -> List[Instance]:
         out = []
         for i, (cid, x1, y1, x2, y2) in enumerate(self._boxes):
-            out.append(Instance(
-                class_id=cid,
-                class_name=self._names.get(cid, str(cid)),
-                conf=0.9,
-                x1=float(x1), y1=float(y1), x2=float(x2), y2=float(y2),
-                mask=self._masks[i],
-                mask_source="stub" if self._masks[i] is not None else None,
-            ))
+            out.append(
+                Instance(
+                    class_id=cid,
+                    class_name=self._names.get(cid, str(cid)),
+                    conf=0.9,
+                    x1=float(x1),
+                    y1=float(y1),
+                    x2=float(x2),
+                    y2=float(y2),
+                    mask=self._masks[i],
+                    mask_source="stub" if self._masks[i] is not None else None,
+                )
+            )
         return out
 
 
@@ -95,6 +112,7 @@ def _run_dir(tmp_path):
 
 
 # ── Polygon GT parsing ──────────────────────────────────────────────────
+
 
 def test_read_yolo_txt_polygon_mask_is_filled(tmp_path):
     txt = tmp_path / "img1.txt"
@@ -120,7 +138,7 @@ def test_read_yolo_txt_detection_branch_unchanged(tmp_path):
     assert len(inst) == 1
     d = inst[0]
     assert d.x1 == pytest.approx(40.0) and d.x2 == pytest.approx(60.0)
-    assert d.mask is None          # detection format carries no mask
+    assert d.mask is None  # detection format carries no mask
     assert d.mask_source is None
 
 
@@ -142,35 +160,38 @@ def test_read_yolo_txt_cross_polygon_bbox_covers_shape(tmp_path):
 
 # ── Mask-aware matching ─────────────────────────────────────────────────
 
+
 def test_mask_iou_falls_back_to_box_without_masks():
     a = Instance(class_id=0, class_name="p", conf=1.0, x1=0, y1=0, x2=10, y2=10)
     b = Instance(class_id=0, class_name="p", conf=1.0, x1=0, y1=0, x2=10, y2=10)
-    assert mask_iou(a, b) == pytest.approx(1.0)   # identical boxes
+    assert mask_iou(a, b) == pytest.approx(1.0)  # identical boxes
 
 
 def test_mask_iou_computes_mask_ratio():
     m1 = np.zeros((20, 20), dtype=bool)
     m1[0:10, 0:10] = True
     m2 = np.zeros((20, 20), dtype=bool)
-    m2[5:15, 5:15] = True          # inter 25 px, union 175 px
-    assert mask_iou(SimpleNamespace(mask=m1), SimpleNamespace(mask=m2)) \
-        == pytest.approx(25 / 175)
+    m2[5:15, 5:15] = True  # inter 25 px, union 175 px
+    assert mask_iou(SimpleNamespace(mask=m1), SimpleNamespace(mask=m2)) == pytest.approx(25 / 175)
 
 
 def test_matching_switches_tp_only_through_masks():
     same_mask = _cross_mask()
     # pred: small box + cross mask; gt: whole-frame bbox + same cross mask
-    pred = Instance(class_id=0, class_name="p", conf=1.0,
-                    x1=0, y1=90, x2=200, y2=110, mask=same_mask)
-    gt = Instance(class_id=0, class_name="p", conf=1.0,
-                  x1=0, y1=0, x2=200, y2=150, mask=same_mask.copy())
+    pred = Instance(
+        class_id=0, class_name="p", conf=1.0, x1=0, y1=90, x2=200, y2=110, mask=same_mask
+    )
+    gt = Instance(
+        class_id=0, class_name="p", conf=1.0, x1=0, y1=0, x2=200, y2=150, mask=same_mask.copy()
+    )
     box_only = match_image([pred], [gt], iou_thr=0.5, use_mask_iou=False)
-    assert box_only.fp == 1        # box IoU ~0.13 < 0.5
+    assert box_only.fp == 1  # box IoU ~0.13 < 0.5
     masked = match_image([pred], [gt], iou_thr=0.5, use_mask_iou=True)
-    assert masked.tp == 1          # identical masks -> IoU 1.0
+    assert masked.tp == 1  # identical masks -> IoU 1.0
 
 
 # ── run_batch on a stub detector ────────────────────────────────────────
+
 
 def test_run_batch_counts_and_outputs(tmp_path):
     image_dir, out = _run_dir(tmp_path)
@@ -180,8 +201,9 @@ def test_run_batch_counts_and_outputs(tmp_path):
     cx, cy, w, h = (70 / 200), (60 / 150), (40 / 200), (40 / 150)
     gt.write_text(f"0 {cx:.4f} {cy:.4f} {w:.4f} {h:.4f}\n", encoding="utf-8")
 
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
-                        gt_folder=image_dir)
+    summary = run_batch(
+        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
+    )
     assert summary["images"] == 1 and summary["detections"] == 1
     assert summary["has_gt"] is True
     assert summary["metrics"]["tp"] == 1 and summary["metrics"]["fp"] == 0
@@ -202,8 +224,9 @@ def test_run_batch_uses_mask_iou_when_both_sides_have_masks(tmp_path):
     # whole-frame GT bbox is ~0.13, so box matching would call it FP;
     # identical masks must make it a TP through the mask path.
     model = _FakeDetector([(0, 0, 90, 200, 110)], masks=[_cross_mask()])
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
-                        gt_folder=image_dir)
+    summary = run_batch(
+        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
+    )
     assert summary["metrics"]["tp"] == 1, summary
 
 
@@ -213,8 +236,9 @@ def test_run_batch_without_masks_keeps_box_matching(tmp_path):
     gt.write_text(_cross_polygon_txt(), encoding="utf-8")
     # Neither side carries masks: matching must degrade to box IoU silently.
     model = _FakeDetector([(0, 0, 90, 200, 110)])
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
-                        gt_folder=image_dir)
+    summary = run_batch(
+        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
+    )
     assert summary["metrics"]["fp"] == 1
 
 
@@ -228,6 +252,7 @@ def test_run_batch_empty_inputs_still_write_csv(tmp_path):
 
 # ── Mask-aware measurement ─────────────────────────────────────────────
 
+
 def test_measurement_prefers_attached_mask_over_otsu():
     """The provided mask wins; the det.mask fallback works too."""
     from polyx.core.detect.protocol import Instance
@@ -236,22 +261,19 @@ def test_measurement_prefers_attached_mask_over_otsu():
     img = np.full((150, 200, 3), 255, dtype=np.uint8)
     cv2.circle(img, (70, 60), 12, (0, 0, 0), -1)
     full = np.zeros((150, 200), dtype=bool)
-    full[40:100, 50:110] = True        # 60 x 60 square, mask area = 3600 px
+    full[40:100, 50:110] = True  # 60 x 60 square, mask area = 3600 px
 
-    box_only = Instance(class_id=0, class_name="p", conf=0.9,
-                        x1=50, y1=40, x2=90, y2=80)
-    assert apply_to_detection(box_only, img, 1.0) is False   # Otsu fails here
+    box_only = Instance(class_id=0, class_name="p", conf=0.9, x1=50, y1=40, x2=90, y2=80)
+    assert apply_to_detection(box_only, img, 1.0) is False  # Otsu fails here
     assert box_only.area_um2 is None
 
     # explicit mask argument
-    det = Instance(class_id=0, class_name="p", conf=0.9,
-                   x1=50, y1=40, x2=90, y2=80)
+    det = Instance(class_id=0, class_name="p", conf=0.9, x1=50, y1=40, x2=90, y2=80)
     assert apply_to_detection(det, img, 1.0, mask=full) is True
     assert det.area_um2 == pytest.approx(3600.0, rel=0.01)
 
     # fallback through det.mask (what a two-stage model attaches)
-    det2 = Instance(class_id=0, class_name="p", conf=0.9,
-                    x1=50, y1=40, x2=90, y2=80, mask=full)
+    det2 = Instance(class_id=0, class_name="p", conf=0.9, x1=50, y1=40, x2=90, y2=80, mask=full)
     assert apply_to_detection(det2, img, 1.0) is True
     assert det2.area_um2 == pytest.approx(3600.0, rel=0.01)
 
@@ -265,8 +287,9 @@ def test_run_batch_records_per_image_metrics_and_params(tmp_path):
     (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
     model = _FakeDetector([(0, 50, 40, 90, 80)])
 
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
-                        gt_folder=image_dir)
+    summary = run_batch(
+        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
+    )
     assert summary["per_image"]["img1.png"] == {"tp": 1, "fp": 0, "fn": 0, "miscls": 0}
     assert summary["per_image"]["img2.png"] == {"tp": 0, "fp": 1, "fn": 1, "miscls": 0}
     assert sum(v["tp"] for v in summary["per_image"].values()) == summary["metrics"]["tp"]
@@ -284,10 +307,12 @@ def test_run_state_rebuild_does_not_multiply_metrics(tmp_path):
     (image_dir / "img1.txt").write_text("0 0.35 0.4 0.2 0.2667\n", encoding="utf-8")
     (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
     model = _FakeDetector([(0, 50, 40, 90, 80)])
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
-                        gt_folder=image_dir)
+    summary = run_batch(
+        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
+    )
 
     from polyx.gui.detector.run_state import build_state_from_run
+
     state = build_state_from_run(out, image_dir)
     rs = state.results[0]
     by_name = {r.image_path.name: r for r in rs}
@@ -303,10 +328,12 @@ def test_run_state_rebuild_does_not_multiply_metrics(tmp_path):
 
 # ── Compact report ──────────────────────────────────────────────────────
 
+
 def test_report_simple_generates_html(tmp_path):
     image_dir, out = _run_dir(tmp_path)
-    run_batch(_FakeDetector([(0, 50, 40, 90, 80)]), image_dir, out,
-              device="cpu", measure_shape=False)
+    run_batch(
+        _FakeDetector([(0, 50, 40, 90, 80)]), image_dir, out, device="cpu", measure_shape=False
+    )
     report = generate_report(out)
     assert report.is_file()
     text = report.read_text(encoding="utf-8")
@@ -316,11 +343,16 @@ def test_report_simple_generates_html(tmp_path):
 
 # ── Evaluation metric extraction (no Ultralytics needed) ────────────────
 
+
 def test_eval_metrics_extraction_maps_sparse_classes():
     from polyx.core.evaluation import _metrics_from_results
+
     box = SimpleNamespace(
-        map50=0.75, map=0.6,
-        p=[0.8, 0.7], r=[0.9, 0.6], ap50=[0.85, 0.65],
+        map50=0.75,
+        map=0.6,
+        p=[0.8, 0.7],
+        r=[0.9, 0.6],
+        ap50=[0.85, 0.65],
         # Real Ultralytics attribute name; class 1 never appears in the
         # val set, so p[1] belongs to class 2 and dense indexing would
         # mislabel it.
@@ -338,6 +370,7 @@ def test_eval_metrics_extraction_maps_sparse_classes():
 
 def test_eval_write_report_creates_parents(tmp_path):
     from polyx.core.evaluation import write_report
+
     deep = tmp_path / "a" / "b" / "metrics.json"
     write_report({"mAP50": 0.5}, deep)
     assert deep.is_file()
@@ -345,6 +378,7 @@ def test_eval_write_report_creates_parents(tmp_path):
 
 
 # ── GT lookup helper ────────────────────────────────────────────────────
+
 
 def test_find_gt_for_image_matches_stem(tmp_path):
     image_dir = tmp_path / "photos"

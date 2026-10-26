@@ -18,6 +18,7 @@ Para regenerar las capturas de la interfaz antes de armar el manual:
     .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/es
     POLYX_IDIOMA=en .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,7 +36,7 @@ except Exception:
     pass
 
 RAIZ = Path(__file__).resolve().parent  # tools/manual: home of manual_texto_*.{es,en}
-PROYECTO = RAIZ.parents[1]              # project root, inputs and outputs of the manual
+PROYECTO = RAIZ.parents[1]  # project root, inputs and outputs of the manual
 CAPTURAS = PROYECTO / "docs" / "assets" / "manual_screenshots"
 DESTINO_HTML = PROYECTO / "docs" / "manual"
 
@@ -113,33 +114,36 @@ def expandir_figuras(html: str, idioma: str, num: Numerador, etiqueta: str) -> s
             num.faltantes.append(str(ruta.relative_to(PROYECTO)))
             return (
                 f'<figure class="fig falta"><div class="ph">Falta la captura '
-                f'<code>{ruta.name}</code></div>'
-                f'<figcaption><b>{etiqueta} {i}.</b> {pie}</figcaption></figure>'
+                f"<code>{ruta.name}</code></div>"
+                f"<figcaption><b>{etiqueta} {i}.</b> {pie}</figcaption></figure>"
             )
         uri, w, h = imagen_base64(ruta)
         return (
             f'<figure class="fig" id="fig-{i}">'
             f'<img src="{uri}" width="{w}" height="{h}" alt="{pie}" loading="lazy">'
-            f'<figcaption><b>{etiqueta} {i}.</b> {pie}</figcaption></figure>'
+            f"<figcaption><b>{etiqueta} {i}.</b> {pie}</figcaption></figure>"
         )
 
     return TOKEN.sub(repl, html)
 
 
-def expandir_esquemas(html: str, esquemas: dict[str, str], num: Numerador,
-                      etiqueta: str, palabra: str) -> str:
+def expandir_esquemas(
+    html: str, esquemas: dict[str, str], num: Numerador, etiqueta: str, palabra: str
+) -> str:
     def repl(m: re.Match) -> str:
         clave, pie = m.group(1), m.group(2).strip()
         i = num.siguiente()
         svg = esquemas.get(clave, "")
         if not svg:
             num.faltantes.append(f"esquema:{clave}")
-            return (f'<figure class="fig falta"><div class="ph">Falta el esquema '
-                    f'<code>{clave}</code></div></figure>')
+            return (
+                f'<figure class="fig falta"><div class="ph">Falta el esquema '
+                f"<code>{clave}</code></div></figure>"
+            )
         return (
             f'<figure class="fig esquema" id="fig-{i}">{svg}'
             f'<figcaption><span class="marca-esquema">{palabra}</span>'
-            f'<b>{etiqueta} {i}.</b> {pie}</figcaption></figure>'
+            f"<b>{etiqueta} {i}.</b> {pie}</figcaption></figure>"
         )
 
     return TOKEN_ESQ.sub(repl, html)
@@ -156,10 +160,11 @@ def expandir(html: str, idioma: str, num: Numerador, txt) -> str:
     combinado = re.compile(TOKEN.pattern + "|" + TOKEN_ESQ.pattern, re.DOTALL)
 
     def repl(m: re.Match) -> str:
-        if m.group(1) is not None:          # [[fig:...]]
+        if m.group(1) is not None:  # [[fig:...]]
             return expandir_figuras(m.group(0), idioma, num, txt.ETIQUETA_FIGURA)
-        return expandir_esquemas(m.group(0), txt.ESQUEMAS, num,
-                                 txt.ETIQUETA_FIGURA, txt.PALABRA_ESQUEMA)
+        return expandir_esquemas(
+            m.group(0), txt.ESQUEMAS, num, txt.ETIQUETA_FIGURA, txt.PALABRA_ESQUEMA
+        )
 
     return combinado.sub(repl, html)
 
@@ -497,9 +502,7 @@ def construir(idioma: str) -> tuple[str, list[str]]:
             + cuerpo
             + "\n</section>"
         )
-        enlaces_sub = "".join(
-            f'<li><a href="#{a}">{t}</a></li>' for a, t in sec.get("anclas", [])
-        )
+        enlaces_sub = "".join(f'<li><a href="#{a}">{t}</a></li>' for a, t in sec.get("anclas", []))
         toc.append(
             f'<li><a href="#{sec["id"]}">{sec["titulo"]}</a>'
             + (f'<ul class="sub">{enlaces_sub}</ul>' if enlaces_sub else "")
@@ -574,13 +577,17 @@ def a_pdf(html: Path, pdf: Path) -> bool:
         print("  [AVISO] no encontre Chrome ni Edge; abre el HTML y usa Ctrl+P -> Guardar como PDF")
         return False
     cmd = [
-        str(exe), "--headless", "--disable-gpu", "--no-pdf-header-footer",
-        f"--print-to-pdf={pdf}", "--print-to-pdf-no-header",
+        str(exe),
+        "--headless",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        f"--print-to-pdf={pdf}",
+        "--print-to-pdf-no-header",
         html.resolve().as_uri(),
     ]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if pdf.exists() and pdf.stat().st_size > 0:
-        print(f"  [OK]  {pdf.name}  ({pdf.stat().st_size/1_048_576:.1f} MB)")
+        print(f"  [OK]  {pdf.name}  ({pdf.stat().st_size / 1_048_576:.1f} MB)")
         return True
     print(f"  [ERR] no se genero el PDF: {r.stderr[:300]}")
     return False
@@ -601,7 +608,7 @@ def main() -> int:
         print(f"\n[{idioma}] {destino.name}")
         html, faltantes = construir(idioma)
         destino.write_text(html, encoding="utf-8")
-        print(f"  [OK]  {destino.stat().st_size/1_048_576:.1f} MB")
+        print(f"  [OK]  {destino.stat().st_size / 1_048_576:.1f} MB")
         if faltantes:
             print(f"  [AVISO] {len(faltantes)} captura(s) sin archivo:")
             for f in faltantes:

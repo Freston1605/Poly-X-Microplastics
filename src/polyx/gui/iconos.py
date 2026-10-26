@@ -18,6 +18,7 @@ Usage:
     from polyx.gui import iconos
     lbl.setPixmap(iconos.pixmap("detector", 26, T.ACCENT))
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -35,8 +36,7 @@ def _detector(p: QPainter) -> None:
     p.drawEllipse(QPointF(11, 11), 7.0, 7.0)
     p.drawEllipse(QPointF(11, 11), 2.4, 2.4)
     for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
-        p.drawLine(QPointF(11 + dx * 8.6, 11 + dy * 8.6),
-                   QPointF(11 + dx * 10.4, 11 + dy * 10.4))
+        p.drawLine(QPointF(11 + dx * 8.6, 11 + dy * 8.6), QPointF(11 + dx * 10.4, 11 + dy * 10.4))
     p.drawLine(QPointF(16.2, 16.2), QPointF(20.6, 20.6))
 
 
@@ -545,8 +545,9 @@ def icon(name_2: str, tam: int, color: str, thickness: float = 1.9) -> QIcon:
     return QIcon(pixmap(name_2, tam, color, thickness))
 
 
-def switchable_icon(name_2: str, tam: int, color_off: str, color_on: str,
-                     thickness: float = 1.85) -> QIcon:
+def switchable_icon(
+    name_2: str, tam: int, color_off: str, color_on: str, thickness: float = 1.85
+) -> QIcon:
     """Icon that changes color when the button is toggled.
 
     Qt keeps a per-state map inside the ``QIcon`` itself: for a

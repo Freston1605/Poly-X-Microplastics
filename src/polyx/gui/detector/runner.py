@@ -1,4 +1,5 @@
 """Background inference thread. Processes all the images with all the models."""
+
 from __future__ import annotations
 
 import json
@@ -53,13 +54,19 @@ def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarr
         if getattr(d, "number", None):
             label = f"{d.number}. {label}" if label else str(d.number)
         if label:
-            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX,
-                                          scale_txt, thickness_txt)
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, scale_txt, thickness_txt)
             margin = max(4, thickness * 2)
             cv2.rectangle(out, (x1, y1 - th - margin), (x1 + tw + margin, y1), c, -1)
-            cv2.putText(out, label, (x1 + margin // 2, y1 - margin // 2),
-                        cv2.FONT_HERSHEY_SIMPLEX, scale_txt, (255, 255, 255),
-                        thickness_txt, cv2.LINE_AA)
+            cv2.putText(
+                out,
+                label,
+                (x1 + margin // 2, y1 - margin // 2),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                scale_txt,
+                (255, 255, 255),
+                thickness_txt,
+                cv2.LINE_AA,
+            )
     return out
 
 
@@ -95,7 +102,7 @@ def _color_bgr_for_class(name: str):
 
 class DetectorRunner(QThread):
     progress = Signal(int, int, str)
-    image_done = Signal(int, object)     # model_idx, ImageResult
+    image_done = Signal(int, object)  # model_idx, ImageResult
     finished_ok = Signal()
     aborted = Signal()
     failed = Signal(str)
@@ -115,12 +122,18 @@ class DetectorRunner(QThread):
             params = state.params
             slots = state.active_models()
             start = datetime.now()
-            obs.event(_log, "run.config", placas=len(state.images),
-                       modelos=[s.alias for s in slots],
-                       conf=params.conf, iou=params.iou_nms,
-                       imgsz=params.imgsz, device=params.device,
-                       medir_forma=params.measure_shape,
-                       um_por_px=params.um_per_px)
+            obs.event(
+                _log,
+                "run.config",
+                placas=len(state.images),
+                modelos=[s.alias for s in slots],
+                conf=params.conf,
+                iou=params.iou_nms,
+                imgsz=params.imgsz,
+                device=params.device,
+                medir_forma=params.measure_shape,
+                um_por_px=params.um_per_px,
+            )
             # What was actually used, image by image, versus what was
             # requested on the `Parametros` page: the auto-fallback may have lowered imgsz
             # for lack of VRAM, and tiling depends on each photo's size.
@@ -157,15 +170,12 @@ class DetectorRunner(QThread):
             # Load models
             for s in slots:
                 if s.loaded is None:
-                    s.loaded = make_detector(s.model_type or "yolo",
-                                            str(s.path), alias=s.alias)
+                    s.loaded = make_detector(s.model_type or "yolo", str(s.path), alias=s.alias)
                 try:
                     s.loaded.load()
-                    obs.event(_log, "model.loaded", alias=s.alias,
-                               file=str(s.path))
+                    obs.event(_log, "model.loaded", alias=s.alias, file=str(s.path))
                 except Exception as exc:
-                    obs.event_error(_log, "model.error", exc,
-                                     alias=s.alias, file=str(s.path))
+                    obs.event_error(_log, "model.error", exc, alias=s.alias, file=str(s.path))
                     raise
 
             # Reset results
@@ -181,8 +191,7 @@ class DetectorRunner(QThread):
                 # Load the image once for GT/annotation
                 img_bgr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), cv2.IMREAD_COLOR)
                 if img_bgr is None:
-                    obs.event(_log, "image.undecodable", level=logging.WARNING,
-                               file=str(img_path))
+                    obs.event(_log, "image.undecodable", level=logging.WARNING, file=str(img_path))
                     done += len(slots)
                     self.progress.emit(done, total, img_path.name)
                     continue
@@ -190,19 +199,26 @@ class DetectorRunner(QThread):
 
                 # Scale of THIS photo. The already-read image is passed in so as not to
                 # decode 12 MP again just to measure the ring.
-                cal = resolver(img_path, index=index_2,
-                               um_por_px_manual=params.um_per_px,
-                               diameter_mm=params.diameter_plate_mm,
-                               measure_plate=params.measure_plate,
-                               bgr=img_bgr,
-                               height_plate_mm=params.height_plate_mm,
-                               distance_camera_mm=params.distance_camera_mm)
+                cal = resolver(
+                    img_path,
+                    index=index_2,
+                    um_por_px_manual=params.um_per_px,
+                    diameter_mm=params.diameter_plate_mm,
+                    measure_plate=params.measure_plate,
+                    bgr=img_bgr,
+                    height_plate_mm=params.height_plate_mm,
+                    distance_camera_mm=params.distance_camera_mm,
+                )
                 state.calibrations[img_path.name] = cal
                 um_px = cal.um_por_px if cal.valid else None
                 if not cal.valid:
-                    obs.event(_log, "calibration.invalid", level=logging.WARNING,
-                               file=str(img_path),
-                               reason=getattr(cal, "reason", None))
+                    obs.event(
+                        _log,
+                        "calibration.invalid",
+                        level=logging.WARNING,
+                        file=str(img_path),
+                        reason=getattr(cal, "reason", None),
+                    )
 
                 # Load GT if it exists (uses first-model names when available)
                 names_first = slots[0].loaded.names if slots[0].loaded else {}
@@ -247,8 +263,8 @@ class DetectorRunner(QThread):
 
                     reg = execution.setdefault(
                         slot.alias,
-                        {"imagenes": 0, "troceadas": 0, "imgsz_usados": set(),
-                         "fallback_en": []})
+                        {"imagenes": 0, "troceadas": 0, "imgsz_usados": set(), "fallback_en": []},
+                    )
                     reg["imagenes"] += 1
                     if plan_tiling.get("troceado"):
                         reg["troceadas"] += 1
@@ -278,9 +294,12 @@ class DetectorRunner(QThread):
                         keep = []
                         for d in preds:
                             if d.diam_um is None:
-                                keep.append(d); continue
-                            if params.size_min_um > 0 and d.diam_um < params.size_min_um: continue
-                            if params.size_max_um > 0 and d.diam_um > params.size_max_um: continue
+                                keep.append(d)
+                                continue
+                            if params.size_min_um > 0 and d.diam_um < params.size_min_um:
+                                continue
+                            if params.size_max_um > 0 and d.diam_um > params.size_max_um:
+                                continue
                             keep.append(d)
                         preds = keep
 
@@ -294,7 +313,8 @@ class DetectorRunner(QThread):
                     # the order in which the model returned them: this way number 1
                     # is at the very top, and finding number 37 in the photo is viable.
                     for _i, _d in enumerate(
-                            sorted(preds, key=lambda z: (round(z.y1 / 40), z.x1)), 1):
+                        sorted(preds, key=lambda z: (round(z.y1 / 40), z.x1)), 1
+                    ):
                         _d.number = _i
 
                     # Match against GT
@@ -313,7 +333,8 @@ class DetectorRunner(QThread):
                     # ── Annotated images ──────────────────────────────
                     # 1) Model predictions (YOLO boxes in class color).
                     pred_img = _draw_annotated(
-                        img_bgr, preds,
+                        img_bgr,
+                        preds,
                         color_for=lambda d: _color_bgr_for_class(d.class_name),
                         label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
                     )
@@ -323,14 +344,16 @@ class DetectorRunner(QThread):
                     gt_img = None
                     if has_gt:
                         combined = _draw_annotated(
-                            pred_img, gts,
+                            pred_img,
+                            gts,
                             color_for=lambda d: (255, 200, 80),
                             label_for=lambda d: f"GT {d.class_name}",
                         )
                         # 3) Ground Truth only (real boxes in class color)
                         #    over the original image → side-by-side view.
                         gt_img = _draw_annotated(
-                            img_bgr, gts,
+                            img_bgr,
+                            gts,
                             color_for=lambda d: _color_bgr_for_class(d.class_name),
                             label_for=lambda d: f"{d.class_name}",
                         )
@@ -364,15 +387,18 @@ class DetectorRunner(QThread):
 
                     # The boxes in text, not only drawn: a PNG cannot be
                     # re-analyzed or reopened for correction.
-                    _save_labels(
-                        preds,
-                        sub / "labels" / f"{idx_img:04d}_{img_path.stem}.txt",
-                        W, H)
+                    _save_labels(preds, sub / "labels" / f"{idx_img:04d}_{img_path.stem}.txt", W, H)
 
                     res = ImageResult(
-                        image_path=img_path, model_idx=real_idx,
-                        predictions=preds, gt=gts, has_gt=has_gt,
-                        tp=tp, fp=fp, fn=fn, miscls=mc,
+                        image_path=img_path,
+                        model_idx=real_idx,
+                        predictions=preds,
+                        gt=gts,
+                        has_gt=has_gt,
+                        tp=tp,
+                        fp=fp,
+                        fn=fn,
+                        miscls=mc,
                         annotated_path=annotated_path,
                         pred_path=pred_path,
                         gt_path=gt_path,
@@ -385,24 +411,33 @@ class DetectorRunner(QThread):
                     self.progress.emit(done, total, img_path.name)
 
             ms = int((datetime.now() - start).total_seconds() * 1000)
-            obs.event(_log, "run.finish", ms=ms,
-                       placas=len(state.images),
-                       imgsz_usados=sorted({int(s) for reg in execution.values()
-                                            for s in reg.get("imgsz_usados", [])}),
-                       sin_forma=dict(shapeless))
+            obs.event(
+                _log,
+                "run.finish",
+                ms=ms,
+                placas=len(state.images),
+                imgsz_usados=sorted(
+                    {int(s) for reg in execution.values() for s in reg.get("imgsz_usados", [])}
+                ),
+                sin_forma=dict(shapeless),
+            )
             # A batch with many shapeless particles deserves a look: it may be
             # the model, the threshold, or out-of-focus photos, and it is not shown in the UI.
             worst = max(shapeless.items(), key=lambda kv: kv[1], default=())
             if worst and worst[1] > 0:
-                obs.event(_log, "run.shapeless_high", level=logging.WARNING,
-                           modelo=worst[0], sin_forma=worst[1])
+                obs.event(
+                    _log,
+                    "run.shapeless_high",
+                    level=logging.WARNING,
+                    modelo=worst[0],
+                    sin_forma=worst[1],
+                )
             self.finished_ok.emit()
         except Exception as e:
             self.failed.emit(f"{type(e).__name__}: {e}")
             obs.event_error(_log, "run.error", e)
 
-    def _write_summary(self, state, slots, start=None, execution=None,
-                          shapeless=None) -> None:
+    def _write_summary(self, state, slots, start=None, execution=None, shapeless=None) -> None:
         """Leaves the run self-describing: provenance, parameters and totals per model.
 
         Without this a run folder is loose PNGs and there is no way to know
@@ -423,9 +458,14 @@ class DetectorRunner(QThread):
                 "duracion_s": round((fin - start).total_seconds(), 1) if start else 0.0,
             },
             "parametros": {
-                "confianza": p.conf, "iou_nms": p.iou_nms, "iou_tp": p.iou_tp,
-                "imgsz": p.imgsz, "device": p.device, "um_por_px": p.um_per_px,
-                "troceo": p.tiling, "troceo_umbral_px": p.tiling_threshold_px,
+                "confianza": p.conf,
+                "iou_nms": p.iou_nms,
+                "iou_tp": p.iou_tp,
+                "imgsz": p.imgsz,
+                "device": p.device,
+                "um_por_px": p.um_per_px,
+                "troceo": p.tiling,
+                "troceo_umbral_px": p.tiling_threshold_px,
             },
             # What standard the sizes were measured against. A value in um without this
             # cannot be verified or reproduced.
@@ -437,25 +477,32 @@ class DetectorRunner(QThread):
             mi = state.model_slots.index(slot)
             rs = state.results.get(mi, [])
             con_gt = [r for r in rs if r.has_gt]
-            tp = sum(r.tp for r in con_gt); fp = sum(r.fp for r in con_gt)
-            fn = sum(r.fn for r in con_gt); mc = sum(r.miscls for r in con_gt)
+            tp = sum(r.tp for r in con_gt)
+            fp = sum(r.fp for r in con_gt)
+            fn = sum(r.fn for r in con_gt)
+            mc = sum(r.miscls for r in con_gt)
             reg = execution.get(slot.alias, {})
-            data["modelos"].append({
-                "alias": slot.alias,
-                "peso": str(slot.path) if slot.path else "",
-                # Two best.pt from two different trainings are named the same;
-                # the fingerprint is the only thing that truly distinguishes them.
-                "sha256": sha256_file(slot.path) if slot.path else "",
-                "detecciones": sum(len(r.predictions) for r in rs),
-                "imagenes_con_gt": len(con_gt),
-                "tp": tp, "fp": fp, "fn": fn, "mal_clasificados": mc,
-                "imgsz_usados": sorted(reg.get("imgsz_usados", ())),
-                "imagenes_troceadas": reg.get("troceadas", 0),
-                # If this list is not empty, those photos were inferred at lower
-                # resolution than requested because the GPU ran out of memory.
-                "fallback_por_memoria": reg.get("fallback_en", []),
-                "particulas_sin_forma": (shapeless or {}).get(slot.alias, 0),
-            })
+            data["modelos"].append(
+                {
+                    "alias": slot.alias,
+                    "peso": str(slot.path) if slot.path else "",
+                    # Two best.pt from two different trainings are named the same;
+                    # the fingerprint is the only thing that truly distinguishes them.
+                    "sha256": sha256_file(slot.path) if slot.path else "",
+                    "detecciones": sum(len(r.predictions) for r in rs),
+                    "imagenes_con_gt": len(con_gt),
+                    "tp": tp,
+                    "fp": fp,
+                    "fn": fn,
+                    "mal_clasificados": mc,
+                    "imgsz_usados": sorted(reg.get("imgsz_usados", ())),
+                    "imagenes_troceadas": reg.get("troceadas", 0),
+                    # If this list is not empty, those photos were inferred at lower
+                    # resolution than requested because the GPU ran out of memory.
+                    "fallback_por_memoria": reg.get("fallback_en", []),
+                    "particulas_sin_forma": (shapeless or {}).get(slot.alias, 0),
+                }
+            )
             # classes.txt next to the labels, so they can be reopened as
             # pre-annotation in the Etiquetador without guessing the class order.
             names_2 = getattr(slot.loaded, "names", None) or {}
@@ -464,12 +511,13 @@ class DetectorRunner(QThread):
                 try:
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     destination.write_text(
-                        "\n".join(names_2[k] for k in sorted(names_2)),
-                        encoding="utf-8")
+                        "\n".join(names_2[k] for k in sorted(names_2)), encoding="utf-8"
+                    )
                 except OSError:
                     pass
         try:
             (state.run_dir / "resumen.json").write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
         except OSError:
             pass

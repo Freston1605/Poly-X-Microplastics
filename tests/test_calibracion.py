@@ -4,6 +4,7 @@ Toda talla del estudio pasa por aquí: si la escala se desplaza, se desplazan
 todas las cifras del paper a la vez y de forma coherente, que es el peor modo de
 fallo posible porque nada parece roto.
 """
+
 from __future__ import annotations
 
 import sys
@@ -25,7 +26,7 @@ def _foto_de_placa(radio=300, lienzo=900, diametro_mm=100.0):
     """
     img = np.full((lienzo, lienzo, 3), 12, np.uint8)
     centro = (lienzo // 2, lienzo // 2)
-    cv2.circle(img, centro, radio, (210, 205, 200), 9)   # el aro
+    cv2.circle(img, centro, radio, (210, 205, 200), 9)  # el aro
     cv2.circle(img, centro, radio - 40, (60, 55, 90), -1)  # el interior
     return img, diametro_mm * 1000.0 / (2 * radio)
 
@@ -111,9 +112,12 @@ def test_lee_el_indice_de_recortes(tmp_path):
     """En un recorte la placa no aparece, así que su escala solo puede
     heredarse de la foto de la que salió."""
     csv = tmp_path / "indice.csv"
-    csv.write_text("recorte,origen,escala,um_por_px\n"
-                   "a__f0c0.jpg,a.jpg,1.05,31.2815\n"
-                   "a__f0c1.jpg,a.jpg,1.05,31.2815\n", encoding="utf-8")
+    csv.write_text(
+        "recorte,origen,escala,um_por_px\n"
+        "a__f0c0.jpg,a.jpg,1.05,31.2815\n"
+        "a__f0c1.jpg,a.jpg,1.05,31.2815\n",
+        encoding="utf-8",
+    )
     mapa = C.carry_index(csv)
     assert mapa["a__f0c0.jpg"] == pytest.approx(31.2815)
 
@@ -134,7 +138,8 @@ def test_busca_el_indice_subiendo_carpetas(tmp_path):
     hondo = tmp_path / "recortes" / "testigo"
     hondo.mkdir(parents=True)
     (tmp_path / "recortes" / "indice.csv").write_text(
-        "recorte,um_por_px\nx.jpg,31.5\n", encoding="utf-8")
+        "recorte,um_por_px\nx.jpg,31.5\n", encoding="utf-8"
+    )
     assert C.search_index(hondo / "x.jpg")["x.jpg"] == pytest.approx(31.5)
 
 
@@ -143,8 +148,9 @@ def test_el_indice_manda_sobre_todo(tmp_path):
     img, _ = _foto_de_placa()
     foto = tmp_path / "1.1.jpg"
     cv2.imwrite(str(foto), img)
-    cal = C.resolver(foto, index={"1.1.jpg": 31.0}, um_por_px_manual=99.0,
-                     measure_plate=True, bgr=img)
+    cal = C.resolver(
+        foto, index={"1.1.jpg": 31.0}, um_por_px_manual=99.0, measure_plate=True, bgr=img
+    )
     assert cal.origin == C.ORIGIN_INDEX
     assert cal.um_por_px == pytest.approx(31.0)
 
@@ -153,22 +159,21 @@ def test_medir_la_placa_manda_sobre_el_valor_manual(tmp_path):
     """El valor manual es uno solo para todo el lote, y en este material la
     escala real varía 1.59× entre fotos."""
     img, esperado = _foto_de_placa()
-    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=99.0,
-                     measure_plate=True, bgr=img)
+    cal = C.resolver(
+        tmp_path / "x.jpg", index={}, um_por_px_manual=99.0, measure_plate=True, bgr=img
+    )
     assert cal.origin == C.ORIGIN_PLATE
     assert cal.um_por_px == pytest.approx(esperado, rel=0.03)
 
 
 def test_el_manual_es_el_ultimo_recurso(tmp_path):
-    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=31.85,
-                     measure_plate=False)
+    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=31.85, measure_plate=False)
     assert cal.origin == C.ORIGIN_MANUAL
     assert cal.um_por_px == pytest.approx(31.85)
 
 
 def test_sin_nada_queda_sin_calibrar(tmp_path):
-    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=0.0,
-                     measure_plate=False)
+    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=0.0, measure_plate=False)
     assert not cal.valid
     assert cal.origin == C.ORIGIN_NONE
 

@@ -41,7 +41,9 @@ class Sam2Segmenter(DetectionSource):
                 "SAM2 not installed. Install with: pip install git+https://github.com/facebookresearch/sam2.git"
             ) from e
 
-        self._predictor = SAM2ImagePredictor(build_sam2(self.model_cfg, self.checkpoint, device=self.device))
+        self._predictor = SAM2ImagePredictor(
+            build_sam2(self.model_cfg, self.checkpoint, device=self.device)
+        )
         return self
 
     def predict(
@@ -71,6 +73,7 @@ class Sam2Segmenter(DetectionSource):
             self.load()
 
         import cv2
+
         img = cv2.imread(str(image_path))
         if img is None:
             return []
@@ -94,15 +97,19 @@ class Sam2Segmenter(DetectionSource):
                 continue
             mx1, mx2 = int(xs.min()), int(xs.max())
             my1, my2 = int(ys.min()), int(ys.max())
-            instances.append(Instance(
-                class_id=0,
-                class_name="particle",
-                conf=float(scores[0]) if len(scores) > 0 else 1.0,
-                x1=float(mx1), y1=float(my1),
-                x2=float(mx2), y2=float(my2),
-                mask=mask,
-                mask_source="sam2",
-            ))
+            instances.append(
+                Instance(
+                    class_id=0,
+                    class_name="particle",
+                    conf=float(scores[0]) if len(scores) > 0 else 1.0,
+                    x1=float(mx1),
+                    y1=float(my1),
+                    x2=float(mx2),
+                    y2=float(my2),
+                    mask=mask,
+                    mask_source="sam2",
+                )
+            )
 
         return instances
 

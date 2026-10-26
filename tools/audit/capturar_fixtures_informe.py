@@ -19,6 +19,7 @@ Outputs (relative to the repo root):
 
 Run from the repo root:  python tools/audit/capturar_fixtures_informe.py
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -93,11 +94,8 @@ def capturar() -> dict[str, str]:
         # identidad (T04) e inyeccion (T06), nada de un render recortado.
         rh.generate_report(st, destino, sections=list(rh.IDS_SECTIONS))
         datos = destino.read_text(encoding="utf-8")
-        digest = hashlib.sha256(
-            _normalizar_figuras(datos).encode("utf-8")
-        ).hexdigest()
-        (directorio / "informe.sha256").write_text(digest + "\n",
-                                                   encoding="utf-8")
+        digest = hashlib.sha256(_normalizar_figuras(datos).encode("utf-8")).hexdigest()
+        (directorio / "informe.sha256").write_text(digest + "\n", encoding="utf-8")
         hashes[variante] = digest
     return hashes
 

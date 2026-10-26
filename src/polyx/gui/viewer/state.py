@@ -1,4 +1,5 @@
 """Viewer state — image, μm/px calibration, detections."""
+
 from __future__ import annotations
 
 import math
@@ -13,22 +14,22 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
 
 
 class ViewerState(QObject):
-    image_loaded        = Signal(Path)
-    detections_changed  = Signal(list)          # List[Detection]
-    calib_changed       = Signal(float, str)    # um_per_px, mode_name
-    calib_pts_changed   = Signal(list)          # List[QPointF] in image coords
-    calib_ready         = Signal()              # enough points collected
-    status_changed      = Signal(str, str)      # text, color_hex
+    image_loaded = Signal(Path)
+    detections_changed = Signal(list)  # List[Detection]
+    calib_changed = Signal(float, str)  # um_per_px, mode_name
+    calib_pts_changed = Signal(list)  # List[QPointF] in image coords
+    calib_ready = Signal()  # enough points collected
+    status_changed = Signal(str, str)  # text, color_hex
 
     def __init__(self):
         super().__init__()
-        self.images:      list[Path]      = []
-        self.current_idx: int             = -1
-        self.um_per_px:   float           = 0.0
-        self.calib_mode:  str             = "none"   # "none" | "linea" | "circulo"
-        self._calib_pts:  list[QPointF]   = []
-        self.detections:  list[Detection] = []
-        self.model        = None           # YoloModel, loaded on demand
+        self.images: list[Path] = []
+        self.current_idx: int = -1
+        self.um_per_px: float = 0.0
+        self.calib_mode: str = "none"  # "none" | "linea" | "circulo"
+        self._calib_pts: list[QPointF] = []
+        self.detections: list[Detection] = []
+        self.model = None  # YoloModel, loaded on demand
 
     # ── Image ────────────────────────────────────────────────
     @property
@@ -44,8 +45,7 @@ class ViewerState(QObject):
         self.image_loaded.emit(path)
 
     def load_folder(self, folder: Path):
-        imgs = sorted(p for p in folder.rglob("*")
-                      if p.suffix.lower() in IMAGE_EXTS)
+        imgs = sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMAGE_EXTS)
         self.images = imgs
         self.current_idx = 0 if imgs else -1
         self.detections = []
@@ -63,8 +63,11 @@ class ViewerState(QObject):
         self.detections_changed.emit([])
         self.image_loaded.emit(self.images[idx])
 
-    def next_image(self): self.goto(self.current_idx + 1)
-    def prev_image(self): self.goto(self.current_idx - 1)
+    def next_image(self):
+        self.goto(self.current_idx + 1)
+
+    def prev_image(self):
+        self.goto(self.current_idx - 1)
 
     # ── Calibration ──────────────────────────────────────────
     def start_calib(self, mode: str):

@@ -12,6 +12,7 @@ it is only detected and announced. The installed-version mark is the
 SHA of the latest commit, saved in `.polyx_version` by the installer
 and by the updater itself.
 """
+
 from __future__ import annotations
 
 import json
@@ -79,8 +80,13 @@ class SearchUpdates(QObject):
         if not remote:
             # `version_remota` swallows every error: here it is recorded AT LEAST
             # that the check could not resolve, with a generic reason.
-            event(log, "update.error", level=logging.WARNING,
-                   reason="sin_respuesta_remota", local=local)
+            event(
+                log,
+                "update.error",
+                level=logging.WARNING,
+                reason="sin_respuesta_remota",
+                local=local,
+            )
             return
         if remote != local:
             event(log, "update.available", remoto=remote[:7], local=local)

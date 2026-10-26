@@ -5,6 +5,7 @@ Usage:
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
     polyx-detect --model best.pt --images ./photos --out ./run --full-report
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,13 +25,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--iou", type=float, default=0.45)
     p.add_argument("--imgsz", type=int, default=1280)
-    p.add_argument("--device", default=None,
-                   help="'cpu', a CUDA index, or empty = auto-select (default: auto)")
+    p.add_argument(
+        "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
+    )
     p.add_argument("--um-per-px", type=float, default=0.0)
     p.add_argument("--gt-folder", default=None)
     p.add_argument("--no-measure-shape", action="store_true")
-    p.add_argument("--full-report", action="store_true",
-                   help="run-order paper-quality HTML report (requires PySide6, [gui] extra)")
+    p.add_argument(
+        "--full-report",
+        action="store_true",
+        help="run-order paper-quality HTML report (requires PySide6, [gui] extra)",
+    )
     args = p.parse_args(argv)
 
     try:
@@ -65,11 +70,14 @@ def main(argv: list[str] | None = None) -> int:
         # builder itself imports the Qt state module directly.
         try:
             import importlib
+
             qt = importlib.import_module("polyx.gui.qt")
             qt.require_qt()
             from polyx.gui.report_html import generate_report
+
             build_state = importlib.import_module(
-                "polyx.gui.detector.run_state").build_state_from_run
+                "polyx.gui.detector.run_state"
+            ).build_state_from_run
             state = build_state(out_dir, Path(args.images))
             generate_report(state, report_path)
             print(f"FULL REPORT: {report_path}")
@@ -86,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _write_compact(run_dir: Path) -> Path:
     from polyx.core.report_simple import generate
+
     return generate(run_dir, run_dir / "report.html")
 
 

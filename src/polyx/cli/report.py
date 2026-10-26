@@ -3,6 +3,7 @@
 Usage:
     polyx-report --run ./run --output ./run/report.html
 """
+
 from __future__ import annotations
 
 import argparse

@@ -1,4 +1,5 @@
 """Thin wrapper over Ultralytics YOLO for inference + YOLO-txt utilities."""
+
 from __future__ import annotations
 
 import logging
@@ -27,6 +28,7 @@ def _is_oom(e: Exception) -> bool:
     """Is the exception caused by GPU memory exhaustion?"""
     try:
         import torch
+
         if isinstance(e, torch.cuda.OutOfMemoryError):
             return True
     except Exception:
@@ -37,6 +39,7 @@ def _is_oom(e: Exception) -> bool:
 def _cuda_empty_cache() -> None:
     try:
         import torch
+
         torch.cuda.empty_cache()
     except Exception:
         pass
@@ -75,14 +78,19 @@ class YoloModel:
         if self._model is not None:
             return self
         from ultralytics import YOLO
+
         self._model = YOLO(self.weights_path)
         nm = getattr(self._model, "names", None) or {}
         self.names = dict(nm)
         return self
 
-    def probe_max_imgsz(self, image_path: str | Path, device: str = "0",
-                        candidates: Tuple[int, ...] = (2048, 3008, 4096, 5120, 6144, 7168, 8192),
-                        progress=None) -> Tuple[int, Dict[int, str]]:
+    def probe_max_imgsz(
+        self,
+        image_path: str | Path,
+        device: str = "0",
+        candidates: Tuple[int, ...] = (2048, 3008, 4096, 5120, 6144, 7168, 8192),
+        progress=None,
+    ) -> Tuple[int, Dict[int, str]]:
         """Finds the largest imgsz the GPU can take for THIS model.
 
         Runs real inference at increasing sizes until it fails on memory.
@@ -103,8 +111,14 @@ class YoloModel:
             if progress is not None:
                 progress(sz)
             try:
-                self._model.predict(source=str(image_path), imgsz=sz, conf=0.25,
-                                    device=device, verbose=False, save=False)
+                self._model.predict(
+                    source=str(image_path),
+                    imgsz=sz,
+                    conf=0.25,
+                    device=device,
+                    verbose=False,
+                    save=False,
+                )
                 detail[sz] = "ok"
                 max_ok = sz
             except torch.cuda.OutOfMemoryError:
@@ -120,9 +134,15 @@ class YoloModel:
                     pass
         return (max_ok or 1920), detail
 
-    def predict(self, image_path: str | Path, conf: float = 0.25, iou: float = 0.45,
-                imgsz: int = 640, device: str = "0",
-                auto_fallback: bool = True) -> List[Detection]:
+    def predict(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 640,
+        device: str = "0",
+        auto_fallback: bool = True,
+    ) -> List[Detection]:
         self.load()
         # Auto-fallback: if the requested imgsz exhausts VRAM, it retries with each
         # smaller size in the ladder instead of aborting the whole analysis.
@@ -133,22 +153,31 @@ class YoloModel:
         for i, sz in enumerate(sizes):
             try:
                 res = self._model.predict(
-                    source=str(image_path), conf=conf, iou=iou, imgsz=sz,
-                    device=device, verbose=False, save=False,
+                    source=str(image_path),
+                    conf=conf,
+                    iou=iou,
+                    imgsz=sz,
+                    device=device,
+                    verbose=False,
+                    save=False,
                     max_det=self.MAX_DET,
                 )
                 self.last_imgsz = sz
-                self.last_fallback = (i > 0)
+                self.last_fallback = i > 0
                 break
             except Exception as e:
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
                     raise
-                event(_log(), "imgsz.fallback", level=logging.WARNING,
-                       alias=self.alias, file=str(image_path),
-                       tried_previous=sz,
-                       imgsz_next=(sizes[i + 1]
-                                        if i + 1 < len(sizes) else None),
-                       reason="gpu_oom")
+                event(
+                    _log(),
+                    "imgsz.fallback",
+                    level=logging.WARNING,
+                    alias=self.alias,
+                    file=str(image_path),
+                    tried_previous=sz,
+                    imgsz_next=(sizes[i + 1] if i + 1 < len(sizes) else None),
+                    reason="gpu_oom",
+                )
                 _cuda_empty_cache()
         out: List[Detection] = []
         if not res:
@@ -160,18 +189,31 @@ class YoloModel:
         confs = r.boxes.conf.cpu().numpy()
         clss = r.boxes.cls.cpu().numpy().astype(int)
         for (x1, y1, x2, y2), c, cls in zip(xyxy, confs, clss):
-            out.append(Detection(
-                class_id=int(cls),
-                class_name=self.names.get(int(cls), str(int(cls))),
-                conf=float(c),
-                x1=float(x1), y1=float(y1), x2=float(x2), y2=float(y2),
-            ))
+            out.append(
+                Detection(
+                    class_id=int(cls),
+                    class_name=self.names.get(int(cls), str(int(cls))),
+                    conf=float(c),
+                    x1=float(x1),
+                    y1=float(y1),
+                    x2=float(x2),
+                    y2=float(y2),
+                )
+            )
         return out
 
-    def predict_sliced(self, image_path: str | Path, conf: float = 0.10,
-                       iou: float = 0.45, tile: int = 1024, overlap: float = 0.25,
-                       device: str = "0", agnostic_nms: bool = True,
-                       imgsz: Optional[int] = None, batch: int = 8) -> List[Detection]:
+    def predict_sliced(
+        self,
+        image_path: str | Path,
+        conf: float = 0.10,
+        iou: float = 0.45,
+        tile: int = 1024,
+        overlap: float = 0.25,
+        device: str = "0",
+        agnostic_nms: bool = True,
+        imgsz: Optional[int] = None,
+        batch: int = 8,
+    ) -> List[Detection]:
         """Tile-based inference (SAHI / Slicing Aided Hyper Inference).
 
         Splits the image into overlapping ``tile``×``tile`` px crops, infers
@@ -197,7 +239,7 @@ class YoloModel:
         origins: List[Tuple[int, int]] = []
         for y0 in ys:
             for x0 in xs:
-                crops.append(img[y0:y0 + tile, x0:x0 + tile])
+                crops.append(img[y0 : y0 + tile, x0 : x0 + tile])
                 origins.append((x0, y0))
         if not crops:
             return []
@@ -211,11 +253,16 @@ class YoloModel:
         bs = max(1, int(batch))
         # Run in sub-batches to avoid exhausting VRAM (many tiles at high imgsz).
         for start in range(0, len(crops), bs):
-            chunk = crops[start:start + bs]
-            chunk_org = origins[start:start + bs]
+            chunk = crops[start : start + bs]
+            chunk_org = origins[start : start + bs]
             results = self._model.predict(
-                source=chunk, conf=conf, iou=iou, imgsz=infer_sz,
-                device=device, verbose=False, save=False,
+                source=chunk,
+                conf=conf,
+                iou=iou,
+                imgsz=infer_sz,
+                device=device,
+                verbose=False,
+                save=False,
                 max_det=self.MAX_DET,
             )
             for (x0, y0), r in zip(chunk_org, results):
@@ -225,21 +272,34 @@ class YoloModel:
                 cf = r.boxes.conf.cpu().numpy()
                 cl = r.boxes.cls.cpu().numpy().astype(int)
                 for (a, b, c, d), cc, k in zip(xyxy, cf, cl):
-                    dets.append(Detection(
-                        class_id=int(k),
-                        class_name=self.names.get(int(k), str(int(k))),
-                        conf=float(cc),
-                        x1=float(a) + x0, y1=float(b) + y0,
-                        x2=float(c) + x0, y2=float(d) + y0,
-                    ))
+                    dets.append(
+                        Detection(
+                            class_id=int(k),
+                            class_name=self.names.get(int(k), str(int(k))),
+                            conf=float(cc),
+                            x1=float(a) + x0,
+                            y1=float(b) + y0,
+                            x2=float(c) + x0,
+                            y2=float(d) + y0,
+                        )
+                    )
         return _nms(dets, iou_thr=iou, agnostic=agnostic_nms)
 
-    def predict_auto(self, image_path: str | Path, conf: float = 0.25,
-                     iou: float = 0.45, imgsz: int = 1280, device: str = "0",
-                     tiling: str = "auto", threshold_px: int = 2000, tile: int = 0,
-                     overlap: float = 0.25, batch: int = 8,
-                     agnostic_nms: bool = True,
-                     record: Optional[Dict] = None) -> List[Detection]:
+    def predict_auto(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        batch: int = 8,
+        agnostic_nms: bool = True,
+        record: Optional[Dict] = None,
+    ) -> List[Detection]:
         """Infers with or without tiling according to the photo's size, hands-free.
 
         ``troceo``: ``"auto"`` decides on the longer side against
@@ -256,24 +316,36 @@ class YoloModel:
         if tiling == "nunca" or wh is None:
             plan = None
         elif tiling == "siempre":
-            plan = policy_tiling(wh[0], wh[1], imgsz,
-                                     threshold_px=0, tile=tile, overlap=overlap)
+            plan = policy_tiling(wh[0], wh[1], imgsz, threshold_px=0, tile=tile, overlap=overlap)
         else:
-            plan = policy_tiling(wh[0], wh[1], imgsz,
-                                     threshold_px=threshold_px, tile=tile, overlap=overlap)
+            plan = policy_tiling(
+                wh[0], wh[1], imgsz, threshold_px=threshold_px, tile=tile, overlap=overlap
+            )
 
         if record is not None:
             record.clear()
-            record.update({"ancho": wh[0] if wh else 0, "alto": wh[1] if wh else 0,
-                             "troceado": plan is not None, "plan": plan})
+            record.update(
+                {
+                    "ancho": wh[0] if wh else 0,
+                    "alto": wh[1] if wh else 0,
+                    "troceado": plan is not None,
+                    "plan": plan,
+                }
+            )
 
         if plan is None:
-            return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz,
-                                device=device)
-        return self.predict_sliced(image_path, conf=conf, iou=iou,
-                                   tile=plan["tile"], overlap=plan["overlap"],
-                                   device=device, agnostic_nms=agnostic_nms,
-                                   imgsz=imgsz, batch=batch)
+            return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
+        return self.predict_sliced(
+            image_path,
+            conf=conf,
+            iou=iou,
+            tile=plan["tile"],
+            overlap=plan["overlap"],
+            device=device,
+            agnostic_nms=agnostic_nms,
+            imgsz=imgsz,
+            batch=batch,
+        )
 
 
 def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
@@ -290,6 +362,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
     """
     try:
         from PIL import Image
+
         with Image.open(str(image_path)) as im:
             width, height = int(im.size[0]), int(im.size[1])
             # 5, 6, 7, 8 are the orientations that swap the axes.
@@ -300,8 +373,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
         # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
         # which is already used throughout the rest of the project for that same reason.
         try:
-            img = cv2.imdecode(np.fromfile(str(image_path), dtype=np.uint8),
-                               cv2.IMREAD_COLOR)
+            img = cv2.imdecode(np.fromfile(str(image_path), dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is None:
                 return None
             return int(img.shape[1]), int(img.shape[0])
@@ -309,32 +381,38 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
             return None
 
 
-def policy_tiling(width: int, height: int, imgsz: int, threshold_px: int = 2000,
-                      tile: int = 0, overlap: float = 0.25) -> Optional[Dict]:
+def policy_tiling(
+    width: int,
+    height: int,
+    imgsz: int,
+    threshold_px: int = 2000,
+    tile: int = 0,
+    overlap: float = 0.25,
+) -> Optional[Dict]:
     """Decides whether the photo gets tiled, and with which geometry, from its
-size alone.
+    size alone.
 
-    ``None`` means a single pass over the full image.
+        ``None`` means a single pass over the full image.
 
-    The threshold is not compared against the area but against the **longer
-    side**, because what makes a particle disappear is the rescale to
-    ``imgsz``: a 3260 px photo entering at 2080 shrinks every particle to
-    0.64x, and below the network's stride it stops existing. Tiling avoids
-    that rescale.
+        The threshold is not compared against the area but against the **longer
+        side**, because what makes a particle disappear is the rescale to
+        ``imgsz``: a 3260 px photo entering at 2080 shrinks every particle to
+        0.64x, and below the network's stride it stops existing. Tiling avoids
+        that rescale.
 
-    With ``tile=0`` the tile side comes from ``min(umbral_px, imgsz)``: this
-    way the crop enters the network without being shrunk, which is exactly
-    the goal.
+        With ``tile=0`` the tile side comes from ``min(umbral_px, imgsz)``: this
+        way the crop enters the network without being shrunk, which is exactly
+        the goal.
 
-    WHETHER to tile and AT WHICH SIZE are two different questions, and
-    mixing them up caused a failure: to force tiling, ``predict_auto``
-    passes ``umbral_px=0`` -- its way of saying "do not decide, tile" --,
-    and that yielded ``min(0, imgsz) = 0``, which the clamp raised to 256.
-    On a 4096x3072 photo that is 336 tiles of 256 px: extremely slow and
-    with ZERO detections, because each tile gets rescaled 8x up to imgsz and
-    the model sees nothing resembling what it was trained on. With
-    umbral_px at 0 the size is governed by imgsz, the only thing that truly
-    determines it.
+        WHETHER to tile and AT WHICH SIZE are two different questions, and
+        mixing them up caused a failure: to force tiling, ``predict_auto``
+        passes ``umbral_px=0`` -- its way of saying "do not decide, tile" --,
+        and that yielded ``min(0, imgsz) = 0``, which the clamp raised to 256.
+        On a 4096x3072 photo that is 336 tiles of 256 px: extremely slow and
+        with ZERO detections, because each tile gets rescaled 8x up to imgsz and
+        the model sees nothing resembling what it was trained on. With
+        umbral_px at 0 the size is governed by imgsz, the only thing that truly
+        determines it.
     """
     side = max(int(width), int(height))
     if side <= int(threshold_px):
@@ -348,8 +426,13 @@ size alone.
     overlap = min(max(float(overlap), 0.0), 0.9)
     step = max(1, int(round(t * (1.0 - overlap))))
     n = len(_tile_starts(int(width), t, step)) * len(_tile_starts(int(height), t, step))
-    return {"tile": t, "overlap": overlap, "n_tiles": n,
-            "lado": side, "umbral_px": int(threshold_px)}
+    return {
+        "tile": t,
+        "overlap": overlap,
+        "n_tiles": n,
+        "lado": side,
+        "umbral_px": int(threshold_px),
+    }
 
 
 def _tile_starts(total: int, tile: int, step: int) -> List[int]:
@@ -363,9 +446,12 @@ def _tile_starts(total: int, tile: int, step: int) -> List[int]:
 
 
 def _box_iou(a: Detection, b: Detection) -> float:
-    x1 = max(a.x1, b.x1); y1 = max(a.y1, b.y1)
-    x2 = min(a.x2, b.x2); y2 = min(a.y2, b.y2)
-    iw = max(0.0, x2 - x1); ih = max(0.0, y2 - y1)
+    x1 = max(a.x1, b.x1)
+    y1 = max(a.y1, b.y1)
+    x2 = min(a.x2, b.x2)
+    y2 = min(a.y2, b.y2)
+    iw = max(0.0, x2 - x1)
+    ih = max(0.0, y2 - y1)
     inter = iw * ih
     if inter <= 0:
         return 0.0
@@ -373,8 +459,7 @@ def _box_iou(a: Detection, b: Detection) -> float:
     return inter / union if union > 0 else 0.0
 
 
-def _nms(dets: List[Detection], iou_thr: float = 0.45,
-         agnostic: bool = True) -> List[Detection]:
+def _nms(dets: List[Detection], iou_thr: float = 0.45, agnostic: bool = True) -> List[Detection]:
     """Greedy NMS over the detections of all tiles. Keeps the one with the highest conf."""
     order = sorted(range(len(dets)), key=lambda i: -dets[i].conf)
     keep: List[int] = []
@@ -393,8 +478,9 @@ def _nms(dets: List[Detection], iou_thr: float = 0.45,
     return [dets[i] for i in keep]
 
 
-def read_yolo_txt(txt_path: str | Path, img_w: int, img_h: int,
-                  class_names: Dict[int, str]) -> List[Detection]:
+def read_yolo_txt(
+    txt_path: str | Path, img_w: int, img_h: int, class_names: Dict[int, str]
+) -> List[Detection]:
     """Reads a YOLO .txt (detection or seg polygon) and returns Detection with conf=1."""
     out: List[Detection] = []
     p = Path(txt_path)
@@ -408,38 +494,56 @@ def read_yolo_txt(txt_path: str | Path, img_w: int, img_h: int,
             cls = int(float(parts[0]))
             nums = [float(x) for x in parts[1:]]
             if len(nums) >= 6 and len(nums) % 2 == 0:
-                pts = [(nums[k] * img_w, nums[k + 1] * img_h)
-                       for k in range(0, len(nums), 2)]
-                xs = [pt[0] for pt in pts]; ys = [pt[1] for pt in pts]
-                x1, x2 = min(xs), max(xs); y1, y2 = min(ys), max(ys)
+                pts = [(nums[k] * img_w, nums[k + 1] * img_h) for k in range(0, len(nums), 2)]
+                xs = [pt[0] for pt in pts]
+                ys = [pt[1] for pt in pts]
+                x1, x2 = min(xs), max(xs)
+                y1, y2 = min(ys), max(ys)
                 import cv2 as _cv2
+
                 mask = np.zeros((img_h, img_w), dtype=np.uint8)
                 arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
                 _cv2.fillPoly(mask, [arr], 1)
-                out.append(Detection(
-                    class_id=cls,
-                    class_name=class_names.get(cls, str(cls)),
-                    conf=1.0,
-                    x1=x1, y1=y1, x2=x2, y2=y2,
-                    mask=mask.astype(bool),
-                    mask_source="gt-polygon",
-                ))
+                out.append(
+                    Detection(
+                        class_id=cls,
+                        class_name=class_names.get(cls, str(cls)),
+                        conf=1.0,
+                        x1=x1,
+                        y1=y1,
+                        x2=x2,
+                        y2=y2,
+                        mask=mask.astype(bool),
+                        mask_source="gt-polygon",
+                    )
+                )
             else:
                 if len(nums) < 4:
                     continue
                 cx, cy, w, h = nums[:4]
-                cx *= img_w; cy *= img_h; w *= img_w; h *= img_h
-                x1 = cx - w / 2; y1 = cy - h / 2
-                x2 = cx + w / 2; y2 = cy + h / 2
-                out.append(Detection(
-                    class_id=cls,
-                    class_name=class_names.get(cls, str(cls)),
-                    conf=1.0,
-                    x1=x1, y1=y1, x2=x2, y2=y2,
-                ))
+                cx *= img_w
+                cy *= img_h
+                w *= img_w
+                h *= img_h
+                x1 = cx - w / 2
+                y1 = cy - h / 2
+                x2 = cx + w / 2
+                y2 = cy + h / 2
+                out.append(
+                    Detection(
+                        class_id=cls,
+                        class_name=class_names.get(cls, str(cls)),
+                        conf=1.0,
+                        x1=x1,
+                        y1=y1,
+                        x2=x2,
+                        y2=y2,
+                    )
+                )
     except Exception:
         pass
     return out
+
 
 def find_gt_for_image(image_path: Path, gt_folder: Optional[Path]) -> Optional[Path]:
     """Finds the GT .txt next to the image, in the sibling /labels, or in gt_folder."""
@@ -471,7 +575,7 @@ def compute_box_size_um(det: Detection, um_per_px: Optional[float]) -> None:
     if um_per_px is None or um_per_px <= 0:
         return
     area_px2 = det.w * det.h
-    area_um2 = area_px2 * (um_per_px ** 2)
+    area_um2 = area_px2 * (um_per_px**2)
     # equivalent diameter (circle with the same area)
     diam_um = 2.0 * (area_um2 / np.pi) ** 0.5
     det.diam_um = diam_um
@@ -489,9 +593,15 @@ class YoloSegModel(YoloModel):
         super().__init__(weights_path, alias=alias)
         self._seg_task = "segment"
 
-    def predict(self, image_path: str | Path, conf: float = 0.25, iou: float = 0.45,
-                imgsz: int = 640, device: str = "0",
-                auto_fallback: bool = True) -> List[Detection]:
+    def predict(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 640,
+        device: str = "0",
+        auto_fallback: bool = True,
+    ) -> List[Detection]:
         self.load()
         sizes = [int(imgsz)]
         if auto_fallback:
@@ -500,12 +610,18 @@ class YoloSegModel(YoloModel):
         for i, sz in enumerate(sizes):
             try:
                 res = self._model.predict(
-                    source=str(image_path), conf=conf, iou=iou, imgsz=sz,
-                    device=device, verbose=False, save=False, task="segment",
+                    source=str(image_path),
+                    conf=conf,
+                    iou=iou,
+                    imgsz=sz,
+                    device=device,
+                    verbose=False,
+                    save=False,
+                    task="segment",
                     max_det=self.MAX_DET,
                 )
                 self.last_imgsz = sz
-                self.last_fallback = (i > 0)
+                self.last_fallback = i > 0
                 break
             except Exception as e:
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
@@ -531,13 +647,18 @@ class YoloSegModel(YoloModel):
             mask_source = "yolo-seg"
             if masks is not None and idx < len(masks):
                 m = masks[idx]
-                mask = (m > 0.5)
-            out.append(Detection(
-                class_id=int(cls),
-                class_name=self.names.get(int(cls), str(int(cls))),
-                conf=float(c),
-                x1=float(x1), y1=float(y1), x2=float(x2), y2=float(y2),
-                mask=mask,
-                mask_source=mask_source if mask is not None else None,
-            ))
+                mask = m > 0.5
+            out.append(
+                Detection(
+                    class_id=int(cls),
+                    class_name=self.names.get(int(cls), str(int(cls))),
+                    conf=float(c),
+                    x1=float(x1),
+                    y1=float(y1),
+                    x2=float(x2),
+                    y2=float(y2),
+                    mask=mask,
+                    mask_source=mask_source if mask is not None else None,
+                )
+            )
         return out

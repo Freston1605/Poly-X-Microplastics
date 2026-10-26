@@ -19,6 +19,7 @@ Mac has no MPS and stays on CPU.
 
 That is why the default device cannot be a constant: it is decided by looking
 at what is available, in this order -- CUDA, MPS, CPU."""
+
 from __future__ import annotations
 
 import os
@@ -79,11 +80,12 @@ def open_in_system(path_2: str | Path) -> bool:
         return False
     try:
         if IS_WINDOWS:
-            os.startfile(str(path_2))            # type: ignore[attr-defined]
+            os.startfile(str(path_2))  # type: ignore[attr-defined]
             return True
         command = ["open"] if IS_MAC else ["xdg-open"]
-        subprocess.Popen(command + [str(path_2)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            command + [str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         return True
     except (OSError, AttributeError, subprocess.SubprocessError):
         return False
@@ -133,8 +135,11 @@ def label_devices() -> str:
     means nothing and offering it only leads to error.
     """
     if IS_MAC:
-        return "Dispositivo (mps/cpu):" if architecture_mac() == "Apple Silicon" \
+        return (
+            "Dispositivo (mps/cpu):"
+            if architecture_mac() == "Apple Silicon"
             else "Dispositivo (cpu):"
+        )
     return "Dispositivo (0/cpu):"
 
 
@@ -172,6 +177,7 @@ def set_identity_app(app_id: str) -> bool:
         return False
     try:
         import ctypes
+
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
         return True
     except (AttributeError, OSError):
@@ -183,6 +189,7 @@ def set_identity_app(app_id: str) -> bool:
 # The script that applies the update differs per system because it
 # has to talk to each one's package manager and shell. The
 # name is resolved here so `updates.py` and `launcher.py` do not repeat it.
+
 
 def name_updater() -> str:
     if IS_WINDOWS:
@@ -207,18 +214,24 @@ def launch_updater(path_2: str | Path) -> bool:
             # 'start' with an empty title: without that "" the first quoted
             # argument is taken as the window title and the script
             # never gets to run.
-            subprocess.Popen(["cmd", "/c", "start", "", str(path_2)],
-                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            subprocess.Popen(
+                ["cmd", "/c", "start", "", str(path_2)],
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
             return True
         if IS_MAC:
             # Terminal.app so the user can see the download progress.
             # Running it in the background would leave the application apparently
             # hung for several minutes without saying anything.
-            subprocess.Popen(["open", "-a", "Terminal", str(path_2)],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(
+                ["open", "-a", "Terminal", str(path_2)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             return True
-        subprocess.Popen(["/bin/bash", str(path_2)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            ["/bin/bash", str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         return True
     except (OSError, subprocess.SubprocessError):
         return False
@@ -253,9 +266,9 @@ def environment_python(root: Optional[Path] = None) -> Optional[Path]:
     yet.
     """
     from polyx.core.paths import ROOT
+
     base = Path(root) if root else ROOT
-    candidates_2 = [base / ".venv" / "Scripts" / "python.exe",
-                  base / ".venv" / "bin" / "python"]
+    candidates_2 = [base / ".venv" / "Scripts" / "python.exe", base / ".venv" / "bin" / "python"]
     for c in candidates_2:
         if c.is_file():
             return c

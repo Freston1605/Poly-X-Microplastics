@@ -7,6 +7,7 @@ corrections as YOLO .txt.
 
 Reuses ``AnnotCanvas`` (the same powerful editor as the manual GT page).
 """
+
 from __future__ import annotations
 
 import shutil
@@ -45,7 +46,7 @@ class ReviewDialog(QDialog):
         self.setWindowTitle(tr("Revisión de detecciones — Poly-X"))
         self.setModal(False)
         self._current_idx = -1
-        self._results: List = []     # ImageResult of the active model
+        self._results: List = []  # ImageResult of the active model
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
@@ -63,8 +64,7 @@ class ReviewDialog(QDialog):
         top.addWidget(QLabel(tr("Clase (para nuevas cajas):")))
         self.combo_class = QComboBox()
         self.combo_class.addItems(DEFAULT_CLASSES)
-        self.combo_class.currentIndexChanged.connect(
-            lambda i: self.canvas.set_active_class(i))
+        self.combo_class.currentIndexChanged.connect(lambda i: self.canvas.set_active_class(i))
         top.addWidget(self.combo_class)
 
         btn_fit = QPushButton(tr("Ajustar (F)"))
@@ -76,7 +76,8 @@ class ReviewDialog(QDialog):
         top.addStretch(1)
         self.lbl_counts = QLabel("—")
         self.lbl_counts.setStyleSheet(
-            f"color: {T.INK2}; font-weight: 600; font-size: 11pt; border: none;")
+            f"color: {T.INK2}; font-weight: 600; font-size: 11pt; border: none;"
+        )
         top.addWidget(self.lbl_counts)
         root.addLayout(top)
 
@@ -104,8 +105,12 @@ class ReviewDialog(QDialog):
         root.addLayout(body, 1)
 
         # ── Canvas status ──
-        self.lbl_status = QLabel(tr("Click y arrastra para dibujar · rueda: zoom · "
-                                 "Espacio+arrastre: mover · Supr: borrar caja."))
+        self.lbl_status = QLabel(
+            tr(
+                "Click y arrastra para dibujar · rueda: zoom · "
+                "Espacio+arrastre: mover · Supr: borrar caja."
+            )
+        )
         self.lbl_status.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         self.canvas.status_changed.connect(self.lbl_status.setText)
         root.addWidget(self.lbl_status)
@@ -124,14 +129,16 @@ class ReviewDialog(QDialog):
         self.btn_good = QPushButton(tr("✓  Buena"))
         self.btn_good.setStyleSheet(
             f"background: {T.OK}; color: white; border: none; "
-            f"border-radius: 6px; padding: 8px 18px; font-weight: 700;")
+            f"border-radius: 6px; padding: 8px 18px; font-weight: 700;"
+        )
         self.btn_good.setCursor(Qt.PointingHandCursor)
         self.btn_good.clicked.connect(lambda: self._set_verdict("buena"))
         btns.addWidget(self.btn_good)
         self.btn_bad = QPushButton(tr("✗  Mala"))
         self.btn_bad.setStyleSheet(
             f"background: {T.ERR}; color: white; border: none; "
-            f"border-radius: 6px; padding: 8px 18px; font-weight: 700;")
+            f"border-radius: 6px; padding: 8px 18px; font-weight: 700;"
+        )
         self.btn_bad.setCursor(Qt.PointingHandCursor)
         self.btn_bad.clicked.connect(lambda: self._set_verdict("mala"))
         btns.addWidget(self.btn_bad)
@@ -140,8 +147,11 @@ class ReviewDialog(QDialog):
         b_dataset = QPushButton(tr("Enviar al dataset de reentrenamiento"))
         b_dataset.setIcon(iconos.icon("exportar", 15, T.INK2))
         b_dataset.setToolTip(
-            tr("Copia esta imagen y sus cajas corregidas a dataset_correcciones/ "
-            "para mejorar el modelo con fine-tuning (active learning)."))
+            tr(
+                "Copia esta imagen y sus cajas corregidas a dataset_correcciones/ "
+                "para mejorar el modelo con fine-tuning (active learning)."
+            )
+        )
         b_dataset.setCursor(Qt.PointingHandCursor)
         b_dataset.clicked.connect(self._send_to_dataset)
         btns.addWidget(b_dataset)
@@ -149,7 +159,8 @@ class ReviewDialog(QDialog):
         b_save.setIcon(iconos.icon("guardar", 15, T.ON_ACCENT))
         b_save.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
-            f"border-radius: 6px; padding: 8px 16px; font-weight: 600;")
+            f"border-radius: 6px; padding: 8px 16px; font-weight: 600;"
+        )
         b_save.setCursor(Qt.PointingHandCursor)
         b_save.clicked.connect(self._save_current)
         btns.addWidget(b_save)
@@ -193,9 +204,11 @@ class ReviewDialog(QDialog):
             name = Path(res.image_path).name
             mark = ""
             if res.verdict == "buena":
-                mark = "✓ "; good += 1
+                mark = "✓ "
+                good += 1
             elif res.verdict == "mala":
-                mark = "✗ "; bad += 1
+                mark = "✗ "
+                bad += 1
             it = QListWidgetItem(f"{mark}{name}")
             if res.verdict == "buena":
                 it.setForeground(QColor(T.OK))
@@ -204,8 +217,8 @@ class ReviewDialog(QDialog):
             self.list.addItem(it)
         self.list.blockSignals(False)
         self.setWindowTitle(
-            f"Revisión de detecciones — {len(self._results)} imágenes "
-            f"(✓{good} ✗{bad}) — Poly-X")
+            f"Revisión de detecciones — {len(self._results)} imágenes (✓{good} ✗{bad}) — Poly-X"
+        )
 
     def _on_list_row(self, row: int):
         # auto-save the verdict/boxes in memory of the previous image is already done
@@ -253,8 +266,7 @@ class ReviewDialog(QDialog):
     def _go_next(self):
         if self.list.count() == 0:
             return
-        self.list.setCurrentRow(
-            min(self.list.count() - 1, self.list.currentRow() + 1))
+        self.list.setCurrentRow(min(self.list.count() - 1, self.list.currentRow() + 1))
         self.canvas.setFocus()
 
     # ── Saving corrections ──
@@ -306,15 +318,18 @@ class ReviewDialog(QDialog):
         path, dets, W, H = cur
         if not dets:
             QMessageBox.information(
-                self, tr("Dataset"),
-                tr("No hay cajas en esta imagen. Corrige o dibuja antes de enviarla."))
+                self,
+                tr("Dataset"),
+                tr("No hay cajas en esta imagen. Corrige o dibuja antes de enviarla."),
+            )
             return
         root = Path(__file__).resolve().parents[4] / "dataset_correcciones"
         (root / "images").mkdir(parents=True, exist_ok=True)
         (root / "labels").mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, root / "images" / path.name)
         (root / "labels" / f"{path.stem}.txt").write_text(
-            "\n".join(self._yolo_lines(dets, W, H)), encoding="utf-8")
+            "\n".join(self._yolo_lines(dets, W, H)), encoding="utf-8"
+        )
         cls_path = root / "classes.txt"
         if not cls_path.exists():
             cls_path.write_text("\n".join(DEFAULT_CLASSES), encoding="utf-8")
@@ -322,4 +337,5 @@ class ReviewDialog(QDialog):
         self.lbl_status.setText(
             f"Enviada al dataset de reentrenamiento — {n} imagen(es) "
             f"acumuladas en dataset_correcciones/. Cuando juntes ~50, haz "
-            f"fine-tuning en el Entrenador.")
+            f"fine-tuning en el Entrenador."
+        )

@@ -1,4 +1,5 @@
 """Page 9 — Detection report in HTML."""
+
 from __future__ import annotations
 
 import shutil
@@ -31,12 +32,12 @@ from ._base import DetectorPage
 class ReportPage(DetectorPage):
     STEP_N = 9
     STEP_TITLE = tr("Informe de detección")
-    STEP_DESCRIPTION = (
-        tr("Genera un informe HTML autocontenido (todas las imágenes embebidas en base64, "
+    STEP_DESCRIPTION = tr(
+        "Genera un informe HTML autocontenido (todas las imágenes embebidas en base64, "
         "así no se rompen al enviarlo a otra persona) con métodos, métricas, gráficos, "
         "galería comparativa, conteo por muestra y análisis de errores. Puedes exportarlo "
         "directamente a PDF para enviarlo, o guardar aparte cada foto con sus etiquetas "
-        "dibujadas.")
+        "dibujadas."
     )
 
     def __init__(self, state, parent=None):
@@ -45,10 +46,12 @@ class ReportPage(DetectorPage):
         # ── Card: Generate report ──
         c1, l1 = self.card(tr("Generar informe"), "texto")
         info = QLabel(
-            tr("Después de ejecutar al menos una detección, presiona <b>Generar reporte HTML</b> "
-            "(se crea <code>informe_deteccion.html</code> dentro de la carpeta del run y se abre "
-            "en tu navegador) o <b>Exportar a PDF</b> para obtener un archivo listo para enviar. "
-            "Todas las imágenes van embebidas en base64, por lo que el archivo es autocontenido.")
+            tr(
+                "Después de ejecutar al menos una detección, presiona <b>Generar reporte HTML</b> "
+                "(se crea <code>informe_deteccion.html</code> dentro de la carpeta del run y se abre "
+                "en tu navegador) o <b>Exportar a PDF</b> para obtener un archivo listo para enviar. "
+                "Todas las imágenes van embebidas en base64, por lo que el archivo es autocontenido."
+            )
         )
         info.setWordWrap(True)
         info.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
@@ -97,29 +100,31 @@ class ReportPage(DetectorPage):
 
         # ── Report content ──
         c2, l2 = self.card(tr("Contenido del reporte"), "lista")
-        contents = QLabel(tr(
-            "<ol>"
-            "<li><b>Resumen</b> con detecciones, confianza media y tamaño medio.</li>"
-            "<li><b>Métodos</b> — modelo, parámetros, calibración y dispositivo.</li>"
-            "<li><b>Calibración de escala</b> — de dónde salió el µm/px de cada foto.</li>"
-            "<li><b>Forma y talla</b> — reparto fibra/fragmento, distribución de tallas, "
-            "la mayor y la menor, recuento por imagen y cómo se mide el largo.</li>"
-            "<li><b>Talla por carpeta y por foto</b> (opcional, desmarcada de fábrica) — "
-            "compara el tamaño entre las carpetas del lote y, dentro de cada una, entre "
-            "sus fotos, con una prueba de significancia. Sirve cuando cada carpeta es un "
-            "sitio de muestreo distinto.</li>"
-            "<li><b>Fichas</b> — una muestra de partículas con su medición dibujada.</li>"
-            "<li><b>Resultados generales</b> — clases, confianza y tamaños.</li>"
-            "<li><b>Resumen por modelo</b> (tabla comparativa)</li>"
-            "<li><b>Análisis de errores</b> (solo si hay ground truth) — matriz de "
-            "confusión y P/R/F1 por clase.</li>"
-            "<li><b>Comparación entre modelos</b></li>"
-            "<li><b>Galería por imagen</b> — predicción y ground truth lado a lado.</li>"
-            "<li><b>Conteo por muestra y tipo de plástico</b> — por imagen, por tramo "
-            "y por estación.</li>"
-            "<li><b>Referencias bibliográficas</b></li>"
-            "</ol>"
-            "<p>Todas las secciones son opcionales: se eligen arriba.</p>")
+        contents = QLabel(
+            tr(
+                "<ol>"
+                "<li><b>Resumen</b> con detecciones, confianza media y tamaño medio.</li>"
+                "<li><b>Métodos</b> — modelo, parámetros, calibración y dispositivo.</li>"
+                "<li><b>Calibración de escala</b> — de dónde salió el µm/px de cada foto.</li>"
+                "<li><b>Forma y talla</b> — reparto fibra/fragmento, distribución de tallas, "
+                "la mayor y la menor, recuento por imagen y cómo se mide el largo.</li>"
+                "<li><b>Talla por carpeta y por foto</b> (opcional, desmarcada de fábrica) — "
+                "compara el tamaño entre las carpetas del lote y, dentro de cada una, entre "
+                "sus fotos, con una prueba de significancia. Sirve cuando cada carpeta es un "
+                "sitio de muestreo distinto.</li>"
+                "<li><b>Fichas</b> — una muestra de partículas con su medición dibujada.</li>"
+                "<li><b>Resultados generales</b> — clases, confianza y tamaños.</li>"
+                "<li><b>Resumen por modelo</b> (tabla comparativa)</li>"
+                "<li><b>Análisis de errores</b> (solo si hay ground truth) — matriz de "
+                "confusión y P/R/F1 por clase.</li>"
+                "<li><b>Comparación entre modelos</b></li>"
+                "<li><b>Galería por imagen</b> — predicción y ground truth lado a lado.</li>"
+                "<li><b>Conteo por muestra y tipo de plástico</b> — por imagen, por tramo "
+                "y por estación.</li>"
+                "<li><b>Referencias bibliográficas</b></li>"
+                "</ol>"
+                "<p>Todas las secciones son opcionales: se eligen arriba.</p>"
+            )
         )
         contents.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none;")
         contents.setTextFormat(Qt.RichText)
@@ -137,13 +142,16 @@ class ReportPage(DetectorPage):
         """
         c, l = self.card(tr("Guardar las fotos con las etiquetas"), "imagenes")
 
-        aid = QLabel(tr(
-            "Guarda cada foto analizada con sus cajas dibujadas, en su resolución "
-            "original. Eliges una carpeta y dentro se crea una subcarpeta por cada "
-            "opción que marques (<code>conteo_manual</code>, "
-            "<code>deteccion_modelo</code>, <code>ambas_superpuestas</code>), así "
-            "no se mezclan. Respeta el <b>alcance</b> elegido arriba: si marcaste "
-            "fotos concretas, solo se guardan esas."))
+        aid = QLabel(
+            tr(
+                "Guarda cada foto analizada con sus cajas dibujadas, en su resolución "
+                "original. Eliges una carpeta y dentro se crea una subcarpeta por cada "
+                "opción que marques (<code>conteo_manual</code>, "
+                "<code>deteccion_modelo</code>, <code>ambas_superpuestas</code>), así "
+                "no se mezclan. Respeta el <b>alcance</b> elegido arriba: si marcaste "
+                "fotos concretas, solo se guardan esas."
+            )
+        )
         aid.setWordWrap(True)
         aid.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
         l.addWidget(aid)
@@ -222,32 +230,45 @@ class ReportPage(DetectorPage):
     def _save_photos(self):
         if not self._check_results():
             return
-        if not any(c.isChecked() for c in (self.chk_f_manual, self.chk_f_model,
-                                           self.chk_f_both)):
+        if not any(c.isChecked() for c in (self.chk_f_manual, self.chk_f_model, self.chk_f_both)):
             QMessageBox.warning(
-                self, tr("Nada que guardar"),
-                tr("Marca al menos una de las tres opciones: etiquetas manuales, "
-                   "detecciones del modelo, o las dos superpuestas."))
+                self,
+                tr("Nada que guardar"),
+                tr(
+                    "Marca al menos una de las tres opciones: etiquetas manuales, "
+                    "detecciones del modelo, o las dos superpuestas."
+                ),
+            )
             return
         if self.rb_chosen.isChecked() and not self._photos_marked():
             QMessageBox.warning(
-                self, tr("Sin fotos marcadas"),
-                tr("El alcance está en 'solo las fotos que marque' y no hay "
-                   "ninguna marcada."))
+                self,
+                tr("Sin fotos marcadas"),
+                tr("El alcance está en 'solo las fotos que marque' y no hay ninguna marcada."),
+            )
             return
 
         tasks = self._photos_to_export()
         if not tasks:
             QMessageBox.warning(
-                self, tr("Nada que guardar"),
-                tr("No se encontró ninguna imagen anotada en disco para lo que "
-                   "pediste.\n\nSi marcaste 'etiquetas manuales', recuerda que "
-                   "solo existen para las fotos que tienen Ground Truth."))
+                self,
+                tr("Nada que guardar"),
+                tr(
+                    "No se encontró ninguna imagen anotada en disco para lo que "
+                    "pediste.\n\nSi marcaste 'etiquetas manuales', recuerda que "
+                    "solo existen para las fotos que tienen Ground Truth."
+                ),
+            )
             return
 
-        base = self.state.run_dir if (self.state.run_dir and self.state.run_dir.exists()) else Path.home()
+        base = (
+            self.state.run_dir
+            if (self.state.run_dir and self.state.run_dir.exists())
+            else Path.home()
+        )
         destination = QFileDialog.getExistingDirectory(
-            self, tr("Carpeta donde guardar las fotos etiquetadas"), str(base))
+            self, tr("Carpeta donde guardar las fotos etiquetadas"), str(base)
+        )
         if not destination:
             return
         destination = Path(destination)
@@ -268,7 +289,8 @@ class ReportPage(DetectorPage):
                 except OSError as e:
                     failures.append(f"{folder}/{name_2}: {e}")
             msg = "✓ " + tr("{} imagen(es) en {} carpeta(s) dentro de {}").format(
-                copied, len(used), destination)
+                copied, len(used), destination
+            )
             if failures:
                 msg += " · " + tr("{} fallaron").format(len(failures))
             self.lbl_photos.setText(msg)
@@ -278,8 +300,9 @@ class ReportPage(DetectorPage):
                 except Exception:
                     pass
             if failures:
-                QMessageBox.warning(self, tr("Algunas no se pudieron guardar"),
-                                    "\n".join(failures[:12]))
+                QMessageBox.warning(
+                    self, tr("Algunas no se pudieron guardar"), "\n".join(failures[:12])
+                )
         finally:
             self.btn_photos.setEnabled(True)
 
@@ -288,11 +311,14 @@ class ReportPage(DetectorPage):
         """Card to choose whether the report covers the whole job or a few photos."""
         c, l = self.card(tr("Alcance del informe"), "diana")
 
-        aid = QLabel(tr(
-            "Puedes generar el informe del <b>trabajo completo</b>, solo de las "
-            "<b>fotos que elijas</b>, o ambos de una vez. Las cifras, los gráficos "
-            "y la matriz de confusión se recalculan sobre lo que elijas, así que "
-            "el informe siempre describe exactamente las fotos que muestra."))
+        aid = QLabel(
+            tr(
+                "Puedes generar el informe del <b>trabajo completo</b>, solo de las "
+                "<b>fotos que elijas</b>, o ambos de una vez. Las cifras, los gráficos "
+                "y la matriz de confusión se recalculan sobre lo que elijas, así que "
+                "el informe siempre describe exactamente las fotos que muestra."
+            )
+        )
         aid.setWordWrap(True)
         aid.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
         l.addWidget(aid)
@@ -335,8 +361,9 @@ class ReportPage(DetectorPage):
         super_refresh = getattr(super(), "refresh", None)
         if callable(super_refresh):
             super_refresh()
-        paths = sorted({r.image_path for rs in self.state.results.values() for r in rs},
-                       key=lambda p: p.name)
+        paths = sorted(
+            {r.image_path for rs in self.state.results.values() for r in rs}, key=lambda p: p.name
+        )
         previous = self._photos_marked()
         self.lst_photos.blockSignals(True)
         self.lst_photos.clear()
@@ -382,9 +409,12 @@ class ReportPage(DetectorPage):
         """Warns when no detections have been run yet."""
         if not self.state.results:
             QMessageBox.warning(
-                self, tr("Sin resultados"),
-                tr("Aún no has ejecutado ninguna detección.\n"
-                "Ve a la pestaña Ejecutar e inicia el análisis primero.")
+                self,
+                tr("Sin resultados"),
+                tr(
+                    "Aún no has ejecutado ninguna detección.\n"
+                    "Ve a la pestaña Ejecutar e inicia el análisis primero."
+                ),
             )
             return False
         return True
@@ -398,24 +428,30 @@ class ReportPage(DetectorPage):
         uncheck.
         """
         c, l = self.card(tr("Qué incluir en el informe"), "reporte")
-        aid = QLabel(tr(
-            "El informe completo es largo. Desmarca lo que no necesites: las secciones "
-            "se renumeran solas y el índice se ajusta. Una sección marcada que no tenga "
-            "datos —errores sin ground truth, por ejemplo— se omite igualmente."))
+        aid = QLabel(
+            tr(
+                "El informe completo es largo. Desmarca lo que no necesites: las secciones "
+                "se renumeran solas y el índice se ajusta. Una sección marcada que no tenga "
+                "datos —errores sin ground truth, por ejemplo— se omite igualmente."
+            )
+        )
         aid.setWordWrap(True)
         aid.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
         l.addWidget(aid)
 
         row_2 = QHBoxLayout()
         row_2.setSpacing(8)
-        for clue, label in (("completo", tr("Completo")),
-                                ("resumen", tr("Resumen breve")),
-                                ("metodologico", tr("Metodológico"))):
+        for clue, label in (
+            ("completo", tr("Completo")),
+            ("resumen", tr("Resumen breve")),
+            ("metodologico", tr("Metodológico")),
+        ):
             b = QPushButton(label)
             b.setCursor(Qt.PointingHandCursor)
             b.setStyleSheet(
                 f"background: white; color: {T.INK2}; border: 1px solid #d0d7de; "
-                f"border-radius: 6px; padding: 5px 12px;")
+                f"border-radius: 6px; padding: 5px 12px;"
+            )
             b.clicked.connect(lambda _=False, k=clue: self._apply_preset(k))
             row_2.addWidget(b)
         row_2.addStretch(1)
@@ -433,8 +469,7 @@ class ReportPage(DetectorPage):
 
         # The gallery is what makes the file large: each photo is embedded in
         # base64 inside the HTML itself.
-        self.chk_sections["galeria"].setText(
-            tr("Galería por imagen  (es lo que más pesa)"))
+        self.chk_sections["galeria"].setText(tr("Galería por imagen  (es lo que más pesa)"))
 
         # Unlike the rest, this one is not checked by default: it only makes
         # sense when the analyzed images are spread across several
@@ -454,7 +489,8 @@ class ReportPage(DetectorPage):
     def _write_html(self, out_path: Path, solo_images_2=None) -> Path:
         """Generates the self-contained HTML (images in base64) at `out_path`."""
         generate_report(
-            self.state, out_path,
+            self.state,
+            out_path,
             sections=self._sections_marked(),
             solo_images=solo_images_2,
         )
@@ -471,18 +507,21 @@ class ReportPage(DetectorPage):
         ask_marked = self.rb_chosen.isChecked() or self.rb_both.isChecked()
         if ask_marked and not marked:
             QMessageBox.warning(
-                self, tr("Sin fotos marcadas"),
-                tr("Elegiste generar el informe de fotos concretas, pero no hay "
-                   "ninguna marcada.\n\nMarca al menos una en la lista, o cambia "
-                   "el alcance a 'Trabajo completo'."))
+                self,
+                tr("Sin fotos marcadas"),
+                tr(
+                    "Elegiste generar el informe de fotos concretas, pero no hay "
+                    "ninguna marcada.\n\nMarca al menos una en la lista, o cambia "
+                    "el alcance a 'Trabajo completo'."
+                ),
+            )
             return []
 
         jobs = []
         if self.rb_complete.isChecked() or self.rb_both.isChecked():
             jobs.append(("", None, tr("trabajo completo")))
         if ask_marked:
-            jobs.append(("_seleccion", marked,
-                             tr("{} foto(s) marcada(s)").format(len(marked))))
+            jobs.append(("_seleccion", marked, tr("{} foto(s) marcada(s)").format(len(marked))))
         return jobs
 
     def _generate(self):
@@ -510,7 +549,8 @@ class ReportPage(DetectorPage):
                 self._write_html(out_path, solo_images_2=photos)
                 generated.append(out_path)
             self.lbl_status.setText(
-                "✓ " + tr("{} informe(s) generado(s) en {}").format(len(generated), out_dir))
+                "✓ " + tr("{} informe(s) generado(s) en {}").format(len(generated), out_dir)
+            )
             for p in generated:
                 try:
                     open_in_system(str(p))
@@ -528,10 +568,13 @@ class ReportPage(DetectorPage):
 
         if not pdf_export.is_available():
             QMessageBox.warning(
-                self, tr("PDF no disponible"),
-                tr("Para exportar a PDF se necesita QtWebEngine (incluido en PySide6-Addons).\n\n"
-                "Alternativa: pulsa 'Generar reporte HTML' y, en el navegador, usa\n"
-                "Ctrl+P → 'Guardar como PDF'.")
+                self,
+                tr("PDF no disponible"),
+                tr(
+                    "Para exportar a PDF se necesita QtWebEngine (incluido en PySide6-Addons).\n\n"
+                    "Alternativa: pulsa 'Generar reporte HTML' y, en el navegador, usa\n"
+                    "Ctrl+P → 'Guardar como PDF'."
+                ),
             )
             return
 
@@ -540,7 +583,11 @@ class ReportPage(DetectorPage):
             return
 
         # Run folder as base; if it does not exist, next to the chosen PDF
-        base_dir = self.state.run_dir if (self.state.run_dir and self.state.run_dir.exists()) else Path.home()
+        base_dir = (
+            self.state.run_dir
+            if (self.state.run_dir and self.state.run_dir.exists())
+            else Path.home()
+        )
         suggested = str(base_dir / "informe_deteccion.pdf")
         path, _ = QFileDialog.getSaveFileName(
             self, "Guardar informe como PDF", suggested, "PDF (*.pdf)"
@@ -548,11 +595,17 @@ class ReportPage(DetectorPage):
         if not path:
             return
         pdf_base = Path(path)
-        html_dir = self.state.run_dir if (self.state.run_dir and self.state.run_dir.exists()) else pdf_base.parent
+        html_dir = (
+            self.state.run_dir
+            if (self.state.run_dir and self.state.run_dir.exists())
+            else pdf_base.parent
+        )
 
         self.btn_pdf.setEnabled(False)
         self.btn_gen.setEnabled(False)
-        self.lbl_status.setText(tr("Generando PDF… (renderizando con el motor del navegador, unos segundos)"))
+        self.lbl_status.setText(
+            tr("Generando PDF… (renderizando con el motor del navegador, unos segundos)")
+        )
         QApplication.processEvents()
         try:
             facts, failed = [], []
@@ -561,8 +614,11 @@ class ReportPage(DetectorPage):
                 # With `"ambos"` two PDFs are written: the name chosen by the
                 # user for the complete one, and that same name with a suffix for the
                 # selection. Reusing the name would overwrite the first one.
-                pdf_path = (pdf_base if not suffix_2
-                            else pdf_base.with_name(pdf_base.stem + suffix_2 + ".pdf"))
+                pdf_path = (
+                    pdf_base
+                    if not suffix_2
+                    else pdf_base.with_name(pdf_base.stem + suffix_2 + ".pdf")
+                )
                 self._write_html(html_path, solo_images_2=photos)
                 if pdf_export.html_to_pdf(html_path, pdf_path):
                     facts.append(pdf_path)
@@ -571,7 +627,8 @@ class ReportPage(DetectorPage):
 
             if facts:
                 self.lbl_status.setText(
-                    "✓ " + tr("{} PDF generado(s) en {}").format(len(facts), pdf_base.parent))
+                    "✓ " + tr("{} PDF generado(s) en {}").format(len(facts), pdf_base.parent)
+                )
                 for p in facts:
                     try:
                         open_in_system(str(p))
@@ -580,10 +637,14 @@ class ReportPage(DetectorPage):
             if failed:
                 self.lbl_status.setText(tr("✗ No se pudo generar todo el PDF."))
                 QMessageBox.warning(
-                    self, tr("No se pudo generar el PDF"),
-                    tr("Falló el renderizado de: " + ", ".join(failed) +
-                       ".\n\nComo alternativa, genera el HTML y usa\n"
-                       "Ctrl+P → 'Guardar como PDF' en tu navegador.")
+                    self,
+                    tr("No se pudo generar el PDF"),
+                    tr(
+                        "Falló el renderizado de: "
+                        + ", ".join(failed)
+                        + ".\n\nComo alternativa, genera el HTML y usa\n"
+                        "Ctrl+P → 'Guardar como PDF' en tu navegador."
+                    ),
                 )
         except Exception as e:
             QMessageBox.critical(self, tr("Error generando PDF"), f"{type(e).__name__}: {e}")

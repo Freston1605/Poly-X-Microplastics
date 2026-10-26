@@ -14,6 +14,7 @@ saved separately. The training leaves three weights:
 
 If a dataset does not carry both prefixes, the step is skipped silently.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -45,12 +46,10 @@ def _val_images(data_yaml: Path) -> List[Path]:
         path = (root / path).resolve()
 
     if path.is_file():  # list of .txt paths
-        return [Path(l.strip()) for l in path.read_text(encoding="utf-8").splitlines()
-                if l.strip()]
+        return [Path(l.strip()) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
     if path.is_dir():
         exts = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
-        return sorted(p for p in path.iterdir()
-                      if p.is_file() and p.suffix.lower() in exts)
+        return sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in exts)
     return []
 
 
@@ -110,8 +109,7 @@ def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Optional[Pa
     It is hard-linked instead of copied: same volume, no duplicated bytes.
     """
     data_yaml = Path(data_yaml)
-    real = [p for p in _val_images(data_yaml)
-              if p.name.startswith(REAL_PREFIX)]
+    real = [p for p in _val_images(data_yaml) if p.name.startswith(REAL_PREFIX)]
     if not real:
         return None
 
@@ -138,8 +136,7 @@ def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Optional[Pa
         "names": cfg.get("names", {}),
     }
     output = destination_dir / "dataset_solo_real.yaml"
-    output.write_text(yaml.safe_dump(new, allow_unicode=True, sort_keys=False),
-                      encoding="utf-8")
+    output.write_text(yaml.safe_dump(new, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return output
 
 
@@ -163,16 +160,21 @@ def _f1(p: float, r: float) -> float:
     return (2 * p * r / (p + r)) if (p + r) > 0 else 0.0
 
 
-def choose_better_in_real(run_dir: Path, data_yaml: Path, imgsz: int, batch: int,
-                         device: str,
-                         log: Optional[Callable[[str], None]] = None,
-                         ) -> Tuple[Optional[Path], List[Dict]]:
+def choose_better_in_real(
+    run_dir: Path,
+    data_yaml: Path,
+    imgsz: int,
+    batch: int,
+    device: str,
+    log: Optional[Callable[[str], None]] = None,
+) -> Tuple[Optional[Path], List[Dict]]:
     """Evaluates the checkpoints on real sediment and copies the best one.
 
     Returns (path of best_real.pt, results table). If nothing can be
     evaluated, it returns (None, []) and the training goes on with its usual
     best.pt.
     """
+
     def _log(m: str) -> None:
         if log:
             log(m)
@@ -199,18 +201,31 @@ def choose_better_in_real(run_dir: Path, data_yaml: Path, imgsz: int, batch: int
     table: List[Dict] = []
     for p in weights:
         try:
-            res = YOLO(str(p)).val(data=str(yaml_real), imgsz=imgsz, batch=batch,
-                                   device=device, plots=False, verbose=False)
+            res = YOLO(str(p)).val(
+                data=str(yaml_real),
+                imgsz=imgsz,
+                batch=batch,
+                device=device,
+                plots=False,
+                verbose=False,
+            )
             pr, rc = float(res.box.mp), float(res.box.mr)
-            row = {"checkpoint": p.name, "ruta": p,
-                    "precision": pr, "recall": rc, "f1": _f1(pr, rc),
-                    "map50": float(res.box.map50)}
+            row = {
+                "checkpoint": p.name,
+                "ruta": p,
+                "precision": pr,
+                "recall": rc,
+                "f1": _f1(pr, rc),
+                "map50": float(res.box.map50),
+            }
         except Exception as exc:
             _log(f"  [WARN] no se pudo evaluar {p.name}: {exc}")
             continue
         table.append(row)
-        _log(f"    {row['checkpoint']:<14} F1={row['f1']:.4f}  "
-             f"P={pr:.4f}  R={rc:.4f}  mAP50={row['map50']:.4f}")
+        _log(
+            f"    {row['checkpoint']:<14} F1={row['f1']:.4f}  "
+            f"P={pr:.4f}  R={rc:.4f}  mAP50={row['map50']:.4f}"
+        )
 
     if not table:
         _log("  No se pudo evaluar ningun checkpoint; se conserva best.pt.")

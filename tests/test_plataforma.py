@@ -10,6 +10,7 @@ falseado. No sustituye a probarlo en un Mac de verdad -- no valida que Qt
 pinte bien ni que MPS funcione -- pero si fija que la logica de despacho no
 se rompa al editar el resto.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -23,9 +24,11 @@ import polyx.core.platform as P
 
 def _recargar_como(plataforma: str, maquina: str = "x86_64"):
     """Devuelve el modulo recargado como si corriera en ese sistema."""
-    with mock.patch.object(sys, "platform", plataforma), \
-         mock.patch("platform.machine", return_value=maquina), \
-         mock.patch("platform.mac_ver", return_value=("14.5", ("", "", ""), "")):
+    with (
+        mock.patch.object(sys, "platform", plataforma),
+        mock.patch("platform.machine", return_value=maquina),
+        mock.patch("platform.mac_ver", return_value=("14.5", ("", "", ""), "")),
+    ):
         importlib.reload(P)
         # Se devuelven los datos ya extraidos: fuera del contexto el modulo
         # se recarga al estado real y las funciones dejarian de mentir.
@@ -121,15 +124,19 @@ def test_abrir_usa_el_comando_de_cada_sistema(tmp_path):
     archivo = tmp_path / "x.txt"
     archivo.write_text("hola", encoding="utf-8")
 
-    with mock.patch.object(P, "IS_WINDOWS", False), \
-         mock.patch.object(P, "IS_MAC", True), \
-         mock.patch("subprocess.Popen") as popen:
+    with (
+        mock.patch.object(P, "IS_WINDOWS", False),
+        mock.patch.object(P, "IS_MAC", True),
+        mock.patch("subprocess.Popen") as popen,
+    ):
         assert P.open_in_system(archivo) is True
         assert popen.call_args[0][0][0] == "open"
 
-    with mock.patch.object(P, "IS_WINDOWS", False), \
-         mock.patch.object(P, "IS_MAC", False), \
-         mock.patch("subprocess.Popen") as popen:
+    with (
+        mock.patch.object(P, "IS_WINDOWS", False),
+        mock.patch.object(P, "IS_MAC", False),
+        mock.patch("subprocess.Popen") as popen,
+    ):
         assert P.open_in_system(archivo) is True
         assert popen.call_args[0][0][0] == "xdg-open"
 
@@ -137,6 +144,8 @@ def test_abrir_usa_el_comando_de_cada_sistema(tmp_path):
 def test_si_el_comando_falla_devuelve_False_sin_lanzar(tmp_path):
     archivo = tmp_path / "x.txt"
     archivo.write_text("hola", encoding="utf-8")
-    with mock.patch.object(P, "IS_WINDOWS", False), \
-         mock.patch("subprocess.Popen", side_effect=OSError("no hay xdg-open")):
+    with (
+        mock.patch.object(P, "IS_WINDOWS", False),
+        mock.patch("subprocess.Popen", side_effect=OSError("no hay xdg-open")),
+    ):
         assert P.open_in_system(archivo) is False

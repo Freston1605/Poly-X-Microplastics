@@ -10,6 +10,7 @@ instead of leaving the user to find out:
   widget is built. Modules opened afterwards come out translated.
 * **Motion** — immediate everywhere; only a repaint is needed.
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
@@ -102,7 +103,8 @@ class _CardTheme(QFrame):
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(
             f"color: {T.INK if active_2 else T.INK2}; font-size: 9.5pt; border: none;"
-            f"font-weight: {'700' if active_2 else '500'};")
+            f"font-weight: {'700' if active_2 else '500'};"
+        )
         lay.addWidget(title)
 
     def _paint_state(self, active_2: bool) -> None:
@@ -111,7 +113,8 @@ class _CardTheme(QFrame):
         self.setStyleSheet(
             f"_TarjetaTema {{ background: {T.BG}; border: {thickness}px solid {edge};"
             f" border-radius: 9px; }}"
-            f"_TarjetaTema:hover {{ border-color: {T.ACCENT}; }}")
+            f"_TarjetaTema:hover {{ border-color: {T.ACCENT}; }}"
+        )
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.LeftButton:
@@ -154,8 +157,9 @@ class PreferencesDialog(QDialog):
         root.setSpacing(6)
 
         root.addWidget(self._title(tr("Tema")))
-        root.addWidget(self._clue(
-            tr("Se aplica al instante aquí. Los módulos ya abiertos conservan el suyo.")))
+        root.addWidget(
+            self._clue(tr("Se aplica al instante aquí. Los módulos ya abiertos conservan el suyo."))
+        )
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -168,8 +172,9 @@ class PreferencesDialog(QDialog):
         root.addSpacing(14)
 
         root.addWidget(self._title(tr("Idioma")))
-        root.addWidget(self._clue(
-            tr("Los módulos que abras a partir de ahora salen en el idioma nuevo.")))
+        root.addWidget(
+            self._clue(tr("Los módulos que abras a partir de ahora salen en el idioma nuevo."))
+        )
         row = QHBoxLayout()
         row.setSpacing(8)
         self._buttons_language: dict[str, QPushButton] = {}
@@ -192,12 +197,18 @@ class PreferencesDialog(QDialog):
         self._chk_anim.setChecked(T.animations())
         self._chk_anim.setCursor(Qt.PointingHandCursor)
         self._chk_anim.setStyleSheet(
-            f"QCheckBox {{ color: {T.INK2}; background: transparent; spacing: 8px; }}")
+            f"QCheckBox {{ color: {T.INK2}; background: transparent; spacing: 8px; }}"
+        )
         self._chk_anim.toggled.connect(T.set_animations)
         root.addWidget(self._chk_anim)
-        root.addWidget(self._clue(
-            tr("Apágalo si el movimiento te molesta o si el equipo va justo. "
-               "El panel queda en un fotograma fijo.")))
+        root.addWidget(
+            self._clue(
+                tr(
+                    "Apágalo si el movimiento te molesta o si el equipo va justo. "
+                    "El panel queda en un fotograma fijo."
+                )
+            )
+        )
 
         root.addSpacing(18)
         pie = QHBoxLayout()
@@ -215,7 +226,8 @@ class PreferencesDialog(QDialog):
         lbl = QLabel(text)
         lbl.setStyleSheet(
             f"color: {T.INK}; font-size: 11.5pt; font-weight: 650;"
-            f" border: none; background: transparent;")
+            f" border: none; background: transparent;"
+        )
         return lbl
 
     def _clue(self, text: str) -> QLabel:
@@ -223,7 +235,8 @@ class PreferencesDialog(QDialog):
         lbl.setWordWrap(True)
         lbl.setStyleSheet(
             f"color: {T.INK3}; font-size: 9pt; border: none;"
-            f" background: transparent; margin-bottom: 6px;")
+            f" background: transparent; margin-bottom: 6px;"
+        )
         return lbl
 
     def _qss_toggle(self) -> str:
@@ -232,14 +245,15 @@ class PreferencesDialog(QDialog):
             f" border: 1px solid {T.RULE}; border-radius: 6px; padding: 7px 14px; }}"
             f"QPushButton:hover {{ border-color: {T.ACCENT}; }}"
             f"QPushButton:checked {{ background: {T.ACCENT}; color: {T.ON_ACCENT};"
-            f" border-color: {T.ACCENT}; font-weight: 600; }}")
+            f" border-color: {T.ACCENT}; font-weight: 600; }}"
+        )
 
     # ── Actions ────────────────────────────────────────────────────
     def _choose_theme(self, name_2: str) -> None:
         if name_2 == T.theme():
             return
         T.set_theme(name_2)
-        self._build()          # the dialog itself is repainted with the new palette
+        self._build()  # the dialog itself is repainted with the new palette
         self.theme_changed.emit(name_2)
 
     def _choose_language(self, code: str) -> None:

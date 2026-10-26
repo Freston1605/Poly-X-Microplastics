@@ -1,4 +1,5 @@
 """TP/FP/FN computation, confusion matrix and per-class P/R/F1 (COCO standard)."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -31,13 +32,18 @@ LABELS_BY_CODE = {
 
 
 def iou(a: Detection, b: Detection) -> float:
-    x1 = max(a.x1, b.x1); y1 = max(a.y1, b.y1)
-    x2 = min(a.x2, b.x2); y2 = min(a.y2, b.y2)
-    iw = max(0.0, x2 - x1); ih = max(0.0, y2 - y1)
+    x1 = max(a.x1, b.x1)
+    y1 = max(a.y1, b.y1)
+    x2 = min(a.x2, b.x2)
+    y2 = min(a.y2, b.y2)
+    iw = max(0.0, x2 - x1)
+    ih = max(0.0, y2 - y1)
     inter = iw * ih
-    if inter <= 0: return 0.0
+    if inter <= 0:
+        return 0.0
     union = (a.w * a.h) + (b.w * b.h) - inter
     return inter / union if union > 0 else 0.0
+
 
 def mask_iou(a: Detection, b: Detection) -> float:
     """IoU on masks when both have them; falls back to box IoU otherwise."""
@@ -59,20 +65,21 @@ def mask_iou(a: Detection, b: Detection) -> float:
 @dataclass
 class MatchResult:
     """Result of pred vs GT matching for one image."""
+
     tp: int = 0
     fp: int = 0
     fn: int = 0
     miscls: int = 0  # located correctly but wrong class
     # (pred_idx, gt_idx) lists for each category
     tp_pairs: List[Tuple[int, int]] = field(default_factory=list)
-    fp_idx: List[int] = field(default_factory=list)        # indices into preds
-    fn_idx: List[int] = field(default_factory=list)        # indices into gts
+    fp_idx: List[int] = field(default_factory=list)  # indices into preds
+    fn_idx: List[int] = field(default_factory=list)  # indices into gts
     miscls_pairs: List[Tuple[int, int]] = field(default_factory=list)
 
 
-def match_image(preds: List[Detection], gts: List[Detection],
-                iou_thr: float = 0.5,
-                use_mask_iou: bool = False) -> MatchResult:
+def match_image(
+    preds: List[Detection], gts: List[Detection], iou_thr: float = 0.5, use_mask_iou: bool = False
+) -> MatchResult:
     """Matches predictions to GTs by IoU. Greedy, descending by confidence."""
     res = MatchResult()
     if not preds and not gts:
@@ -133,21 +140,25 @@ class ClassMetrics:
     def precision(self) -> float:
         d = self.tp + self.fp
         return self.tp / d if d else 0.0
+
     @property
     def recall(self) -> float:
         d = self.tp + self.fn
         return self.tp / d if d else 0.0
+
     @property
     def f1(self) -> float:
         p, r = self.precision, self.recall
         return 2 * p * r / (p + r) if (p + r) else 0.0
 
 
-def aggregate_per_class(all_preds: List[List[Detection]],
-                        all_gts: List[List[Detection]],
-                        class_ids: List[int],
-                        iou_thr: float = 0.5,
-                        use_mask_iou: bool = False) -> Dict[int, ClassMetrics]:
+def aggregate_per_class(
+    all_preds: List[List[Detection]],
+    all_gts: List[List[Detection]],
+    class_ids: List[int],
+    iou_thr: float = 0.5,
+    use_mask_iou: bool = False,
+) -> Dict[int, ClassMetrics]:
     """Returns {class_id: ClassMetrics} summed over all images."""
     out = {cid: ClassMetrics() for cid in class_ids}
     for preds, gts in zip(all_preds, all_gts):
@@ -171,16 +182,20 @@ def aggregate_per_class(all_preds: List[List[Detection]],
         for pi, gi in m.miscls_pairs:
             cid_p = preds[pi].class_id
             cid_g = gts[gi].class_id
-            if cid_p in out: out[cid_p].fp += 1
-            if cid_g in out: out[cid_g].fn += 1
+            if cid_p in out:
+                out[cid_p].fp += 1
+            if cid_g in out:
+                out[cid_g].fn += 1
     return out
 
 
-def confusion_matrix(all_preds: List[List[Detection]],
-                     all_gts: List[List[Detection]],
-                     class_ids: List[int],
-                     iou_thr: float = 0.5,
-                      use_mask_iou: bool = False) -> np.ndarray:
+def confusion_matrix(
+    all_preds: List[List[Detection]],
+    all_gts: List[List[Detection]],
+    class_ids: List[int],
+    iou_thr: float = 0.5,
+    use_mask_iou: bool = False,
+) -> np.ndarray:
     """Matrix (N+1)x(N+1). Last row/col = background (FN/FP)."""
     n = len(class_ids)
     cm = np.zeros((n + 1, n + 1), dtype=int)
@@ -199,9 +214,9 @@ def confusion_matrix(all_preds: List[List[Detection]],
         for pi in m.fp_idx:
             ip = idx_of.get(preds[pi].class_id)
             if ip is not None:
-                cm[n, ip] += 1   # GT background -> predicted as a class
+                cm[n, ip] += 1  # GT background -> predicted as a class
         for gi in m.fn_idx:
             ig = idx_of.get(gts[gi].class_id)
             if ig is not None:
-                cm[ig, n] += 1   # GT class -> not detected
+                cm[ig, n] += 1  # GT class -> not detected
     return cm

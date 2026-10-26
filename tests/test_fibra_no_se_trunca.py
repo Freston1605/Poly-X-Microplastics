@@ -20,6 +20,7 @@ Las dos causas son distintas y hay una prueba para cada una:
 Importa porque el largo subestimado va directo a la talla que se reporta, y
 hacia abajo: una fibra cortada no se nota en las cifras, solo en la imagen.
 """
+
 from __future__ import annotations
 
 import cv2
@@ -43,8 +44,7 @@ def _foto_fibra_con_bultos(largo=120, grosor=9, bulto=7):
     img = np.full((260, 320, 3), 18, np.uint8)
     y = 130
     x0 = (320 - largo) // 2
-    cv2.rectangle(img, (x0, y - grosor // 2), (x0 + largo, y + grosor // 2),
-                  (60, 210, 240), -1)
+    cv2.rectangle(img, (x0, y - grosor // 2), (x0 + largo, y + grosor // 2), (60, 210, 240), -1)
     # Zonas gruesas, separadas para que den dos nucleos distintos.
     cv2.circle(img, (x0 + largo // 4, y), bulto, (60, 210, 240), -1)
     cv2.circle(img, (x0 + 3 * largo // 4, y), bulto, (60, 210, 240), -1)
@@ -69,13 +69,11 @@ def test_el_watershed_no_parte_una_fibra_con_dos_zonas_gruesas():
     n, etiquetas, stats, _ = cv2.connectedComponentsWithStats(entera, 8)
     idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
     componente = (etiquetas == idx).astype(np.uint8) * 255
-    semilla = (int(np.mean(np.nonzero(componente)[1])),
-               int(np.mean(np.nonzero(componente)[0])))
+    semilla = (int(np.mean(np.nonzero(componente)[1])), int(np.mean(np.nonzero(componente)[0])))
 
     despues = M.separate_glued(componente.copy(), semilla)
     conserva = np.count_nonzero(despues) / max(1, np.count_nonzero(componente))
-    assert conserva > 0.95, (
-        f"el watershed se llevo el {100*(1-conserva):.0f}% de la fibra")
+    assert conserva > 0.95, f"el watershed se llevo el {100 * (1 - conserva):.0f}% de la fibra"
 
 
 def test_la_fibra_no_se_recorta_a_la_caja_corta_del_detector():
@@ -89,7 +87,8 @@ def test_la_fibra_no_se_recorta_a_la_caja_corta_del_detector():
     # Se admite el margen de discretizacion habitual del metodo (~5%), pero no
     # una amputacion: antes de arreglarlo aqui salia en torno al 60% del largo.
     assert m.length_px > largo_real * 0.90, (
-        f"la fibra mide {m.length_px:.0f} px y deberia rondar {largo_real:.0f}")
+        f"la fibra mide {m.length_px:.0f} px y deberia rondar {largo_real:.0f}"
+    )
 
 
 def test_una_particula_compacta_sigue_recortandose_a_su_caja():
@@ -138,7 +137,8 @@ def test_la_elongacion_no_depende_de_la_curvatura():
     cv2.ellipse(arco, (120, 120), (80, 80), 0, 200, 340, 255, 7)
     assert M._elongation(recta) > M.ELONGATION_ELONGATED
     assert M._elongation(arco) > M.ELONGATION_ELONGATED, (
-        f"un arco debe seguir siendo alargado, dio {M._elongation(arco):.1f}")
+        f"un arco debe seguir siendo alargado, dio {M._elongation(arco):.1f}"
+    )
 
 
 def test_la_elongacion_no_depende_de_la_orientacion():
@@ -170,8 +170,7 @@ def test_el_aviso_llega_a_la_deteccion():
     # detector encajona un trozo del medio de algo mas largo.
     cv2.rectangle(img, (20, 96), (240, 104), (60, 210, 240), -1)
 
-    d = Detection(class_id=0, class_name="PET", conf=0.9,
-                  x1=100, y1=92, x2=130, y2=108)
+    d = Detection(class_id=0, class_name="PET", conf=0.9, x1=100, y1=92, x2=130, y2=108)
     assert M.apply_to_detection(d, img, 30.0)
     assert d.review is True, "el aviso no llego a la Detection"
     assert d.warning_shape, "y sin texto no hay nada que enseñar"
@@ -183,8 +182,7 @@ def test_una_particula_sana_no_se_marca():
 
     img = np.full((200, 200, 3), 18, np.uint8)
     cv2.circle(img, (100, 100), 25, (60, 210, 240), -1)
-    d = Detection(class_id=0, class_name="PET", conf=0.9,
-                  x1=75, y1=75, x2=125, y2=125)
+    d = Detection(class_id=0, class_name="PET", conf=0.9, x1=75, y1=75, x2=125, y2=125)
     assert M.apply_to_detection(d, img, 30.0)
     assert d.review is False
 
@@ -224,7 +222,8 @@ def test_una_mascara_alargada_que_se_fuga_queda_acotada_por_la_caja():
     diagonal = float(np.hypot(caja[2] - caja[0], caja[3] - caja[1]))
     assert m.length_px < 1.6 * diagonal, (
         f"la mascara mide {m.length_px:.0f} px, {m.length_px / diagonal:.1f}x la "
-        f"diagonal de su caja ({diagonal:.0f} px): se fugo a la vecina")
+        f"diagonal de su caja ({diagonal:.0f} px): se fugo a la vecina"
+    )
 
 
 def test_la_fuga_se_declara_aunque_se_haya_acotado():
@@ -236,8 +235,9 @@ def test_la_fuga_se_declara_aunque_se_haya_acotado():
     from polyx.core.detect.protocol import Instance as Detection
 
     img, caja = _trozo_del_medio_de_algo_largo()
-    d = Detection(class_id=0, class_name="PET", conf=0.9,
-                  x1=caja[0], y1=caja[1], x2=caja[2], y2=caja[3])
+    d = Detection(
+        class_id=0, class_name="PET", conf=0.9, x1=caja[0], y1=caja[1], x2=caja[2], y2=caja[3]
+    )
     assert M.apply_to_detection(d, img, 30.0)
     assert d.review is True, "una fuga acotada sigue siendo una fuga"
     assert d.warning_shape

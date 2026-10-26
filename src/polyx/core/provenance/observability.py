@@ -26,6 +26,7 @@ The module cannot bring the program down: if the log folder cannot be
 created (read-only HOME, locked profile), the logger falls back to
 NullHandler and the run continues exactly as today. An observer that does
 not work must not be worse than having no observability."""
+
 from __future__ import annotations
 
 import json
@@ -54,7 +55,7 @@ __all__ = [
     "timer",
 ]
 
-SIZE_MAX = 5 * 1024 * 1024     # 5 MB per file; x 3 copies: ~20 MB per module
+SIZE_MAX = 5 * 1024 * 1024  # 5 MB per file; x 3 copies: ~20 MB per module
 COPIES = 3
 SIZE_TOTAL = 200 * 1024 * 1024  # cap on the TOTAL size of the logs folder
 
@@ -72,25 +73,26 @@ def folder_logs() -> Path:
 
 
 def _level_from_environment() -> int:
-    mapping = {"debug": logging.DEBUG, "info": logging.INFO,
-               "warn": logging.WARNING, "warning": logging.WARNING,
-               "error": logging.ERROR}
-    return mapping.get(os.environ.get("POLYX_LOG", "info").strip().lower(),
-                       logging.INFO)
+    mapping = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warn": logging.WARNING,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
+    return mapping.get(os.environ.get("POLYX_LOG", "info").strip().lower(), logging.INFO)
 
 
 def _about_json(record: logging.LogRecord) -> str:
     """From a LogRecord to JSON: fixed fields + event payload."""
     about: dict = {
-        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds")
-              .replace("+00:00", "Z"),
+        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         "level": record.levelname,
         "module": record.name,
         "pid": os.getpid(),
         "thread": record.threadName,
         "event": getattr(record, "event", record.getMessage()),
-        "run_id": getattr(record, "run_id",
-                          getattr(_run_local, "run_id", None)),
+        "run_id": getattr(record, "run_id", getattr(_run_local, "run_id", None)),
     }
     ms = getattr(record, "ms", None)
     if ms is not None:
@@ -98,13 +100,14 @@ def _about_json(record: logging.LogRecord) -> str:
     data = getattr(record, "data", None)
     if data:
         try:
-            json.dumps(data)      # check: serialisable as is
+            json.dumps(data)  # check: serialisable as is
             about["data"] = data
         except (TypeError, ValueError):
             # Payload with unusual objects (paths, ndarrays): turned into a string, never crashes.
             about["data"] = {k: str(v) for k, v in data.items()}
     if record.exc_info:
         import traceback
+
         about["exc"] = traceback.format_exception(*record.exc_info)
     return json.dumps(about, default=str, ensure_ascii=False)
 
@@ -115,8 +118,10 @@ class _AboutFormatter(logging.Formatter):
             return _about_json(record)
         except Exception:
             # A log that breaks cannot bring down the piece that uses it.
-            return json.dumps({"level": record.levelname, "module": record.name,
-                               "event": "log.format_error"}, ensure_ascii=False)
+            return json.dumps(
+                {"level": record.levelname, "module": record.name, "event": "log.format_error"},
+                ensure_ascii=False,
+            )
 
 
 def _ceiling_pruning_bytes() -> int:
@@ -142,16 +147,18 @@ def _ceiling_pruning_bytes() -> int:
 
 def _close_loggers() -> None:
     """Closes and removes the handlers of every logger and empties the _loggers
-cache.
+    cache.
 
-    Never raises: useful to isolate tests or reconfigure log directories.
+        Never raises: useful to isolate tests or reconfigure log directories.
     """
     try:
         with _loggers_lock:
             loggers_to_close = list(_loggers.values())
             try:
                 for name, lg in getattr(logging.Logger.manager, "loggerDict", {}).items():
-                    if isinstance(lg, logging.Logger) and (name == "polyx" or name.startswith("polyx.")):
+                    if isinstance(lg, logging.Logger) and (
+                        name == "polyx" or name.startswith("polyx.")
+                    ):
                         if lg not in loggers_to_close:
                             loggers_to_close.append(lg)
             except Exception:
@@ -200,8 +207,8 @@ def logger_for(module: str) -> logging.Logger:
             folder = folder_logs()
             folder.mkdir(parents=True, exist_ok=True)
             handler = RotatingFileHandler(
-                folder / f"{module}.jsonl",
-                maxBytes=SIZE_MAX, backupCount=COPIES, encoding="utf-8")
+                folder / f"{module}.jsonl", maxBytes=SIZE_MAX, backupCount=COPIES, encoding="utf-8"
+            )
             handler.setFormatter(_AboutFormatter())
             logger.addHandler(handler)
             # Every module start checks that the directory is still within its cap.
@@ -247,7 +254,7 @@ def prune(folder: Path | None = None, active_2: Path | str | None = None) -> Non
             try:
                 st = input_value.lstat()
             except OSError:
-                continue                 # disappeared while we were listing
+                continue  # disappeared while we were listing
             if stat.S_ISDIR(st.st_mode):
                 continue
             total += st.st_size
@@ -257,14 +264,14 @@ def prune(folder: Path | None = None, active_2: Path | str | None = None) -> Non
         ceiling = _ceiling_pruning_bytes()
         if total <= ceiling:
             return
-        candidates_2.sort()                # oldest first (mtime, name)
+        candidates_2.sort()  # oldest first (mtime, name)
         for _mtime, _name, size, path_2 in candidates_2:
             if total <= ceiling:
                 break
             try:
                 os.unlink(path_2)
             except OSError:
-                continue                 # could not be removed; continue with the next one
+                continue  # could not be removed; continue with the next one
             total -= size
     except Exception:
         # Pruning is an observer's best effort: nothing below here
@@ -286,36 +293,37 @@ def clear_run_id() -> None:
     _run_local.run_id = None
 
 
-def event_error(logger: logging.Logger, name_2: str, exc: BaseException,
-                 ms: Optional[int] = None, **data) -> None:
+def event_error(
+    logger: logging.Logger, name_2: str, exc: BaseException, ms: Optional[int] = None, **data
+) -> None:
     """ERROR-level event with a full traceback.
 
     It exists for what gets lost today: a background thread that blows up
     under pythonw leaves no console trace. Never raises.
     """
     try:
-        logger._log(logging.ERROR, name_2, (), exc_info=exc,
-                    extra={"event": name_2, "data": data, "ms": ms})
+        logger._log(
+            logging.ERROR, name_2, (), exc_info=exc, extra={"event": name_2, "data": data, "ms": ms}
+        )
     except Exception:
         pass
 
 
-def event(logger: logging.Logger, name_2: str, level: int = logging.INFO,
-           ms: Optional[int] = None, **data) -> None:
+def event(
+    logger: logging.Logger, name_2: str, level: int = logging.INFO, ms: Optional[int] = None, **data
+) -> None:
     """Emits a verb.object event with the payload in ``datos``.
 
     Never raises: a logging-system failure cannot stop the analysis.
     """
     try:
-        logger._log(level, name_2, (),
-                    extra={"event": name_2, "data": data, "ms": ms})
+        logger._log(level, name_2, (), extra={"event": name_2, "data": data, "ms": ms})
     except Exception:
         pass
 
 
 @contextmanager
-def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO,
-               **data) -> Iterator[None]:
+def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO, **data) -> Iterator[None]:
     """Context manager that emits ``nombre.start`` / ``nombre.finish`` with ms.
 
     If the block raises, it emits ``nombre.error`` at ERROR with the
@@ -329,9 +337,13 @@ def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO,
     except Exception as exc:
         ms = int((time.perf_counter() - t0) * 1000)
         try:
-            logger._log(logging.ERROR, f"{name_2}.error", (), exc_info=exc,
-                        extra={"event": f"{name_2}.error", "data": data,
-                               "ms": ms})
+            logger._log(
+                logging.ERROR,
+                f"{name_2}.error",
+                (),
+                exc_info=exc,
+                extra={"event": f"{name_2}.error", "data": data, "ms": ms},
+            )
         except Exception:
             pass
         raise

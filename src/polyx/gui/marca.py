@@ -28,6 +28,7 @@ another hue because someone prefers working at night, it would stop
 being recognizable in the taskbar — which is exactly what it is for.
 They go fixed, same as the report palette (``theme.DOC``).
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import QRectF, Qt
@@ -55,7 +56,7 @@ _APP_ID = "CristofherFerrada.PolyX"
 # with any theme.
 MODULES: dict[str, dict] = {
     "launcher": {
-        "icono": None,               # uses assets/polyx.ico, the usual brand
+        "icono": None,  # uses assets/polyx.ico, the usual brand
         "color": "#0969da",
         "titulo": "Poly-X · Suite de microplásticos",
         "id": _APP_ID,

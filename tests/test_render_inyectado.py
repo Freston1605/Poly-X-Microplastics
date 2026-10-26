@@ -36,6 +36,7 @@ mismo, no de datos de usuarios, y con el idioma fijado son estables: si una
 reforma de report_html mueve una marca de plantilla, este test delimita
 exactamente que sumidero muto.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -68,8 +69,7 @@ SUMIDEROS_ALIAS: list[tuple[str, str, int]] = [
     ("encabezado (linea de modelos)", f"{ALIAS_ESCAPADO}</p>", 1),
     ("tabla de metodos (modelos cargados)", f"<td>{ALIAS_ESCAPADO}</td></tr>", 1),
     ("texto de la figura de calibracion", f"\u00ab{ALIAS_ESCAPADO}\u00bb", 1),
-    ("tabla de conteo (fila por modelo)",
-     f"<td>{ALIAS_ESCAPADO}</td><td class='r'>", 1),
+    ("tabla de conteo (fila por modelo)", f"<td>{ALIAS_ESCAPADO}</td><td class='r'>", 1),
     ("caption de comparacion", f"<strong>{ALIAS_ESCAPADO}</strong>", 1),
 ]
 
@@ -77,12 +77,17 @@ SUMIDEROS_ALIAS: list[tuple[str, str, int]] = [
 # celda 2 veces (2 filas de estadisticas por imagen, con marca identica),
 # por eso espera 2; los demas sitios aportan 1 con el fixture de 1 imagen.
 SUMIDEROS_NOMBRE: list[tuple[str, str, int]] = [
-    ("ficha de articulo (filas de estadisticas)",
-     f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td></tr>", 2),
-    ("tabla de tamano (fila por imagen)",
-     f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td><td>1</td>", 1),
-    ("tabla de conteo (fila por imagen)",
-     f"<td>{NOMBRE_ESCAPADO}</td><td class='r'>", 1),
+    (
+        "ficha de articulo (filas de estadisticas)",
+        f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td></tr>",
+        2,
+    ),
+    (
+        "tabla de tamano (fila por imagen)",
+        f"<td style='font-size:9pt'>{NOMBRE_ESCAPADO}</td><td>1</td>",
+        1,
+    ),
+    ("tabla de conteo (fila por imagen)", f"<td>{NOMBRE_ESCAPADO}</td><td class='r'>", 1),
     ("titulo h3 de la seccion por imagen", f"<h3>{NOMBRE_ESCAPADO}</h3>", 1),
 ]
 
@@ -109,6 +114,7 @@ def _idioma_y_logs_muertos(tmp_path):
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
+
     importlib.reload(rh)
     import polyx.core.observability as obs
 
@@ -159,7 +165,8 @@ def test_la_inyeccion_no_llega_viva_al_html(tmp_path):
     for cruda in (ALIAS_HOSTIL, NOMBRE_FOTO_HOSTIL, "<script>"):
         assert cruda not in html_text, (
             f"la inyeccion llego viva al HTML: {cruda!r} aparece cruda; "
-            f"el escape de report_html no cubrio algun sumidero")
+            f"el escape de report_html no cubrio algun sumidero"
+        )
 
 
 def test_la_inyeccion_esta_como_texto_escapado(tmp_path):
@@ -175,11 +182,12 @@ def test_la_inyeccion_esta_como_texto_escapado(tmp_path):
     html_text = _render_hostil(tmp_path)
     assert "&lt;img src=x" in html_text, (
         "el HTML no lleva la cadena hostil escapada: el dato hostil se perdio "
-        "del informe, no solo se neutralizo")
+        "del informe, no solo se neutralizo"
+    )
     for marcador in ("alert(1)", "alert(2)"):
         assert marcador in html_text, (
-            f"la inyeccion escapada ({marcador}) no esta en el HTML como "
-            f"texto visible")
+            f"la inyeccion escapada ({marcador}) no esta en el HTML como texto visible"
+        )
 
 
 def test_cada_sumidero_hostil_reaparece_una_vez_por_sumidero(tmp_path):
@@ -195,18 +203,20 @@ def test_cada_sumidero_hostil_reaparece_una_vez_por_sumidero(tmp_path):
     html_text = _render_hostil(tmp_path)
 
     for cadena_escape, sumideros, total in (
-            ("alias", SUMIDEROS_ALIAS, html_text.count(ALIAS_ESCAPADO)),
-            ("nombre de archivo", SUMIDEROS_NOMBRE,
-             html_text.count(NOMBRE_ESCAPADO))):
+        ("alias", SUMIDEROS_ALIAS, html_text.count(ALIAS_ESCAPADO)),
+        ("nombre de archivo", SUMIDEROS_NOMBRE, html_text.count(NOMBRE_ESCAPADO)),
+    ):
         suma = 0
         for nombre, ventana, esperado in sumideros:
             n = html_text.count(ventana)
             assert n == esperado, (
                 f"sumidero {cadena_escape} '{nombre}': {n} apariciones "
                 f"(esperadas {esperado}); la plantilla de ese sumidero mutó "
-                f"o un sitio nuevo esta inyectando la misma ventana")
+                f"o un sitio nuevo esta inyectando la misma ventana"
+            )
             suma += n
         assert suma == total, (
             f"cadena hostil '{cadena_escape}': la suma de sumideros "
             f"({suma}) no agota el total de apariciones ({total}); "
-            f"hay ocurrencias sin sumidero documentado")
+            f"hay ocurrencias sin sumidero documentado"
+        )

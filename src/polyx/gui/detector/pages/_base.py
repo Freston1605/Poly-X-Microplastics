@@ -1,4 +1,5 @@
 """Base page with a numbered, manual-style header."""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
@@ -58,9 +59,7 @@ class DetectorPage(QWidget):
                 ic.setStyleSheet("border: none;")
                 head.addWidget(ic)
             t = QLabel(title)
-            t.setStyleSheet(
-                f"color: {T.INK}; font-size: 13pt; font-weight: 600; border: none;"
-            )
+            t.setStyleSheet(f"color: {T.INK}; font-size: 13pt; font-weight: 600; border: none;")
             head.addWidget(t)
             head.addStretch(1)
             lay.addLayout(head)

@@ -4,6 +4,7 @@ Cada una fija una decision de diseno, no solo un comportamiento: si alguien
 anade un tema bonito pero ilegible, o vuelve a usar un color de fondo como
 color de texto, la suite lo dice antes de que llegue a una captura del manual.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,9 +20,8 @@ from polyx.gui import theme as T
 def _luminancia(hex_color: str) -> float:
     """Luminancia relativa segun WCAG 2.1."""
     h = hex_color.lstrip("#")
-    canales = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-    lineal = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-              for c in canales]
+    canales = [int(h[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    lineal = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in canales]
     return 0.2126 * lineal[0] + 0.7152 * lineal[1] + 0.0722 * lineal[2]
 
 
@@ -33,13 +33,21 @@ def contraste(a: str, b: str) -> float:
 
 #: Pares que llevan texto encima y por tanto deben cumplir 4.5:1 (WCAG AA).
 PARES_DE_TEXTO = [
-    ("INK", "BG"), ("INK", "BG_SOFT"),
-    ("INK2", "BG"), ("INK2", "BG_SOFT"),
-    ("INK3", "BG"), ("INK3", "BG_SOFT"),
-    ("ACCENT_TX", "BG"), ("ACCENT_D_TX", "BG"),
-    ("OK_TX", "BG"), ("WARN_TX", "BG"), ("ERR_TX", "BG"), ("VIO_TX", "BG"),
+    ("INK", "BG"),
+    ("INK", "BG_SOFT"),
+    ("INK2", "BG"),
+    ("INK2", "BG_SOFT"),
+    ("INK3", "BG"),
+    ("INK3", "BG_SOFT"),
+    ("ACCENT_TX", "BG"),
+    ("ACCENT_D_TX", "BG"),
+    ("OK_TX", "BG"),
+    ("WARN_TX", "BG"),
+    ("ERR_TX", "BG"),
+    ("VIO_TX", "BG"),
     ("TIP_FG", "TIP_BG"),
-    ("ON_ACCENT", "ACCENT"), ("ON_ACCENT", "ACCENT_D"),
+    ("ON_ACCENT", "ACCENT"),
+    ("ON_ACCENT", "ACCENT_D"),
 ]
 
 
@@ -53,8 +61,7 @@ def test_texto_cumple_wcag_aa(tema: str, frente: str, fondo: str) -> None:
     """
     p = T.PALETTES[tema]
     razon = contraste(p[frente], p[fondo])
-    assert razon >= 4.5, (
-        f"{tema}: {frente} sobre {fondo} da {razon:.2f}:1, por debajo de 4.5:1")
+    assert razon >= 4.5, f"{tema}: {frente} sobre {fondo} da {razon:.2f}:1, por debajo de 4.5:1"
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -82,7 +89,8 @@ def test_los_colores_son_hex_de_seis_digitos() -> None:
     for nombre, tokens in T.PALETTES.items():
         for token, valor in tokens.items():
             assert valor.startswith("#") and len(valor) == 7, (
-                f"{nombre}.{token} = {valor!r}: se espera #rrggbb")
+                f"{nombre}.{token} = {valor!r}: se espera #rrggbb"
+            )
             int(valor[1:], 16)
 
 

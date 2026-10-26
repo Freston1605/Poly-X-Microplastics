@@ -1,4 +1,5 @@
 """Background training thread with Ultralytics YOLO."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,10 +16,10 @@ from .state import EpochMetrics, TrainerState
 class TrainerRunner(QThread):
     """Launches an Ultralytics training on a separate thread and emits per-epoch signals."""
 
-    epoch_metrics = Signal(object)         # EpochMetrics
+    epoch_metrics = Signal(object)  # EpochMetrics
     log_line = Signal(str)
-    progress = Signal(int, int)             # epoch, total
-    finished_ok = Signal(str)               # path to best.pt
+    progress = Signal(int, int)  # epoch, total
+    finished_ok = Signal(str)  # path to best.pt
     aborted = Signal()
     failed = Signal(str)
 
@@ -40,7 +41,8 @@ class TrainerRunner(QThread):
         self.log_line.emit("=" * 60)
         self.log_line.emit(
             f"  Configuracion identica: imgsz={p.imgsz} · batch={p.batch} · "
-            f"epocas={p.epochs} · lr0={p.lr0}")
+            f"epocas={p.epochs} · lr0={p.lr0}"
+        )
         self.log_line.emit("")
         header_line = f"  {'familia':<10}{'peso base':<16}{'mAP50':>9}{'epoca':>8}"
         if there_is_real:
@@ -48,8 +50,7 @@ class TrainerRunner(QThread):
         self.log_line.emit(header_line)
         self.log_line.emit("  " + "-" * (len(header_line) - 2))
         for c in comparison:
-            row = (f"  {c['familia']:<10}{c['peso_base']:<16}"
-                    f"{c['map50']:>9.4f}{c['epoca_mejor']:>8}")
+            row = f"  {c['familia']:<10}{c['peso_base']:<16}{c['map50']:>9.4f}{c['epoca_mejor']:>8}"
             if there_is_real:
                 fr = c.get("f1_real")
                 row += f"{fr:>10.4f}" if fr is not None else f"{'-':>10}"
@@ -58,8 +59,8 @@ class TrainerRunner(QThread):
         # With domain re-selection the F1 on real sediment is the benchmark: it is
         # the number that describes what these weights will do on field photos.
         # The global mAP mixes laboratory and field and is useless here.
-        key_2 = ("f1_real" if there_is_real else "map50")
-        label = ("F1 en sedimento real" if there_is_real else "mAP50")
+        key_2 = "f1_real" if there_is_real else "map50"
+        label = "F1 en sedimento real" if there_is_real else "mAP50"
         useful = [c for c in comparison if c.get(key_2) is not None]
         if not useful:
             useful, key_2, label = comparison, "map50", "mAP50"
@@ -69,17 +70,16 @@ class TrainerRunner(QThread):
         self.log_line.emit("")
         self.log_line.emit(
             f"  Mejor: {best['familia']} ({label} {best[key_2]:.4f}, "
-            f"+{d:.4f} sobre {worst['familia']})")
+            f"+{d:.4f} sobre {worst['familia']})"
+        )
         if there_is_real:
-            self.log_line.emit(
-                "  Los pesos a usar para detectar son los best_real.pt.")
+            self.log_line.emit("  Los pesos a usar para detectar son los best_real.pt.")
         # Without repetitions architecture cannot be separated from random seed.
+        self.log_line.emit("  Con un entrenamiento por arquitectura, una diferencia pequena")
+        self.log_line.emit("  no distingue el diseno del azar de inicializacion.")
         self.log_line.emit(
-            "  Con un entrenamiento por arquitectura, una diferencia pequena")
-        self.log_line.emit(
-            "  no distingue el diseno del azar de inicializacion.")
-        self.log_line.emit(
-            "  Los pesos quedaron en runs_train/; comparalos en la pestana Comparar.")
+            "  Los pesos quedaron en runs_train/; comparalos en la pestana Comparar."
+        )
         self.log_line.emit("=" * 60)
 
     def run(self):
@@ -103,29 +103,40 @@ class TrainerRunner(QThread):
                 return
             log = self._log()
             obs.set_run_id(mdl.base_weights_name)
-            obs.event(log, "train.config", modelo=mdl.name, dataset=str(ds.yaml_path),
-                       epochs=p.epochs, batch=p.batch, imgsz=p.imgsz,
-                       device=getattr(p, "device", None),
-                       optimizador=getattr(p, "optimizer", None))
+            obs.event(
+                log,
+                "train.config",
+                modelo=mdl.name,
+                dataset=str(ds.yaml_path),
+                epochs=p.epochs,
+                batch=p.batch,
+                imgsz=p.imgsz,
+                device=getattr(p, "device", None),
+                optimizador=getattr(p, "optimizer", None),
+            )
 
             # ── Explicit hardware diagnostics ──
             cuda_ok = torch.cuda.is_available()
             self.log_line.emit("=" * 60)
-            self.log_line.emit(f"[HW] PyTorch {torch.__version__}  ·  CUDA build: {torch.version.cuda}")
+            self.log_line.emit(
+                f"[HW] PyTorch {torch.__version__}  ·  CUDA build: {torch.version.cuda}"
+            )
             self.log_line.emit(f"[HW] torch.cuda.is_available(): {cuda_ok}")
             if cuda_ok:
                 dev_name = torch.cuda.get_device_name(0)
                 free, total = torch.cuda.mem_get_info(0)
                 self.log_line.emit(
                     f"[HW] GPU 0: {dev_name}  ·  "
-                    f"VRAM libre {free/1024**3:.2f} / {total/1024**3:.2f} GB"
+                    f"VRAM libre {free / 1024**3:.2f} / {total / 1024**3:.2f} GB"
                 )
             self.log_line.emit(f"[HW] Device solicitado: '{p.device}'")
 
             # Resolve the effective device
             req = (p.device or "0").strip().lower()
             if not cuda_ok and req != "cpu":
-                self.log_line.emit("[ATENCION] CUDA no disponible — se forzará entrenamiento en CPU.")
+                self.log_line.emit(
+                    "[ATENCION] CUDA no disponible — se forzará entrenamiento en CPU."
+                )
                 effective_device = "cpu"
             elif req in ("cpu",):
                 self.log_line.emit("[INFO] Entrenando en CPU (por configuración).")
@@ -144,7 +155,8 @@ class TrainerRunner(QThread):
                 if mdl.compare_families:
                     self.log_line.emit(
                         "[ATENCION] Hay pesos personalizados cargados: se ignora "
-                        "la comparacion de arquitecturas y se entrena solo ese .pt.")
+                        "la comparacion de arquitecturas y se entrena solo ese .pt."
+                    )
             else:
                 families = mdl.families_to_train()
 
@@ -159,9 +171,9 @@ class TrainerRunner(QThread):
                 self.log_line.emit(
                     f"[INFO] Comparacion de arquitecturas: se entrenaran "
                     f"{len(families)} modelos ({', '.join(families)}) con "
-                    f"identica configuracion.")
-                self.log_line.emit(
-                    "[INFO] Van en secuencia, no en paralelo: comparten GPU.")
+                    f"identica configuracion."
+                )
+                self.log_line.emit("[INFO] Van en secuencia, no en paralelo: comparten GPU.")
                 self.log_line.emit("=" * 60)
 
             # Callbacks are registered once but serve several runs,
@@ -181,8 +193,12 @@ class TrainerRunner(QThread):
                         recall=float(metrics.get("metrics/recall(B)", 0.0)),
                         map50=float(metrics.get("metrics/mAP50(B)", 0.0)),
                         map50_95=float(metrics.get("metrics/mAP50-95(B)", 0.0)),
-                        box_loss=float(getattr(trainer, "loss_items", [0])[0]) if getattr(trainer, "loss_items", None) is not None else 0.0,
-                        lr=float(trainer.optimizer.param_groups[0]["lr"]) if trainer.optimizer else 0.0,
+                        box_loss=float(getattr(trainer, "loss_items", [0])[0])
+                        if getattr(trainer, "loss_items", None) is not None
+                        else 0.0,
+                        lr=float(trainer.optimizer.param_groups[0]["lr"])
+                        if trainer.optimizer
+                        else 0.0,
                     )
                     st.history.append(em)
                     if em.map50 > st.best_map50:
@@ -196,9 +212,16 @@ class TrainerRunner(QThread):
                     # Per-epoch telemetry: one record per epoch so that
                     # trainer.jsonl can follow a run in progress.
                     # obs.evento never raises, it is safe inside the callback.
-                    obs.event(log, "train.progress", epoca=ep, total=p.epochs,
-                               map50=round(em.map50, 4), precision=round(em.precision, 4),
-                               recall=round(em.recall, 4), caja=round(em.box_loss, 4))
+                    obs.event(
+                        log,
+                        "train.progress",
+                        epoca=ep,
+                        total=p.epochs,
+                        map50=round(em.map50, 4),
+                        precision=round(em.precision, 4),
+                        recall=round(em.recall, 4),
+                        caja=round(em.box_loss, 4),
+                    )
                     # Stop requested by the user: we cut at the epoch
                     # boundary (not midway) so that no half-written checkpoints are left.
                     # consume_abort() consumes the flag only once.
@@ -207,14 +230,17 @@ class TrainerRunner(QThread):
                         run_current["abortado"] = True
                         self.log_line.emit(
                             "[INFO] Solicitud de detención recibida: "
-                            "se parará al final de esta época.")
+                            "se parará al final de esta época."
+                        )
                 except Exception as e:
                     self.log_line.emit(f"[WARN] callback error: {e}")
 
             def _on_train_start(trainer):
                 self.log_line.emit("[INFO] Entrenamiento iniciado.")
                 self.log_line.emit(f"[INFO] Run: {run_current['nombre']}")
-                self.log_line.emit(f"[INFO] Imgsz: {p.imgsz} · Batch: {p.batch} · Epochs: {p.epochs}")
+                self.log_line.emit(
+                    f"[INFO] Imgsz: {p.imgsz} · Batch: {p.batch} · Epochs: {p.epochs}"
+                )
                 # Confirm the EFFECTIVE device of the model (this is the truth)
                 try:
                     model_dev = next(trainer.model.parameters()).device
@@ -300,12 +326,14 @@ class TrainerRunner(QThread):
                     self.log_line.emit("")
                     self.log_line.emit("=" * 60)
                     self.log_line.emit(
-                        f"[INFO] Modelo {i} de {len(families)}: {family_2} ({weights})")
+                        f"[INFO] Modelo {i} de {len(families)}: {family_2} ({weights})"
+                    )
                     self.log_line.emit("=" * 60)
 
                 self.log_line.emit(f"[INFO] Cargando modelo base: {weights}")
                 from polyx.core.training import TrainingConfig
                 from polyx.core.training import train as _core_train
+
                 cfg = TrainingConfig(
                     weights=weights,
                     data_yaml=str(ds.yaml_path),
@@ -339,9 +367,13 @@ class TrainerRunner(QThread):
                 if getattr(p, "choose_by_real_domain", True):
                     try:
                         chosen, table = choose_better_in_real(
-                            proj_dir / name_2, Path(ds.yaml_path),
-                            imgsz=int(p.imgsz), batch=int(p.batch),
-                            device=effective_device, log=self.log_line.emit)
+                            proj_dir / name_2,
+                            Path(ds.yaml_path),
+                            imgsz=int(p.imgsz),
+                            batch=int(p.batch),
+                            device=effective_device,
+                            log=self.log_line.emit,
+                        )
                         if chosen is not None:
                             weight_final = chosen
                             f1_real = table[0]["f1"] if table else None
@@ -349,36 +381,46 @@ class TrainerRunner(QThread):
                         # A failed re-selection cannot throw away an hours-long
                         # training run: it is reported and best.pt is kept.
                         self.log_line.emit(
-                            f"[WARN] No se pudo reelegir checkpoint: {exc}. "
-                            f"Se conserva best.pt.")
+                            f"[WARN] No se pudo reelegir checkpoint: {exc}. Se conserva best.pt."
+                        )
 
                 if weight_final.exists():
                     last_best = str(weight_final)
-                comparison.append({
-                    "familia": family_2,
-                    "peso_base": weights,
-                    "run": name_2,
-                    "best": str(weight_final) if weight_final.exists() else "",
-                    "map50": st.best_map50,
-                    "epoca_mejor": st.best_epoch,
-                    "f1_real": f1_real,
-                })
+                comparison.append(
+                    {
+                        "familia": family_2,
+                        "peso_base": weights,
+                        "run": name_2,
+                        "best": str(weight_final) if weight_final.exists() else "",
+                        "map50": st.best_map50,
+                        "epoca_mejor": st.best_epoch,
+                        "f1_real": f1_real,
+                    }
+                )
 
             # User abort: it is NOT a termination. The completion event is not emitted
             # and neither is finished_ok (that would tell the UI there were final
             # weights when there is only a truncated training run).
             if run_current["abortado"]:
-                obs.event(log, "train.aborted",
-                           ms=int((__import__("time").perf_counter() - _t0) * 1000),
-                           familias_completadas=len(comparison))
+                obs.event(
+                    log,
+                    "train.aborted",
+                    ms=int((__import__("time").perf_counter() - _t0) * 1000),
+                    familias_completadas=len(comparison),
+                )
                 self.aborted.emit()
                 return
 
             if len(comparison) > 1:
                 self._report_comparison(comparison, p)
 
-            obs.event(log, "train.complete", ms=int((__import__("time").perf_counter() - _t0) * 1000),
-                       weights=str(last_best), familias=len(comparison))
+            obs.event(
+                log,
+                "train.complete",
+                ms=int((__import__("time").perf_counter() - _t0) * 1000),
+                weights=str(last_best),
+                familias=len(comparison),
+            )
             self.finished_ok.emit(last_best)
 
         except KeyboardInterrupt:
@@ -386,6 +428,7 @@ class TrainerRunner(QThread):
             obs.event(self._log(), "train.aborted")
         except Exception as e:
             import traceback
+
             self.failed.emit(f"{type(e).__name__}: {e}\n\n{traceback.format_exc()}")
             obs.event_error(self._log(), "train.error", e)
 

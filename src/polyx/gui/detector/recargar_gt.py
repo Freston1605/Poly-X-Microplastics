@@ -9,6 +9,7 @@ Until now the only way out was to re-run the whole batch, and whoever did not
 ended up with a report carrying the old annotation with no warning at all,
 because the run freezes the GT it read. This module closes that gap.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,8 +35,12 @@ def _same_boxes(a, b, tol: float = 0.5) -> bool:
     for d1, d2 in zip(a, b):
         if d1.class_id != d2.class_id:
             return False
-        if (abs(d1.x1 - d2.x1) > tol or abs(d1.y1 - d2.y1) > tol
-                or abs(d1.x2 - d2.x2) > tol or abs(d1.y2 - d2.y2) > tol):
+        if (
+            abs(d1.x1 - d2.x1) > tol
+            or abs(d1.y1 - d2.y1) > tol
+            or abs(d1.x2 - d2.x2) > tol
+            or abs(d1.y2 - d2.y2) > tol
+        ):
             return False
     return True
 
@@ -107,16 +112,14 @@ def reload_gt(state, progress=None) -> dict:
         if has_gt:
             gts = read_yolo_txt(gt_txt, W, H, names_2)
             for d in gts:
-                compute_box_size_um(
-                    d, _um_px_de(state, r.image_path, params))
+                compute_box_size_um(d, _um_px_de(state, r.image_path, params))
 
         first = cluster[0][1]
         if has_gt == first.has_gt and _same_boxes(gts, first.gt):
             continue
         summary["cambiadas"].append(path_2.name)
 
-        img_bgr = cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8),
-                               cv2.IMREAD_COLOR)
+        img_bgr = cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8), cv2.IMREAD_COLOR)
         if img_bgr is None:
             continue
 
@@ -141,18 +144,21 @@ def reload_gt(state, progress=None) -> dict:
             base = f"{idx_img:04d}_{path_2.stem}"
 
             pred_img = _draw_annotated(
-                img_bgr, r.predictions,
+                img_bgr,
+                r.predictions,
                 color_for=lambda d: _color_bgr_for_class(d.class_name),
                 label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
             )
             if has_gt:
                 combined = _draw_annotated(
-                    pred_img, gts,
+                    pred_img,
+                    gts,
                     color_for=lambda d: (255, 200, 80),
                     label_for=lambda d: f"GT {d.class_name}",
                 )
                 gt_img = _draw_annotated(
-                    img_bgr, gts,
+                    img_bgr,
+                    gts,
                     color_for=lambda d: _color_bgr_for_class(d.class_name),
                     label_for=lambda d: f"{d.class_name}",
                 )

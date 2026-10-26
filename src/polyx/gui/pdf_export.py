@@ -9,6 +9,7 @@ without the figures breaking.
 It runs synchronously through a local event loop, so it must be called
 from the GUI thread with a QApplication already created.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,6 +18,7 @@ from pathlib import Path
 def is_available() -> bool:
     """Is QtWebEngine available to export to PDF?"""
     import importlib.util
+
     return importlib.util.find_spec("PySide6.QtWebEngineWidgets") is not None
 
 
@@ -34,7 +36,7 @@ def html_to_pdf(html_path: Path, pdf_path: Path, timeout_ms: int = 60000) -> boo
     pdf_path = Path(pdf_path)
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
-    view = QWebEngineView()          # not shown; offscreen render
+    view = QWebEngineView()  # not shown; offscreen render
     loop = QEventLoop()
     state = {"ok": False}
 
@@ -46,7 +48,7 @@ def html_to_pdf(html_path: Path, pdf_path: Path, timeout_ms: int = 60000) -> boo
         layout = QPageLayout(
             QPageSize(QPageSize.A4),
             QPageLayout.Portrait,
-            QMarginsF(8, 8, 8, 8),   # margins in mm
+            QMarginsF(8, 8, 8, 8),  # margins in mm
         )
         view.page().printToPdf(str(pdf_path), layout)
 

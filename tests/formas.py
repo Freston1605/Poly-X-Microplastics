@@ -10,6 +10,7 @@ de trazo en cada punta**, es decir el grosor entero. Tomar la línea central com
 verdad hacía aparecer un error del 12 % que no existía. Por eso las funciones de
 aquí devuelven ya la longitud con las tapas incluidas.
 """
+
 from __future__ import annotations
 
 import cv2
@@ -56,8 +57,7 @@ def arco(grados: float, radio: int = 70, grosor: int = 10):
     subestima y tiene que entrar el camino geodésico."""
     m = _lienzo()
     ang = np.deg2rad(np.linspace(-grados / 2, grados / 2, 400))
-    pts = np.c_[LADO // 2 + radio * np.cos(ang),
-                LADO // 2 + radio * np.sin(ang)].astype(np.int32)
+    pts = np.c_[LADO // 2 + radio * np.cos(ang), LADO // 2 + radio * np.sin(ang)].astype(np.int32)
     cv2.polylines(m, [pts], False, 255, grosor)
     return m, float(radio * np.deg2rad(grados) + grosor)
 
@@ -94,8 +94,9 @@ def grumo_con_muesca(diametro: int = 100):
     m = _lienzo()
     c = LADO // 2
     cv2.circle(m, (c, c), diametro // 2, 255, -1)
-    cv2.ellipse(m, (c, c + diametro // 2 + 5),
-                (diametro // 2 - 4, diametro // 2 - 8), 0, 0, 360, 0, -1)
+    cv2.ellipse(
+        m, (c, c + diametro // 2 + 5), (diametro // 2 - 4, diametro // 2 - 8), 0, 0, 360, 0, -1
+    )
     return m, float(diametro)
 
 
@@ -106,12 +107,12 @@ def grumo_con_muesca(diametro: int = 100):
 # asi que un 6 % deja margen para variaciones de version de OpenCV sin dejar
 # pasar una regresion de verdad. El arco de 180 grados es el mas exigente.
 CASOS = [
-    ("recta",              lambda: recta(),                 6.0),
-    ("recta girada 45",    lambda: recta_girada(45),        6.0),
-    ("arco 60",            lambda: arco(60),                6.0),
-    ("arco 120",           lambda: arco(120),               6.0),
-    ("arco 180",           lambda: arco(180),               6.0),
-    ("circulo",            lambda: circulo(),               6.0),
-    ("recta dentada",      lambda: recta_dentada(),         6.0),
-    ("grumo con muesca",   lambda: grumo_con_muesca(),      6.0),
+    ("recta", lambda: recta(), 6.0),
+    ("recta girada 45", lambda: recta_girada(45), 6.0),
+    ("arco 60", lambda: arco(60), 6.0),
+    ("arco 120", lambda: arco(120), 6.0),
+    ("arco 180", lambda: arco(180), 6.0),
+    ("circulo", lambda: circulo(), 6.0),
+    ("recta dentada", lambda: recta_dentada(), 6.0),
+    ("grumo con muesca", lambda: grumo_con_muesca(), 6.0),
 ]

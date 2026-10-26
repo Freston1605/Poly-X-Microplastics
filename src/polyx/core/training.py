@@ -4,6 +4,7 @@ Wraps Ultralytics YOLO training behind a plain-Python API so it can run in
 CI, containers and sweeps without a display. The GUI Trainer is a thin
 adapter over this module.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,23 +15,26 @@ from typing import Callable, Optional
 @dataclass
 class TrainingConfig:
     """Plain-data training configuration (no Qt)."""
-    weights: str                          # base weights (e.g. "yolov8m.pt")
-    data_yaml: str                        # path to data.yaml
-    project: str = "runs"                 # output root
-    name: str = "train"                   # run name
+
+    weights: str  # base weights (e.g. "yolov8m.pt")
+    data_yaml: str  # path to data.yaml
+    project: str = "runs"  # output root
+    name: str = "train"  # run name
     epochs: int = 100
     batch: int = 16
     imgsz: int = 640
-    device: Optional[str] = None      # None = let Ultralytics auto-select
+    device: Optional[str] = None  # None = let Ultralytics auto-select
     optimizer: str = "SGD"
     lr0: float = 0.01
-    extra: dict = field(default_factory=dict)   # forwarded to model.train()
+    extra: dict = field(default_factory=dict)  # forwarded to model.train()
 
 
-def train(cfg: TrainingConfig,
-          on_epoch: Optional[Callable[[dict], None]] = None,
-          on_log: Optional[Callable[[str], None]] = None,
-          callbacks: Optional[dict[str, Callable]] = None) -> Path:
+def train(
+    cfg: TrainingConfig,
+    on_epoch: Optional[Callable[[dict], None]] = None,
+    on_log: Optional[Callable[[str], None]] = None,
+    callbacks: Optional[dict[str, Callable]] = None,
+) -> Path:
     """Run Ultralytics training and return the path to best.pt.
 
     ``callbacks`` is a mapping of Ultralytics event name -> callable(trainer),

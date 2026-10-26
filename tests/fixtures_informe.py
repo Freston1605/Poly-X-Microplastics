@@ -28,6 +28,7 @@ dos componentes y el ``<`` de apertura se perdia de ``image_path.name``
 la inyeccion completa llega viva al sumidero, que es lo que T06/T07 cer-
 rifican.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -80,16 +81,16 @@ def _escribir_foto(ruta: Path) -> None:
     """
     ruta.parent.mkdir(parents=True, exist_ok=True)
     ok, buf = cv2.imencode(".png", foto_sintetica())
-    if not ok:      # pragma: no cover - cv2 nunca falla con tipos correctos
+    if not ok:  # pragma: no cover - cv2 nunca falla con tipos correctos
         raise RuntimeError(f"cv2.imencode fallo para {ruta}")
     ruta.write_bytes(buf.tobytes())
 
 
 def deteccion_medida(img: "np.ndarray") -> Detection:
     """Build the measured Detection (disc fit to the synthetic frame)."""
-    d = Detection(class_id=0, class_name="PET", conf=0.9,
-                  x1=138, y1=108, x2=182, y2=152)
+    d = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
     from polyx.core import morphology
+
     morphology.apply_to_detection(d, img, 30.0)
     return d
 
@@ -101,10 +102,9 @@ def _normalizar(valor: Union[str, Sequence[str]]) -> list[str]:
     return list(valor)
 
 
-def _construir_estado(directorio: Path,
-                      nombres: Sequence[str],
-                      aliases: Sequence[str],
-                      escribir_foto: bool = True):
+def _construir_estado(
+    directorio: Path, nombres: Sequence[str], aliases: Sequence[str], escribir_foto: bool = True
+):
     """Build the DetectorState shared by every fixture variant.
 
     Identical recipe to test_informe_bilingue._estado_minimo: one synthetic
@@ -122,8 +122,7 @@ def _construir_estado(directorio: Path,
     st = DetectorState()
     # model_slots es una LISTA (ver state.py, active_models itera sobre ella);
     # no se reemplaza el contenedor, solo se llenan los indices pedidos.
-    assert len(st.model_slots) >= len(aliases), (
-        "DetectorState no tiene slots para tantos modelos")
+    assert len(st.model_slots) >= len(aliases), "DetectorState no tiene slots para tantos modelos"
     st.results = {}
     numero = 1
     for idx, alias in enumerate(aliases):
@@ -134,8 +133,9 @@ def _construir_estado(directorio: Path,
             d = deteccion_medida(foto_sintetica())
             d.number = numero
             numero += 1
-            filas.append(ImageResult(image_path=ruta, model_idx=idx,
-                                     predictions=[d], gt=[], has_gt=False))
+            filas.append(
+                ImageResult(image_path=ruta, model_idx=idx, predictions=[d], gt=[], has_gt=False)
+            )
         st.results[idx] = filas
     return st
 
@@ -147,13 +147,14 @@ def estado_benigno(directorio: Optional[Path] = None):
     renders must reproduce the baseline byte-for-byte.
     """
     directorio = directorio or Path(tempfile.mkdtemp(prefix="polyx-fixture-benigna-"))
-    return _construir_estado(Path(directorio),
-                             [NOMBRE_FOTO_BENIGNO], [ALIAS_BENIGNO])
+    return _construir_estado(Path(directorio), [NOMBRE_FOTO_BENIGNO], [ALIAS_BENIGNO])
 
 
-def estado_hostil(nombres: Union[str, Sequence[str], None] = None,
-                  alias: Union[str, Sequence[str], None] = None,
-                  directorio: Optional[Path] = None):
+def estado_hostil(
+    nombres: Union[str, Sequence[str], None] = None,
+    alias: Union[str, Sequence[str], None] = None,
+    directorio: Optional[Path] = None,
+):
     """Return a DetectorState carrying HTML injection in its strings.
 
     Injection lives in two sinks of the report: the model alias ("m1" beco-

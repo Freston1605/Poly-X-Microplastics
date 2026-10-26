@@ -18,6 +18,7 @@ Usage:
 The language is resolved once at startup: ``POLYX_IDIOMA`` if set, otherwise
 the user's saved choice, otherwise the system language, and failing all of
 that, Spanish."""
+
 from __future__ import annotations
 
 import json
@@ -43,8 +44,7 @@ TRANSLATIONS: dict[str, str] = {
     # ── Launcher ──
     "Poly-X · Suite de microplásticos": "Poly-X · Microplastics suite",
     "● PLATAFORMA DE ANÁLISIS": "● ANALYSIS PLATFORM",
-    "Plataforma de detección y clasificación de microplásticos":
-        "Detection and classification platform for microplastics",
+    "Plataforma de detección y clasificación de microplásticos": "Detection and classification platform for microplastics",
     "Abrir  →": "Open  →",
     "MÓDULO": "MODULE",
     "Detector": "Detector",
@@ -59,28 +59,21 @@ TRANSLATIONS: dict[str, str] = {
     "medición": "measurement",
     "calibración por píxel": "per-pixel calibration",
     "Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) "
-    "e inteligencia artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo.":
-        "Automated detection of PET, PP and LDPE by Nile Red fluorescence (254 nm) "
-        "and machine learning. Training, labeling, detection and reporting in a single workflow.",
-    "Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026":
-        "Designed and developed by <b>Cristofher Ferrada</b> · PhD (c) in Chemistry, 2026",
+    "e inteligencia artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo.": "Automated detection of PET, PP and LDPE by Nile Red fluorescence (254 nm) "
+    "and machine learning. Training, labeling, detection and reporting in a single workflow.",
+    "Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026": "Designed and developed by <b>Cristofher Ferrada</b> · PhD (c) in Chemistry, 2026",
     "Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, "
-    "CSV con centroides y diámetros, métricas globales y reporte HTML paper-quality.":
-        "Analyzes images with a trained .pt model. Produces annotated output, a CSV "
-        "of centroids and diameters, global metrics and a paper-quality HTML report.",
+    "CSV con centroides y diámetros, métricas globales y reporte HTML paper-quality.": "Analyzes images with a trained .pt model. Produces annotated output, a CSV "
+    "of centroids and diameters, global metrics and a paper-quality HTML report.",
     "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas "
-    "de calidad y comparación con runs anteriores.":
-        "Trains YOLO v8 / v11 models. Live curves, automatic quality recommendations "
-        "and comparison against earlier runs.",
+    "de calidad y comparación con runs anteriores.": "Trains YOLO v8 / v11 models. Live curves, automatic quality recommendations "
+    "and comparison against earlier runs.",
     "Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo "
-    "existente y atajos de teclado, ahorra ~80 % del tiempo manual.":
-        "Annotates images in YOLO format. Supports pre-annotation with an existing "
-        "model plus keyboard shortcuts, saving ~80% of the manual time.",
+    "existente y atajos de teclado, ahorra ~80 % del tiempo manual.": "Annotates images in YOLO format. Supports pre-annotation with an existing "
+    "model plus keyboard shortcuts, saving ~80% of the manual time.",
     "Inspección de una imagen a la vez con calibración interactiva μm/píxel "
-    "(línea o círculo) y medición precisa por partícula.":
-        "Inspects one image at a time with interactive µm/pixel calibration "
-        "(line or circle) and precise per-particle measurement.",
-
+    "(línea o círculo) y medición precisa por partícula.": "Inspects one image at a time with interactive µm/pixel calibration "
+    "(line or circle) and precise per-particle measurement.",
     # ── Shared vocabulary ──
     "Abrir carpeta…": "Open folder…",
     "Guardar": "Save",
@@ -106,7 +99,6 @@ TRANSLATIONS: dict[str, str] = {
     "Exportar": "Export",
     "Informe": "Summary",
     "Augmentación": "Augmentation",
-
     # ── Automatic tiling (Detector › Parameters) ──
     "Troceado automático (fotos grandes)": "Automatic tiling (large photos)",
     "Cuándo trocear:": "When to tile:",
@@ -120,30 +112,26 @@ TRANSLATIONS: dict[str, str] = {
     "reducidos a 2080, cada partícula encoge a la mitad y desaparece bajo el "
     "stride de la red. Troceando, cada tile entra a resolución nativa y las "
     "cajas vuelven a coordenadas de la foto completa, fusionadas con NMS "
-    "global — no hay que cortar nada a mano ni sumar los conteos después.":
-        "A whole-plate photo is rescaled to imgsz on its way into the network: "
-        "going from 4096 px down to 2080 halves every particle, and it vanishes "
-        "under the network stride. Tiling feeds each tile at native resolution "
-        "and maps the boxes back to full-photo coordinates, merged with global "
-        "NMS — nothing has to be cut by hand and no counts have to be added up "
-        "afterwards.",
-
+    "global — no hay que cortar nada a mano ni sumar los conteos después.": "A whole-plate photo is rescaled to imgsz on its way into the network: "
+    "going from 4096 px down to 2080 halves every particle, and it vanishes "
+    "under the network stride. Tiling feeds each tile at native resolution "
+    "and maps the boxes back to full-photo coordinates, merged with global "
+    "NMS — nothing has to be cut by hand and no counts have to be added up "
+    "afterwards.",
     # ── Trainer › GPU and priorities ──
     "Maximizar imgsz para mi GPU": "Maximize imgsz for my GPU",
     "Detectar GPU / VRAM": "Detect GPU / VRAM",
     "Sugerir imgsz MÁXIMO": "Suggest MAXIMUM imgsz",
     "Sugerir batch para mi GPU": "Suggest batch for my GPU",
-    "Optimizar todo (imgsz → batch → velocidad)":
-        "Optimize everything (imgsz → batch → speed)",
+    "Optimizar todo (imgsz → batch → velocidad)": "Optimize everything (imgsz → batch → speed)",
     "Detectando GPU…": "Detecting GPU…",
     "Sin GPU utilizable": "No usable GPU",
     "Configuración optimizada": "Optimized configuration",
     "Fija imgsz al máximo que aguanta la tarjeta (sin pasar de la resolución "
     "nativa del dataset), después sube el batch con lo que sobre, y al final "
-    "ajusta AMP, workers y cache. En ese orden.":
-        "Sets imgsz to the highest the card can take (without exceeding the "
-        "dataset's native resolution), then raises batch with what is left, and "
-        "finally tunes AMP, workers and cache. In that order.",
+    "ajusta AMP, workers y cache. En ese orden.": "Sets imgsz to the highest the card can take (without exceeding the "
+    "dataset's native resolution), then raises batch with what is left, and "
+    "finally tunes AMP, workers and cache. In that order.",
     "automático": "automatic",
 }
 
@@ -157,7 +145,7 @@ TRANSLATIONS.update({s: s for s in NO_TRANSLATE})
 
 def _detect_language_system() -> str:
     try:
-        cod = (locale.getlocale()[0] or locale.getdefaultlocale()[0] or "")
+        cod = locale.getlocale()[0] or locale.getdefaultlocale()[0] or ""
     except Exception:
         cod = ""
     return "es" if cod.lower().startswith("es") else "en" if cod else "es"

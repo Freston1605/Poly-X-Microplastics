@@ -28,6 +28,7 @@ QT_QPA_PLATFORM=offscreen para hermeticidad; ninguno de los dos afecta la
 topologia de imports, solo evitan dependencia del locale/entorno de la
 maquina.
 """
+
 from __future__ import annotations
 
 import os
@@ -68,7 +69,9 @@ def test_importar_informe_no_carga_los_pesados():
     env = os.environ | {
         "QT_QPA_PLATFORM": "offscreen",
         "POLYX_IDIOMA": "en",
-        "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""),
+        "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")
+        + os.pathsep
+        + os.environ.get("PYTHONPATH", ""),
     }
     proc = subprocess.run(
         [sys.executable, "-c", script],
@@ -81,8 +84,7 @@ def test_importar_informe_no_carga_los_pesados():
 
     # Si el propio import del informe revienta, el gate tiene que señalarlo.
     assert proc.returncode == 0, (
-        "importar polyx.gui.report_html fallo en el interprete limpio:\n"
-        + proc.stderr
+        "importar polyx.gui.report_html fallo en el interprete limpio:\n" + proc.stderr
     )
     assert "YoloWrapImportable:ok" in proc.stdout, proc.stdout + proc.stderr
 

@@ -46,7 +46,9 @@ class NativeDetector(DetectionSource):
             return []
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, self.threshold, 255, cv2.THRESH_BINARY)
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary, connectivity=8)
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+            binary, connectivity=8
+        )
 
         instances = []
         for i in range(1, num_labels):  # Skip background (label 0)
@@ -59,13 +61,17 @@ class NativeDetector(DetectionSource):
             h = stats[i, cv2.CC_STAT_HEIGHT]
             cx, cy = centroids[i]
 
-            instances.append(Instance(
-                class_id=0,
-                class_name="particle",
-                conf=conf,
-                x1=float(x), y1=float(y),
-                x2=float(x + w), y2=float(y + h),
-            ))
+            instances.append(
+                Instance(
+                    class_id=0,
+                    class_name="particle",
+                    conf=conf,
+                    x1=float(x),
+                    y1=float(y),
+                    x2=float(x + w),
+                    y2=float(y + h),
+                )
+            )
 
         return instances
 

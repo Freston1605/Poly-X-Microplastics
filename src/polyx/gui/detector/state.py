@@ -2,6 +2,7 @@
 
 Inherits from QObject to emit signals when it changes (the pages subscribe).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -21,9 +22,10 @@ from polyx.core.platform import device_available
 @dataclass
 class ModelSlot:
     """A model slot in the `Modelos` tab (up to 3)."""
+
     alias: str = ""
-    path: Optional[Path] = None      # path to the weights
-    model_type: str = "yolo"         # "yolo" | "yolo-seg" | "sam2" | ...
+    path: Optional[Path] = None  # path to the weights
+    model_type: str = "yolo"  # "yolo" | "yolo-seg" | "sam2" | ...
     loaded: Optional[DetectionSource] = None
 
 
@@ -31,7 +33,7 @@ class ModelSlot:
 class InferenceParams:
     conf: float = 0.25
     iou_nms: float = 0.45
-    iou_tp: float = 0.50            # for error analysis
+    iou_tp: float = 0.50  # for error analysis
     # 1280 and not 640: microplastics occupy ~12 px in 4096 photos, and at 640
     # they collapse below the network stride, so by default nothing was detected.
     # Matches the `Rápido` profile on the Parameters page.
@@ -40,9 +42,9 @@ class InferenceParams:
     # analysis failed at startup. It is resolved when creating the parameters
     # by choosing the best available -- CUDA, then MPS (Mac GPU), then CPU.
     device: str = field(default_factory=device_available)
-    um_per_px: float = 0.0          # 0 = calibration disabled; manual fallback
-    size_min_um: float = 0.0        # 0 = lower filter disabled
-    size_max_um: float = 0.0        # 0 = upper filter disabled
+    um_per_px: float = 0.0  # 0 = calibration disabled; manual fallback
+    size_min_um: float = 0.0  # 0 = lower filter disabled
+    size_max_um: float = 0.0  # 0 = upper filter disabled
     # ── Abstention: how far the polymer holds ──
     # Minimum confidence to assign a polymer to the particle. Below it, the
     # particle is still counted but reported as «not assignable», instead of
@@ -86,10 +88,10 @@ class InferenceParams:
     # each tile at native resolution and merges with global NMS. The threshold is 2000
     # so the study crops (1630 px per side) fit in one piece and
     # the full plates (~3260) get tiled.
-    tiling: str = "auto"            # `"auto"` | `"siempre"` | `"nunca"`
+    tiling: str = "auto"  # `"auto"` | `"siempre"` | `"nunca"`
     tiling_threshold_px: int = 2000
-    tiling_tile: int = 0            # 0 = derive from min(threshold, imgsz)
-    tiling_overlap: float = 0.25    # overlap between tiles; NMS removes the duplicate
+    tiling_tile: int = 0  # 0 = derive from min(threshold, imgsz)
+    tiling_overlap: float = 0.25  # overlap between tiles; NMS removes the duplicate
 
 
 @lru_cache(maxsize=12)
@@ -115,6 +117,7 @@ class ImageResult:
     written. The ``*_png`` properties still return bytes, so whoever consumed
     them does not change; what changes is that they are read on demand.
     """
+
     image_path: Path
     model_idx: int
     predictions: List[Detection] = field(default_factory=list)
@@ -125,9 +128,9 @@ class ImageResult:
     fn: int = 0
     miscls: int = 0
     # Paths of the annotated images saved in the run folder.
-    annotated_path: Optional[Path] = None   # prediction + GT (preview/errors)
-    pred_path: Optional[Path] = None        # model predictions only
-    gt_path: Optional[Path] = None          # GT only (None if absent)
+    annotated_path: Optional[Path] = None  # prediction + GT (preview/errors)
+    pred_path: Optional[Path] = None  # model predictions only
+    gt_path: Optional[Path] = None  # GT only (None if absent)
     # user verdict after visual review: None / `"buena"` / `"mala"`
     verdict: Optional[str] = None
     # tiling geometry if the photo was split; "" = inferred as one piece
@@ -164,16 +167,17 @@ class DetectorState(QObject):
     models_changed = Signal()
     images_changed = Signal()
     params_changed = Signal()
-    run_progress = Signal(int, int, str)    # done, total, last_image
+    run_progress = Signal(int, int, str)  # done, total, last_image
     run_started = Signal()
     run_finished = Signal()
-    run_image_done = Signal(int, object)    # model_idx, ImageResult
+    run_image_done = Signal(int, object)  # model_idx, ImageResult
     run_aborted = Signal()
 
     def __init__(self):
         super().__init__()
         self.model_slots: List[ModelSlot] = [
-            ModelSlot(alias=tr("Modelo {n}").format(n=i + 1)) for i in range(3)]
+            ModelSlot(alias=tr("Modelo {n}").format(n=i + 1)) for i in range(3)
+        ]
         self.images: List[Path] = []
         self.gt_folder: Optional[Path] = None
         self.params = InferenceParams()

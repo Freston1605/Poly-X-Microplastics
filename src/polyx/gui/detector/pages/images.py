@@ -1,4 +1,5 @@
 """Page 2 — `Imágenes`. File/folder selection + optional GT folder."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,10 +29,10 @@ from ._base import DetectorPage
 class ImagesPage(DetectorPage):
     STEP_N = 2
     STEP_TITLE = tr("Imágenes")
-    STEP_DESCRIPTION = (
-        tr("Selecciona imágenes individuales o una carpeta. Si tienes etiquetas verdaderas en "
+    STEP_DESCRIPTION = tr(
+        "Selecciona imágenes individuales o una carpeta. Si tienes etiquetas verdaderas en "
         "formato YOLO (.txt) en la misma carpeta o en una hermana 'labels/', se cargarán y "
-        "activarán el análisis de errores.")
+        "activarán el análisis de errores."
     )
 
     def __init__(self, state, parent=None):
@@ -62,7 +63,9 @@ class ImagesPage(DetectorPage):
         lbl_gt = QLabel(tr("Carpeta GT (opcional):"))
         lbl_gt.setStyleSheet(f"color: {T.INK2}; border: none;")
         self.ed_gt = QLineEdit()
-        self.ed_gt.setPlaceholderText(tr("Ruta a la carpeta con .txt YOLO (si no, busca junto a la imagen)"))
+        self.ed_gt.setPlaceholderText(
+            tr("Ruta a la carpeta con .txt YOLO (si no, busca junto a la imagen)")
+        )
         self.ed_gt.editingFinished.connect(self._gt_text_changed)
         btn_gt = QPushButton("…")
         btn_gt.setFixedWidth(36)
@@ -73,10 +76,12 @@ class ImagesPage(DetectorPage):
         l1.addLayout(gt_row)
 
         hint = QLabel(
-            tr("Si dejas vacío, busca .txt junto a cada imagen y en /labels/ hermana. "
-            "Si una imagen tiene GT, se incluirá en el análisis de errores "
-            "(Verdaderos Positivos, Falsos Positivos y Falsos Negativos). "
-            "Si no, solo se reportan las detecciones del modelo.")
+            tr(
+                "Si dejas vacío, busca .txt junto a cada imagen y en /labels/ hermana. "
+                "Si una imagen tiene GT, se incluirá en el análisis de errores "
+                "(Verdaderos Positivos, Falsos Positivos y Falsos Negativos). "
+                "Si no, solo se reportan las detecciones del modelo."
+            )
         )
         hint.setWordWrap(True)
         hint.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
@@ -104,9 +109,7 @@ class ImagesPage(DetectorPage):
     # ──────────────────────────────────────────
     def _pick_files(self):
         ext_filter = "Imágenes (" + " ".join(f"*{e}" for e in IMAGE_EXTS) + ")"
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "Seleccionar imágenes", "", ext_filter
-        )
+        files, _ = QFileDialog.getOpenFileNames(self, "Seleccionar imágenes", "", ext_filter)
         if files:
             self.state.images = [Path(f) for f in files]
             self._refresh_table()
@@ -145,6 +148,7 @@ class ImagesPage(DetectorPage):
             for u in urls:
                 p = u.toLocalFile()
                 from pathlib import Path as _P
+
                 pp = _P(p)
                 if pp.is_dir() or pp.suffix.lower() in IMAGE_EXTS:
                     ev.acceptProposedAction()
@@ -167,7 +171,7 @@ class ImagesPage(DetectorPage):
 
     def _refresh_table(self):
         imgs = self.state.images
-        self.lbl_count.setText(f"{len(imgs)} imágene{'s' if len(imgs)!=1 else ''}")
+        self.lbl_count.setText(f"{len(imgs)} imágene{'s' if len(imgs) != 1 else ''}")
         self.table.setRowCount(len(imgs))
         for r, p in enumerate(imgs):
             self.table.setItem(r, 0, QTableWidgetItem(p.name))
