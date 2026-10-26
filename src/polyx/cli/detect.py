@@ -71,9 +71,6 @@ def main(argv: list[str] | None = None) -> int:
             build_state = importlib.import_module(
                 "polyx.gui.detector.run_state").build_state_from_run
             state = build_state(out_dir, Path(args.images))
-            state.params.um_per_px = args.um_per_px
-            state.params.conf = args.conf
-            state.params.device = args.device or state.params.device
             generate_report(state, report_path)
             print(f"FULL REPORT: {report_path}")
         except Exception as exc:

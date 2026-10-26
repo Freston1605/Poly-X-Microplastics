@@ -227,6 +227,81 @@ def test_run_batch_empty_inputs_still_write_csv(tmp_path):
     assert (out / "centroids.csv").read_text(encoding="utf-8").startswith("image")
 
 
+# ── Mask-aware measurement ─────────────────────────────────────────────
+
+def test_measurement_prefers_attached_mask_over_otsu():
+    """The provided mask wins; the det.mask fallback works too."""
+    from polyx.core.detect.protocol import Instance
+    from polyx.core.measure.morphology import apply_to_detection
+
+    img = np.full((150, 200, 3), 255, dtype=np.uint8)
+    cv2.circle(img, (70, 60), 12, (0, 0, 0), -1)
+    full = np.zeros((150, 200), dtype=bool)
+    full[40:100, 50:110] = True        # 60 x 60 square, mask area = 3600 px
+
+    box_only = Instance(class_id=0, class_name="p", conf=0.9,
+                        x1=50, y1=40, x2=90, y2=80)
+    assert apply_to_detection(box_only, img, 1.0) is False   # Otsu fails here
+    assert box_only.area_um2 is None
+
+    # explicit mask argument
+    det = Instance(class_id=0, class_name="p", conf=0.9,
+                   x1=50, y1=40, x2=90, y2=80)
+    assert apply_to_detection(det, img, 1.0, mask=full) is True
+    assert det.area_um2 == pytest.approx(3600.0, rel=0.01)
+
+    # fallback through det.mask (what a two-stage model attaches)
+    det2 = Instance(class_id=0, class_name="p", conf=0.9,
+                    x1=50, y1=40, x2=90, y2=80, mask=full)
+    assert apply_to_detection(det2, img, 1.0) is True
+    assert det2.area_um2 == pytest.approx(3600.0, rel=0.01)
+
+
+def test_run_batch_records_per_image_metrics_and_params(tmp_path):
+    """Per-image counts must sum to the aggregate, never repeat it."""
+    image_dir, out = _run_dir(tmp_path)
+    _write_image(image_dir / "img2.png")
+    # img1: prediction matches GT -> TP. img2: GT sits elsewhere -> FP + FN.
+    (image_dir / "img1.txt").write_text("0 0.35 0.4 0.2 0.2667\n", encoding="utf-8")
+    (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
+    model = _FakeDetector([(0, 50, 40, 90, 80)])
+
+    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
+                        gt_folder=image_dir)
+    assert summary["per_image"]["img1.png"] == {"tp": 1, "fp": 0, "fn": 0, "miscls": 0}
+    assert summary["per_image"]["img2.png"] == {"tp": 0, "fp": 1, "fn": 1, "miscls": 0}
+    assert sum(v["tp"] for v in summary["per_image"].values()) == summary["metrics"]["tp"]
+
+    assert summary["params"]["imgsz"] == 1280
+    assert summary["params"]["conf"] == 0.25
+    assert summary["params"]["measure_shape"] is False
+    assert summary["params"]["device"] == "cpu"
+
+
+def test_run_state_rebuild_does_not_multiply_metrics(tmp_path):
+    """The report sums per image: rebuilt state must carry per-image counts."""
+    image_dir, out = _run_dir(tmp_path)
+    _write_image(image_dir / "img2.png")
+    (image_dir / "img1.txt").write_text("0 0.35 0.4 0.2 0.2667\n", encoding="utf-8")
+    (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
+    model = _FakeDetector([(0, 50, 40, 90, 80)])
+    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False,
+                        gt_folder=image_dir)
+
+    from polyx.gui.detector.run_state import build_state_from_run
+    state = build_state_from_run(out, image_dir)
+    rs = state.results[0]
+    by_name = {r.image_path.name: r for r in rs}
+    assert by_name["img1.png"].tp == 1
+    assert by_name["img2.png"].tp == 0 and by_name["img2.png"].fn == 1
+    # The invariant the report relies on: the per-image sum is the aggregate.
+    assert sum(r.tp for r in rs) == summary["metrics"]["tp"]
+    assert all(r.has_gt for r in rs)
+    assert all(r.annotated_path.is_file() for r in rs)
+    # Run parameters travel with the run instead of defaulting to 1280/0.25.
+    assert state.params.imgsz == summary["params"]["imgsz"]
+
+
 # ── Compact report ──────────────────────────────────────────────────────
 
 def test_report_simple_generates_html(tmp_path):
@@ -247,13 +322,16 @@ def test_eval_metrics_extraction_maps_sparse_classes():
     box = SimpleNamespace(
         map50=0.75, map=0.6,
         p=[0.8, 0.7], r=[0.9, 0.6], ap50=[0.85, 0.65],
-        ap_class=[0, 2],           # class 1 never appears in the val set
+        # Real Ultralytics attribute name; class 1 never appears in the
+        # val set, so p[1] belongs to class 2 and dense indexing would
+        # mislabel it.
+        ap_class_index=[0, 2],
     )
     results = SimpleNamespace(box=box)
     metrics = _metrics_from_results(results, {0: "particle", 1: "fiber", 2: "pellet"})
     assert metrics["mAP50"] == pytest.approx(0.75)
     assert metrics["mAP50-95"] == pytest.approx(0.6)
-    # class 1 is absent from ap_class; only present classes are reported
+    # class 1 is absent from ap_class_index; only present classes are reported
     assert set(metrics["per_class"]) == {"particle", "pellet"}
     assert metrics["per_class"]["pellet"]["precision"] == pytest.approx(0.7)
     assert metrics["per_class"]["particle"]["AP50"] == pytest.approx(0.85)

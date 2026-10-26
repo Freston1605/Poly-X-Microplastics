@@ -45,15 +45,19 @@ def _metrics_from_results(results: Any, names: dict) -> dict:
         p = list(results.box.p)
         r = list(results.box.r)
         ap50 = list(results.box.ap50)
-        ap_classes = list(getattr(results.box, "ap_class", range(len(p))) or range(len(p)))
+        # Ultralytics names the mapping "ap_class_index" (the class id for
+        # each entry of p/r/ap50); older/newer shapes are guarded, and the
+        # dense fallback only applies when the mapping is absent.
+        ap_classes = list(getattr(results.box, "ap_class_index",
+                                  getattr(results.box, "ap_class", range(len(p))) or range(len(p))))
         for i, cid in enumerate(ap_classes):
-            name = names.get(cid, str(cid))
+            name = names.get(int(cid), str(cid))
             per_class[str(name)] = {
                 "precision": float(p[i]) if i < len(p) else None,
                 "recall": float(r[i]) if i < len(r) else None,
                 "AP50": float(ap50[i]) if i < len(ap50) else None,
             }
-    except (AttributeError, TypeError):
+    except (AttributeError, TypeError, IndexError):
         pass
     metrics["per_class"] = per_class
     metrics["names"] = {str(k): str(v) for k, v in names.items()}

@@ -56,6 +56,7 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
     images = sorted(p for p in Path(image_dir).rglob("*") if p.suffix.lower() in IMAGE_EXTS)
     rows = []
     metrics_agg = {"tp": 0, "fp": 0, "fn": 0, "miscls": 0}
+    per_image: dict[str, dict[str, int]] = {}
     has_gt_any = False
 
     for img_path in images:
@@ -78,16 +79,22 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
             if measure_shape:
                 for g in gts:
                     _measure(g, img, um_per_px)
-            # Mask IoU only when both sides can be evaluated through masks;
-            # otherwise the greedy match degrades to box IoU, which is the
-            # historical behavior.
-            use_masks = all(getattr(d, "mask", None) is not None for d in dets) and \
-                all(getattr(g, "mask", None) is not None for g in gts)
+            # Mask IoU when either side carries masks: mask_iou falls back to
+            # box IoU per pair, so one failed segmentation cannot disable
+            # mask matching for the whole image.
+            use_masks = any(getattr(d, "mask", None) is not None for d in dets) or \
+                any(getattr(g, "mask", None) is not None for g in gts)
             m = match_image(dets, gts, iou_thr=0.5, use_mask_iou=use_masks)
             metrics_agg["tp"] += m.tp
             metrics_agg["fp"] += m.fp
             metrics_agg["fn"] += m.fn
             metrics_agg["miscls"] += m.miscls
+            # Per-image counts so the report's per-photo table and its
+            # sums stay honest (an aggregate copied into every row would
+            # multiply by the number of images).
+            per_image[img_path.name] = {
+                "tp": m.tp, "fp": m.fp, "fn": m.fn, "miscls": m.miscls,
+            }
 
         # save annotated
         annotated = _draw(img, dets)
@@ -127,6 +134,19 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
         "detections": len(rows),
         "has_gt": has_gt_any,
         "metrics": metrics_agg,
+        "per_image": per_image,
+        # The run parameters travel with the run so a report rebuilt from
+        # this folder shows what actually ran, not the defaults.
+        "params": {
+            "conf": conf,
+            "iou": iou,
+            "imgsz": imgsz,
+            "device": device,
+            "um_per_px": um_per_px,
+            "measure_shape": measure_shape,
+            "gt_folder": str(gt_folder) if gt_folder else None,
+            "model_type": type(model).__name__,
+        },
         "output_dir": str(output_dir),
     }
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
