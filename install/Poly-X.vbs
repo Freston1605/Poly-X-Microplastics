@@ -14,6 +14,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 Set shell = CreateObject("WScript.Shell")
 
 raiz = fso.GetParentFolderName(WScript.ScriptFullName)
+raiz = fso.GetParentFolderName(raiz)
 pythonw = raiz & "\.venv\Scripts\pythonw.exe"
 
 If Not fso.FileExists(pythonw) Then
@@ -26,7 +27,7 @@ End If
 
 If Not fso.FolderExists(raiz & "\src\polyx") Then
     MsgBox "No se encuentra la carpeta 'polyx' junto a este archivo." & vbCrLf & _
-           vbCrLf & "Deja Poly-X.vbs en la raiz del proyecto, junto a SETUP.bat.", _
+           vbCrLf & "Deja Poly-X.vbs en install\, junto a SETUP.bat.", _
            vbCritical, "Poly-X"
     WScript.Quit 1
 End If

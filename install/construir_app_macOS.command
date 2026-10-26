@@ -20,8 +20,10 @@
 #     Lanzar_macOS.command sigue funcionando y es la opción recomendada.
 # ══════════════════════════════════════════════════════════════════
 
-cd "$(dirname "$0")" || exit 1
-VENV_PY=".venv/bin/python"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT" || exit 1
+VENV_PY="$PROJECT_ROOT/.venv/bin/python"
 
 if [ ! -x "$VENV_PY" ]; then
     echo "  [ERROR] No hay entorno instalado."
@@ -69,7 +71,7 @@ echo "  Empaquetando (paciencia)..."
     --collect-all torch \
     --collect-all torchvision \
     --collect-submodules polyx \
-    lanzar_polyx.py
+    install/lanzar_polyx.py
 
 if [ $? -ne 0 ] || [ ! -d "dist/Poly-X.app" ]; then
     echo ""

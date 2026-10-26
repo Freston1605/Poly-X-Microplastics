@@ -110,12 +110,13 @@ ESTRUCTURA DE CARPETAS
   legacy/             Versiones anteriores del código (referencia)
   docs/manual/        Manual de usuario completo (abrir en navegador)
   LEEME_macOS.md      Guia especifica de macOS
-  SETUP.bat                 [Win] Instalación
-  iniciar_polyx.bat         [Win] Lanzador
-  actualizar.bat            [Win] Actualizador
-  Lanzar_macOS.command      [Mac] Instalación + lanzador
-  crear_icono_macOS.command [Mac] Icono que abre sin ventana de Terminal
-  actualizar_macOS.command  [Mac] Actualizador
+  install\SETUP.bat         [Win] Instalación
+  install\iniciar_polyx.bat [Win] Lanzador
+  install\Poly-X.vbs        [Win] Lanzador sin consola
+  install\actualizar.bat     [Win] Actualizador
+  install\Lanzar_macOS.command      [Mac] Instalación + lanzador
+  install\crear_icono_macOS.command  [Mac] Icono sin ventana de Terminal
+  install\actualizar_macOS.command   [Mac] Actualizador
 
 REGENERAR EL MANUAL CON LA UI ACTUAL
 ------------------------------------

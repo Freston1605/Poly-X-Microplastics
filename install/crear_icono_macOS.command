@@ -21,7 +21,9 @@
 # Sin 'set -u': macOS sigue trayendo bash 3.2, y ahi expandir "$@" sin
 # argumentos —que es como lo abre Finder— aborta con 'unbound variable'.
 cd "$(dirname "$0")" || exit 1
-RAIZ="$(pwd)"
+SCRIPT_DIR="$(pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+RAIZ="$PROJECT_ROOT"
 VENV_PY="$RAIZ/.venv/bin/python"
 
 DESTINO=""

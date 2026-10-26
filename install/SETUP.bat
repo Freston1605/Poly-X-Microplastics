@@ -3,7 +3,8 @@ setlocal enabledelayedexpansion
 title Poly-X - Instalacion
 REM Trabajar siempre desde la carpeta donde esta este SETUP.bat
 cd /d "%~dp0"
-set "SRC=%cd%"
+for %%I in ("%~dp0..") do set "SRC=%%~fI"
+cd /d "%SRC%"
 
 echo.
 echo ============================================================

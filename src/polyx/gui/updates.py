@@ -30,9 +30,10 @@ REPO = "CrissFerrada/Poly-X-Microplastics"
 BRANCH = "main"
 API = f"https://api.github.com/repos/{REPO}/commits/{BRANCH}"
 FILE_VERSION = ROOT / ".polyx_version"
-# The name depends on the system: each one needs its own shell to
-# unzip and overwrite. See `plataforma.nombre_actualizador()`.
-UPDATER = ROOT / name_updater()
+# The updater ships next to the program, in the install/ folder, so that the
+# project root stays the working directory for assets/models/data while the
+# double-click surface lives in one place. See polyx.core.platform.name_updater.
+UPDATER = ROOT / "install" / name_updater()
 
 # Short on purpose: if GitHub does not reply quickly, it is not worth insisting.
 TIMEOUT_S = 6

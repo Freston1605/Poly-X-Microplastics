@@ -2,10 +2,11 @@
 title Poly-X - Actualizar
 setlocal
 cd /d "%~dp0"
-
-REM Ruta de esta carpeta sin la barra final (para pasarla a PowerShell)
 set "HERE=%~dp0"
 set "HERE=%HERE:~0,-1%"
+
+REM La raiz del proyecto es el padre de esta carpeta (install\).
+for %%I in ("%HERE%\..") do set "RAIZ=%%~fI"
 
 where powershell >nul 2>&1
 if errorlevel 1 (
@@ -16,4 +17,4 @@ if errorlevel 1 (
     exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\actualizar.ps1" -InstallDir "%HERE%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\actualizar.ps1" -InstallDir "%RAIZ%"
