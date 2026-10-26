@@ -79,6 +79,7 @@ jobs:
 
       - name: Smoke-test the [gui] extra
         run: |
-          /tmp/smoke/bin/pip install --quiet "dist/*.whl[gui]"
+          WHEEL=$(ls dist/*.whl)
+          /tmp/smoke/bin/pip install --quiet "$WHEEL[gui]"
           /tmp/smoke/bin/python -c "from polyx.gui.qt import qt_available, require_qt; require_qt(); print('qt_available:', qt_available())"
           /tmp/smoke/bin/python -c "import polyx.gui.launcher; print('gui launcher imports OK')"
