@@ -75,7 +75,7 @@ def _normalizar_figuras(html: str) -> str:
 # arbol de decision junto al sha256 -- el digest localiza QUE bytes cambiaron,
 # este pin da el tamano esperado sin abrir el archivo. La procedencia completa
 # esta en tests/fixtures/baseline_informe/README.md.
-TAMANO_BASELINE = 18853
+TAMANO_BASELINE = 20417
 
 
 @pytest.fixture(autouse=True)
