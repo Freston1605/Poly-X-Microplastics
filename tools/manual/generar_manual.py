@@ -82,13 +82,13 @@ def imagen_base64(ruta: Path) -> tuple[str, int, int]:
 # ────────────────────────────────────────────────────────────────────
 #  Tokens de figura:  [[fig:web/w01_github_repo|Pie de figura]]
 # ────────────────────────────────────────────────────────────────────
-TOKEN = re.compile(r"\[\[fig:([a-z]+)/([A-Za-z0-9_\-.]+)\|(.*?)\]\]", re.S)
+TOKEN = re.compile(r"\[\[fig:([a-z]+)/([A-Za-z0-9_\-.]+)\|(.*?)\]\]", re.DOTALL)
 
 # Los dialogos que no se pueden fotografiar honestamente —el instalador de
 # Python en un equipo que ya lo tiene muestra la pantalla de mantenimiento, no
 # la de primera instalacion; y aqui no hay un Mac— van como esquema dibujado, y
 # se marcan como tal para que nadie los confunda con una captura.
-TOKEN_ESQ = re.compile(r"\[\[esquema:(\w+)\|(.*?)\]\]", re.S)
+TOKEN_ESQ = re.compile(r"\[\[esquema:(\w+)\|(.*?)\]\]", re.DOTALL)
 
 
 class Numerador:
@@ -153,7 +153,7 @@ def expandir(html: str, idioma: str, num: Numerador, txt) -> str:
     esquema intercalado recibiria un numero posterior al de la figura que va
     despues de el.
     """
-    combinado = re.compile(TOKEN.pattern + "|" + TOKEN_ESQ.pattern, re.S)
+    combinado = re.compile(TOKEN.pattern + "|" + TOKEN_ESQ.pattern, re.DOTALL)
 
     def repl(m: re.Match) -> str:
         if m.group(1) is not None:          # [[fig:...]]

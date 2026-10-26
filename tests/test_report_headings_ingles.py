@@ -32,8 +32,6 @@ import os
 import re
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = REPO_ROOT / "src" / "polyx" / "gui" / "report_html.py"
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "baseline_informe"
@@ -85,7 +83,7 @@ ROTULOS_EN_COMPLETE = {
 
 def _visible_lines(document: str) -> list[str]:
     """Visible text lines, without markup, scripts or embedded base64 data."""
-    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", document, flags=re.S)
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", document, flags=re.DOTALL)
     text = re.sub(r"data:image[^\"']+", "", text)
     text = re.sub(r"<[^>]+>", "\n", text)
     text = html.unescape(text)

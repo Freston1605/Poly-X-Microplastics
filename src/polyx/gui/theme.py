@@ -200,7 +200,7 @@ def set_animations(active: bool) -> None:
     global _animations
     _animations = bool(active)
     _save()
-    for f in list(_subscribers):
+    for f in _subscribers:
         try:
             f(_theme)
         except Exception:
@@ -585,7 +585,7 @@ def set_theme(name_2: str) -> None:
     _theme = name_2
     _apply(name_2)
     _save()
-    for f in list(_subscribers):
+    for f in _subscribers:
         try:
             f(name_2)
         except Exception:

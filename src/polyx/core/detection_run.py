@@ -19,11 +19,14 @@ import cv2
 import numpy as np
 
 from polyx.core.detect.protocol import (
-    DetectionSource, Instance, read_yolo_txt, find_gt_for_image, compute_box_size_um,
+    DetectionSource,
+    Instance,
+    compute_box_size_um,
+    find_gt_for_image,
+    read_yolo_txt,
 )
-from polyx.core.quality.metrics import match_image
 from polyx.core.measure.morphology import apply_to_detection
-
+from polyx.core.quality.metrics import match_image
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
@@ -153,4 +156,4 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
     return summary
 
 
-__all__ = ["run_batch", "IMAGE_EXTS"]
+__all__ = ["IMAGE_EXTS", "run_batch"]

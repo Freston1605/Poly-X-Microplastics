@@ -10,7 +10,12 @@ Uso (desde la raiz del proyecto):
     POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
 from __future__ import annotations
-import sys, os, time, argparse, importlib.util
+
+import argparse
+import importlib.util
+import os
+import sys
+import time
 from pathlib import Path
 
 try:

@@ -1,11 +1,13 @@
 """SAM2 segmenter — runtime backend for mask generation."""
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Tuple
+
 import numpy as np
 
-from .protocol import Instance, DetectionSource, Detections
+from .protocol import DetectionSource, Instance
 
 
 class Sam2Segmenter(DetectionSource):

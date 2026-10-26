@@ -29,8 +29,9 @@ from polyx.core.detect.protocol import Instance as Detection
 def _estado_minimo(tmp_path):
     """Un DetectorState con una deteccion medida sobre una foto sintetica."""
     import cv2
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+
     from polyx.core import morphology
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 22, (60, 210, 240), -1)
@@ -112,7 +113,7 @@ def test_en_español_siguen_los_rotulos_en_español(tmp_path):
 def _texto_visible(html: str) -> list[str]:
     """Lineas de texto del documento, sin marcado ni imagenes embebidas."""
     import re
-    h = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.S)
+    h = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.DOTALL)
     h = re.sub(r"data:image[^\"']+", "", h)
     h = re.sub(r"<[^>]+>", "\n", h)
     for a, b in [("&nbsp;", " "), ("&middot;", "·"), ("&aacute;", "á"),
@@ -137,7 +138,7 @@ def test_el_informe_en_ingles_no_arrastra_frases_en_español(tmp_path):
                        r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no|"
                        r"clase|fibras|muestra|menor|mayor|mediana|verdaderos|"
                        r"falsos|clasificados|imagen)\b",
-                       re.I)
+                       re.IGNORECASE)
     # Los apellidos de la bibliografia son nombres propios: no se traducen.
     sospechosas = [t for t in es & en
                    if marca.search(t) and len(t) > 2 and "(2024)" not in t]
@@ -188,8 +189,9 @@ def test_ninguna_traduccion_se_congela_al_importar():
 def _estado_completo(tmp_path):
     """Dos carpetas, tres fotos cada una, dos modelos y ground truth."""
     import cv2
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+
     from polyx.core import morphology
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     clases = ["PET", "PP", "LDPE"]
     st = DetectorState()
@@ -274,7 +276,7 @@ def test_en_el_lote_completo_tampoco_se_cuela_español(tmp_path):
                        r"por|una|un|se|es|su|sus|como|cada|sobre|entre|sin|no|"
                        r"clase|fibras|muestra|menor|mayor|mediana|verdaderos|"
                        r"falsos|clasificados|imagen)\b",
-                       re.I)
+                       re.IGNORECASE)
     sospechosas = [t for t in es & en
                    if marca.search(t) and len(t) > 2 and "(2024)" not in t]
     assert not sospechosas, (

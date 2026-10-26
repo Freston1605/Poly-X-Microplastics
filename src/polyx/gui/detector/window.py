@@ -1,21 +1,26 @@
 """Main window of the Detector — sidebar on the left + pages on the right."""
 from __future__ import annotations
-from pathlib import Path
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon, QFont
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QStackedWidget, QFrame, QSizePolicy, QButtonGroup, QScrollArea,
+    QButtonGroup,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
-from polyx.gui import theme as T
-from polyx.gui import marca
-from polyx.gui import iconos
-from polyx.gui.widgets import LogoBadge
-from .state import DetectorState
 from polyx.core.i18n import tr
+from polyx.gui import iconos, marca
+from polyx.gui import theme as T
+from polyx.gui.widgets import LogoBadge
 
+from .state import DetectorState
 
 # ────────────────────────────────────────────────────────────────────
 SIDEBAR_ITEMS = [
@@ -154,15 +159,15 @@ class DetectorWindow(QMainWindow):
 
     def _build_pages(self):
         # Late import to avoid cycles
-        from .pages.modelos import ModelsPage
-        from .pages.imagenes import ImagesPage
-        from .pages.gt_manual import GTManualPage
-        from .pages.parametros import ParametersPage
-        from .pages.ejecutar import RunPage
-        from .pages.resultados import ResultsPage
-        from .pages.errores import ErrorsPage
         from .pages.comparar import ComparePage
+        from .pages.ejecutar import RunPage
+        from .pages.errores import ErrorsPage
+        from .pages.gt_manual import GTManualPage
+        from .pages.imagenes import ImagesPage
+        from .pages.modelos import ModelsPage
+        from .pages.parametros import ParametersPage
         from .pages.reporte import ReportPage
+        from .pages.resultados import ResultsPage
 
         pages = [
             ModelsPage(self.state),

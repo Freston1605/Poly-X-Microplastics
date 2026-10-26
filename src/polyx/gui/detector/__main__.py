@@ -1,9 +1,11 @@
 """Enables `python -m polyx.gui.detector`."""
 import sys
-from PySide6.QtCore import Qt, QCoreApplication
+
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QApplication
 
 from polyx.gui import marca
+
 from .window import DetectorWindow
 
 

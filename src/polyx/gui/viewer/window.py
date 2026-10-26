@@ -3,49 +3,41 @@
 from __future__ import annotations
 
 import json
-
 import math
-
 from datetime import datetime
-
 from pathlib import Path
 
-
-
 from PySide6.QtCore import Qt
-
 from PySide6.QtGui import QKeySequence, QShortcut
-
 from PySide6.QtWidgets import (
-
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QPushButton,
-
-    QLabel, QFileDialog, QMessageBox, QInputDialog, QComboBox,
-
-    QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea,
-
-    QDoubleSpinBox, QProgressDialog, QSizePolicy, QSpinBox, QCheckBox,
-
     QApplication,
-
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QHeaderView,
+    QInputDialog,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
-
-
+from polyx.core.i18n import tr
+from polyx.gui import iconos, marca
 from polyx.gui import theme as T
-from polyx.gui import marca
-from polyx.gui import iconos
-
-from polyx.gui.widgets import LogoBadge, HLine
-
-from .state import ViewerState
+from polyx.gui.widgets import HLine, LogoBadge
 
 from .canvas import ViewerCanvas
-
-from polyx.core.i18n import tr
-
-
-
+from .state import ViewerState
 
 
 def _there_are_gpu() -> bool:
@@ -198,7 +190,7 @@ class ViewerWindow(QMainWindow):
 
         lbl_open = QLabel(tr("Imagen"))
 
-        lbl_open.setStyleSheet(f"font-weight: 600; font-size: 10pt;")
+        lbl_open.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_open)
 
@@ -282,7 +274,7 @@ class ViewerWindow(QMainWindow):
 
         lbl_mod = QLabel(tr("Modelo"))
 
-        lbl_mod.setStyleSheet(f"font-weight: 600; font-size: 10pt;")
+        lbl_mod.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_mod)
 
@@ -419,7 +411,7 @@ class ViewerWindow(QMainWindow):
 
         lbl_calib = QLabel(tr("Calibración μm/píxel"))
 
-        lbl_calib.setStyleSheet(f"font-weight: 600; font-size: 10pt;")
+        lbl_calib.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_calib)
 
@@ -499,7 +491,7 @@ class ViewerWindow(QMainWindow):
 
         lbl_res = QLabel(tr("Resultados"))
 
-        lbl_res.setStyleSheet(f"font-weight: 600; font-size: 10pt;")
+        lbl_res.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_res)
 
@@ -557,7 +549,7 @@ class ViewerWindow(QMainWindow):
 
         self.table.setFixedHeight(200)
 
-        self.table.setStyleSheet(f"font-size: 9pt;")
+        self.table.setStyleSheet("font-size: 9pt;")
 
         self.table.itemSelectionChanged.connect(self._on_particle_chosen)
 
@@ -591,7 +583,7 @@ class ViewerWindow(QMainWindow):
 
         self.lbl_record.setStyleSheet(
 
-            f"background: #0d1117; border: 1px solid #d0d7de; border-radius: 6px;")
+            "background: #0d1117; border: 1px solid #d0d7de; border-radius: 6px;")
 
         rv.addWidget(self.lbl_record)
 
@@ -930,11 +922,10 @@ class ViewerWindow(QMainWindow):
 
         try:
 
-            from polyx.core.detect.yolo import read_yolo_txt
-
             import cv2
-
             import numpy as np
+
+            from polyx.core.detect.yolo import read_yolo_txt
 
             bgr = cv2.imdecode(np.fromfile(str(img), dtype=np.uint8),
 
@@ -1011,7 +1002,6 @@ class ViewerWindow(QMainWindow):
 
 
         import cv2
-
         import numpy as np
 
         from polyx.core.detect.yolo import Detection
@@ -1148,7 +1138,6 @@ class ViewerWindow(QMainWindow):
         try:
 
             from polyx.core.calibration import read_image
-
             from polyx.core.morphology import apply_to_detection
 
             bgr = read_image(path_2)
@@ -1577,7 +1566,6 @@ class ViewerWindow(QMainWindow):
     def _save_annotated_image(self, img: Path, save_dir: Path):
 
         import cv2
-
         import numpy as np
 
         # imdecode and not imread: on Windows imread fails with paths that contain

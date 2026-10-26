@@ -1,26 +1,37 @@
 """Page 2 — Dataset. Loads data.yaml, validates the structure, preview, auto-split."""
 from __future__ import annotations
-from pathlib import Path
-import random
-import shutil
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QImage, QFont
+import random
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton,
-    QFileDialog, QMessageBox, QFrame, QSpinBox, QComboBox, QProgressDialog,
-    QListWidget, QListWidgetItem,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
+from polyx.core.i18n import tr
 from polyx.core.paths import IMAGE_EXTS
 from polyx.core.quality.dataset_audit import (
-    audit_dataset, LEVEL_OK, LEVEL_WARN, LEVEL_ERROR,
+    LEVEL_ERROR,
+    LEVEL_OK,
+    LEVEL_WARN,
+    audit_dataset,
 )
-from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
 from ..state import validate_training_config
+from ._base import TrainerPage
 
 
 def _load_yaml(path: Path) -> dict:

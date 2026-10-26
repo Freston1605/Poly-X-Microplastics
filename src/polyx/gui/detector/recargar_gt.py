@@ -10,16 +10,21 @@ ended up with a report carrying the old annotation with no warning at all,
 because the run freezes the GT it read. This module closes that gap.
 """
 from __future__ import annotations
+
 from pathlib import Path
 
-import numpy as np
 import cv2
+import numpy as np
 
 from polyx.core.detect.yolo import (
-    find_gt_for_image, read_yolo_txt, compute_box_size_um, size_image,
+    compute_box_size_um,
+    find_gt_for_image,
+    read_yolo_txt,
+    size_image,
 )
 from polyx.core.quality.metrics import match_image
-from .runner import _draw_annotated, _color_bgr_for_class
+
+from .runner import _color_bgr_for_class, _draw_annotated
 
 
 def _same_boxes(a, b, tol: float = 0.5) -> bool:

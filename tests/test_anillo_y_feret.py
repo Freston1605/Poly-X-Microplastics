@@ -22,7 +22,6 @@ from polyx.core import calibration as C
 from polyx.core import morphology as M
 from polyx.core.detect.yolo import Detection
 
-
 # ── El anillo de la placa ──────────────────────────────────────────────
 
 def _placa(um_por_px=33.9, cx=2054.0, cy=1534.0, radio=1471.0):
@@ -144,5 +143,5 @@ def test_el_corte_del_area_util_no_se_lleva_particulas_reales():
     mas_periferica = 0.828
     x = cal.cx + cal.radius_px * mas_periferica
     assert not C.about_the_ring(cal, x - 30, cal.cy - 30, x + 30, cal.cy + 30)
-    assert C.FRACTION_AREA_USEFUL > mas_periferica + 0.10, (
+    assert mas_periferica + 0.10 < C.FRACTION_AREA_USEFUL, (
         "el corte se acerco demasiado a la particula real mas periferica")

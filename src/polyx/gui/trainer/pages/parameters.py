@@ -8,17 +8,28 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
-    QCheckBox, QComboBox, QPushButton, QLineEdit, QFrame, QMessageBox,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from ..hw import detect_gpu, recommend_max_imgsz, recommend_batch, estimate_vram_gb, humanize_gb
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ..hw import detect_gpu, estimate_vram_gb, humanize_gb, recommend_batch, recommend_max_imgsz
+from ._base import TrainerPage
 
 
 # GPU detection in the background so the GUI does not freeze at startup

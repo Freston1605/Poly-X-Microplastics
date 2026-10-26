@@ -1,8 +1,10 @@
 """Enables `python -m polyx.gui.trainer`."""
 import sys
+
 from PySide6.QtWidgets import QApplication
 
 from polyx.gui import marca
+
 from .window import TrainerWindow
 
 

@@ -3,15 +3,24 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QDoubleSpinBox, QSpinBox,
-    QLineEdit, QFrame, QPushButton, QMessageBox, QComboBox, QCheckBox,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
 )
 
-from ._base import DetectorPage
 from polyx.core.i18n import tr
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.platform import IS_MAC, architecture_mac, label_devices
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ._base import DetectorPage
 
 
 def _hint(text: str) -> QLabel:
@@ -440,7 +449,7 @@ class ParametersPage(DetectorPage):
         Seeing the decision before launching the batch avoids the surprise of
         discovering two hours later that everything was inferred in one piece.
         """
-        from polyx.core.detect.yolo import size_image, policy_tiling
+        from polyx.core.detect.yolo import policy_tiling, size_image
         p = self.state.params
         if not self.state.images:
             self.lbl_plan.setText(tr("Selecciona imágenes para ver qué se trocearía."))

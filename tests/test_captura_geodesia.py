@@ -27,15 +27,13 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from polyx.core import morphology as M  # noqa: E402
-
-import capturar_fixtures_geodesia as CFG  # noqa: E402
-import generar_fixtures_geodesia as GFG  # noqa: E402
+import capturar_fixtures_geodesia as CFG
+import generar_fixtures_geodesia as GFG
+from polyx.core import morphology as M
 
 
 # ── helpers: foto sintetica y layout de run en miniatura ─────────────────

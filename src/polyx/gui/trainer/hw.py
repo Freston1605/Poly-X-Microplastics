@@ -5,6 +5,7 @@ without OOM?". By default the user wants to train as large as possible.
 Here we compute a sensible value from the available VRAM.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 

@@ -7,14 +7,13 @@ instance when segmentation fails for a given particle.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import List, Optional, Tuple, Any
+from typing import List
 
 from .protocol import (
     DetectionSource,
-    SegmentationSource,
     Instance,
     SegmentationPrompts,
+    SegmentationSource,
 )
 
 

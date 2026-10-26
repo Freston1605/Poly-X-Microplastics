@@ -1,9 +1,6 @@
 """Reusable widgets (logo, numbered headers, KPI cards)."""
-from PySide6.QtCore import Qt, QSize, QRectF
-from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics, QPainterPath
-from PySide6.QtWidgets import (
-    QWidget, QLabel, QHBoxLayout, QVBoxLayout, QFrame, QSizePolicy
-)
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from . import theme as T
 

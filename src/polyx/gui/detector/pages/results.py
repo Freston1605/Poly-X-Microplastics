@@ -1,25 +1,32 @@
 """Page 6 — `Resultados`. Large KPIs + size histogram + per-image table."""
 from __future__ import annotations
-import csv
-import io
-from pathlib import Path
 
-import numpy as np
+import csv
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QHeaderView, QPushButton, QFileDialog, QFrame, QProgressDialog, QMessageBox,
     QApplication,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QProgressDialog,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.gui.widgets import KPICard
-from polyx.core.quality.metrics import LABEL_TP, LABEL_FP, LABEL_FN, LABEL_MISCLS, match_image
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
+from polyx.gui import iconos
+from polyx.gui import theme as T
+from polyx.gui.widgets import KPICard
+
+from ._base import DetectorPage
 
 
 class ResultsPage(DetectorPage):
@@ -429,9 +436,8 @@ class ResultsPage(DetectorPage):
         try:
             import matplotlib
             matplotlib.use("Agg")
-            import matplotlib.pyplot as plt
-            from matplotlib.figure import Figure
             from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+            from matplotlib.figure import Figure
 
             if self._hist_canvas is None:
                 fig = Figure(figsize=(7, 3), tight_layout=True)

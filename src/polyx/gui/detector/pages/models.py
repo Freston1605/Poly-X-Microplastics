@@ -1,20 +1,27 @@
 """Page 1 — `Modelos`. Up to 3 .pt slots + quick load."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog,
-    QFrame, QMessageBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.core.paths import DEFAULT_MODEL
-from polyx.core.detect.yolo import YoloModel
 from polyx.core.i18n import tr
+from polyx.core.paths import DEFAULT_MODEL
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ._base import DetectorPage
 
 
 class _ModelSlotCard(QFrame):

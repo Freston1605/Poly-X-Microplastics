@@ -1,19 +1,26 @@
 """Main window of the Trainer. Sidebar with 9 items + pages on the right."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QPushButton,
-    QButtonGroup, QStackedWidget, QLabel, QScrollArea,
+    QButtonGroup,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
-from polyx.gui import theme as T
-from polyx.gui import marca
-from polyx.gui import iconos
-from polyx.gui.widgets import LogoBadge
-from .state import TrainerState
 from polyx.core.i18n import tr
+from polyx.gui import iconos, marca
+from polyx.gui import theme as T
+from polyx.gui.widgets import LogoBadge
 
+from .state import TrainerState
 
 SIDEBAR_ITEMS = [
     # (icon name in polyx/gui/iconos.py, label)
@@ -143,15 +150,15 @@ class TrainerWindow(QMainWindow):
         self.state.train_failed.connect(lambda _: self._set_status("● Error", T.ERR))
 
     def _build_pages(self):
-        from .pages.modelo import ModelPage
-        from .pages.dataset import DatasetPage
-        from .pages.parametros import ParametersPage
         from .pages.augmentacion import AugmentationPage
+        from .pages.comparar import ComparePage
+        from .pages.dataset import DatasetPage
         from .pages.entrenar import TrainPage
         from .pages.evaluar import EvaluatePage
-        from .pages.comparar import ComparePage
         from .pages.exportar import ExportPage
         from .pages.informe import ReportPage
+        from .pages.modelo import ModelPage
+        from .pages.parametros import ParametersPage
 
         pages = [
             ModelPage(self.state),

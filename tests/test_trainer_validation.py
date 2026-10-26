@@ -18,12 +18,11 @@ import time
 from pathlib import Path
 
 import pytest
-
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from polyx.gui.trainer.state import ModelConfig, TrainerState, validate_training_config
 from polyx.gui.trainer.pages.dataset import DatasetPage
 from polyx.gui.trainer.pages.train import TrainPage
+from polyx.gui.trainer.state import ModelConfig, TrainerState, validate_training_config
 
 # Las páginas son QWidgets: sin display real las pruebas corren «offscreen».
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

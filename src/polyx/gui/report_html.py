@@ -12,6 +12,7 @@ Contents:
   9. Bibliographic references
 """
 from __future__ import annotations
+
 import base64
 import html
 import io
@@ -22,19 +23,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
-
 # matplotlib in non-interactive mode
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from . import theme as T
-from polyx.core.i18n import tr, language
-from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
-from polyx.core.detect.yolo import Detection
+from polyx.core.i18n import language, tr
 from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
+from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 
+from . import theme as T
 
 # ────────────────────────────────────────────────────────────────────
 # Report styles (identical to the manual)
@@ -1174,7 +1174,7 @@ def _figure_calibration(state) -> str:
 
     Returns "" when there is no measured plate to draw on.
     """
-    from polyx.core.measure.calibration import ORIGIN_PLATE, DIAMETER_PLATE_MM
+    from polyx.core.measure.calibration import DIAMETER_PLATE_MM, ORIGIN_PLATE
 
     cals = getattr(state, "calibrations", None) or {}
     measurements = [(name_2, c) for name_2, c in cals.items()
@@ -1200,6 +1200,7 @@ def _figure_calibration(state) -> str:
 
     try:
         import cv2
+
         from polyx.core.measure.calibration import read_image
         bgr = read_image(path_2)
         if bgr is None:
@@ -1261,6 +1262,7 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float],
         # cv2 is imported here and not at the top: this module does so in the rest of
         # the functions to avoid loading OpenCV when only text is requested.
         import cv2
+
         from polyx.core.measure.calibration import read_image
         from polyx.core.measure.morphology import box_margin, segment
         bgr = read_image(image_path_2)
@@ -1992,7 +1994,7 @@ def _section_gallery(results_2: Dict[int, list], state, classes_batch,
                     f"<span class='sub'>"
                     + tr("{n} detección(es) por YOLO").format(n=len(r.predictions))
                     + "</span>"
-                    f"</figcaption></figure>"
+                    "</figcaption></figure>"
                 )
 
                 # Ground Truth image (control)
@@ -2212,8 +2214,11 @@ def _section_calibration(state) -> str:
     calib_html = ""
     cals = getattr(state, "calibrations", None) or {}
     if cals:
-        from polyx.core.measure.calibration import (summary_batch, ORIGIN_PLATE,
-                                  THICKNESS_WALL_MM, BIAS_MAXIMUM_WALL_PCT)
+        from polyx.core.measure.calibration import (
+            BIAS_MAXIMUM_WALL_PCT,
+            THICKNESS_WALL_MM,
+            summary_batch,
+        )
         res = summary_batch(list(cals.values()))
         if res["n"]:
             label_2 = {"placa": tr("medida sobre la placa Petri de esta foto"),
@@ -2291,7 +2296,7 @@ def _lot_forms(state, all_results):
     # to be asked. It is removed from the SIZE and from the cards, not from the count:
     # removing detections from the count is a study decision and not the
     # report generator's. What is done is to declare how many were set apart.
-    from polyx.core.measure.calibration import about_the_ring, FRACTION_AREA_USEFUL
+    from polyx.core.measure.calibration import about_the_ring
 
     _cals = getattr(state, "calibrations", None) or {}
 
@@ -2669,6 +2674,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
     records_html = ""
     if shapes and max_records:
         import cv2
+
         from polyx.core.measure.morphology import draw_measurement
 
         chosen = choose_records(shapes, max_records)
@@ -3022,7 +3028,7 @@ def generate_report(state, output_path: Path,
     report.finish / report.error in the detector JSONL. Re-throws failures:
     the caller decides what to do, the log keeps the diagnosis.
     """
-    from polyx.core.observability import timer, logger_for
+    from polyx.core.observability import logger_for, timer
     n_results = sum(len(rs) for rs in (state.results or {}).values())
     with timer(logger_for("detector"), "report",
                     results_2=n_results, output=str(output_path),

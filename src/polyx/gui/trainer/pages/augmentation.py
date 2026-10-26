@@ -3,14 +3,17 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QSlider,
-    QDoubleSpinBox,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QSlider,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from ..state import AUG_LEVELS
 from polyx.core.i18n import tr
+from polyx.gui import theme as T
+
+from ..state import AUG_LEVELS
+from ._base import TrainerPage
 
 
 def _slider_row(label: str, value: float, max_val: float, on_change) -> tuple[QHBoxLayout, QSlider, QLabel]:

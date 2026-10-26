@@ -1,28 +1,31 @@
 """Background inference thread. Processes all the images with all the models."""
 from __future__ import annotations
-from pathlib import Path
-from datetime import datetime
-import io
-import logging
-import json
 
-import numpy as np
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+
 import cv2
+import numpy as np
 from PySide6.QtCore import QThread, Signal
 
-from polyx.core.detect.yolo import (
-    YoloModel, Detection, find_gt_for_image, read_yolo_txt, compute_box_size_um,
-)
-from polyx.core.detect import make_detector
-from polyx.core.quality.metrics import match_image
-from polyx.core.quality.assignment import mark_assignables
-from polyx.core.provenance import provenance, sha256_file
-from polyx.core.calibration import (resolver, carry_index, search_index,
-                                summary_batch)
-from polyx.core.morphology import apply_to_detection
-from polyx.gui import theme as T
-from .state import DetectorState, ImageResult
 from polyx.core import observability as obs
+from polyx.core.calibration import carry_index, resolver, search_index, summary_batch
+from polyx.core.detect import make_detector
+from polyx.core.detect.yolo import (
+    Detection,
+    compute_box_size_um,
+    find_gt_for_image,
+    read_yolo_txt,
+)
+from polyx.core.morphology import apply_to_detection
+from polyx.core.provenance import provenance, sha256_file
+from polyx.core.quality.assignment import mark_assignables
+from polyx.core.quality.metrics import match_image
+from polyx.gui import theme as T
+
+from .state import DetectorState, ImageResult
 
 
 def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarray:

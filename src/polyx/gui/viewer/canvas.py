@@ -1,16 +1,26 @@
 """Viewer canvas — image + detection overlays + calibration modes."""
 from __future__ import annotations
+
 import math
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPointF, QRectF, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
-    QColor, QPainter, QPen, QBrush, QPixmap, QImage, QFont,
-    QWheelEvent, QMouseEvent, QKeyEvent, QPainterPath,
+    QBrush,
+    QColor,
+    QFont,
+    QImage,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QWheelEvent,
 )
 from PySide6.QtWidgets import QWidget
 
 from polyx.gui import theme as T
+
 from .state import ViewerState, _circumscribed_center, _circumscribed_radius
 
 _CLASS_COLORS = [
@@ -69,8 +79,8 @@ class ViewerCanvas(QWidget):
         pix = QPixmap(str(path))
         if pix.isNull():
             try:
-                from PIL import Image
                 import numpy as np
+                from PIL import Image
                 arr = np.array(Image.open(str(path)).convert("RGB"))
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)

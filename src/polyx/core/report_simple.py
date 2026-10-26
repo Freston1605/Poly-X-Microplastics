@@ -10,7 +10,6 @@ import csv
 import html
 import json
 from pathlib import Path
-from typing import Any
 
 
 def generate(run_dir: Path, output: Path | None = None) -> Path:
@@ -31,7 +30,7 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
              "<style>body{font-family:sans-serif;margin:2rem;} table{border-collapse:collapse;} "
              "td,th{border:1px solid #ccc;padding:4px 8px;} img{max-width:320px;}</style>",
              "</head><body>"]
-    parts.append(f"<h1>Poly-X run report</h1>")
+    parts.append("<h1>Poly-X run report</h1>")
     parts.append(f"<p><b>Run dir:</b> {html.escape(str(run_dir))}</p>")
     parts.append(f"<p>Images: {summary.get('images', '?')} &nbsp; Detections: {summary.get('detections', len(rows))}</p>")
     if summary.get("metrics"):

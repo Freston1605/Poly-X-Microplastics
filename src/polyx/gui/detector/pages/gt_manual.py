@@ -14,33 +14,53 @@ Full bounding-box annotator with:
 - Exports YOLO .txt + classes.txt
 """
 from __future__ import annotations
+
+import copy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-from dataclasses import dataclass, field
-import copy
-import json
 
-import numpy as np
 import cv2
-
-from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QSize
+import numpy as np
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
-    QPixmap, QPainter, QPen, QColor, QBrush, QImage, QFont, QCursor,
-    QKeySequence, QShortcut, QAction,
+    QBrush,
+    QColor,
+    QFont,
+    QImage,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QShortcut,
 )
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QListWidget,
-    QListWidgetItem, QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsSimpleTextItem, QMessageBox, QFrame, QSizePolicy,
+    QComboBox,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.detect.yolo import (
-    Detection, read_yolo_txt, find_gt_for_image, size_image,
+    Detection,
+    find_gt_for_image,
+    read_yolo_txt,
+    size_image,
 )
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ._base import DetectorPage
 
 
 def _qpixmap_de(path: Path) -> QPixmap:
@@ -506,9 +526,7 @@ class AnnotCanvas(QGraphicsView):
                 self._set_cursor_for_handle(h)
                 ev.accept(); return
         # Hover over a box: hand cursor
-        if self._hit_box(scene_pos) >= 0:
-            self.setCursor(Qt.OpenHandCursor)
-        elif self._space_pressed:
+        if self._hit_box(scene_pos) >= 0 or self._space_pressed:
             self.setCursor(Qt.OpenHandCursor)
         else:
             self.setCursor(Qt.CrossCursor)
@@ -803,7 +821,7 @@ class GTManualPage(DetectorPage):
         try:
             self._save_to_txt(path, dets)
             if not silent:
-                self.lbl_canvas_status.setText(f"Auto-guardado.")
+                self.lbl_canvas_status.setText("Auto-guardado.")
         except Exception as e:
             if not silent:
                 QMessageBox.warning(self, tr("Error guardando"), str(e))

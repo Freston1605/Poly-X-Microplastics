@@ -1,25 +1,38 @@
 """Main window of the Labeller — 3 panels: list | canvas | classes."""
 from __future__ import annotations
-import sys
+
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QSize
-from PySide6.QtGui import QKeySequence, QShortcut, QIcon, QPixmap
+from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtGui import QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QPushButton,
-    QLabel, QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
-    QInputDialog, QComboBox, QProgressDialog, QProgressBar, QCheckBox,
-    QDoubleSpinBox, QSpinBox,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QProgressDialog,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
 )
 
-from polyx.gui import theme as T
-from polyx.gui import marca
-from polyx.gui import iconos
-from polyx.gui.widgets import LogoBadge, HLine
-from .state import LabelerState
-from .canvas import BboxCanvas
 from polyx.core.i18n import tr
+from polyx.gui import iconos, marca
+from polyx.gui import theme as T
+from polyx.gui.widgets import HLine, LogoBadge
 
+from .canvas import BboxCanvas
+from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
     "Microplásticos Nile Red": ["PET", "PP", "LDPE"],
@@ -201,7 +214,7 @@ class LabelerWindow(QMainWindow):
 
         # Pre-annotation
         lbl_pre = QLabel(tr("Pre-anotación automática"))
-        lbl_pre.setStyleSheet(f"font-weight: 600; font-size: 10pt;")
+        lbl_pre.setStyleSheet("font-weight: 600; font-size: 10pt;")
         rv.addWidget(lbl_pre)
 
         rv.addWidget(QLabel(tr("Modelo .pt:")))

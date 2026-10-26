@@ -5,22 +5,29 @@ used and a gallery of the figures produced by Ultralytics (results.png,
 confusion_matrix, PR_curve, F1_curve, etc.).
 """
 from __future__ import annotations
+
 import base64
 import html
 import webbrowser
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QCheckBox, QFileDialog,
-    QMessageBox, QComboBox,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ._base import TrainerPage
 
 
 def _runs_root() -> Path:

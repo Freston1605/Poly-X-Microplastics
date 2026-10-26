@@ -1,18 +1,27 @@
 """Page 8 — `Exportar`. Converts the model to ONNX, TensorRT, TFLite, CoreML."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton,
-    QFileDialog, QComboBox, QCheckBox, QMessageBox, QPlainTextEdit,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
 
+from ._base import TrainerPage
 
 FORMATS = [
     ("ONNX",      "onnx",        "Más portable. Para CPU o GPU vía onnxruntime."),

@@ -10,6 +10,7 @@ It runs synchronously through a local event loop, so it must be called
 from the GUI thread with a QApplication already created.
 """
 from __future__ import annotations
+
 from pathlib import Path
 
 
@@ -25,7 +26,7 @@ def html_to_pdf(html_path: Path, pdf_path: Path, timeout_ms: int = 60000) -> boo
     Requires a running QApplication (GUI thread). The local event loop
     blocks until the printing finishes or `timeout_ms` is exhausted.
     """
-    from PySide6.QtCore import QUrl, QEventLoop, QTimer, QMarginsF
+    from PySide6.QtCore import QEventLoop, QMarginsF, QTimer, QUrl
     from PySide6.QtGui import QPageLayout, QPageSize
     from PySide6.QtWebEngineWidgets import QWebEngineView
 

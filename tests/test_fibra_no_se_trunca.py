@@ -24,10 +24,8 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-import pytest
 
 from polyx.core import morphology as M
-
 
 # Cuanto se queda corta la caja del detector por cada extremo de una fibra.
 # 0.10 = (36 - 29) / 2 / 36, medido sobre una fibra real de la placa 10.3.

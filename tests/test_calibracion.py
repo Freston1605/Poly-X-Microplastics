@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import calibration as C  # noqa: E402
+from polyx.core import calibration as C
 
 
 def _foto_de_placa(radio=300, lienzo=900, diametro_mm=100.0):

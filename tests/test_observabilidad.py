@@ -74,6 +74,7 @@ def test_run_id_correlaciona_por_hilo(log_dir):
 
 def test_cronometro_emite_par_y_ms(log_dir):
     import time
+
     from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.set_run_id("runB")
@@ -100,6 +101,7 @@ def test_cronometro_en_error_relaza_y_ground_trasbazo(log_dir):
 
 def test_payload_no_serializable_no_tumba(log_dir):
     import numpy as np
+
     from polyx.core import observability as ob
     log = ob.logger_for("prueba")
     ob.event(log, "prueba.raro", mapa=np.zeros(3))
@@ -324,8 +326,8 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
     import cv2
     import numpy as np
 
-    from polyx.gui import report_html
     from polyx.core.detect.protocol import Instance as Detection
+    from polyx.gui import report_html
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)

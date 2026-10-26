@@ -4,20 +4,25 @@ Filterable list + preview. Internally the short codes FP/FN/MISCLS are still
 used for the logic; the user is shown the full names.
 """
 from __future__ import annotations
+
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QByteArray
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QComboBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QPushButton,
+    QComboBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.core.quality.metrics import match_image, LABEL_FP, LABEL_FN, LABEL_MISCLS
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
+from polyx.gui import theme as T
+
+from ._base import DetectorPage
 
 
 class ErrorsPage(DetectorPage):

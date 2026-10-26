@@ -1,21 +1,31 @@
 """Page 5 — `Entrenar`. Control + tabs (`Métricas en vivo` · `Curvas` · `Log`)."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPushButton, QTabWidget,
-    QPlainTextEdit, QMessageBox, QFrame, QProgressBar,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.gui.widgets import KPICard
-from ..runner import TrainerRunner
-from ..state import validate_training_config
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.gui import iconos
+from polyx.gui import theme as T
+from polyx.gui.widgets import KPICard
+
+from ..runner import TrainerRunner
+from ..state import validate_training_config
+from ._base import TrainerPage
 
 
 class _HwProbeWorker(QThread):
@@ -67,8 +77,8 @@ class _LiveCurves(QFrame):
         try:
             import matplotlib
             matplotlib.use("QtAgg")
-            from matplotlib.figure import Figure
             from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+            from matplotlib.figure import Figure
             self.fig = Figure(figsize=(8, 5), tight_layout=True)
             self.axes = self.fig.subplots(2, 2)
             for ax in self.axes.flat:

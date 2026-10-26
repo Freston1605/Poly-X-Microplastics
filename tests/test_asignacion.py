@@ -4,10 +4,14 @@ Lo que se fija aquí es que abstenerse NO pierde partículas. El estudio informa
 por número de partículas, así que una que no se puede atribuir a un polímero
 tiene que seguir contando en el total; lo único que cambia es bajo qué etiqueta.
 """
-from polyx.core.quality.assignment import (
-    NO_ASSIGNABLE, class_id_reported, count_reported, mark_assignables, resume,
-)
 from polyx.core.detect.yolo import Detection
+from polyx.core.quality.assignment import (
+    NO_ASSIGNABLE,
+    class_id_reported,
+    count_reported,
+    mark_assignables,
+    resume,
+)
 
 
 def _det(clase: str, conf: float, cid: int = 0) -> Detection:

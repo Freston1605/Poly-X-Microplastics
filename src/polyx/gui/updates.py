@@ -18,13 +18,12 @@ import json
 import logging
 import threading
 import urllib.request
-from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from polyx.core.observability import event, logger_for
 from polyx.core.paths import ROOT
 from polyx.core.platform import name_updater
-from polyx.core.observability import logger_for, event
 
 REPO = "CrissFerrada/Poly-X-Microplastics"
 BRANCH = "main"

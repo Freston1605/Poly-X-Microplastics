@@ -1,7 +1,10 @@
 """Entry point: python -m polyx.gui.viewer"""
 import sys
+
 from PySide6.QtWidgets import QApplication
+
 from polyx.gui import marca
+
 from .window import ViewerWindow
 
 

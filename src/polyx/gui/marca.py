@@ -30,15 +30,14 @@ They go fixed, same as the report palette (``theme.DOC``).
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPixmap
 
-from . import iconos
 from polyx.core import paths as _paths
 from polyx.core import platform
 from polyx.core.i18n import tr
+
+from . import iconos
 
 #: AppUserModelID prefix. The format Windows requires is
 #: Company.Product.SubProduct.Version; what matters is that it is stable

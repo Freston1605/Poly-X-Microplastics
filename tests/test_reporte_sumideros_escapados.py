@@ -63,12 +63,11 @@ from pathlib import Path
 import pytest
 
 from polyx.gui.report_html import (
-    _table_width,
-    _table_count,
     _figure_calibration,
-    _section_count,
-    _section_team,
     _generate_report_impl,
+    _section_team,
+    _table_count,
+    _table_width,
 )
 
 # ── P001: par de cadenas hostil de referencia ──
@@ -160,7 +159,7 @@ def test_tabla_conteo_escapa_el_nombre_de_clase():
     # El sink no muta la columna del modelo: la fija del lote va intacta.
     # Y sin doble escape: escapar la forma ya escapada daria &amp;lt;.
     assert _e(CLASE_ESCAPADA) not in html, "doble escape prohibido"
-    assert f"<tr><td>PET</td><td>1</td></tr>" in html, "deteccion de PET se pierde"
+    assert "<tr><td>PET</td><td>1</td></tr>" in html, "deteccion de PET se pierde"
 
 
 def test_tabla_conteo_sin_doble_escape_benigno():
@@ -289,7 +288,7 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
 
     La clave de calibracion ES el nombre de archivo; el fix lo renderiza en
     la brecha monoespaciada del rotulo, escapado."""
-    from polyx.core.measure.calibration import Calibration, ORIGIN_PLATE
+    from polyx.core.measure.calibration import ORIGIN_PLATE, Calibration
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
@@ -404,6 +403,7 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
     La galeria ahi* no levanta si el ImageResult no lleva bytes pred/annot;
     los sub-successes pred_portas escriben PNG de la misma sintetica."""
     import cv2
+
     from tests.fixtures_informe import estado_hostil, foto_sintetica
 
     st = estado_hostil(directorio=tmp_path / "fotos")

@@ -1,12 +1,11 @@
 """Label/annotation format — single source of truth for YOLO-txt I/O."""
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-import numpy as np
+from typing import Dict, List
 
-from polyx.core.detect.protocol import Instance, Detections
-
+from polyx.core.detect.protocol import Instance
 
 # YOLO-txt format: class_id cx_n cy_n w_n h_n [conf]
 # All coordinates normalized to [0, 1] relative to image dimensions.
@@ -83,7 +82,6 @@ def write_labels(
         img_h: Image height in pixels.
         include_conf: If True, write confidence as 6th column.
     """
-    from polyx.core.detect.protocol import Instance
     lines = []
     for inst in instances:
         cx_n = inst.cx / img_w

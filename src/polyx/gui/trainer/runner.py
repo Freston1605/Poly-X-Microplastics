@@ -1,15 +1,15 @@
 """Background training thread with Ultralytics YOLO."""
 from __future__ import annotations
-from pathlib import Path
+
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
 
-from .state import TrainerState, EpochMetrics
 from .dominio import choose_better_in_real
+from .state import EpochMetrics, TrainerState
 
 
 class TrainerRunner(QThread):
@@ -86,7 +86,7 @@ class TrainerRunner(QThread):
         _t0 = __import__("time").perf_counter()
         try:
             import torch
-            from ultralytics import YOLO
+            from ultralytics import YOLO  # noqa: F401
         except Exception as e:
             self.failed.emit(f"No se pudo importar Ultralytics / PyTorch: {e}")
             return
@@ -212,7 +212,7 @@ class TrainerRunner(QThread):
                     self.log_line.emit(f"[WARN] callback error: {e}")
 
             def _on_train_start(trainer):
-                self.log_line.emit(f"[INFO] Entrenamiento iniciado.")
+                self.log_line.emit("[INFO] Entrenamiento iniciado.")
                 self.log_line.emit(f"[INFO] Run: {run_current['nombre']}")
                 self.log_line.emit(f"[INFO] Imgsz: {p.imgsz} · Batch: {p.batch} · Epochs: {p.epochs}")
                 # Confirm the EFFECTIVE device of the model (this is the truth)
@@ -229,7 +229,7 @@ class TrainerRunner(QThread):
                     self.log_line.emit(f"[WARN] No se pudo verificar device del modelo: {e}")
 
             def _on_train_end(trainer):
-                self.log_line.emit(f"[INFO] Entrenamiento finalizado.")
+                self.log_line.emit("[INFO] Entrenamiento finalizado.")
 
             # Cache: ultralytics accepts True/False/'ram'/'disk'
             cache_val: object = p.cache
@@ -304,7 +304,8 @@ class TrainerRunner(QThread):
                     self.log_line.emit("=" * 60)
 
                 self.log_line.emit(f"[INFO] Cargando modelo base: {weights}")
-                from polyx.core.training import TrainingConfig, train as _core_train
+                from polyx.core.training import TrainingConfig
+                from polyx.core.training import train as _core_train
                 cfg = TrainingConfig(
                     weights=weights,
                     data_yaml=str(ds.yaml_path),

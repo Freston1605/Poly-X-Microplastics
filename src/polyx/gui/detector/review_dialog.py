@@ -8,22 +8,32 @@ corrections as YOLO .txt.
 Reuses ``AnnotCanvas`` (the same powerful editor as the manual GT page).
 """
 from __future__ import annotations
+
 import shutil
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List
 
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QDialog, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox,
-    QListWidget, QListWidgetItem, QSizePolicy, QMessageBox, QFrame,
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
 )
 
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.detect.yolo import Detection
-from .pages.gt_manual import AnnotCanvas, DEFAULT_CLASSES
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from .pages.gt_manual import DEFAULT_CLASSES, AnnotCanvas
 
 
 class ReviewDialog(QDialog):

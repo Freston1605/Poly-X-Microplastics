@@ -49,8 +49,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morphology  # noqa: E402
-from polyx.core.detect.yolo import read_yolo_txt  # noqa: E402
+from polyx.core import morphology
+from polyx.core.detect.yolo import read_yolo_txt
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.

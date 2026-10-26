@@ -1,12 +1,16 @@
 """Native threshold/connected-component detector (no ML dependencies)."""
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-import numpy as np
+from typing import Dict, List
+
 import cv2
 
-from .protocol import Instance, DetectionSource, Detections, size_image, read_yolo_txt, find_gt_for_image, compute_box_size_um
+from .protocol import (
+    DetectionSource,
+    Instance,
+)
 
 
 class NativeDetector(DetectionSource):

@@ -1,11 +1,12 @@
 """TP/FP/FN computation, confusion matrix and per-class P/R/F1 (COCO standard)."""
 from __future__ import annotations
-from typing import List, Dict, Tuple
+
 from dataclasses import dataclass, field
+from typing import Dict, List, Tuple
+
 import numpy as np
 
 from polyx.core.detect.protocol import Instance as Detection
-
 
 # ────────────────────────────────────────────────────────────────────
 # Labels for display (Spanish).

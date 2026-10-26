@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import polyx.core.observability as ob   # noqa: E402  (despues del path hack)
+import polyx.core.observability as ob
 
 
 def _leer_jsonl(carpeta: Path, modulo: str) -> list[dict]:

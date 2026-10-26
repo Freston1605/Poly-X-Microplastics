@@ -3,13 +3,15 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QHeaderView,
+    QHeaderView,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.core.quality.metrics import LABEL_TP, LABEL_FP, LABEL_FN
 from polyx.core.i18n import tr
+from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
+
+from ._base import DetectorPage
 
 
 def _safe_div(a, b): return a / b if b else 0.0

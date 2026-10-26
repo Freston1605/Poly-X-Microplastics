@@ -42,8 +42,16 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 __all__ = [
-    "logger_for", "event", "timer", "set_run_id", "run_id_current",
-    "clear_run_id", "folder_logs", "event_error", "prune", "SIZE_TOTAL",
+    "SIZE_TOTAL",
+    "clear_run_id",
+    "event",
+    "event_error",
+    "folder_logs",
+    "logger_for",
+    "prune",
+    "run_id_current",
+    "set_run_id",
+    "timer",
 ]
 
 SIZE_MAX = 5 * 1024 * 1024     # 5 MB per file; x 3 copies: ~20 MB per module

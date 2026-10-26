@@ -18,9 +18,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morphology as M  # noqa: E402
-from tests.formas import (  # noqa: E402
-    CASOS, arco, circulo, grumo_con_muesca, recta, recta_dentada, recta_girada,
+from polyx.core import morphology as M
+from tests.formas import (
+    CASOS,
+    arco,
+    circulo,
+    grumo_con_muesca,
+    recta,
+    recta_dentada,
+    recta_girada,
 )
 
 

@@ -8,7 +8,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-from polyx.core.training import TrainingConfig, train as run_training
+from polyx.core.training import TrainingConfig
+from polyx.core.training import train as run_training
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -101,8 +101,8 @@ def test_cambiar_tema_republica_tokens_y_rehace_el_qss() -> None:
         T.set_theme("claro")
         qss_claro, ink_claro = T.GLOBAL_QSS, T.INK
         T.set_theme("oscuro")
-        assert T.INK != ink_claro
-        assert T.GLOBAL_QSS != qss_claro
+        assert ink_claro != T.INK
+        assert qss_claro != T.GLOBAL_QSS
         assert T.INK in T.GLOBAL_QSS
     finally:
         T.set_theme(original)
@@ -138,8 +138,8 @@ def test_los_informes_no_siguen_el_tema() -> None:
         antes = (T.DOC.BG, T.DOC.INK, T.DOC.ACCENT)
         for nombre in T.PALETTES:
             T.set_theme(nombre)
-            assert (T.DOC.BG, T.DOC.INK, T.DOC.ACCENT) == antes
-        assert T.DOC.BG == T.PALETTES["claro"]["BG"]
+            assert antes == (T.DOC.BG, T.DOC.INK, T.DOC.ACCENT)
+        assert T.PALETTES["claro"]["BG"] == T.DOC.BG
     finally:
         T.set_theme(original)
 
@@ -155,7 +155,7 @@ def test_los_colores_de_polimero_no_siguen_el_tema() -> None:
         esperado = dict(T.CLASS_COLOR_HEX)
         for nombre in T.PALETTES:
             T.set_theme(nombre)
-            assert T.CLASS_COLOR_HEX == esperado
+            assert esperado == T.CLASS_COLOR_HEX
     finally:
         T.set_theme(original)
 

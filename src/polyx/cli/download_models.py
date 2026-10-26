@@ -17,11 +17,10 @@ import hashlib
 import os
 import sys
 from pathlib import Path
-from urllib.request import urlopen, Request
 from urllib.error import URLError
+from urllib.request import Request, urlopen
 
-from polyx.core.paths import MODELS_DIR, discover_default_model
-
+from polyx.core.paths import MODELS_DIR
 
 DEFAULT_URL = os.environ.get(
     "POLYX_MODEL_URL",

@@ -4,33 +4,50 @@ Hero with kicker, 'Poly-X analytics' title, subtitle, 4 KPI chips,
 and 4 large module cards (Detector, Trainer, Labeler, Viewer).
 """
 from __future__ import annotations
+
 import logging
 import math
-import random
 import os
-import sys
+import random
 import subprocess
+import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSize, QTimer, QRectF, QPointF
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
-    QPainter, QColor, QBrush, QPen, QLinearGradient, QRadialGradient,
-    QPainterPath, QFont, QKeySequence, QShortcut,
+    QBrush,
+    QColor,
+    QFont,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QRadialGradient,
+    QShortcut,
 )
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QPushButton, QFrame, QScrollArea, QMessageBox
+    QApplication,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
 )
 
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.gui import marca
-from polyx.core.i18n import tr, language
-from polyx.gui.preferencias import PreferencesDialog
-from polyx.gui.widgets import LogoBadge, HLine
-from polyx.gui.updates import UPDATER, SearchUpdates, can_update
-from polyx.core.platform import open_in_system, launch_updater
 from polyx import __version__
+from polyx.core.i18n import language, tr
+from polyx.core.platform import launch_updater, open_in_system
+from polyx.gui import iconos, marca
+from polyx.gui import theme as T
+from polyx.gui.preferencias import PreferencesDialog
+from polyx.gui.updates import UPDATER, SearchUpdates, can_update
+from polyx.gui.widgets import HLine, LogoBadge
 
 # ──────────────────────────────────────────────────────────────────────
 # Instrumented startup: the launcher leaves a JSONL trace in `app.jsonl`.

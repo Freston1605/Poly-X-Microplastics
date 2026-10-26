@@ -21,8 +21,8 @@ import numpy as np
 import pytest
 
 from polyx.core import morphology as M
-from polyx.gui.report_html import _record_particle
 from polyx.core.detect.protocol import Instance as Detection
+from polyx.gui.report_html import _record_particle
 
 
 def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
@@ -101,6 +101,7 @@ def test_el_margen_del_recorte_es_el_mismo_en_los_dos_sitios(lado_x, lado_y):
     distintas, que es donde min y max se separan.
     """
     import inspect
+
     from polyx.gui import report_html
 
     fuente = inspect.getsource(report_html._record_particle)

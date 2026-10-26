@@ -9,11 +9,12 @@ so the lab chemist does not train blindly on a bad split.
 Public function: ``audit_dataset(yaml_path) -> DatasetAudit``.
 Pure Python (no Qt) → testable headless."""
 from __future__ import annotations
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-from collections import defaultdict
+
 import statistics
+from collections import defaultdict
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 

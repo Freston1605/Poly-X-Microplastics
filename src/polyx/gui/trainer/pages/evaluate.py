@@ -1,18 +1,26 @@
 """Page 6 — `Evaluar`. Validation of any .pt over a YOLO dataset."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton,
-    QFileDialog, QMessageBox, QPlainTextEdit,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.gui.widgets import KPICard
 from polyx.core.i18n import tr
+from polyx.gui import iconos
+from polyx.gui import theme as T
+from polyx.gui.widgets import KPICard
+
+from ._base import TrainerPage
 
 
 class _EvalWorker(QThread):
@@ -145,4 +153,4 @@ class EvaluatePage(TrainerPage):
         self.kpi_map95.set_value(f"{d['mAP50-95']:.3f}")
         self.kpi_prec.set_value(f"{d['precision']:.3f}")
         self.kpi_rec.set_value(f"{d['recall']:.3f}")
-        self.log.appendPlainText(f"[OK] Validación completada.")
+        self.log.appendPlainText("[OK] Validación completada.")

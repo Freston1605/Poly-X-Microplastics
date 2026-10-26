@@ -1,17 +1,25 @@
 """Interactive canvas to draw and edit YOLO bounding boxes."""
 from __future__ import annotations
+
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPointF, QRectF, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
-    QColor, QPainter, QPen, QBrush, QPixmap, QImage, QFont,
-    QWheelEvent, QMouseEvent, QKeyEvent, QPainterPath,
+    QColor,
+    QFont,
+    QImage,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QWheelEvent,
 )
 from PySide6.QtWidgets import QWidget
 
 from polyx.gui import theme as T
-from .state import LabelerState, BBox
 
+from .state import BBox, LabelerState
 
 # Extended palette: PET, PP, LDPE + extra colors for custom classes
 _CLASS_COLORS = [
@@ -94,8 +102,8 @@ class BboxCanvas(QWidget):
         pix = QPixmap(str(img_path))
         if pix.isNull():
             try:
-                from PIL import Image
                 import numpy as np
+                from PIL import Image
                 arr = np.array(Image.open(str(img_path)).convert("RGB"))
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)

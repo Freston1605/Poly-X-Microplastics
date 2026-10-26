@@ -1,10 +1,12 @@
 """Base page of the Trainer (header with icon+title, not a number)."""
 from __future__ import annotations
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 
-from polyx.gui import theme as T
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
 from polyx.gui import iconos
+from polyx.gui import theme as T
+
 from ..state import TrainerState
 
 

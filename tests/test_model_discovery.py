@@ -1,5 +1,4 @@
 """Model discovery seam (M011/S01/T01)."""
-from pathlib import Path
 
 import pytest
 

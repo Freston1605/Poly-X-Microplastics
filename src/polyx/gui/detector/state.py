@@ -3,15 +3,16 @@
 Inherits from QObject to emit signals when it changes (the pages subscribe).
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.core.detect.yolo import Detection, YoloModel
-from polyx.core.detect import DetectionSource, make_detector
+from polyx.core.detect import DetectionSource
+from polyx.core.detect.yolo import Detection
 from polyx.core.i18n import tr
 from polyx.core.platform import device_available
 

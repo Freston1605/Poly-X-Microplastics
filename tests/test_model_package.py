@@ -33,7 +33,6 @@ se admite ``polyx.core.*`` (nivel 1) y el ``from ..`` que apunta al propio
 from __future__ import annotations
 
 import ast
-import importlib
 import os
 import subprocess
 import sys

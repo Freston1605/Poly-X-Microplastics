@@ -1,18 +1,23 @@
 """Page 7 — `Comparar`. Table of all the previous runs with their metrics."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem,
+    QHBoxLayout,
     QHeaderView,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ._base import TrainerPage
 
 
 def _runs_root() -> Path:

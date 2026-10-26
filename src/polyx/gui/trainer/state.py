@@ -1,14 +1,15 @@
 """Shared state of the Trainer across all the pages."""
 from __future__ import annotations
+
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Optional
-import re
+from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
 from polyx.core.platform import device_available
-from polyx.core.quality.dataset_audit import audit_dataset, LEVEL_ERROR, LEVEL_WARN
+from polyx.core.quality.dataset_audit import LEVEL_ERROR, LEVEL_WARN, audit_dataset
 
 # Device accepted by Ultralytics: `"cpu"`, `"mps"`, `"cuda[:N]"` or `"N[,N...]"` (GPU by
 # index). Anything else makes the run fail midway.

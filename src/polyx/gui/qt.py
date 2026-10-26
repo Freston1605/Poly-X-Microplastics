@@ -7,10 +7,8 @@ readable message; the Qt-touching modules keep importing PySide6 directly.
 """
 from __future__ import annotations
 
-
 from importlib.util import find_spec
-import sys
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 from typing import Tuple
 
 _INSTALL_HINT = (
@@ -48,4 +46,4 @@ def require_qt() -> None:
         _raise_missing()
 
 
-__all__ = ["qt_available", "require_qt", "_bind_gui_modules", "_INSTALL_HINT"]
+__all__ = ["_INSTALL_HINT", "_bind_gui_modules", "qt_available", "require_qt"]

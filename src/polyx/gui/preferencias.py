@@ -15,12 +15,20 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QPushButton, QVBoxLayout, QWidget,
+    QCheckBox,
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
-from . import theme as T
 from polyx.core.i18n import LANGUAGES, language, set_language, tr
+
+from . import theme as T
 
 
 # ──────────────────────────────────────────────────────────────────────

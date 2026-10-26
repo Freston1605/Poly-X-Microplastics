@@ -1,17 +1,22 @@
 """Thin wrapper over Ultralytics YOLO for inference + YOLO-txt utilities."""
 from __future__ import annotations
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
-import os
 
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import cv2
+import numpy as np
 
-from polyx.core.provenance.observability import logger_for, event
-from polyx.core.detect.protocol import Instance, DetectionSource, Detections, size_image, policy_tiling, read_yolo_txt, find_gt_for_image, compute_box_size_um
+from polyx.core.detect.protocol import (
+    Instance,
+    compute_box_size_um,
+    find_gt_for_image,
+    policy_tiling,
+    read_yolo_txt,
+    size_image,
+)
+from polyx.core.provenance.observability import event, logger_for
 
 # Canonical alias: `Detection` is `Instance` from the protocol. Kept for
 # backwards compatibility with GUI/report code that imports `Detection`.
@@ -88,7 +93,7 @@ class YoloModel:
         detail: Dict[int, str] = {}
         dev = str(device).strip().lower()
         if dev in ("cpu", "-1"):
-            return candidates[-1], {c: "cpu" for c in candidates}
+            return candidates[-1], dict.fromkeys(candidates, "cpu")
         try:
             import torch
         except Exception:

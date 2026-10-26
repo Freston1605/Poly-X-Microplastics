@@ -26,7 +26,8 @@ import os
 from pathlib import Path
 from typing import Callable
 
-from polyx.core.translations_en import EN as _EN, NO_TRANSLATE
+from polyx.core.translations_en import EN as _EN
+from polyx.core.translations_en import NO_TRANSLATE
 
 LANGUAGES = {"es": "Español", "en": "English"}
 _FILE = Path.home() / ".polyx_idioma.json"
@@ -200,7 +201,7 @@ def set_language(code: str) -> None:
         _FILE.write_text(json.dumps({"idioma": code}), encoding="utf-8")
     except Exception:
         pass
-    for f in list(_subscribers):
+    for f in _subscribers:
         try:
             f(code)
         except Exception:

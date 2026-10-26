@@ -5,9 +5,10 @@ It contains no implementation, only the contracts (Protocol classes and data typ
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple, Protocol
+from typing import Dict, List, Optional, Protocol, Tuple
 
 import cv2
 import numpy as np

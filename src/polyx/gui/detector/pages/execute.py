@@ -1,20 +1,27 @@
 """Page 5 — `Ejecutar`. Starts the inference in the background and shows previews."""
 from __future__ import annotations
+
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QByteArray
+from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QProgressBar, QFrame,
-    QGridLayout, QFileDialog, QMessageBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from ..runner import DetectorRunner
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.gui import iconos
+from polyx.gui import theme as T
+
+from ..runner import DetectorRunner
+from ._base import DetectorPage
 
 
 class _PreviewSlot(QFrame):
@@ -70,7 +77,7 @@ class RunPage(DetectorPage):
 
     def _refresh_warning_tiling(self):
         """Summarizes whether the photos will be tiled, and how much longer it will take."""
-        from polyx.core.detect.yolo import size_image, policy_tiling
+        from polyx.core.detect.yolo import policy_tiling, size_image
         p = self.state.params
         if not self.state.images:
             self.lbl_tiling.setText("")

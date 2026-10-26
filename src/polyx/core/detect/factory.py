@@ -1,14 +1,14 @@
 """Detector factory — create detection backends by name."""
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Optional
 
-from .protocol import DetectionSource, Instance
-from .yolo import YoloModel, YoloSegModel
 from .native import NativeDetector
+from .protocol import DetectionSource
 from .sam import Sam2Segmenter
-
+from .yolo import YoloModel, YoloSegModel
 
 _DETECTOR_REGISTRY: Dict[str, type] = {
     "yolo": YoloModel,

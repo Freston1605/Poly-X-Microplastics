@@ -98,4 +98,4 @@ def write_report(metrics: dict, path: Path) -> None:
     path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
 
-__all__ = ["EvalConfig", "evaluate", "_metrics_from_results", "write_report"]
+__all__ = ["EvalConfig", "_metrics_from_results", "evaluate", "write_report"]

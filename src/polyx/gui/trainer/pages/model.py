@@ -1,18 +1,24 @@
 """Page 1 — `Modelo`. Quick preset + family (v8/v11) + size + custom weights."""
 from __future__ import annotations
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QComboBox, QLineEdit, QPushButton,
-    QFileDialog, QCheckBox,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
 )
 
-from ._base import TrainerPage
-from polyx.gui import theme as T
-from ..state import PRESETS
 from polyx.core.i18n import tr
+from polyx.gui import theme as T
 
+from ..state import PRESETS
+from ._base import TrainerPage
 
 SIZE_DESCRIPTIONS = [
     ("n", "Nano",   "El más liviano y rápido. Útil para probar.", T.OK),

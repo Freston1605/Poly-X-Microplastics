@@ -39,7 +39,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import capturar_fixtures_geodesia as CFG  # noqa: E402
+import capturar_fixtures_geodesia as CFG
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "geodesia"
 

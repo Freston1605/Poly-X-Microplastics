@@ -1,12 +1,12 @@
 """Labeller state — images, annotations, undo/redo."""
 from __future__ import annotations
+
 import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
-
 
 CLASS_NAMES_DEFAULT = ["PET", "PP", "LDPE"]
 

@@ -13,7 +13,6 @@ autouse fixture (``_aislar_logs_suite``) to isolate ``POLYX_LOG_DIR`` to
 from __future__ import annotations
 
 import json
-import logging
 import os
 import sys
 from pathlib import Path
@@ -156,7 +155,6 @@ class TestSpawnModulePopenFalla:
 class TestOpenTrainerWiring:
     def test_open_trainer_lanza_modulo_trainer(self, qapp, monkeypatch):
         """Launcher's "Abrir Entrenador" button spawns the trainer module."""
-        import polyx.gui.launcher as launcher
         from polyx.gui.launcher import LauncherWindow, ModuleCard
         captured = {}
 
@@ -187,7 +185,7 @@ class TestOpenTrainerWiring:
         monkeypatch.setattr(launcher, "_spawn_module", lambda dotted: False)
 
         # Monkeypatch QMessageBox.information to capture the call
-        from PySide6.QtWidgets import QMessageBox, QScrollArea
+        from PySide6.QtWidgets import QMessageBox
         monkeypatch.setattr(
             QMessageBox, "information",
             lambda parent, title, msg: avisos.append((title, msg))
@@ -204,7 +202,6 @@ class TestOpenTrainerWiring:
 # ── Module boundary tests ───────────────────────────────────────────
 # These tests ensure the GUI doesn't import the old core re-export package.
 
-from pathlib import Path
 import ast
 import importlib
 

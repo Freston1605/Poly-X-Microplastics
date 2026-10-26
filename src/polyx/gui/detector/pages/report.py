@@ -1,22 +1,31 @@
 """Page 9 — Detection report in HTML."""
 from __future__ import annotations
+
 import shutil
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QCheckBox, QMessageBox,
-    QFileDialog, QApplication, QRadioButton, QButtonGroup, QListWidget,
+    QApplication,
+    QButtonGroup,
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
     QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
 )
 
-from ._base import DetectorPage
-from polyx.gui import theme as T
-from polyx.gui import iconos
-from polyx.gui import pdf_export
-from polyx.gui.report_html import generate_report, SECTIONS, PRESETS
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
+from polyx.gui import iconos, pdf_export
+from polyx.gui import theme as T
+from polyx.gui.report_html import PRESETS, SECTIONS, generate_report
+
+from ._base import DetectorPage
 
 
 class ReportPage(DetectorPage):

@@ -17,11 +17,10 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core.detect.protocol import Instance, read_yolo_txt, find_gt_for_image
+from polyx.core.detect.protocol import Instance, find_gt_for_image, read_yolo_txt
 from polyx.core.detection_run import run_batch
 from polyx.core.quality.metrics import mask_iou, match_image
 from polyx.core.report_simple import generate as generate_report
-
 
 # A cross-shaped polygon: its bounding box is the whole (200x150) frame,
 # while the mask itself is the two bars. Any box-vs-box comparison of a
