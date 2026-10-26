@@ -42,7 +42,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[1]
-MOTOR = RAIZ / "polyx" / "core"
+MOTOR = RAIZ / "src" / "polyx" / "core"
 
 # Enlaces de Qt que el motor puro no debe importar nunca. La raiz de cada
 # nombre es lo que se compara, asi que ``PySide6.QtWidgets`` cae en ``PySide6``.
@@ -186,7 +186,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
     entorno = dict(os.environ)
     entorno["QT_QPA_PLATFORM"] = "offscreen"
     # El worktree primero, para no importar un polyx instalado y viejo.
-    entorno["PYTHONPATH"] = str(RAIZ) + os.pathsep + entorno.get("PYTHONPATH", "")
+    entorno["PYTHONPATH"] = str(RAIZ / "src") + os.pathsep + str(RAIZ) + os.pathsep + entorno.get("PYTHONPATH", "")
 
     resultado = subprocess.run(
         [sys.executable, "-c", guion],
@@ -270,7 +270,7 @@ def test_el_paquete_core_es_el_motor():
     qt_antes = {m for m in sys.modules if m.startswith("PySide6")}
     import polyx.core
     # El paquete debe existir en disco
-    assert (RAIZ / "polyx" / "core").exists(), "polyx/core no existe en disco"
+    assert (RAIZ / "src" / "polyx" / "core").exists(), "polyx/core no existe en disco"
     qt_nuevos = {m for m in sys.modules if m.startswith("PySide6")} - qt_antes
     assert not qt_nuevos, f"polyx.core arrastro Qt: {sorted(qt_nuevos)}"
     # Debe tener los submodulos esperados

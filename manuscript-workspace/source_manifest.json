@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "evidence_id": "E001",
+      "source_type": "report",
+      "title": "Poly-X project documentation (CLAUDE.md)",
+      "authors": ["Cristofher Ferrada"],
+      "year": 2026,
+      "identifiers": {"doi": "", "pmid": "", "pmcid": "", "isbn": "", "url": "https://github.com/CrissFerrada/Poly-X-Microplastics"},
+      "locator": "CLAUDE.md sections: Key classes, Data flow, Conventions, Common parameters",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    },
+    {
+      "evidence_id": "E002",
+      "source_type": "journal_article",
+      "title": "Development of a new methodology for the determination of PET microplastics in sediment, based on microwave-assisted acid digestion",
+      "authors": ["Perez M", "Parra S", "Ferrada C", "Bravo M", "Perez PA", "Quiroz W"],
+      "year": 2024,
+      "identifiers": {"doi": "10.1371/journal.pone.0314520", "pmid": "", "pmcid": "", "isbn": "", "url": "https://doi.org/10.1371/journal.pone.0314520"},
+      "locator": "PLoS ONE 19(12): e0314520",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    },
+    {
+      "evidence_id": "E003",
+      "source_type": "journal_article",
+      "title": "Evaluation of microwave-assisted acid/oxidant digestion method for the detection of polyethylene microplastics in Merluccius gayi fish by Nile Red fluorescent staining and image analysis",
+      "authors": ["Ferrada C", "Perez M", "Parra S", "Salas E", "Sepulveda F", "Bravo MA", "Quiroz W"],
+      "year": 2024,
+      "identifiers": {"doi": "10.4067/s0717-97072024000106082", "pmid": "", "pmcid": "", "isbn": "", "url": "https://doi.org/10.4067/s0717-97072024000106082"},
+      "locator": "J. Chil. Chem. Soc. 69(1): 6082-6085",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    },
+    {
+      "evidence_id": "E004",
+      "source_type": "software",
+      "title": "Poly-X test suite (tests/test_morfologia.py)",
+      "authors": ["Cristofher Ferrada"],
+      "year": 2026,
+      "identifiers": {"doi": "", "pmid": "", "pmcid": "", "isbn": "", "url": ""},
+      "locator": "tests/test_morfologia.py",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    },
+    {
+      "evidence_id": "E005",
+      "source_type": "dataset",
+      "title": "Training dataset fluorescence measurements (mean RGB over 30 particles per class)",
+      "authors": ["Cristofher Ferrada"],
+      "year": 2026,
+      "identifiers": {"doi": "", "pmid": "", "pmcid": "", "isbn": "", "url": ""},
+      "locator": "CLAUDE.md: Real fluorescence of each polymer",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    },
+    {
+      "evidence_id": "E006",
+      "source_type": "software",
+      "title": "Ultralytics YOLO",
+      "authors": ["Jocher G", "Chaurasia A", "Qiu J"],
+      "year": 2023,
+      "identifiers": {"doi": "", "pmid": "", "pmcid": "", "isbn": "", "url": "https://github.com/ultralytics/ultralytics"},
+      "locator": "Ultralytics 8.3.40",
+      "confidentiality": "public",
+      "verification": {"status": "verified", "source_opened": true, "verified_by": "Cristofher Ferrada", "verified_on": "2026-10-25"}
+    }
+  ]
+}

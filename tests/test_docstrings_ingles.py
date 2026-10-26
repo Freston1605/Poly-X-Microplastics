@@ -47,8 +47,8 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is
 # not silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "polyx/core/measure/morphology.py",
-    "polyx/gui/report_html.py",
+    "src/polyx/core/measure/morphology.py",
+    "src/polyx/gui/report_html.py",
 ]
 
 # Floor for the docstring inventory (measured 410 at S02 planning; the
@@ -59,7 +59,7 @@ _FILE_FLOOR = 50
 
 def _polyx_files() -> list[Path]:
     """Every ``*.py`` file under the polyx package, sorted for stability."""
-    return sorted((REPO_ROOT / "polyx").rglob("*.py"))
+    return sorted((REPO_ROOT / "src" / "polyx").rglob("*.py"))
 
 
 def _allowed(findings: list[str]) -> list[str]:

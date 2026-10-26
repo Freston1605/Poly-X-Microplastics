@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "polyx-microplastics"
+version = "2.0.0"
+description = "Automated detection and classification of Nile Red-stained microplastics"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+authors = [{ name = "Cristofher Ferrada" }]
+dependencies = [
+  "ultralytics==8.3.40",
+  "opencv-python==4.10.0.84",
+  "numpy==1.26.4",
+  "Pillow==12.3.0",
+  "matplotlib==3.9.2",
+  "pyqtgraph==0.13.7",
+  "PyYAML==6.0.2",
+  "psutil==6.0.0",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6==6.7.2"]
+dev = ["pytest", "libcst==1.9.0"]
+sam2 = ["sam2"]
+
+[project.scripts]
+polyx = "polyx.gui.__main__:main"
+polyx-gui = "polyx.gui.__main__:main"
+polyx-download-models = "polyx.cli.download_models:main"
+polyx-train = "polyx.cli.train:main"
+polyx-eval = "polyx.cli.eval:main"
+polyx-detect = "polyx.cli.detect:main"
+polyx-report = "polyx.cli.report:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/polyx"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md", "CLAUDE.md", "requirements.txt"]

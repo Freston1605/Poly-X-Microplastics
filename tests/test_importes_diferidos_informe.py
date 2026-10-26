@@ -33,6 +33,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 # Modulos pesados que DEBEN quedar diferidos tras importar el informe.
 LAZY_TARGETS = (
@@ -67,6 +68,7 @@ def test_importar_informe_no_carga_los_pesados():
     env = os.environ | {
         "QT_QPA_PLATFORM": "offscreen",
         "POLYX_IDIOMA": "en",
+        "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""),
     }
     proc = subprocess.run(
         [sys.executable, "-c", script],

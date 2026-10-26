@@ -54,9 +54,9 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is
 # not silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "polyx/core/measure/morphology.py",
-    "polyx/gui/report_html.py",
-    "polyx/gui/detector/runner.py",
+    "src/polyx/core/measure/morphology.py",
+    "src/polyx/gui/report_html.py",
+    "src/polyx/gui/detector/runner.py",
 ]
 
 # Floor for the comment inventory (measured 1890 comments across 72 modules
@@ -71,7 +71,7 @@ _MODULE_FLOOR = 72
 
 def _polyx_files() -> list[Path]:
     """Every ``*.py`` file under the polyx package, sorted for stability."""
-    return sorted((REPO_ROOT / "polyx").rglob("*.py"))
+    return sorted((REPO_ROOT / "src" / "polyx").rglob("*.py"))
 
 
 def _read_source(path: Path) -> str:

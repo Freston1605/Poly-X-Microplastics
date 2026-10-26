@@ -45,7 +45,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # El runner deriva el directorio de runs de su propia ubicación:
 # Path(__file__).resolve().parents[3] / "runs_train".
-RAIZ_PROYECTO = Path(runner_mod.__file__).resolve().parents[3]
+RAIZ_PROYECTO = Path(runner_mod.__file__).resolve().parents[4]
 RUNS_ENTRENAMIENTO = RAIZ_PROYECTO / "runs_train"
 
 

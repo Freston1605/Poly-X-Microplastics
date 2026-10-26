@@ -24,7 +24,7 @@ If Not fso.FileExists(pythonw) Then
     WScript.Quit 1
 End If
 
-If Not fso.FolderExists(raiz & "\polyx") Then
+If Not fso.FolderExists(raiz & "\src\polyx") Then
     MsgBox "No se encuentra la carpeta 'polyx' junto a este archivo." & vbCrLf & _
            vbCrLf & "Deja Poly-X.vbs en la raiz del proyecto, junto a SETUP.bat.", _
            vbCritical, "Poly-X"
@@ -32,7 +32,8 @@ If Not fso.FolderExists(raiz & "\polyx") Then
 End If
 
 ' El directorio de trabajo debe ser la raiz: 'python -m polyx.launcher' importa
-' el paquete desde ahi.
+' el paquete desde ahi. Con el layout src/, src/ debe estar en PYTHONPATH.
+shell.Environment("Process")("PYTHONPATH") = raiz & "\src;" & shell.Environment("Process")("PYTHONPATH")
 shell.CurrentDirectory = raiz
 
 ' Estilo de ventana 0 = oculta; False = no esperar a que termine.

@@ -35,7 +35,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[1]
-PAQUETE_GUI = RAIZ / "polyx" / "gui"
+PAQUETE_GUI = RAIZ / "src" / "polyx" / "gui"
 
 # Enlaces de Qt que solo puede importar polyx.gui. La raiz de cada nombre es
 # lo que se compara, asi que ``PySide6.QtWidgets`` cae en ``PySide6``.
@@ -63,7 +63,7 @@ PAQUETES_FEATURE = ("detector", "trainer", "viewer", "labeler")
 def _es_de_gui(ruta: Path) -> bool:
     """True si la ruta esta dentro del paquete polyx/gui."""
     partes = ruta.relative_to(RAIZ).parts
-    return len(partes) >= 2 and partes[0] == "polyx" and partes[1] == "gui"
+    return len(partes) >= 3 and partes[0] == "src" and partes[1] == "polyx" and partes[2] == "gui"
 
 
 def _fuentes_de_gui() -> list[Path]:
@@ -74,7 +74,7 @@ def _fuentes_de_gui() -> list[Path]:
 def _fuentes_fuera_de_gui() -> list[Path]:
     """Rutas de los .py de polyx/ que NO estan en polyx/gui."""
     return sorted(
-        ruta for ruta in (RAIZ / "polyx").rglob("*.py") if not _es_de_gui(ruta)
+        ruta for ruta in (RAIZ / "src" / "polyx").rglob("*.py") if not _es_de_gui(ruta)
     )
 
 
@@ -213,9 +213,9 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     fuera = _fuentes_fuera_de_gui()
     assert fuera, "no se escaneo ningun archivo fuera de polyx/gui"
     nombres = {ruta.as_posix() for ruta in fuera}
-    assert (RAIZ / "polyx" / "launcher.py").as_posix() in nombres
+    assert (RAIZ / "src" / "polyx" / "launcher.py").as_posix() in nombres
     for modulo, rel_path in MODULOS_MOTOR.items():
-        assert (RAIZ / "polyx" / "core" / rel_path).as_posix() in nombres
+        assert (RAIZ / "src" / "polyx" / "core" / rel_path).as_posix() in nombres
 
 
 @pytest.mark.parametrize(
@@ -275,7 +275,7 @@ def test_el_paquete_de_reexport_del_core_ha_desaparecido():
         importlib.import_module(NOMBRE_HEREDADO)
 
     # El NUEVO polyx.core DEBE existir (es el motor)
-    assert (RAIZ / "polyx" / "core").exists(), "polyx/core (el motor) no existe"
+    assert (RAIZ / "src" / "polyx" / "core").exists(), "polyx/core (el motor) no existe"
 
 
 # ── 5. El punto de entrada historico sigue viviendo ──
@@ -299,7 +299,7 @@ def test_el_shim_del_launcher_no_menciona_qt_en_su_fuente():
     Comprobar el source (y no el import) es la prueba fuerte: el shim,
     por definicion, importa ``polyx.gui.launcher``, que SI habla con Qt.
     """
-    fuente = (RAIZ / "polyx" / "launcher.py").read_text(encoding="utf-8")
+    fuente = (RAIZ / "src" / "polyx" / "launcher.py").read_text(encoding="utf-8")
     assert "PySide6" not in fuente
     assert "PyQt" not in fuente
 

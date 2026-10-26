@@ -409,8 +409,8 @@ def test_crlf_line_endings_survive(tmp_path):
 
 
 def test_enumeration_matches_tokenize_on_every_polyx_module():
-    files = sorted((ROOT / "polyx").rglob("*.py"))
-    assert len(files) == 83
+    files = sorted((ROOT / "src" / "polyx").rglob("*.py"))
+    assert len(files) == 95
     for path in files:
         source = path.read_text(encoding="utf-8")
         enumeration = tc.enumerate_comments(source)
@@ -422,7 +422,7 @@ def test_enumeration_matches_tokenize_on_every_polyx_module():
 
 
 def test_theme_inventory_and_non_vacuous_scanner(tmp_path, capsys):
-    theme = ROOT / "polyx" / "gui" / "theme.py"
+    theme = ROOT / "src" / "polyx" / "gui" / "theme.py"
     assert harness.main(["list-comments", "--json", str(theme)]) == 0
     entries = json.loads(capsys.readouterr().out)
     assert len(entries) == 65

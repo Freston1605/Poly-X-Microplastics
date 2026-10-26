@@ -25,8 +25,15 @@ por test (``tmp_path / "_polyx_logs"``), limpia variables de entorno ambientales
 run_id en setup y teardown.
 """
 import os
+import sys
+from pathlib import Path
 
 import pytest
+
+_RAIZ = Path(__file__).resolve().parents[1]
+_SRC = _RAIZ / "src"
+if _SRC.is_dir() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 os.environ.setdefault("POLYX_IDIOMA", "es")
 

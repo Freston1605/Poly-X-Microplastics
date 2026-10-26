@@ -1,12 +1,15 @@
-"""Punto de entrada de Poly-X como archivo suelto.
+"""Shim Qt-free del entry point historico.
 
-Existe para PyInstaller: al empaquetar hace falta apuntar a un *archivo*, y
-``python -m polyx.launcher`` no le sirve porque eso es un modulo. Fuera de
-ese caso no aporta nada; el modo normal de arrancar sigue siendo el modulo.
-
-    python -m polyx.launcher      # uso normal
-    python lanzar_polyx.py        # equivalente, y lo que empaqueta el .app
+Arranca el launcher sin consola. Equivalente a `python -m polyx.launcher`.
 """
+import sys
+from pathlib import Path
+
+_RAIZ = Path(__file__).resolve().parent
+_SRC = _RAIZ / "src"
+if _SRC.is_dir() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
 from polyx.gui.launcher import main
 
 if __name__ == "__main__":

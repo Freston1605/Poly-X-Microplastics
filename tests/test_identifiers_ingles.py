@@ -49,10 +49,10 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is not
 # silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "polyx/core/measure/morphology.py",
-    "polyx/core/provenance/observability.py",
-    "polyx/gui/report_html.py",
-    "polyx/gui/detector/state.py",
+    "src/polyx/core/measure/morphology.py",
+    "src/polyx/core/provenance/observability.py",
+    "src/polyx/gui/report_html.py",
+    "src/polyx/gui/detector/state.py",
 ]
 
 # Floors measured at S04 closeout. The module floor may grow; it must never
@@ -64,32 +64,32 @@ _UNIQUE_IDENTIFIER_FLOOR = 3000
 # must be gone from the module that defines them.
 _PUBLIC_SURFACE = [
     (
-        "polyx/core/measure/calibration.py",
+        "src/polyx/core/measure/calibration.py",
         ("Calibration",),
         ("Calibracion",),
     ),
     (
-        "polyx/core/measure/morphology.py",
+        "src/polyx/core/measure/morphology.py",
         ("Morphology", "segment", "measure"),
         ("Morfologia", "segmentar", "medir"),
     ),
     (
-        "polyx/core/provenance/observability.py",
+        "src/polyx/core/provenance/observability.py",
         ("logger_for",),
         ("logger_para",),
     ),
     (
-        "polyx/gui/viewer/window.py",
+        "src/polyx/gui/viewer/window.py",
         ("ViewerWindow",),
         ("VisorWindow",),
     ),
     (
-        "polyx/gui/detector/pages/compare.py",
+        "src/polyx/gui/detector/pages/compare.py",
         ("ComparePage",),
         ("CompararPage",),
     ),
     (
-        "polyx/gui/detector/pages/parameters.py",
+        "src/polyx/gui/detector/pages/parameters.py",
         ("ParametersPage",),
         ("ParametrosPage",),
     ),
@@ -98,7 +98,7 @@ _PUBLIC_SURFACE = [
 
 def _polyx_files() -> list[Path]:
     """Every ``*.py`` file under the polyx package, sorted for stability."""
-    return sorted((REPO_ROOT / "polyx").rglob("*.py"))
+    return sorted((REPO_ROOT / "src" / "polyx").rglob("*.py"))
 
 
 def _read_source(path: Path) -> str:

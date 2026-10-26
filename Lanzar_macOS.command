@@ -18,6 +18,9 @@
 
 cd "$(dirname "$0")" || exit 1
 
+# src/ layout: el paquete vive en src/polyx, asi que src debe estar en PYTHONPATH.
+export PYTHONPATH="$(pwd)/src${PYTHONPATH:+:$PYTHONPATH}"
+
 # Ruta absoluta: el enlace del Escritorio no puede apuntar a una ruta
 # relativa -- quedaria roto en cuanto se abriera desde otro sitio.
 INSTALL_DIR_ABS="$(pwd)"

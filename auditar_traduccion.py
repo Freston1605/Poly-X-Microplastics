@@ -59,7 +59,7 @@ def main():
 
     faltan: dict[str, list[Path]] = {}
     total = 0
-    for py in sorted((RAIZ / "polyx").rglob("*.py")):
+    for py in sorted((RAIZ / "src" / "polyx").rglob("*.py")):
         if "legacy" in py.parts or "__pycache__" in py.parts:
             continue
         for c in cadenas_tr(py):

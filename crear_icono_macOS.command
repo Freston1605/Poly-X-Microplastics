@@ -183,6 +183,7 @@ fi
 
 mkdir -p "$(dirname "$LOG")"
 cd "$RAIZ" || exit 1
+export PYTHONPATH="$RAIZ/src${PYTHONPATH:+:$PYTHONPATH}"
 printf '\n===== %s · Poly-X =====\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG"
 
 # exec, y no una llamada normal: asi Python REEMPLAZA a este script y conserva

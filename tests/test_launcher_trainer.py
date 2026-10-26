@@ -71,7 +71,7 @@ class TestSpawnModuleTrainerExitoso:
         assert len(_FakePopen.llamadas) == 1
         args, kwargs = _FakePopen.llamadas[0]
         assert args == [sys.executable, "-m", "polyx.gui.trainer"]
-        assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[2])
+        assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[3])
 
     def test_spawn_module_emite_module_launch_en_app_jsonl(
         self, tmp_path, monkeypatch
@@ -209,7 +209,7 @@ import ast
 import importlib
 
 RAIZ = Path(__file__).resolve().parents[1]
-PAQUETE_GUI = RAIZ / "polyx" / "gui"
+PAQUETE_GUI = RAIZ / "src" / "polyx" / "gui"
 NOMBRE_HEREDADO = "polyx.core_reexport"  # nombre que nunca existira
 
 
@@ -287,7 +287,7 @@ def _imports_heredados(arbol: ast.AST, partes: list[str]) -> list[str]:
 def _fuentes_fuera_de_gui() -> list[Path]:
     """All .py files under polyx/ except those under polyx/gui/."""
     return sorted(
-        p for p in (RAIZ / "polyx").rglob("*.py")
+        p for p in (RAIZ / "src" / "polyx").rglob("*.py")
         if "__pycache__" not in p.parts and not p.is_relative_to(PAQUETE_GUI)
     )
 
@@ -311,13 +311,13 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     fuera = _fuentes_fuera_de_gui()
     assert fuera, "no se escaneo ningun archivo fuera de polyx/gui"
     nombres = {ruta.as_posix() for ruta in fuera}
-    assert (RAIZ / "polyx" / "launcher.py").as_posix() in nombres
+    assert (RAIZ / "src" / "polyx" / "launcher.py").as_posix() in nombres
     for rel_path in (
-        "polyx/core/i18n.py",
-        "polyx/core/quality/metrics.py",
-        "polyx/core/measure/morphology.py",
-        "polyx/core/provenance/observability.py",
-        "polyx/core/detect/yolo.py",
+        "src/polyx/core/i18n.py",
+        "src/polyx/core/quality/metrics.py",
+        "src/polyx/core/measure/morphology.py",
+        "src/polyx/core/provenance/observability.py",
+        "src/polyx/core/detect/yolo.py",
     ):
         assert (RAIZ / rel_path).as_posix() in nombres
 
@@ -352,7 +352,7 @@ def test_el_paquete_de_reexport_del_core_ha_desaparecido():
         importlib.import_module("polyx.core_reexport")
 
     # The new polyx.core MUST exist (it's the engine)
-    assert (RAIZ / "polyx" / "core").exists(), "polyx/core (the engine) does not exist"
+    assert (RAIZ / "src" / "polyx" / "core").exists(), "polyx/core (the engine) does not exist"
     import polyx.core
     assert hasattr(polyx.core, "Instance")  # exports the engine API
 

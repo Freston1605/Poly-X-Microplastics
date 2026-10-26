@@ -2,6 +2,8 @@
 title Poly-X
 cd /d "%~dp0"
 
+set "PYTHONPATH=%~dp0src;%PYTHONPATH%"
+
 if not exist .venv\Scripts\python.exe (
     echo [ERROR] No se encuentra el entorno virtual.
     echo Ejecuta primero SETUP.bat
