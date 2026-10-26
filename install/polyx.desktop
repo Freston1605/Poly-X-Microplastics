@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Poly-X
+Comment=Microplastics detection and classification suite
+Exec=@@PROJECT_ROOT@@/install/run.sh
+Path=@@PROJECT_ROOT@@
+Icon=@@PROJECT_ROOT@@/src/polyx/assets/polyx.ico
+Terminal=false
+Categories=Science;Education;
+StartupNotify=true

@@ -6,7 +6,7 @@
 # QtWebEngine (usado para exportar el reporte a PDF) viene en PySide6-Addons.
 PySide6==6.7.2
 ultralytics==8.3.40
-opencv-python==4.10.0.84
+opencv-python-headless==4.10.0.84
 # numpy <2 no es capricho: numpy 2.0 elimino np.trapz (ahora np.trapezoid) y
 # ultralytics 8.3.40 lo sigue usando en utils/metrics.py al calcular el AP. Con
 # numpy 2.x el entrenamiento corre bien y muere al validar la primera epoca, que
