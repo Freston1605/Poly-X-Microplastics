@@ -88,7 +88,7 @@ def test_lanzar_modulo_registra_module_launch(log_dir, monkeypatch):
     args, kwargs = llamadas[0]
     assert args == [sys.executable, "-m", "polyx.gui.detector"], \
         "no se puede cambiar como se lanzan los procesos"
-    assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[2])
+    assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[3])
     recs = _leer_jsonl(log_dir, "app")
     eventos = [r for r in recs if r["event"] == "module.launch"]
     assert len(eventos) == 1

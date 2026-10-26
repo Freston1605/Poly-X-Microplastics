@@ -552,7 +552,7 @@ def _archivos_modificados() -> List[Path]:
     tests se editan a mano y no participan del codemod.
     """
     resultado = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD", "--", "polyx/"],
+        ["git", "diff", "--name-only", "HEAD", "--", "src/polyx/"],
         capture_output=True,
         check=True,
         text=True,

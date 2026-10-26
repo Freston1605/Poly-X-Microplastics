@@ -156,7 +156,7 @@ def test_ninguna_traduccion_se_congela_al_importar():
     import ast
     from pathlib import Path as _P
 
-    ruta = _P(__file__).resolve().parents[1] / "polyx" / "gui" / "report_html.py"
+    ruta = _P(__file__).resolve().parents[1] / "src" / "polyx" / "gui" / "report_html.py"
     arbol = ast.parse(ruta.read_text(encoding="utf-8"))
     dentro_de_funcion = set()
     for nodo in arbol.body:

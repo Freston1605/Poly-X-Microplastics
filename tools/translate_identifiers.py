@@ -64,7 +64,7 @@ from typing import Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, 
 import libcst as cst
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-POLYX_ROOT = REPO_ROOT / "polyx"
+POLYX_ROOT = REPO_ROOT / "src" / "polyx"
 
 # Dynamic string helpers whose second positional argument is an attribute name.
 DYNAMIC_GETTERS = frozenset({"getattr", "setattr", "hasattr", "delattr"})

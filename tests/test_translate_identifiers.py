@@ -477,7 +477,7 @@ def test_consumer_mode_ignores_non_polyx_imports():
 
 
 def test_list_identifiers_enumerates_a_real_polyx_file(capsys):
-    path = REPO_ROOT / "polyx" / "core" / "measure" / "calibration.py"
+    path = REPO_ROOT / "src" / "polyx" / "core" / "measure" / "calibration.py"
     assert tct.main(["list-identifiers", "--json", str(path)]) == 0
     entries = json.loads(capsys.readouterr().out)
     names = {entry["name"] for entry in entries}
