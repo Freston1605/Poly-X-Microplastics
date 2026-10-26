@@ -1,8 +1,8 @@
 # Poly-X — Microplastics Detection Suite
 
-**Status:** Ongoing rebuild (May 2026)  
-**Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV  
-**Version:** 2.0.0  
+**Status:** Ongoing rebuild (May 2026)
+**Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV
+**Version:** 2.0.0
 **GitHub:** https://github.com/CrissFerrada/Poly-X-Microplastics
 
 ## 🎯 Purpose
@@ -47,87 +47,87 @@ The root deliberately mixes two surfaces with different audiences:
   out of the repository on purpose.
 
 ```
-src/                      # Código fuente (paquete instalable)
-└── polyx/                # El paquete `polyx` (importable)
-    ├── __init__.py       # __version__ (fuente única, leída por hatchling)
-    ├── launcher.py       # Shim Qt-free del entry point histórico
-    ├── assets/           # Recursos empaquetados (polyx.ico)
-    ├── cli/              # CLIs headless: train, eval, detect, report,
+src/                      # Source code (installable package)
+└── polyx/                # The `polyx` package (importable)
+    ├── __init__.py       # __version__ (single source, read by hatchling)
+    ├── launcher.py       # Qt-free shim of the historic entry point
+    ├── assets/           # Bundled resources (polyx.ico)
+    ├── cli/              # Headless CLIs: train, eval, detect, report,
     │                     #   download-models
-    ├── core/             # Motor puro, sin Qt
-    │   ├── paths.py      # Rutas (ROOT, ASSETS_DIR, USER_DATA_DIR, ...)
-    │   ├── platform.py   # Diferencias entre sistemas operativos
-    │   ├── i18n.py       # tr(), idioma()
+    ├── core/             # Engine, no Qt
+    │   ├── paths.py      # Paths (ROOT, ASSETS_DIR, USER_DATA_DIR, ...)
+    │   ├── platform.py   # OS differences
+    │   ├── i18n.py       # tr(), language()
     │   ├── translations_en.py
-    │   ├── observability.py  # Logs JSONL (logger_for, set_run_id)
-    │   ├── yolo_wrap.py  # Wrapper YOLO (Detection, YoloModel)
-    │   ├── metrics.py    # TP/FP/FN, IoU, matriz de confusión
-    │   ├── assignment.py # Abstención: detectar ≠ identificar
+    │   ├── observability.py  # JSONL logs (logger_for, set_run_id)
+    │   ├── yolo_wrap.py  # YOLO wrapper (Detection, YoloModel)
+    │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
+    │   ├── assignment.py # Abstention: detecting ≠ identifying
     │   ├── dataset_audit.py
-    │   ├── detection_run.py  # Motor headless de detección
-    │   ├── training.py       # Motor headless de entrenamiento
-    │   ├── evaluation.py     # Motor headless de evaluación
-    │   ├── report_simple.py  # Reporte HTML sin Qt
-    │   ├── detect/       # Inferencia YOLO
-    │   ├── measure/      # Segmentación y tallas sobre la máscara
-    │   ├── calibration/  # Calibración μm/píxel
-    │   ├── data/         # Carga/validación de datasets
-    │   ├── quality/      # Métricas, asignación, abstractness
-    │   └── provenance/   # Trazabilidad de la corrida
-    └── gui/              # Presentación: todo lo que toca Qt
+    │   ├── detection_run.py  # Headless detection engine
+    │   ├── training.py       # Headless training engine
+    │   ├── evaluation.py     # Headless evaluation engine
+    │   ├── report_simple.py  # HTML report without Qt
+    │   ├── detect/       # YOLO inference
+    │   ├── measure/      # Segmentation and sizes over the mask
+    │   ├── calibration/  # μm/pixel calibration
+    │   ├── data/         # Dataset loading/validation
+    │   ├── quality/      # Metrics, assignment, abstractness
+    │   └── provenance/   # Run traceability
+    └── gui/              # Presentation: everything that touches Qt
         ├── __main__.py   # python -m polyx.gui
-        ├── launcher.py   # Módulo 1: Menú principal (hero + 4 cards)
-        ├── theme.py      # Paleta de colores (Segoe UI, Nile Red RGB)
-        ├── iconos.py     # Iconos vectoriales (QPainterPath)
-        ├── marca.py      # Identidad por ventana (logo + nombre)
+        ├── launcher.py   # Module 1: Main menu (hero + 4 cards)
+        ├── theme.py      # Colour palette (Segoe UI, Nile Red RGB)
+        ├── iconos.py     # Vector icons (QPainterPath)
+        ├── marca.py      # Per-window identity (logo + name)
         ├── widgets.py    # LogoBadge, HLine, custom widgets
-        ├── preferencias.py  # Diálogo de preferencias (tema, idioma)
+        ├── preferencias.py  # Preferences dialog (theme, language)
         ├── pdf_export.py # HTML → PDF
-        ├── updates.py    # Buscador de actualizaciones
-        ├── report_html.py  # Generador reporte (base64, paper-quality)
-        ├── qt.py         # Guard de PySide6 (extra [gui])
-        ├── detector/     # Módulo 2: Análisis en lote
+        ├── updates.py    # Update checker
+        ├── report_html.py  # Report generator (base64, paper-quality)
+        ├── qt.py         # PySide6 guard (extra [gui])
+        ├── detector/     # Module 2: Batch analysis
         │   ├── window.py, state.py, runner.py
-        │   └── pages/    # modelos, imagenes, parametros, gt_manual,
-        │                 # ejecutar, resultados, errores, comparar, reporte
-        ├── trainer/      # Módulo 3: Entrenamiento YOLO
+        │   └── pages/    # models, images, params, gt_manual,
+        │                 # run, results, errors, compare, report
+        ├── trainer/      # Module 3: YOLO training
         │   ├── window.py, state.py, runner.py, hw.py
-        │   └── pages/    # modelo, dataset, parametros, augmentacion,
-        │                 # entrenar, evaluar, comparar, exportar, informe
-        ├── labeler/      # Módulo 4: Anotación YOLO manual
-        └── viewer/       # Módulo 5: Inspección con calibración μm/píxel
+        │   └── pages/    # model, dataset, params, augmentation,
+        │                 # train, eval, compare, export, report
+        ├── labeler/      # Module 4: Manual YOLO annotation
+        └── viewer/       # Module 5: Inspection with μm/px calibration
 
-tests/                    # Pytest (44 módulos + fixtures)
-├── english_scan.py       # Scanner de remanentes en español (sin LibCST)
-├── test_*_ingles.py      # Guardas de convención de idioma
-├── fixtures/             # Fixtures compartidos y baselines del informe
-└── formas/               # Casos de prueba geométricos
+tests/                    # Pytest (44 modules + fixtures)
+├── english_scan.py       # Spanish-remnant scanner (no LibCST)
+├── test_*_ingles.py      # Language-convention gates
+├── fixtures/             # Shared fixtures and report baselines
+└── formas/               # Geometric test cases
 
-tools/                    # Herramientas de desarrollo (no se empaquetan)
-├── audit/                # Auditoría de traducción + captura de fixtures
-├── manual/               # Cadena del manual (capturar, generar, texto ES/EN)
+tools/                    # Development tooling (not packaged)
+├── audit/                # Translation audit + report fixture capture
+├── manual/               # Manual chain (capture, generate, text ES/EN)
 └── packaging/            # PyInstaller (polyx.spec, build.py)
 
-docs/                     # Documentación
-├── manual/               # Manual compilado (versionado, offline)
+docs/                     # Documentation
+├── manual/               # Compiled manual (versioned, offline)
 ├── assets/               # manual_screenshots/ (es, en, web, win)
-├── development/          # diagnóstico, recetas, revisión de arquitectura
-└── (LEEME_macOS.md en la raíz)
+├── development/          # Diagnostics, recipes, architecture review
+└── (LEEME_macOS.md at the root)
 
-install/                  # Superficie del usuario final (doble clic)
+install/                  # End-user surface (double click)
 ├── SETUP.bat, iniciar_polyx.bat, Poly-X.vbs   # Windows
 ├── actualizar.{bat,ps1}, desinstalar.ps1, migrar_instalacion.ps1
 ├── empaquetar_*.bat
 ├── Lanzar_macOS.command, actualizar_macOS.command, ...  # macOS
 ├── setup.sh, run.sh, actualizar_linux.sh, polyx.desktop  # Linux
-└── lanzar_polyx.py       # Shim Qt-free
+└── lanzar_polyx.py       # Qt-free shim
 
-legacy/                   # Versiones anteriores (referencia, no se toca)
+legacy/                   # Previous versions (reference, not touched)
 
-models/                   # Pesos YOLO .pt (dev; en instalación van a user data)
-runs/                     # Resultados de cada ejecución (gitignored)
-data_microplastico/       # Dataset YOLO etiquetado (gitignored)
-data/                     # Otros datasets
+models/                   # YOLO .pt weights (dev; in installs they go to user data)
+runs/                     # Results of each run (gitignored)
+data_microplastico/       # Labelled YOLO dataset (gitignored)
+data/                     # Other datasets
 
 .github/workflows/        # ci.yml (tests + build smoke), publish.yml (PyPI)
 ```
@@ -136,19 +136,17 @@ data/                     # Otros datasets
 
 ## 🔧 Technology
 
-| Component | Version | Purpose |
-|---|---|---|
-| **Python** | 3.11.x | Runtime |
-| **PySide6** | 6.7.2 | GUI (Qt) |
-| **Ultralytics** | 8.3.40 | YOLO inference + training |
-| **OpenCV** | 4.10.0.84 | Image reading/annotation |
-| **NumPy** | 1.26.4 | Computations |
-| **Pillow** | 10.4.0 | PNG/JPEG processing |
-| **Matplotlib** | 3.9.2 | Plots (reports) |
-| **pyqtgraph** | 0.13.7 | Live plots (trainer) |
+- Python 3.11 (pinned; `requires-python = ">=3.11,<3.12"`)
+- PySide6 6.7.2 (GUI, optional extra `[gui]`)
+- Ultralytics 8.3.40 (YOLO v8/v11)
+- OpenCV 4.10.0.84 (headless wheel)
+- NumPy 1.26.4 (pinned `<2`: ultralytics 8.3.40 still uses `np.trapz`)
+- Pillow 12.3.0
+- Matplotlib 3.9.2
+- PyYAML 6.0.2
+- psutil 6.0.0
+- Hatchling (build backend), uv (lockfile + dev workflow)
 
-**Hardware:**
-- Windows 10/11 · macOS 11 Big Sur or later
 - 8 GB RAM minimum
 - Acceleration: picked automatically in `src/polyx/core/platform.py` → **CUDA** (NVIDIA) →
   **MPS** (integrated GPU of Apple Silicon Macs) → **CPU**
@@ -158,10 +156,10 @@ data/                     # Otros datasets
 
 | Before (Windows only) | Now |
 |---|---|
-| `os.startfile` (11 sites) | `abrir_en_el_sistema()` → `startfile` / `open` / `xdg-open` |
-| `cmd /c start` | `lanzar_actualizador()` |
-| `device = "0"` (fixed CUDA) | `dispositivo_disponible()` |
-| hardcoded `actualizar.bat` | `nombre_actualizador()` |
+| `os.startfile` (11 sites) | `open_in_system()` → `startfile` / `open` / `xdg-open` |
+| `cmd /c start` | `launch_updater()` |
+| `device = "0"` (fixed CUDA) | `available_device()` |
+| hardcoded `actualizar.bat` | `name_updater()` |
 
 > **Intel Macs:** PyTorch stopped publishing x86_64 wheels for macOS with version 2.3;
 > the installer pins **2.2.2**, the last one that exists. No MPS (it requires Apple
@@ -181,7 +179,7 @@ data/                     # Otros datasets
 
 | Theme | What it is for |
 |---|---|
-| `claro` | The usual one. Default, and the one shown in the manual |
+| `claro` | The default. Shown in the manual |
 | `oscuro` | Working at night and next to UV photos |
 | `azul` | Deep blue, a colder accent |
 | `contraste` | AAA. For projector and tired-eye viewing |
@@ -197,15 +195,15 @@ the program keeps writing `T.INK` without knowing the themes exist.
 ### Tokens
 
 ```python
-INK / INK2 / INK3 / MUTED   # texto, de más a menos contraste
-RULE / RULE_SOFT            # bordes: visible y apenas insinuado
-BG                          # superficie elevada: tarjetas, barras, campos
-BG_SOFT                     # fondo hundido: el lienzo de la ventana
-ACCENT / ACCENT_D           # primario y su hover
-ON_ACCENT                   # texto ENCIMA del acento; no siempre blanco
-OK / WARN / ERR / VIO       # estado, como FONDO de botón relleno
-OK_TX / WARN_TX / ...       # el mismo estado, como TEXTO sobre la tarjeta
-FIELD_1 / FIELD_2 / RING    # campo del microscopio del launcher
+INK / INK2 / INK3 / MUTED   # text, from highest to lowest contrast
+RULE / RULE_SOFT            # borders: visible and barely suggested
+BG                          # elevated surface: cards, bars, fields
+BG_SOFT                     # sunken background: the window canvas
+ACCENT / ACCENT_D           # primary and its hover
+ON_ACCENT                   # text ON TOP of the accent; not always white
+OK / WARN / ERR / VIO       # state, as FILLED button background
+OK_TX / WARN_TX / ...       # the same state, as TEXT on a card
+FIELD_1 / FIELD_2 / RING    # microscope field in the launcher
 TIP_BG / TIP_FG             # tooltip
 ```
 
@@ -227,16 +225,16 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 
 | Where | When |
 |---|---|
-| Launcher | **Instantly** — it rebuilds itself (`_construir_ui`) |
+| Launcher | **Instantly** — it rebuilds itself (`_build_ui`) |
 | Modules already open | They do not change: they are separate processes with the colour baked in |
 | Modules opened afterwards | They already come up with the new theme |
 
 It is the same contract as the language. Preferences are stored in
-`~/.polyx_tema.json` (theme + animations) and `~/.polyx_idioma.json`.
+`~/.polyx_theme.json` (theme + animations) and `~/.polyx_language.json`.
 
 ### Animation
 
-`theme.animaciones()` governs the launcher's microscope panel. Turning it off is not
+`theme.animations()` governs the launcher's microscope panel. Turning it off is not
 just aesthetic: continuous movement bothers people with vestibular sensitivity, and
 on a machine without a GPU it saves 30 frames per second. With animations off the
 panel draws a fixed frame; it does not disappear.
@@ -254,11 +252,11 @@ something that shows as soon as four of them sit together in a grid.
 ```python
 from polyx.gui import iconos
 lbl.setPixmap(iconos.pixmap("detector", 26, T.ACCENT))
-btn.setIcon(iconos.icon("guardar", 15, T.INK2))
+btn.setIcon(iconos.icon("save", 15, T.INK2))
 ```
 
 For a `checkable` button —the sidebar ones— there is
-`switchable_icon(nombre, tam, color_off, color_on)`: Qt stores a per-state map
+`switchable_icon(name, size, color_off, color_on)`: Qt stores a per-state map
 inside the `QIcon` itself, so the active page's icon is tinted with the accent along
 with its text, without listening to `toggled`.
 
@@ -278,21 +276,21 @@ headers (second argument of `card()`) and the action buttons of the four modules
 ### Light theme values
 
 ```python
-INK = "#1f2328"          # Texto principal
-INK2 = "#424a53"         # Subtítulos
+INK = "#1f2328"          # Main text
+INK2 = "#424a53"         # Subtitles
 INK3 = "#656d76"         # Muted
-ACCENT = "#0969da"       # Botones primarios (azul)
-OK = "#1f6b5e"           # Verde (positivo)
-WARN = "#9a6700"         # Naranjo (warning)
-ERR = "#cf222e"          # Rojo (error)
-VIO = "#6639ba"          # Púrpura
+ACCENT = "#0969da"       # Primary buttons (blue)
+OK = "#1f6b5e"           # Green (positive)
+WARN = "#9a6700"         # Orange (warning)
+ERR = "#cf222e"          # Red (error)
+VIO = "#6639ba"          # Purple
 
-# Colores con que se dibujan las cajas de cada clase en pantalla.
-# OJO: son colores de interfaz, NO describen la emisión real del Nile Red.
+# Colours used to draw each class's boxes on screen.
+# NOTE: these are interface colours, they do NOT describe Nile Red's real emission.
 CLASS_COLOR_HEX = {
-    "PET": "#e3342f",    # se dibuja rojo
-    "PP": "#ff8c00",     # se dibuja naranjo
-    "LDPE": "#ffd700",   # se dibuja amarillo
+    "PET": "#e3342f",    # drawn red
+    "PP": "#ff8c00",     # drawn orange
+    "LDPE": "#ffd700",   # drawn yellow
 }
 ```
 
@@ -324,18 +322,18 @@ observation.
 ### 🪟 Windows
 
 ```batch
-SETUP.bat            :: primera vez — crea .venv, detecta GPU, instala todo
-iniciar_polyx.bat    :: uso diario
-actualizar.bat       :: traer lo nuevo de GitHub
+SETUP.bat            :: first time — creates .venv, detects GPU, installs everything
+iniciar_polyx.bat    :: daily use
+actualizar.bat       :: pull the latest from GitHub
 ```
 
 ### 🍎 macOS
 
 ```bash
-Lanzar_macOS.command       # instala la 1ª vez, arranca las siguientes
-crear_icono_macOS.command  # crea Poly-X.app: abre sin ventana de Terminal
-actualizar_macOS.command   # traer lo nuevo de GitHub
-construir_app_macOS.command  # empaquetar Poly-X.app (opcional)
+Lanzar_macOS.command       # installs the 1st time, launches afterwards
+crear_icono_macOS.command  # creates Poly-X.app: opens without a Terminal window
+actualizar_macOS.command   # pull the latest from GitHub
+construir_app_macOS.command  # package Poly-X.app (optional)
 ```
 
 **Right** click → Open the first time (Gatekeeper blocks scripts
@@ -416,8 +414,8 @@ A `.txt` file is written **only** when the image is marked as reviewed or when a
 is drawn. Skimming past does not create a file: recording an image that was barely
 glanced at as "reviewed with zero" would falsify the census.
 
-**Shortcuts:** `Espacio` marks reviewed and moves on · `Tab` jumps to the next
-unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Supr` deletes the
+**Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
+unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
 selected box · `Ctrl+Z/Y` undo/redo · wheel zoom · middle-button pan.
 
 **Minimum box side: 2 px** (`BboxCanvas.SIDE_MINIMUM_PX`). It was 5 px and it silently
@@ -451,7 +449,7 @@ instead of showing the raw exception.
 image, with sizes already converted to μm. Useful for reviewing the manual count
 over the full plate without going back to the Labeller.
 
-**Export** to `visor_<imagen>_<ts>/`: annotated PNG, `detecciones.csv`
+**Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
 (one row per particle, with diam_px, diam_um and area_um2) and `resumen.json`.
 
 > Image reading and writing with `cv2.imdecode`/`imencode` over
@@ -468,15 +466,15 @@ over the full plate without going back to the Labeller.
 class Detection:
     class_id: int           # 0=PET, 1=PP, 2=LDPE
     class_name: str         # "PET", "PP", "LDPE"
-    conf: float             # 0-1, confianza
-    x1, y1, x2, y2: float   # Bbox píxeles (absolutos)
-    diam_um: Optional[float]  # Diámetro del círculo de igual área REAL
-    area_um2: Optional[float] # Área de la partícula, no de la caja
-    largo_um: Optional[float] # Dimensión mayor, siguiendo la curva
+    conf: float             # 0-1, confidence
+    x1, y1, x2, y2: float   # Bbox pixels (absolute)
+    diam_um: Optional[float]  # Diameter of the equal-area circle, REAL
+    area_um2: Optional[float] # Particle area, not the box
+    largo_um: Optional[float] # Larger dimension, following the curve
     ancho_um: Optional[float]
-    aspecto: Optional[float]    # largo/ancho reales
-    curvatura: Optional[float]  # 1.0 = recta; ≥1.15 = curva
-    morfotipo: Optional[str]    # "fibra" | "fragmento"
+    aspecto: Optional[float]    # real largo/ancho
+    curvatura: Optional[float]  # 1.0 = straight; ≥1.15 = curved
+    morfotipo: Optional[str]    # "fibre" | "fragment"
 ```
 
 **The box does not describe the shape.** Measured over 7.129 annotated particles: the box
@@ -497,8 +495,8 @@ comes from an observed failure:
 
 | Condition | Constant | Why |
 |---|---|---|
-| **Slender**, `largo/grosor ≥ 4` | `THINNESS_FOR_GEODESIC` | on a thick particle the path rounds the concavities: a real 44 px clump got 73 |
-| **Non-convex**, `solidez < 0.90` | `SOLIDITY_CONVEX` | on a convex shape geodesic and Feret coincide by definition; a rotated bar measured 200 px at 0° and 45° but **208 at 15°, 30° and 60°** |
+| **Slender**, `length/thickness ≥ 4` | `THINNESS_FOR_GEODESIC` | on a thick particle the path rounds the concavities: a real 44 px clump got 73 |
+| **Non-convex**, `solidity < 0.90` | `SOLIDITY_CONVEX` | on a convex shape geodesic and Feret coincide by definition; a rotated bar measured 200 px at 0° and 45° but **208 at 15°, 30° and 60°** |
 
 Against synthetic shapes of known size: **median error 0.6 %, worst case
 4.7 %**. Pinned in `tests/test_morfologia.py`.
@@ -529,10 +527,10 @@ detections = model.predict("image.jpg", conf=0.25, device="0")
 ### `DetectorState` (src/polyx/gui/detector/state.py)
 Global state of the Detector (Qt signals):
 ```python
-state.model_slots: List[ModelSlot]      # Hasta 3 modelos
-state.images: List[Path]                # Imágenes a analizar
+state.model_slots: List[ModelSlot]      # Up to 3 models
+state.images: List[Path]                # Images to analyse
 state.params: InferenceParams           # conf, IoU, um_per_px
-state.results: Dict[int, List[ImageResult]]  # Resultados por modelo
+state.results: Dict[int, List[ImageResult]]  # Results per model
 ```
 
 ### `ImageResult` (src/polyx/gui/detector/state.py)
@@ -540,18 +538,18 @@ Result of one image:
 ```python
 image_path: Path
 predictions: List[Detection]
-gt: List[Detection]             # Ground truth (si existe)
+gt: List[Detection]             # Ground truth (if present)
 tp, fp, fn, miscls: int
-annotated_png: Optional[bytes]  # PNG anotado en base64
+annotated_png: Optional[bytes]  # Annotated PNG as base64
 ```
 
 ### `MatchResult` (src/polyx/core/quality/metrics.py)
 Prediction vs GT matching (IoU ≥ 0.5):
 ```python
-tp: int          # True Positives (conf y clase correcta)
-fp: int          # False Positives (sin GT)
-fn: int          # False Negatives (GT sin pred)
-miscls: int      # Bien localizado pero clase incorrecta
+tp: int          # True Positives (correct conf and class)
+fp: int          # False Positives (no GT)
+fn: int          # False Negatives (GT without prediction)
+miscls: int      # Correctly located but wrong class
 ```
 
 ---
@@ -560,21 +558,21 @@ miscls: int      # Bien localizado pero clase incorrecta
 
 ### Detector
 ```
-Imágenes (carpeta)
+Images (folder)
     ↓
-YoloModel.predict() × N modelos
+YoloModel.predict() × N models
     ↓
-Detection[] (bbox + clase + conf)
+Detection[] (bbox + class + conf)
     ↓
-read_yolo_txt() → Ground truth (si existe)
+read_yolo_txt() → Ground truth (if present)
     ↓
 match_image() → TP/FP/FN (IoU ≥ 0.5)
     ↓
-compute_box_size_um() → diam_um (si um_per_px calibrado)
+compute_box_size_um() → diam_um (if um_per_px calibrated)
     ↓
 ImageResult
     ↓
-cv2.rectangle() + anotación → PNG
+cv2.rectangle() + annotation → PNG
     ↓
 runs/YYYYMMDD_HHMMSS/
 ```
@@ -587,7 +585,7 @@ YOLO(model_name).train(epochs=..., batch=...)
     ↓
 Ultralytics training loop
     ↓
-best.pt (checkpoint óptimo)
+best.pt (best checkpoint)
     ↓
 results.csv + curves
     ↓
@@ -625,15 +623,15 @@ runs/detect/trainN/
 
 ### Inference (DetectorState.params)
 ```python
-conf: float = 0.25          # Umbral confianza
-iou_nms: float = 0.45       # IoU para NMS
-iou_tp: float = 0.50        # IoU para análisis de errores
-imgsz: int = 640            # Tamaño entrada red
+conf: float = 0.25          # Confidence threshold
+iou_nms: float = 0.45       # IoU for NMS
+iou_tp: float = 0.50        # IoU for error analysis
+imgsz: int = 640            # Network input size
 device: str = "0"           # "0" (GPU), "cpu"
-um_per_px: float = 0.0      # Calibración (0 = sin calibrar)
-size_min_um: float = 0.0    # Filtro inferior (0 = sin filtro)
-size_max_um: float = 0.0    # Filtro superior
-conf_asignacion: float = 0.0  # Confianza mínima para atribuir polímero (0 = off)
+um_per_px: float = 0.0      # Calibration (0 = uncalibrated)
+size_min_um: float = 0.0    # Lower filter (0 = no filter)
+size_max_um: float = 0.0    # Upper filter (0 = no filter)
+conf_asignacion: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
 ```
 
 ### Abstention: detecting ≠ identifying
@@ -663,10 +661,10 @@ requires intercepting the raw head tensor, fragile across ultralytics versions.
 ### Training
 ```python
 epochs: int = 100
-batch: int = 16             # Menor si OOM
-imgsz: int = 640            # Menor si OOM
+batch: int = 16             # Lower if OOM
+imgsz: int = 640            # Lower if OOM
 device: str = "0"
-optimizer: str = "SGD"      # o "Adam"
+optimizer: str = "SGD"      # or "Adam"
 lr0: float = 0.01
 ```
 
@@ -688,7 +686,7 @@ lr0: float = 0.01
 
 - **docs/manual/Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) —
   built from scratch by `tools/manual/generar_manual.py`: text, figures,
-  index and stylesheet. Generated and not versioned.
+  index and stylesheet. Versioned: a fresh ZIP download opens it offline.
 - **tools/manual/manual_texto_es.py / manual_texto_en.py** — the manual's
   text. Content only; the engine is in `tools/manual/generar_manual.py`.
 - **docs/assets/manual_screenshots/** — screenshots the manual embeds, one
