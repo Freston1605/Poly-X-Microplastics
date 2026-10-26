@@ -1215,6 +1215,12 @@ sam2 = [
     { name = "sam2" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", specifier = "==3.9.2" },
@@ -1231,6 +1237,12 @@ requires-dist = [
     { name = "ultralytics", specifier = "==8.3.40" },
 ]
 provides-extras = ["dev", "gui", "legacy", "sam2"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "ruff", specifier = ">=0.17" },
+]
 
 [[package]]
 name = "portalocker"

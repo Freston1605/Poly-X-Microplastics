@@ -49,6 +49,9 @@ Issues = "https://github.com/CrissFerrada/Poly-X-Microplastics/issues"
 Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHANGELOG.md"
 
 
+[dependency-groups]
+dev = ["pytest", "ruff>=0.17"]
+
 [project.optional-dependencies]
 gui = ["PySide6==6.7.2"]
 dev = ["pytest", "ruff>=0.17"]
@@ -56,7 +59,7 @@ sam2 = ["sam2"]
 legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
 [project.scripts]
-polyx = "polyx.gui.__main__:main"
+polyx = "polyx.cli.main:main"
 polyx-gui = "polyx.gui.__main__:main"
 polyx-download-models = "polyx.cli.download_models:main"
 polyx-train = "polyx.cli.train:main"
