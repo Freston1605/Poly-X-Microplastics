@@ -1,46 +1,36 @@
-"""Contract test: every polyx symbol identifier reads English (M006 S04).
+"""Contract test: every polyx symbol identifier reads English.
 
-This is the durable replacement for the generated per-package identifier
-manifests retired at slice closeout. It uses the same scanner as the LibCST
-codemod (``tools/translate_identifiers.py``), loaded by file path exactly like
-``tests/test_comments_ingles.py`` loads the S03 harness, so the gate and the
-codemod can never disagree about what counts as a Spanish identifier.
+Encodes the English-only identifier convention as a pytest gate instead of
+review discipline. The scanner lives in ``tests/english_scan.py`` and is plain
+``ast``/``tokenize``, so the gate no longer depends on the one-time LibCST
+rename codemod.
 
-Scope rules (D027/D028): only symbol identifiers in ``polyx/**/*.py`` are
-checked. Module filenames and import paths are excluded by construction, and
-an imported name that is itself a module stem is skipped because the symbol is
-defined and scanned in its own module. String literals, JSONL data keys and
-the runtime ``tr()`` layer are out of scope.
+Scope rules: only symbol identifiers in ``polyx/**/*.py`` are checked. Module
+filenames and import paths are excluded by construction, and an imported name
+that is itself a module stem is skipped because the symbol is defined and
+scanned in its own module. String literals, JSONL data keys and the runtime
+``tr()`` layer are out of scope.
 
-The scanner cannot see every Spanish word, so the S04 closeout also included a
-manual survivor sweep of the complete unflagged identifier inventory against a
-broad Spanish vocabulary; that sweep found and retired the remaining words
-(``Morfologia``, ``segmentar``, ``logger_para``, ``raiz``, ``talla``, ...).
+The scanner cannot see every Spanish word, so the language closeout also
+included a manual survivor sweep of the complete unflagged identifier
+inventory against a broad Spanish vocabulary; that sweep found and retired the
+remaining words (``Morfologia``, ``segmentar``, ``logger_para``, ``raiz``,
+``talla``, ...).
 
-Anti-vacuity guards (P028): the walk must see the real package, a synthetic
-Spanish tuple must be flagged, known English/API names must stay clean, a
-local ``iconos`` binding must be scanned while its import path is not, and
-every module must round-trip through LibCST byte for byte.
+Anti-vacuity guards: the walk must see the real package, a synthetic Spanish
+tuple must be flagged, known English/API names must stay clean, and a local
+``iconos`` binding must be scanned while its import path is not.
 """
 from __future__ import annotations
 
 import ast
-import importlib.util
-import sys
 from pathlib import Path
 
-import libcst as cst
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.english_scan import identifier_occurrences, spanish_identifier_findings
 
-# The codemod core is loaded from file path: ``tools/`` is not a package and
-# the harness itself loads its cores the same way.
-_RUTA_CORE = REPO_ROOT / "tools" / "translate_identifiers.py"
-_spec = importlib.util.spec_from_file_location("translate_identifiers_gate", _RUTA_CORE)
-ti = importlib.util.module_from_spec(_spec)
-sys.modules.setdefault(_spec.name, ti)
-_spec.loader.exec_module(ti)
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Tokens the scanner flags but that are legitimate in polyx identifiers.
 # Extend this set, never loosen the scanner vocabulary.
@@ -55,8 +45,8 @@ _KNOWN_MODULES = [
     "src/polyx/gui/detector/state.py",
 ]
 
-# Floors measured at S04 closeout. The module floor may grow; it must never
-# shrink below the 72 modules the slice closed with.
+# Floors measured when the convention was adopted. The module floor may grow;
+# it must never shrink below the 72 modules the package had then.
 _MODULE_FLOOR = 72
 _UNIQUE_IDENTIFIER_FLOOR = 3000
 
@@ -188,7 +178,7 @@ def inventory() -> list[tuple[Path, str, list[tuple[int, str]], ast.Module]]:
             (
                 path,
                 source,
-                ti.identifier_occurrences(source),
+                identifier_occurrences(source),
                 ast.parse(source, filename=str(path)),
             )
         )
@@ -203,7 +193,7 @@ def test_polyx_package_walk_finds_no_spanish_identifiers(
     for path, _source, occurrences, _tree in inventory:
         relative = path.relative_to(REPO_ROOT).as_posix()
         for line, name in occurrences:
-            findings = _allowed(ti.spanish_identifier_findings(name))
+            findings = _allowed(spanish_identifier_findings(name))
             if findings:
                 offenders.append(f"{relative}:{line} {name!r} -> {findings}")
     assert not offenders, "Spanish identifier remnants in polyx:\n" + "\n".join(
@@ -234,7 +224,7 @@ def test_inventory_exceeds_floors_and_covers_known_modules(
 )
 def test_scanner_flags_synthetic_spanish_identifiers(name: str) -> None:
     """Anti-vacuity: the Spanish scanner must flag real Spanish words."""
-    findings = _allowed(ti.spanish_identifier_findings(name))
+    findings = _allowed(spanish_identifier_findings(name))
     assert findings, f"scanner failed to flag synthetic Spanish identifier {name!r}"
 
 
@@ -255,19 +245,19 @@ def test_scanner_flags_synthetic_spanish_identifiers(name: str) -> None:
 )
 def test_english_and_api_names_are_not_flagged(name: str) -> None:
     """English words, Qt/API names and unit tokens must stay clean."""
-    assert _allowed(ti.spanish_identifier_findings(name)) == []
+    assert _allowed(spanish_identifier_findings(name)) == []
 
 
 def test_local_module_stem_is_scanned_while_an_import_path_is_not() -> None:
     """A local ``iconos`` binding is a symbol; an imported module path is not."""
     local_source = "from .iconos import toggleable_icon\niconos = 1\n"
-    local_names = [name for _line, name in ti.identifier_occurrences(local_source)]
+    local_names = [name for _line, name in identifier_occurrences(local_source)]
     assert "iconos" in local_names, "local iconos binding must be scanned"
     assert "toggleable_icon" not in local_names, "imported symbol belongs to its module"
-    assert _allowed(ti.spanish_identifier_findings("iconos"))
+    assert _allowed(spanish_identifier_findings("iconos"))
 
     module_source = "from polyx.gui import iconos\nvalue = iconos.icon\n"
-    module_names = [name for _line, name in ti.identifier_occurrences(module_source)]
+    module_names = [name for _line, name in identifier_occurrences(module_source)]
     assert "iconos" not in module_names, "imported module stem must be skipped"
 
 
@@ -305,67 +295,36 @@ def test_every_dunder_all_entry_resolves(
 def test_every_polyx_module_compiles(
     inventory: list[tuple[Path, str, list[tuple[int, str]], ast.Module]],
 ) -> None:
-    """Every module is valid Python after the codemod."""
+    """Every module is valid Python."""
     for path, source, _occurrences, _tree in inventory:
         compile(source, str(path), "exec")
 
 
-def test_every_polyx_module_round_trips_through_libcst(
-    inventory: list[tuple[Path, str, list[tuple[int, str]], ast.Module]],
-) -> None:
-    """Formatting proof (D024): the codemod never rewrote code or layout."""
-    mismatched = [
-        path.relative_to(REPO_ROOT).as_posix()
-        for path, source, _occurrences, _tree in inventory
-        if cst.parse_module(source).code != source
+def test_generated_translation_manifests_are_retired() -> None:
+    """The durable gates replaced the generated manifests and translation caches."""
+    retired = [
+        REPO_ROOT / "tests" / "identifier_manifests",
+        REPO_ROOT / "tests" / "heading_manifests",
     ]
-    assert not mismatched, "LibCST round-trip changed these modules:\n" + "\n".join(
-        mismatched
-    )
-    assert len(inventory) >= _MODULE_FLOOR
-
-
-def test_generated_identifier_manifests_are_retired() -> None:
-    """The durable gate replaced the generated manifests and translation cache."""
-    retired = REPO_ROOT / "tests" / "identifier_manifests"
-    assert not retired.exists(), f"generated identifier manifests still exist: {retired}"
-    assert not (retired / "translation_cache.json").exists()
+    for path in retired:
+        assert not path.exists(), f"generated manifest directory still exists: {path}"
 
 
 def test_no_test_imports_the_retired_manifests() -> None:
-    """No test may depend on the deleted manifest directory."""
+    """No test may depend on a deleted manifest directory."""
     candidates = sorted((REPO_ROOT / "tests").glob("test_*.py"))
     candidates.append(REPO_ROOT / "tests" / "conftest.py")
+    retired = ("identifier_manifests", "heading_manifests")
     offenders = []
     for path in candidates:
         if path.resolve() == Path(__file__).resolve():
             continue
-        if "identifier_manifests" in path.read_text(encoding="utf-8"):
+        text = path.read_text(encoding="utf-8")
+        if any(name in text for name in retired):
             offenders.append(path.relative_to(REPO_ROOT).as_posix())
-    assert not offenders, "tests still reference tests/identifier_manifests:\n" + (
+    assert not offenders, "tests still reference a retired manifest directory:\n" + (
         "\n".join(offenders)
     )
-
-
-def test_preflight_rejects_builtin_target() -> None:
-    """A renamed target may never shadow a builtin."""
-    with pytest.raises(ValueError, match="builtin"):
-        ti.validate_rename_map({"lista": "list"})
-
-
-def test_preflight_rejects_keyword_target() -> None:
-    """A renamed target may never be a Python keyword."""
-    with pytest.raises(ValueError, match="keyword"):
-        ti.validate_rename_map({"clase": "class"})
-
-
-def test_preflight_rejects_same_scope_collision() -> None:
-    """Old and new names coexisting in one scope are refused."""
-    source = "clase = 1\nclass_value = 2\n"
-    problems = ti.same_scope_collisions(source, {"clase": "class_value"}, "collision.py")
-    assert problems, "same-scope collision was not detected"
-    with pytest.raises(ValueError, match="already has both"):
-        ti.preflight_module(source, {"clase": "class_value"}, "collision.py")
 
 
 def test_allowlist_drops_only_listed_tokens() -> None:

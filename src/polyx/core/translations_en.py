@@ -2,8 +2,8 @@
 
 The key is the Spanish string exactly as it appears in the code, with its
 accents, emojis and spaces. Without an exact match `tr()` returns the
-Spanish and the translation is not applied: `auditar_traduccion.py` flags
-those cases.
+Spanish and the translation is not applied: `scripts/audit_translations.py`
+flags those cases.
 
 Not translated: polymer names (PET/PP/LDPE), units, metric acronyms (mAP,
 IoU, TP/FP/FN), file names or Ultralytics identifiers."""
@@ -323,6 +323,12 @@ EN: dict[str, str] = {
         "• If <b>No improvement</b> reaches <b>Patience</b>, training stops on its own.",
     "⌛  Detectando hardware…": "⌛  Detecting hardware…",
     "Iniciar entrenamiento": "Start training",
+    "Parámetros de entrenamiento válidos": "Valid training parameters",
+    "Modelo, hiperparámetros y augmentación dentro de rango.":
+        "Model, hyperparameters and augmentation within range.",
+    "No se puede entrenar": "Cannot train",
+    "Corrige estos problemas antes de iniciar el entrenamiento:\n\n":
+        "Fix these problems before starting training:\n\n",
     "Iniciar validación": "Start validation",
     "✗ Archivo no encontrado.": "✗ File not found.",
     "✗ Error": "✗ Error",
