@@ -94,6 +94,7 @@ ignore = [
     "RUF001", "RUF002", "RUF003",  # ambiguous unicode (intentional: ×, –, ñ)
     "S101",        # assert is fine in tests and invariants
     "RUF012",      # mutable class defaults (common in dataclasses/config)
+    "SIM905",      # """...""".split() -> list (cosmetic, huge diff for no benefit)
 ]
 
 [tool.ruff.lint.per-file-ignores]
