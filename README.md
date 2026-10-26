@@ -4,7 +4,7 @@
 > by Nile Red fluorescence under UV light (254 nm), using YOLO v8/v11 models.**
 
 **Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV · 2026
-**Version:** 2.0.0 · **Windows 10/11, macOS and Linux (Ubuntu tested in CI)** · Python 3.11
+**Version:** 2.0.0 · **Windows 10/11, macOS and Linux (Ubuntu tested in CI)** · Python 3.11 or 3.12
 
 ---
 
@@ -18,7 +18,7 @@ pip install polyx-microplastics[gui]       # + the Qt GUI (Launcher, Detector, T
 polyx-download-models                      # fetch the default .pt weights into the user data dir
 ```
 
-Requires **Python 3.11**. The headless engines and report generation work
+Requires **Python 3.11 or 3.12**. The headless engines and report generation work
 without Qt; the GUI needs PySide6, which the `[gui]` extra pulls in. Model
 weights are not bundled (~50 MB) and are fetched by `polyx-download-models`.
 

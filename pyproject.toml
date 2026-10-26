@@ -7,7 +7,7 @@ name = "polyx-microplastics"
 dynamic = ["version"]
 description = "Automated detection and classification of Nile Red-stained microplastics"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Cristofher Ferrada", email = "cristofher.ferrada@pucv.cl" }]
@@ -23,6 +23,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: MacOS",
   "Natural Language :: English",

@@ -136,7 +136,7 @@ data/                     # Other datasets
 
 ## 🔧 Technology
 
-- Python 3.11 (pinned; `requires-python = ">=3.11,<3.12"`)
+- Python 3.11 or 3.12 (pinned; `requires-python = ">=3.11"`)
 - PySide6 6.7.2 (GUI, optional extra `[gui]`)
 - Ultralytics 8.3.40 (YOLO v8/v11)
 - OpenCV 4.10.0.84 (headless wheel)
