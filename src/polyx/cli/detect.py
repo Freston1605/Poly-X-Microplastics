@@ -2,6 +2,8 @@
 
 Usage:
     polyx-detect --model best.pt --images ./photos --out ./run --conf 0.25 --measure-shape
+    polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
+    polyx-detect --model best.pt --images ./photos --out ./run --full-report
 """
 from __future__ import annotations
 
@@ -22,11 +24,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--iou", type=float, default=0.45)
     p.add_argument("--imgsz", type=int, default=1280)
-    p.add_argument("--device", default="0")
+    p.add_argument("--device", default=None,
+                   help="'cpu', a CUDA index, or empty = auto-select (default: auto)")
     p.add_argument("--um-per-px", type=float, default=0.0)
     p.add_argument("--gt-folder", default=None)
     p.add_argument("--no-measure-shape", action="store_true")
-    p.add_argument("--full-report", action="store_true", help="also build paper-quality HTML (requires PySide6)")
+    p.add_argument("--full-report", action="store_true",
+                   help="run-order paper-quality HTML report (requires PySide6, [gui] extra)")
     args = p.parse_args(argv)
 
     try:
@@ -54,63 +58,38 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     out_dir = Path(args.out)
+    report_path = out_dir / "report.html"
     if args.full_report:
+        # Report assembly lives in polyx.gui.detector.run_state; the single
+        # deferred import keeps this CLI importable without Qt while the
+        # builder itself imports the Qt state module directly.
         try:
             import importlib
             qt = importlib.import_module("polyx.gui.qt")
             qt.require_qt()
-            state_mod = importlib.import_module("polyx.gui.detector.state")
-            DetectorState = state_mod.DetectorState
-            ImageResult = state_mod.ImageResult
-            InferenceParams = state_mod.InferenceParams
-            Detection = importlib.import_module("polyx.core.detect.yolo").Detection
-            generate_report = importlib.import_module("polyx.gui.report_html").generate_report
-            import csv
-            params = InferenceParams(conf=args.conf, iou_nms=args.iou, iou_tp=0.5,
-                                    imgsz=args.imgsz, device=args.device, um_per_px=args.um_per_px,
-                                    measure_shape=not args.no_measure_shape)
-            state = DetectorState()
-            state.params = params
-            state.run_dir = out_dir
-            # Build one ImageResult per image from centroids.csv
-            by_image: dict = {}
-            cp = out_dir / "centroids.csv"
-            if cp.exists():
-                with open(cp, newline="", encoding="utf-8") as f:
-                    for r in csv.DictReader(f):
-                        by_image.setdefault(r["image"], []).append(r)
-            results = {}
-            for idx, img_path in enumerate(sorted(Path(args.images).rglob("*"))):
-                if img_path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"):
-                    continue
-                preds = []
-                for r in by_image.get(img_path.name, []):
-                    preds.append(Detection(
-                        class_id=0, class_name=r["class"], conf=float(r["conf"]),
-                        x1=float(r["x1"]), y1=float(r["y1"]), x2=float(r["x2"]), y2=float(r["y2"]),
-                        diam_um=float(r["diam_um"]) if r.get("diam_um") not in (None, "") else None,
-                    ))
-                img_result = ImageResult(image_path=img_path, model_idx=0, predictions=preds,
-                                 has_gt=False, annotated_path=out_dir / "images" / (img_path.stem + ".png"))
-                results.setdefault(0, []).append(img_result)
-            state.results = results
-            state.images = [p for p in sorted(Path(args.images).rglob("*"))
-                            if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")]
-            generate_report(state, out_dir / "report.html")
-            print(f"FULL REPORT: {out_dir / 'report.html'}")
+            from polyx.gui.report_html import generate_report
+            build_state = importlib.import_module(
+                "polyx.gui.detector.run_state").build_state_from_run
+            state = build_state(out_dir, Path(args.images))
+            state.params.um_per_px = args.um_per_px
+            state.params.conf = args.conf
+            state.params.device = args.device or state.params.device
+            generate_report(state, report_path)
+            print(f"FULL REPORT: {report_path}")
         except Exception as exc:
             print(f"Full report unavailable ({exc}); writing compact report.")
-            from polyx.core.report_simple import generate as _gen
-            _gen(out_dir, out_dir / "report.html")
-            print(f"COMPACT REPORT: {out_dir / 'report.html'}")
+            print(f"COMPACT REPORT: {_write_compact(run_dir=out_dir)}")
     else:
-        from polyx.core.report_simple import generate as _gen
-        _gen(out_dir, out_dir / "report.html")
-        print(f"COMPACT REPORT: {out_dir / 'report.html'}")
+        print(f"COMPACT REPORT: {_write_compact(run_dir=out_dir)}")
 
     print(f"IMAGES: {summary['images']}  DETECTIONS: {summary['detections']}")
     print(f"OUTPUT: {summary['output_dir']}")
     return 0
+
+
+def _write_compact(run_dir: Path) -> Path:
+    from polyx.core.report_simple import generate
+    return generate(run_dir, run_dir / "report.html")
 
 
 if __name__ == "__main__":

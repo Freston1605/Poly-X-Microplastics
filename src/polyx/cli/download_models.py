@@ -4,6 +4,11 @@ Usage:
     polyx-download-models
     polyx-download-models --model bestdetectormedium.pt
     polyx-download-models --url https://example.com/model.pt --name model.pt
+    polyx-download-models --sha256 <expected-digest>
+
+Model weights (.pt) are PyTorch pickles: running one executes code. For any
+untrusted source, pass --sha256 with the digest published alongside the
+release; the download aborts on mismatch.
 """
 from __future__ import annotations
 

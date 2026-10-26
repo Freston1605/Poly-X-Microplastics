@@ -410,7 +410,7 @@ def test_crlf_line_endings_survive(tmp_path):
 
 def test_enumeration_matches_tokenize_on_every_polyx_module():
     files = sorted((ROOT / "src" / "polyx").rglob("*.py"))
-    assert len(files) == 95
+    assert len(files) == 96
     for path in files:
         source = path.read_text(encoding="utf-8")
         enumeration = tc.enumerate_comments(source)

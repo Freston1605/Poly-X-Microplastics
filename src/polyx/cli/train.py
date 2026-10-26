@@ -18,7 +18,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--batch", type=int, default=16)
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--device", default="0")
+    p.add_argument("--device", default=None,
+                   help="'cpu', a CUDA index, or empty = auto-select (default: auto)")
     p.add_argument("--optimizer", default="SGD")
     p.add_argument("--lr0", type=float, default=0.01)
     p.add_argument("--project", default="runs")

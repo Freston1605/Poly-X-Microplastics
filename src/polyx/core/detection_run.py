@@ -2,13 +2,18 @@
 
 Runs a DetectionSource over a folder of images, writes annotated PNGs,
 centroids.csv and metrics.json (when GT is present). No HTML report.
+
+Masks produced by a segmentation backend (``yolo-seg``, SAM2, two-stage)
+are honored where available: measurement uses them before falling back to
+box-derived Otsu segmentation, and GT matching switches to mask IoU when
+both sides of a comparison carry a mask.
 """
 from __future__ import annotations
 
 import csv
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -16,8 +21,7 @@ import numpy as np
 from polyx.core.detect.protocol import (
     DetectionSource, Instance, read_yolo_txt, find_gt_for_image, compute_box_size_um,
 )
-from polyx.core.detect.yolo import size_image
-from polyx.core.quality.metrics import match_image, iou
+from polyx.core.quality.metrics import match_image
 from polyx.core.measure.morphology import apply_to_detection
 
 
@@ -34,9 +38,16 @@ def _draw(img, dets):
     return out
 
 
+def _measure(det: Instance, img: np.ndarray, um_per_px: Optional[float]) -> None:
+    """Box-size (+ shape) measurement, preferring an attached mask."""
+    compute_box_size_um(det, um_per_px if um_per_px and um_per_px > 0 else None)
+    apply_to_detection(det, img, um_per_px if um_per_px and um_per_px > 0 else None,
+                       mask=getattr(det, "mask", None))
+
+
 def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
               conf: float = 0.25, iou: float = 0.45, imgsz: int = 1280,
-              device: str = "0", um_per_px: float = 0.0,
+              device: Optional[str] = None, um_per_px: float = 0.0,
               measure_shape: bool = True, gt_folder: Optional[Path] = None) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     img_dir = output_dir / "images"
@@ -53,10 +64,9 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
             continue
         H, W = img.shape[:2]
         dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=device)
-        for d in dets:
-            compute_box_size_um(d, um_per_px if um_per_px > 0 else None)
-            if measure_shape:
-                apply_to_detection(d, img, um_per_px if um_per_px > 0 else None)
+        if measure_shape:
+            for d in dets:
+                _measure(d, img, um_per_px)
 
         # GT matching
         gt_txt = find_gt_for_image(img_path, gt_folder) if gt_folder else None
@@ -65,11 +75,15 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
             has_gt_any = True
             names = getattr(model, "names", {}) or {}
             gts = read_yolo_txt(gt_txt, W, H, names)
-            for g in gts:
-                compute_box_size_um(g, um_per_px if um_per_px > 0 else None)
-                if measure_shape:
-                    apply_to_detection(g, img, um_per_px if um_per_px > 0 else None)
-            m = match_image(dets, gts, iou_thr=0.5)
+            if measure_shape:
+                for g in gts:
+                    _measure(g, img, um_per_px)
+            # Mask IoU only when both sides can be evaluated through masks;
+            # otherwise the greedy match degrades to box IoU, which is the
+            # historical behavior.
+            use_masks = all(getattr(d, "mask", None) is not None for d in dets) and \
+                all(getattr(g, "mask", None) is not None for g in gts)
+            m = match_image(dets, gts, iou_thr=0.5, use_mask_iou=use_masks)
             metrics_agg["tp"] += m.tp
             metrics_agg["fp"] += m.fp
             metrics_agg["fn"] += m.fn
@@ -83,6 +97,7 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
         for d in dets:
             rows.append({
                 "image": img_path.name,
+                "class_id": int(d.class_id),
                 "class": d.class_name,
                 "conf": round(float(d.conf), 4),
                 "x1": int(d.x1), "y1": int(d.y1), "x2": int(d.x2), "y2": int(d.y2),
@@ -91,17 +106,19 @@ def run_batch(model: DetectionSource, image_dir: Path, output_dir: Path,
                 "length_um": d.length_um,
                 "width_um": d.width_um,
                 "aspect": d.aspect,
+                "has_mask": bool(getattr(d, "mask", None) is not None),
             })
 
-    # centroids.csv
+    # centroids.csv (always written, even empty, so downstream tools can rely on it)
     csv_path = output_dir / "centroids.csv"
-    if rows:
-        with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-            w.writeheader()
-            w.writerows(rows)
+    fieldnames = ["image", "class_id", "class", "conf", "x1", "y1", "x2", "y2",
+                  "diam_um", "area_um2", "length_um", "width_um", "aspect", "has_mask"]
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        w.writerows(rows)
 
-    # metrics.json
+    # metrics.json (zeros even without GT; "has_gt" is the honesty flag)
     metrics_path = output_dir / "metrics.json"
     metrics_path.write_text(json.dumps(metrics_agg, indent=2), encoding="utf-8")
 

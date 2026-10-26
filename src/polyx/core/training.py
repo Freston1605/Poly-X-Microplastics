@@ -21,7 +21,7 @@ class TrainingConfig:
     epochs: int = 100
     batch: int = 16
     imgsz: int = 640
-    device: str = "0"
+    device: Optional[str] = None      # None = let Ultralytics auto-select
     optimizer: str = "SGD"
     lr0: float = 0.01
     extra: dict = field(default_factory=dict)   # forwarded to model.train()
@@ -55,21 +55,24 @@ def train(cfg: TrainingConfig,
     for name, cb in (callbacks or {}).items():
         try:
             model.add_callback(name, cb)
-        except Exception:
-            pass
+        except Exception as exc:
+            # A dropped progress callback is a silent bug downstream: say so.
+            if on_log:
+                on_log(f"[train] WARNING: callback '{name}' not registered: {exc}")
 
     kwargs = {
         "data": cfg.data_yaml,
         "epochs": cfg.epochs,
         "batch": cfg.batch,
         "imgsz": cfg.imgsz,
-        "device": cfg.device,
         "optimizer": cfg.optimizer,
         "lr0": cfg.lr0,
         "project": cfg.project,
         "name": cfg.name,
         "exist_ok": True,
     }
+    if cfg.device:
+        kwargs["device"] = cfg.device
     kwargs.update(cfg.extra or {})
 
     if on_log:

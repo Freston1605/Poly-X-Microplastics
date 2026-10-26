@@ -2,30 +2,20 @@
 
 Bundled (read-only) assets live next to the package; user-writable data
 (models cache, runs, datasets) live in a per-user directory so the package
-can be installed read-only (wheels, site-packages).
+can be installed read-only (wheels, site-packages). The OS-dependent part
+of that directory lives in :mod:`polyx.core.platform`, the single place
+where platform differences are allowed.
 """
 from pathlib import Path
 from typing import Optional
-import os
-import sys
+
+from polyx.core.platform import user_data_dir
 
 # src/polyx/core/paths.py -> parents[0]=core, [1]=polyx, [2]=src, [3]=project root
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS_DIR = ROOT / "assets"
 
-def _user_data_dir() -> Path:
-    override = os.environ.get("POLYX_HOME")
-    if override:
-        return Path(override).expanduser()
-    if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support"
-    else:
-        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    return base / "polyx"
-
-USER_DATA_DIR = _user_data_dir()
+USER_DATA_DIR = user_data_dir()
 MODELS_DIR = USER_DATA_DIR / "models"
 RUNS_DIR = USER_DATA_DIR / "runs"
 DATA_DIR = USER_DATA_DIR / "data"

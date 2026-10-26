@@ -224,6 +224,27 @@ def launch_updater(path_2: str | Path) -> bool:
         return False
 
 
+# ── Per-user data directory ──
+def user_data_dir() -> Path:
+    """The per-user writable home of models, runs and datasets.
+
+    Windows uses ``%LOCALAPPDATA%``, macOS ``~/Library/Application Support``
+    and the rest ``XDG_DATA_HOME`` (defaulting to ``~/.local/share``).
+    ``POLYX_HOME`` overrides all of them, which is what tests and portable
+    installs use.
+    """
+    override = os.environ.get("POLYX_HOME")
+    if override:
+        return Path(override).expanduser()
+    if IS_WINDOWS:
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    elif IS_MAC:
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / "polyx"
+
+
 def environment_python(root: Optional[Path] = None) -> Optional[Path]:
     """Path to the .venv python, which hangs off a different folder per OS.
 

@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Protocol
+
+import cv2
 import numpy as np
 
 
@@ -178,11 +180,13 @@ def read_yolo_txt(
                     ys = [p[1] for p in pts]
                     x1, x2 = min(xs), max(xs)
                     y1, y2 = min(ys), max(ys)
-                    mask = np.zeros((img_h, img_w), dtype=bool)
+                    # fillPoly mutates in place: fill a named uint8 array and
+                    # only then cast to bool. Passing mask.astype(uint8) as
+                    # a throwaway expression silently filled a copy.
+                    mask_u8 = np.zeros((img_h, img_w), dtype=np.uint8)
                     arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-                    import cv2
-                    cv2.fillPoly(mask.astype(np.uint8), [arr], 1)
-                    mask = mask.astype(bool)
+                    cv2.fillPoly(mask_u8, [arr], 1)
+                    mask = mask_u8.astype(bool)
                     instances.append(Instance(
                         class_id=cid,
                         class_name=class_names.get(cid, str(cid)),
