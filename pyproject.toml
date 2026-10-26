@@ -52,6 +52,7 @@ Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHAN
 gui = ["PySide6==6.7.2"]
 dev = ["pytest"]
 sam2 = ["sam2"]
+legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
 [project.scripts]
 polyx = "polyx.gui.__main__:main"
