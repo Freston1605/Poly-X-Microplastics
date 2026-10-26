@@ -222,7 +222,7 @@ def coverage() -> dict:
     """How many dictionary strings there are, to know how much is left.
 
     It does not measure the interface total (that is
-    `scripts/audit_translations.py`'s job), only what is already translated.
+    `tools/audit/audit_translations.py`'s job), only what is already translated.
     """
     return {"traducidas": len(TRANSLATIONS), "idioma": _language}
 

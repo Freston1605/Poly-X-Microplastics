@@ -32,7 +32,7 @@ from types import SimpleNamespace
 import pytest
 
 # Baseline benigno de M006/S05: solo lectura en la suite; se recaptura con
-# scripts/capturar_fixtures_informe.py solo ante un cambio consciente del
+# tools/audit/capturar_fixtures_informe.py solo ante un cambio consciente del
 # informe, actualizando sha256, pin y README juntos.
 BASELINE_HTML = Path(__file__).resolve().parent / "fixtures" / "baseline_informe" \
     / "benigna" / "informe.html"

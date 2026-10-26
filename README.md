@@ -282,7 +282,7 @@ readers treat it correctly.
 To see what is still untranslated:
 
 ```bat
-.venv\Scripts\python.exe scripts\audit_translations.py
+.venv\Scripts\python.exe tools\audit\audit_translations.py
 ```
 
 It walks the syntax tree of every module looking for `tr()` calls and checks them

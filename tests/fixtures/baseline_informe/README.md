@@ -32,7 +32,7 @@ English report headings.
 
 ## Provenance
 
-- **Original capture:** `scripts/capturar_fixtures_informe.py`, run in
+- **Original capture:** `tools/audit/capturar_fixtures_informe.py`, run in
   **M001/T03** against pre-fix code. The script renders the two fixture
   states of `tests/fixtures_informe.py` through the real pipeline (all
   sections, stopwatch wrapper included) and persists each `informe.html`
@@ -57,7 +57,7 @@ English report headings.
   failed: the previous snapshots were captured on the dev machine (system
   Python 3.14, matplotlib 3.11.2, no torch), so both the embedded figure
   PNG bytes and the live machine-equipment rows differed.
-  The snapshots were regenerated with `scripts/capturar_fixtures_informe.py`
+  The snapshots were regenerated with `tools/audit/capturar_fixtures_informe.py`
   on the pinned stack. The capture script and
   `tests/test_render_reporte_benigno.py` pin the machine-equipment table
   (`rh._team`) to the same canonical rows, so the byte gate compares an
