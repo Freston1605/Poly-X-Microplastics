@@ -2,6 +2,7 @@
 
 Arranca el launcher sin consola. Equivalente a `python -m polyx.launcher`.
 """
+
 import sys
 from pathlib import Path
 
