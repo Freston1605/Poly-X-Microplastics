@@ -86,7 +86,7 @@ line-length = 100
 src = ["src", "tests", "tools"]
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "S", "SIM", "RUF", "PLW", "PERF", "ISC", "I", "C4", "FURB"]
+select = ["E", "F", "B", "BLE", "S", "SIM", "RUF", "PLW", "PERF", "ISC", "I", "C4", "FURB"]
 ignore = [
     "E501",        # line length — handled by ruff format (phase B)
     "E701", "E702", # multiple statements on one line (legacy style)
