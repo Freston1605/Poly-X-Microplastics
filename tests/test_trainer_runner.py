@@ -215,7 +215,7 @@ def _eventos(tmp_path: Path) -> list[dict]:
     ruta = tmp_path / "_polyx_logs" / "trainer.jsonl"
     if not ruta.exists():
         return []
-    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]
+    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
 
 
 # ── Camino feliz: secuencia completa del ciclo de vida ───────────────
@@ -272,8 +272,8 @@ class TestCicloDeVidaFeliz:
         assert recolector.metricas[-1].map50 > recolector.metricas[0].map50
         assert recolector.abortados == 0
         assert recolector.fallos == []
-        assert any("Entrenamiento iniciado" in l for l in recolector.lineas)
-        assert any("PyTorch 2.5.1+fake" in l for l in recolector.lineas)
+        assert any("Entrenamiento iniciado" in l for l in recolector.lineas)  # noqa: E741
+        assert any("PyTorch 2.5.1+fake" in l for l in recolector.lineas)  # noqa: E741
 
     def test_complete_apunta_a_best_pt_real(self, qapp, tmp_path, deps_falsos):
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz4")
@@ -338,7 +338,7 @@ class TestAborto:
         assert [m.epoch for m in recolector.metricas] == [1]
         assert estado["pedido"]  # la solicitud se hizo en mitad del run
         assert st._abort is False, "la bandera quedo consumida exacta vez, no clavada"
-        assert any("Solicitud de detención" in l for l in recolector.lineas)
+        assert any("Solicitud de detención" in l for l in recolector.lineas)  # noqa: E741
 
         abortado = next(e for e in eventos if e["event"] == "train.aborted")
         assert abortado["data"]["familias_completadas"] == 1
@@ -443,4 +443,4 @@ class TestComparacionDeFamilias:
         assert recolector.finales == [str(esperado)]
         assert esperado.exists()
         assert (RUNS_ENTRENAMIENTO / "corrida_v8" / "weights" / "best.pt").exists()
-        assert any("COMPARACION DE ARQUITECTURAS" in l for l in recolector.lineas)
+        assert any("COMPARACION DE ARQUITECTURAS" in l for l in recolector.lineas)  # noqa: E741

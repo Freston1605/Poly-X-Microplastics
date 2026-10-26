@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         model = make_detector(args.model_type, args.model, alias="model")
         model.load()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"ERROR loading model: {exc}", file=sys.stderr)
         return 1
 
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
             measure_shape=not args.no_measure_shape,
             gt_folder=Path(args.gt_folder) if args.gt_folder else None,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             state = build_state(out_dir, Path(args.images))
             generate_report(state, report_path)
             print(f"FULL REPORT: {report_path}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             print(f"Full report unavailable ({exc}); writing compact report.")
             print(f"COMPACT REPORT: {_write_compact(run_dir=out_dir)}")
     else:

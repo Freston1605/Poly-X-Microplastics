@@ -131,7 +131,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
 
         h, w = cv2.imread(str(image_path)).shape[:2]
         return w, h
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -226,7 +226,7 @@ def read_yolo_txt(
                             y2=y2,
                         )
                     )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return instances
 

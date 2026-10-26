@@ -24,7 +24,7 @@ import polyx.core.observability as ob
 def _leer_jsonl(carpeta: Path, modulo: str) -> list[dict]:
     ruta = carpeta / f"{modulo}.jsonl"
     assert ruta.exists(), "el log no se escribio donde se pidio"
-    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]
+    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
 
 
 @pytest.fixture
@@ -118,7 +118,7 @@ def test_lanzar_modulo_inexistente_devuelve_false(
     assert lanzadas == []  # jamas llega a Popen
     ruta_log = log_dir / "app.jsonl"
     if ruta_log.exists():  # logger 'app' pudo arrancar
-        recs = [json.loads(l) for l in ruta_log.read_text().splitlines() if l.strip()]
+        recs = [json.loads(l) for l in ruta_log.read_text().splitlines() if l.strip()]  # noqa: E741
         assert recs == []  # y no emitio rastro ninguno
 
 

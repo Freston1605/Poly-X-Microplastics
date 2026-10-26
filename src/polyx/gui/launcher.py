@@ -76,7 +76,7 @@ def _register_boot() -> None:
             python=sys.version.split()[0],
             sistema=name_system(),
         )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -97,12 +97,12 @@ def _spawn_module(dotted: str) -> bool:
         env = dict(os.environ)
         src_dir = str(Path(__file__).resolve().parents[3] / "src")
         env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603
             [sys.executable, "-m", dotted],
             cwd=str(Path(__file__).resolve().parents[3]),
             env=env,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         try:
             from polyx.core import observability
 
@@ -113,14 +113,14 @@ def _spawn_module(dotted: str) -> bool:
                 modulo=dotted,
                 error=str(e),
             )
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         return False
     try:
         from polyx.core import observability
 
         observability.event(observability.logger_for("app"), "module.launch", modulo=dotted)
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return True
 
@@ -169,7 +169,7 @@ class MicroscopePanel(QWidget):
         self.setMinimumSize(240, 240)
         self.setMaximumWidth(360)
 
-        rnd = random.Random(11)
+        rnd = random.Random(11)  # noqa: S311
         classes = ("PET", "PP", "LDPE")
         planes = (0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2)  # 4 background, 5 middle, 4 foreground
 
@@ -194,7 +194,7 @@ class MicroscopePanel(QWidget):
         rnd.shuffle(shift)
 
         self._particles: list[dict] = []
-        for plane, (dx, dy), class_id in zip(planes, sites, shift):
+        for plane, (dx, dy), class_id in zip(planes, sites, shift):  # noqa: B905
             scale = (0.55, 0.82, 1.0)[plane]
             self._particles.append(
                 {

@@ -77,8 +77,8 @@ def commit_git(root: Optional[Path] = None) -> Dict[str, str]:
 
     def _git(*args: str) -> Optional[str]:
         try:
-            r = subprocess.run(
-                ["git", "-C", str(root), *args],
+            r = subprocess.run(  # noqa: PLW1510, S603
+                ["git", "-C", str(root), *args],  # noqa: S607
                 capture_output=True,
                 text=True,
                 timeout=5,

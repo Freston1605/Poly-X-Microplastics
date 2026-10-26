@@ -40,9 +40,9 @@ def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarr
     """
     out = img_bgr.copy()
     side = max(out.shape[:2])
-    thickness = max(2, int(round(side / 700)))
+    thickness = max(2, int(round(side / 700)))  # noqa: RUF046
     scale_txt = max(0.5, side / 3000)
-    thickness_txt = max(1, int(round(scale_txt * 2)))
+    thickness_txt = max(1, int(round(scale_txt * 2)))  # noqa: RUF046
 
     for d in dets:
         c = color_for(d)
@@ -232,7 +232,7 @@ class DetectorRunner(QThread):
                         if params.measure_shape:
                             apply_to_detection(d, img_bgr, um_px)
 
-                for mi_idx, slot in enumerate(slots):
+                for mi_idx, slot in enumerate(slots):  # noqa: B007
                     # mi_idx is the order within active_models()
                     # we need the real slot index within model_slots
                     real_idx = state.model_slots.index(slot)
@@ -377,7 +377,7 @@ class DetectorRunner(QThread):
                         # The name carries the image index because two photos
                         # from different folders can share a name (1.1.jpg
                         # exists in several controls) and would overwrite each other.
-                        destination = sub / f"{idx_img:04d}_{img_path.stem}{suffix}.png"
+                        destination = sub / f"{idx_img:04d}_{img_path.stem}{suffix}.png"  # noqa: B023
                         destination.write_bytes(bytes(buf))
                         return destination
 
@@ -433,7 +433,7 @@ class DetectorRunner(QThread):
                     sin_forma=worst[1],
                 )
             self.finished_ok.emit()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.failed.emit(f"{type(e).__name__}: {e}")
             obs.event_error(_log, "run.error", e)
 
@@ -515,7 +515,7 @@ class DetectorRunner(QThread):
                     )
                 except OSError:
                     pass
-        try:
+        try:  # noqa: SIM105
             (state.run_dir / "resumen.json").write_text(
                 json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
             )

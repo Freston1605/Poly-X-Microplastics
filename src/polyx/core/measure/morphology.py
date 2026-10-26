@@ -210,7 +210,7 @@ def box_margin(box_width: float, box_height: float) -> int:
     -- it was lost before anything was segmented. On a compact particle both
     sides are similar and the number does not change.
     """
-    return int(max(3, round(0.50 * max(max(1.0, box_width), max(1.0, box_height)))))
+    return int(max(3, round(0.50 * max(max(1.0, box_width), max(1.0, box_height)))))  # noqa: PLW3301
 
 
 def _cutout(bgr: np.ndarray, x1, y1, x2, y2, margin: int):
@@ -494,8 +494,8 @@ def segment(
     if n <= 1:
         return None
     # Box center in crop coordinates.
-    cx = int(round((x1 + x2) / 2 - ox))
-    cy = int(round((y1 + y2) / 2 - oy))
+    cx = int(round((x1 + x2) / 2 - ox))  # noqa: RUF046
+    cy = int(round((y1 + y2) / 2 - oy))  # noqa: RUF046
     cx = int(np.clip(cx, 0, labels.shape[1] - 1))
     cy = int(np.clip(cy, 0, labels.shape[0] - 1))
     idx = labels[cy, cx]
@@ -553,9 +553,9 @@ def segment(
     if record is not None:
         record["largo_sin_recortar_px"] = feret_maximum(_contour_elderly(mask))
     if _elongation(mask) < ELONGATION_ELONGATED:
-        slack = max(2, int(round(SLACK_COMPACT * min(box_width, box_height))))
+        slack = max(2, int(round(SLACK_COMPACT * min(box_width, box_height))))  # noqa: RUF046
     else:
-        slack = max(2, int(round(SLACK_ELONGATED * max(box_width, box_height))))
+        slack = max(2, int(round(SLACK_ELONGATED * max(box_width, box_height))))  # noqa: RUF046
     hx1 = max(0, int(x1) - ox - slack)
     hy1 = max(0, int(y1) - oy - slack)
     hx2 = min(mask.shape[1], int(np.ceil(x2)) - ox + slack)
@@ -848,7 +848,7 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
         if zoom > 1:
             par = cv2.resize(par, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
         return par, m
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None, None
 
 
@@ -882,7 +882,7 @@ def measure(mask: np.ndarray, um_por_px: Optional[float] = None) -> Morphology:
 
     (_, _), (rw, rh), _ = cv2.minAreaRect(c)
     cuerda = float(max(rw, rh))
-    thickness_straight = float(min(rw, rh))
+    thickness_straight = float(min(rw, rh))  # noqa: F841
 
     # Rectangle model: valid only if a rectangle with that area and
     # that perimeter exists. On a compact particle the discriminant is negative.

@@ -48,7 +48,7 @@ class _HwProbeWorker(QThread):
                 d["vram_free_gb"] = free / 1024**3
                 d["vram_total_gb"] = total / 1024**3
                 d["ok"] = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             d["error"] = str(e)
         self.done.emit(d)
 
@@ -100,7 +100,7 @@ class _LiveCurves(QFrame):
             self._placeholder.deleteLater()
             self._lay.addWidget(self.canvas)
             self._ok = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._placeholder.setText(f"matplotlib no disponible: {e}")
         return self._ok
 

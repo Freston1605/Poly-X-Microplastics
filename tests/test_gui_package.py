@@ -140,8 +140,8 @@ def _imports_qt(arbol: ast.AST) -> list[str]:
         if isinstance(nodo, ast.Import):
             for alias in nodo.names:
                 if _es_qt(alias.name):
-                    encontrados.append(alias.name)
-        elif isinstance(nodo, ast.ImportFrom):
+                    encontrados.append(alias.name)  # noqa: PERF401
+        elif isinstance(nodo, ast.ImportFrom):  # noqa: SIM102
             if not nodo.level and nodo.module and _es_qt(nodo.module):
                 encontrados.append(nodo.module)
     return encontrados
@@ -158,7 +158,7 @@ def _imports_heredados(arbol: ast.AST, partes: list[str]) -> list[str]:
         if isinstance(nodo, ast.Import):
             for alias in nodo.names:
                 if _es_paquete_heredado(alias.name):
-                    encontrados.append(alias.name)
+                    encontrados.append(alias.name)  # noqa: PERF401
         elif isinstance(nodo, ast.ImportFrom):
             if nodo.level:
                 destino = _resuelve_relativo(partes, nodo.level, nodo.module)
@@ -178,16 +178,16 @@ def _leer(ruta: Path) -> ast.AST:
 def test_la_estructura_del_paquete_gui_existe():
     """Si falta un archivo, los escaneos AST pasarian en vacio y mentirian."""
     faltan: list[str] = []
-    esperadas = ("__init__.py", "launcher.py", "__main__.py") + tuple(
+    esperadas = ("__init__.py", "launcher.py", "__main__.py") + tuple(  # noqa: RUF005
         modulo + ".py" for modulo in MODULOS_MOVIDOS
     )
     for nombre in esperadas:
         if not (PAQUETE_GUI / nombre).is_file():
-            faltan.append(f"polyx/gui/{nombre}")
+            faltan.append(f"polyx/gui/{nombre}")  # noqa: PERF401
     for paquete in PAQUETES_FEATURE:
         for nombre in ("__init__.py", "__main__.py", "window.py"):
             if not (PAQUETE_GUI / paquete / nombre).is_file():
-                faltan.append(f"polyx/gui/{paquete}/{nombre}")
+                faltan.append(f"polyx/gui/{paquete}/{nombre}")  # noqa: PERF401
     assert not faltan, f"faltan archivos de la estructura del paquete gui: {faltan}"
 
 
@@ -213,7 +213,7 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     assert fuera, "no se escaneo ningun archivo fuera de polyx/gui"
     nombres = {ruta.as_posix() for ruta in fuera}
     assert (RAIZ / "src" / "polyx" / "launcher.py").as_posix() in nombres
-    for modulo, rel_path in MODULOS_MOTOR.items():
+    for modulo, rel_path in MODULOS_MOTOR.items():  # noqa: B007, PERF102
         assert (RAIZ / "src" / "polyx" / "core" / rel_path).as_posix() in nombres
 
 

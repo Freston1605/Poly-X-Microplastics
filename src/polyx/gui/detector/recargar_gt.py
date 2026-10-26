@@ -32,7 +32,7 @@ def _same_boxes(a, b, tol: float = 0.5) -> bool:
     """True when two lists of boxes match in class and coordinates."""
     if len(a) != len(b):
         return False
-    for d1, d2 in zip(a, b):
+    for d1, d2 in zip(a, b):  # noqa: B905
         if d1.class_id != d2.class_id:
             return False
         if (

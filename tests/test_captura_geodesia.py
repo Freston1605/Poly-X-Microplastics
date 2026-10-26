@@ -174,7 +174,7 @@ def test_captura_idempotente_sin_reforzar(tmp_path):
     primera = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino)
     assert primera["serializadas"] == 1
 
-    fichero = sorted(destino.glob("*.npy"))[0]
+    fichero = sorted(destino.glob("*.npy"))[0]  # noqa: FURB192
     mtime1 = fichero.stat().st_mtime_ns
     segunda = CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino)
     # sin --reforzar: la misma mascara, ya capturada, NO se reescribe
@@ -193,7 +193,7 @@ def test_captura_fixture_distinto_se_protege_y_reforzar_pisa(tmp_path):
     destino = tmp_path / "fixtures" / "geodesia"
 
     CFG.capturar(runs=runs, fotos=tmp_path / "fotos", destino=destino)
-    fichero = sorted(destino.glob("*.npy"))[0]
+    fichero = sorted(destino.glob("*.npy"))[0]  # noqa: FURB192
     original = _leer_npy(fichero)
     mtime1 = fichero.stat().st_mtime_ns
 

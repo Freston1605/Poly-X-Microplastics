@@ -48,7 +48,7 @@ def _there_are_gpu() -> bool:
 
         return bool(torch.cuda.is_available())
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -603,7 +603,7 @@ class ViewerWindow(QMainWindow):
 
             self._set_status("● Modelo listo", T.OK)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Error al cargar modelo"), str(e))
 
     def _detect(self):
@@ -620,7 +620,7 @@ class ViewerWindow(QMainWindow):
 
             return
 
-        imgsz = int(round(self.spin_imgsz.value() / 32)) * 32  # multiple of stride
+        imgsz = int(round(self.spin_imgsz.value() / 32)) * 32  # multiple of stride  # noqa: RUF046
 
         device = "0" if (self.chk_gpu.isChecked() and _there_are_gpu()) else "cpu"
 
@@ -663,7 +663,7 @@ class ViewerWindow(QMainWindow):
             else:
                 self._set_status(f"● {len(dets)} detecciones (imgsz {imgsz})", T.OK)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Without enough VRAM the failure is common when raising imgsz: it says
 
             # what to do instead of showing the raw exception.
@@ -755,7 +755,7 @@ class ViewerWindow(QMainWindow):
             if not ok:
                 return
 
-            candidates = [c for c, o in zip(candidates, options) if o == chosen]
+            candidates = [c for c, o in zip(candidates, options) if o == chosen]  # noqa: B905
 
         txt = candidates[0]
 
@@ -772,11 +772,11 @@ class ViewerWindow(QMainWindow):
 
             height, width_2 = bgr.shape[:2]
 
-            names = {i: n for i, n in enumerate(self._class_names(txt.parent))}
+            names = {i: n for i, n in enumerate(self._class_names(txt.parent))}  # noqa: C416
 
             dets = read_yolo_txt(txt, width_2, height, names)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Error"), f"No se pudieron leer las predicciones: {e}")
 
             return
@@ -893,7 +893,7 @@ class ViewerWindow(QMainWindow):
         f = folder_2 / "classes.txt"
 
         if f.exists():
-            names = [l.strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]
+            names = [l.strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
 
             if names:
                 return names
@@ -938,7 +938,7 @@ class ViewerWindow(QMainWindow):
 
             bgr = read_image(path_2)
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             bgr = None
 
         if bgr is None:
@@ -1026,7 +1026,7 @@ class ViewerWindow(QMainWindow):
 
             img, m = draw_measurement(self._bgr_current, det, zoom=6)
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             img, m = None, None
 
         if img is None or m is None or not m.ok:
@@ -1264,7 +1264,7 @@ class ViewerWindow(QMainWindow):
 
             QMessageBox.information(self, tr("Guardado"), f"Archivos guardados en:\n{save_dir}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Error al guardar"), str(e))
 
             self._set_status("● Error al guardar", T.ERR)
@@ -1422,7 +1422,7 @@ class ViewerWindow(QMainWindow):
 
                     self._set_status("● Modelo cargado", T.OK)
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     self._set_status(f"● Error: {e}", T.ERR)
 
             elif path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}:

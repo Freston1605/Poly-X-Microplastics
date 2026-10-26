@@ -190,7 +190,7 @@ def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> Optional[tuple]:
         cx, cy, r = adjust_circle(pts)
         d = np.abs(np.hypot(pts[:, 0] - cx, pts[:, 1] - cy) - r)
         pts = pts[d < max(3.0, 2.0 * np.median(d))]
-    return adjust_circle(pts) + (len(pts),)
+    return adjust_circle(pts) + (len(pts),)  # noqa: RUF005
 
 
 def correct_parallax(um_por_px: float, height_plate_mm: float, distance_camera_mm: float) -> tuple:

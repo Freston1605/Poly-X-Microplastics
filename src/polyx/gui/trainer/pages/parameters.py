@@ -47,7 +47,7 @@ IMGSZ_CHOICES = [320, 416, 512, 640, 800, 960, 1024, 1280, 1600, 1920, 2560, 384
 
 
 def _hint(text: str) -> QLabel:
-    l = QLabel(text)
+    l = QLabel(text)  # noqa: E741
     l.setStyleSheet(f"color: {T.INK3}; font-size: 9pt; border: none;")
     l.setWordWrap(True)
     return l
@@ -333,7 +333,7 @@ class ParametersPage(TrainerPage):
 
     def _on_change(self, *_):
         p = self.state.params
-        try:
+        try:  # noqa: SIM105
             p.imgsz = int(self.combo_imgsz.currentText())
         except ValueError:
             pass
@@ -479,7 +479,7 @@ class ParametersPage(TrainerPage):
         for p in imgs[:25]:
             wh = size_image(p)
             if wh:
-                side = max(side, max(wh))
+                side = max(side, max(wh))  # noqa: PLW3301
         return side, gb
 
     def _optimize_all(self):
@@ -508,7 +508,7 @@ class ParametersPage(TrainerPage):
             import psutil
 
             ram_gb = psutil.virtual_memory().available / (1024**3)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         r = recommend_config(
@@ -576,5 +576,5 @@ class ParametersPage(TrainerPage):
                     amp="on" if self.cb_amp.isChecked() else "off",
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             self.lbl_est.setText(tr("Estimación de VRAM: —"))

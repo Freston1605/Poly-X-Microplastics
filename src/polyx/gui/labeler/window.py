@@ -377,7 +377,7 @@ class LabelerWindow(QMainWindow):
     def _add_class(self):
         name, ok = QInputDialog.getText(self, "Nueva clase", "Nombre de la clase:")
         if ok and name.strip():
-            self.state.set_class_names(list(self.state.class_names) + [name.strip()])
+            self.state.set_class_names(list(self.state.class_names) + [name.strip()])  # noqa: RUF005
 
     # ── Files ────────────────────────────────────────────────
     def _open_folder(self):
@@ -403,7 +403,7 @@ class LabelerWindow(QMainWindow):
             self._pre_model = YoloModel(path)
             self.lbl_model.setText(Path(path).name)
             self._set_status("● Modelo cargado", T.OK)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Error al cargar modelo"), str(e))
 
     def _pre_annotate_current(self):
@@ -426,7 +426,7 @@ class LabelerWindow(QMainWindow):
             boxes = self._dets_to_boxes(dets, img)
             self.state.set_current_boxes(boxes)
             self._set_status(f"● Pre-anotadas {len(boxes)} cajas", T.OK)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Error en pre-anotación"), str(e))
 
     def _pre_annotate_all(self):
@@ -457,7 +457,7 @@ class LabelerWindow(QMainWindow):
                 boxes = self._dets_to_boxes(dets, img_path)
                 self.state._annotations[key] = boxes
                 self.state._save_labels_for(img_path, boxes)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
         pd.setValue(total)
@@ -476,13 +476,13 @@ class LabelerWindow(QMainWindow):
             import torch
 
             device = "0" if torch.cuda.is_available() else "cpu"
-        except Exception:
+        except Exception:  # noqa: BLE001
             device = "cpu"
         # Automatic tiling: a full plate (~3260 px) is split into overlapping
         # tiles and the boxes return to plate coordinates. The study crops
         # (1630 px per side) stay below the threshold and are
         # inferred in one piece, so nothing changes here.
-        return dict(
+        return dict(  # noqa: C408
             conf=float(self.sb_pre_conf.value()),
             imgsz=int(self.sb_pre_imgsz.value()),
             device=device,
@@ -499,7 +499,7 @@ class LabelerWindow(QMainWindow):
 
             with Image.open(str(img_path)) as im:
                 iw, ih = im.size
-        except Exception:
+        except Exception:  # noqa: BLE001
             iw = ih = 640
 
         boxes = []
@@ -533,7 +533,7 @@ class LabelerWindow(QMainWindow):
             # Without loading into memory: it counts the lines of the .txt directly
             txt = self.state._label_path_for(img)
             try:
-                n = sum(1 for l in txt.read_text(encoding="utf-8").splitlines() if l.strip())
+                n = sum(1 for l in txt.read_text(encoding="utf-8").splitlines() if l.strip())  # noqa: E741
             except OSError:
                 n = 0
         return f"✓  {img.name}  ({n})" if n else f"·  {img.name}  (0)"
@@ -558,7 +558,7 @@ class LabelerWindow(QMainWindow):
             if pix.isNull():
                 return QIcon()
             return QIcon(pix.scaled(QSize(52, 40), Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return QIcon()
 
     def _update_progress(self):

@@ -46,8 +46,8 @@ def download(url: str, dest: Path, expected_sha256: str | None = None) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     try:
-        req = Request(url, headers={"User-Agent": "Poly-X"})
-        with urlopen(req) as resp:
+        req = Request(url, headers={"User-Agent": "Poly-X"})  # noqa: S310
+        with urlopen(req) as resp:  # noqa: S310
             total = int(resp.headers.get("Content-Length", 0) or 0)
             done = 0
             h = hashlib.sha256()

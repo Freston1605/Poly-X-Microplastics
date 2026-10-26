@@ -151,7 +151,7 @@ def _all_entries(tree: ast.Module) -> list[str]:
         if isinstance(value, (ast.List, ast.Tuple)):
             for element in value.elts:
                 if isinstance(element, ast.Constant) and isinstance(element.value, str):
-                    entries.append(element.value)
+                    entries.append(element.value)  # noqa: PERF401
         elif isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
             collect(value.left)
             collect(value.right)
@@ -162,7 +162,7 @@ def _all_entries(tree: ast.Module) -> list[str]:
                 isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
             ):
                 collect(node.value)
-        elif isinstance(node, ast.AugAssign):
+        elif isinstance(node, ast.AugAssign):  # noqa: SIM102
             if isinstance(node.target, ast.Name) and node.target.id == "__all__":
                 collect(node.value)
     return entries
@@ -282,7 +282,7 @@ def test_every_dunder_all_entry_resolves(
         relative = path.relative_to(REPO_ROOT).as_posix()
         for entry in _all_entries(tree):
             if entry not in bindings:
-                offenders.append(f"{relative}: __all__ entry {entry!r} does not resolve")
+                offenders.append(f"{relative}: __all__ entry {entry!r} does not resolve")  # noqa: PERF401
     assert not offenders, "\n".join(offenders)
 
 

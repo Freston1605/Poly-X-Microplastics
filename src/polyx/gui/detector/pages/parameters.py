@@ -25,7 +25,7 @@ from ._base import DetectorPage
 
 
 def _hint(text: str) -> QLabel:
-    l = QLabel(text)
+    l = QLabel(text)  # noqa: E741
     l.setStyleSheet(f"color: {T.INK3}; font-size: 9pt; border: none;")
     l.setWordWrap(True)
     return l
@@ -59,10 +59,10 @@ class _ProbeThread(QThread):
             mx, detail = self.model.probe_max_imgsz(
                 self.image_path,
                 device=self.device,
-                progress=lambda sz: self.progress.emit(sz),
+                progress=lambda sz: self.progress.emit(sz),  # noqa: PLW0108
             )
             self.done.emit(mx, detail)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.failed.emit(f"{type(e).__name__}: {e}")
 
 

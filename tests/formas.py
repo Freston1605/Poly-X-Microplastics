@@ -107,12 +107,12 @@ def grumo_con_muesca(diametro: int = 100):
 # asi que un 6 % deja margen para variaciones de version de OpenCV sin dejar
 # pasar una regresion de verdad. El arco de 180 grados es el mas exigente.
 CASOS = [
-    ("recta", lambda: recta(), 6.0),
+    ("recta", lambda: recta(), 6.0),  # noqa: PLW0108
     ("recta girada 45", lambda: recta_girada(45), 6.0),
     ("arco 60", lambda: arco(60), 6.0),
     ("arco 120", lambda: arco(120), 6.0),
     ("arco 180", lambda: arco(180), 6.0),
-    ("circulo", lambda: circulo(), 6.0),
-    ("recta dentada", lambda: recta_dentada(), 6.0),
-    ("grumo con muesca", lambda: grumo_con_muesca(), 6.0),
+    ("circulo", lambda: circulo(), 6.0),  # noqa: PLW0108
+    ("recta dentada", lambda: recta_dentada(), 6.0),  # noqa: PLW0108
+    ("grumo con muesca", lambda: grumo_con_muesca(), 6.0),  # noqa: PLW0108
 ]

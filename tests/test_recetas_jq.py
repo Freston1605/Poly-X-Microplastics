@@ -97,7 +97,7 @@ def test_10_plate_batch_log_generation(log_env):
                 assert fijo in rec
 
     det_recs = [
-        json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()
+        json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()  # noqa: E741
     ]
     all_finishes = [
         r for r in det_recs if r["event"].endswith(".finish") and r.get("run_id") == run_id
@@ -117,7 +117,7 @@ def test_jq_recetas_subprocess(log_env):
     # 1. Finish event tailing
     cmd1 = ["jq", "-c", 'select(.event | endswith(".finish")) | {ts, event, ms}', det_path]
     res1 = subprocess.run(cmd1, capture_output=True, text=True, check=True)
-    lines1 = [json.loads(l) for l in res1.stdout.splitlines() if l.strip()]
+    lines1 = [json.loads(l) for l in res1.stdout.splitlines() if l.strip()]  # noqa: E741
     assert len(lines1) >= 40
 
     # 2. Batch run_id filtering
@@ -128,13 +128,13 @@ def test_jq_recetas_subprocess(log_env):
         det_path,
     ]
     res2 = subprocess.run(cmd2, capture_output=True, text=True, check=True)
-    lines2 = [json.loads(l) for l in res2.stdout.splitlines() if l.strip()]
+    lines2 = [json.loads(l) for l in res2.stdout.splitlines() if l.strip()]  # noqa: E741
     assert len(lines2) > 0
 
     # 3. Error/warning queries
     cmd3 = ["jq", "-c", 'select(.level == "ERROR" or .level == "WARNING")', det_path]
     res3 = subprocess.run(cmd3, capture_output=True, text=True, check=True)
-    lines3 = [json.loads(l) for l in res3.stdout.splitlines() if l.strip()]
+    lines3 = [json.loads(l) for l in res3.stdout.splitlines() if l.strip()]  # noqa: E741
     assert len(lines3) >= 2
 
     # 4. Cross-module correlation query
@@ -169,7 +169,7 @@ def test_q5_missing_jq_fallback_handling(log_env):
 
     # Fallback con python puro
     recs = [
-        json.loads(l) for l in Path(det_path).read_text(encoding="utf-8").splitlines() if l.strip()
+        json.loads(l) for l in Path(det_path).read_text(encoding="utf-8").splitlines() if l.strip()  # noqa: E741
     ]
     finishes = [r for r in recs if r["event"].endswith(".finish")]
     assert len(finishes) == 40
@@ -192,7 +192,7 @@ def test_q6_10x_load_profile_batch(log_env):
 
     ob.clear_run_id()
     det_file = log_env / "detector.jsonl"
-    recs = [json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+    recs = [json.loads(l) for l in det_file.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
     finishes = [r for r in recs if r["event"] == "phase.infer.finish" and r.get("run_id") == run_id]
     assert len(finishes) == 100
     for r in finishes:
@@ -216,7 +216,7 @@ def test_q7_malformed_jsonl_records_handled(log_env):
     for line in det_file.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        try:
+        try:  # noqa: SIM105
             parsed.append(json.loads(line))
         except json.JSONDecodeError:
             pass

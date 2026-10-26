@@ -168,7 +168,7 @@ def test_la_mascara_no_se_escapa_de_la_caja():
     cv2.rectangle(img, (118, 95), (134, 105), (60, 210, 240), -1)  # puente
     mascara = M.segment(img, 80, 80, 120, 120)
     assert mascara is not None
-    ys, xs = np.nonzero(mascara)
+    ys, xs = np.nonzero(mascara)  # noqa: RUF059
     ancho = xs.max() - xs.min() + 1
     assert ancho < 40 * 1.6, f"la máscara mide {ancho} px de ancho para una caja de 40"
 
@@ -208,7 +208,7 @@ def test_no_parte_una_particula_sana():
         ("arco 180", lambda: arco(180)),
         ("dentada", recta_dentada),
     ):
-        mascara, real = fabrica()
+        mascara, real = fabrica()  # noqa: RUF059
         ys, xs = np.nonzero(mascara)
         semilla = ((xs.min() + xs.max()) // 2, (ys.min() + ys.max()) // 2)
         antes = int(np.count_nonzero(mascara))

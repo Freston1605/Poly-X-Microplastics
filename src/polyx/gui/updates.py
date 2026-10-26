@@ -50,9 +50,9 @@ def version_remote() -> str:
     """Return the latest commit SHA on the tracked branch, or '' on failure."""
     req = urllib.request.Request(API, headers={"User-Agent": "PolyX-Updater"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:  # noqa: S310
             return (json.load(r).get("sha") or "").strip()
-    except Exception:
+    except Exception:  # noqa: BLE001
         # No internet, GitHub down, proxy, rate limit... none of this deserves
         # interrupting the user: it stays silent and shows no notice.
         return ""

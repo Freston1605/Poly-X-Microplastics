@@ -57,7 +57,7 @@ class _ExportWorker(QThread):
             )
             out = m.export(format=self.fmt, imgsz=self.imgsz, half=self.half)
             self.finished_ok.emit(str(out))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             import traceback
 
             self.failed.emit(f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
@@ -98,7 +98,7 @@ class ExportPage(TrainerPage):
         g.setVerticalSpacing(10)
         g.addWidget(QLabel(tr("Formato:")), 0, 0)
         self.combo = QComboBox()
-        for name, code, desc in FORMATS:
+        for name, code, desc in FORMATS:  # noqa: B007
             self.combo.addItem(f"{name}  ({code})", code)
         self.combo.currentIndexChanged.connect(self._update_desc)
         g.addWidget(self.combo, 0, 1)

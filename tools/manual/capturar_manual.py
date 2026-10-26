@@ -22,7 +22,7 @@ from pathlib import Path
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-except Exception:
+except Exception:  # noqa: BLE001, S110
     pass
 
 from PySide6.QtWidgets import QApplication
@@ -86,7 +86,7 @@ def capturar(modulo: str, clase: str, size, tab, espera_ms: int, destino: Path) 
         ok = pix.save(str(destino), "PNG")
         print(f"  [{'OK' if ok else 'FAIL'}] {destino.name}  {pix.width()}x{pix.height()}")
         return ok
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"  [ERR] {modulo}.{clase}: {type(e).__name__}: {e}")
         return False
 
@@ -108,7 +108,7 @@ def main():
     print(f"Idioma UI : {os.environ.get('POLYX_IDIOMA', '(preferencia guardada)')}")
     print(f"Salida    : {out}")
 
-    app = QApplication.instance() or QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
     hechas = 0
     for nombre, modulo, clase, size, tab, espera in CAPTURAS:
         if args.solo and args.solo not in nombre:

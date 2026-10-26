@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     try:
         out = generate(Path(args.run), Path(args.output) if args.output else None)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     print(f"WROTE: {out}")

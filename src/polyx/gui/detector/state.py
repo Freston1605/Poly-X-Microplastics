@@ -198,7 +198,7 @@ class DetectorState(QObject):
 
     def has_gt(self) -> bool:
         """Does any image have GT?"""
-        for r_list in self.results.values():
+        for r_list in self.results.values():  # noqa: SIM110
             if any(r.has_gt for r in r_list):
                 return True
         return False

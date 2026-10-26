@@ -59,7 +59,7 @@ def train(
     for name, cb in (callbacks or {}).items():
         try:
             model.add_callback(name, cb)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             # A dropped progress callback is a silent bug downstream: say so.
             if on_log:
                 on_log(f"[train] WARNING: callback '{name}' not registered: {exc}")

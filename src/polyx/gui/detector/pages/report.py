@@ -140,7 +140,7 @@ class ReportPage(DetectorPage):
         wants the image for a paper figure or to review it with a magnifier
         needs the original, and that is what this card copies.
         """
-        c, l = self.card(tr("Guardar las fotos con las etiquetas"), "imagenes")
+        c, l = self.card(tr("Guardar las fotos con las etiquetas"), "imagenes")  # noqa: E741
 
         aid = QLabel(
             tr(
@@ -220,7 +220,7 @@ class ReportPage(DetectorPage):
                 for origin_2, folder, name_2 in candidates:
                     if origin_2 is None or (folder, name_2) in seen:
                         continue
-                    origin_2 = Path(origin_2)
+                    origin_2 = Path(origin_2)  # noqa: PLW2901
                     if not origin_2.exists():
                         continue
                     seen.add((folder, name_2))
@@ -295,9 +295,9 @@ class ReportPage(DetectorPage):
                 msg += " · " + tr("{} fallaron").format(len(failures))
             self.lbl_photos.setText(msg)
             if copied and not failures:
-                try:
+                try:  # noqa: SIM105
                     open_in_system(str(destination))
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
             if failures:
                 QMessageBox.warning(
@@ -309,7 +309,7 @@ class ReportPage(DetectorPage):
     # ── Scope ─────────────────────────────────────────────────
     def _card_scope(self):
         """Card to choose whether the report covers the whole job or a few photos."""
-        c, l = self.card(tr("Alcance del informe"), "diana")
+        c, l = self.card(tr("Alcance del informe"), "diana")  # noqa: E741
 
         aid = QLabel(
             tr(
@@ -427,7 +427,7 @@ class ReportPage(DetectorPage):
         checkbox appears on its own, and no section can end up impossible to
         uncheck.
         """
-        c, l = self.card(tr("Qué incluir en el informe"), "reporte")
+        c, l = self.card(tr("Qué incluir en el informe"), "reporte")  # noqa: E741
         aid = QLabel(
             tr(
                 "El informe completo es largo. Desmarca lo que no necesites: las secciones "
@@ -544,7 +544,7 @@ class ReportPage(DetectorPage):
         self.lbl_status.setText(tr("Generando reporte… (puede tardar unos segundos)"))
         generated = []
         try:
-            for suffix_2, photos, label in jobs:
+            for suffix_2, photos, label in jobs:  # noqa: B007
                 out_path = out_dir / f"informe_deteccion{suffix_2}.html"
                 self._write_html(out_path, solo_images_2=photos)
                 generated.append(out_path)
@@ -552,11 +552,11 @@ class ReportPage(DetectorPage):
                 "✓ " + tr("{} informe(s) generado(s) en {}").format(len(generated), out_dir)
             )
             for p in generated:
-                try:
+                try:  # noqa: SIM105
                     open_in_system(str(p))
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, tr("Error generando reporte"), f"{type(e).__name__}: {e}")
             self.lbl_status.setText(tr("✗ Falló la generación."))
         finally:
@@ -630,9 +630,9 @@ class ReportPage(DetectorPage):
                     "✓ " + tr("{} PDF generado(s) en {}").format(len(facts), pdf_base.parent)
                 )
                 for p in facts:
-                    try:
+                    try:  # noqa: SIM105
                         open_in_system(str(p))
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
             if failed:
                 self.lbl_status.setText(tr("✗ No se pudo generar todo el PDF."))
@@ -646,7 +646,7 @@ class ReportPage(DetectorPage):
                         "Ctrl+P → 'Guardar como PDF' en tu navegador."
                     ),
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, tr("Error generando PDF"), f"{type(e).__name__}: {e}")
             self.lbl_status.setText(tr("✗ Falló la generación de PDF."))
         finally:

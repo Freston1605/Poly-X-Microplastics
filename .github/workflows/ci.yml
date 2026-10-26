@@ -47,8 +47,11 @@ jobs:
       - name: Sync dependencies
         run: uv sync --python ${{ matrix.python-version }} --extra gui --extra dev
 
+      - name: Lint
+        run: uv run ruff check src/ tests/ tools/
+
       - name: Check formatting
-        run: uv run ruff format --check .
+        run: uv run ruff format --check src/ tests/ tools/
 
       # offscreen: la suite no abre ventanas pero PySide6 pide una
       # plataforma. MPLCONFIGDIR: matplotlib quiere un config dir

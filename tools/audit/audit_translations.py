@@ -61,7 +61,7 @@ def package_files() -> list[Path]:
 def main() -> int:
     # The Windows console is cp1252 and many strings carry arrows or emoji;
     # without this the auditor dies while printing instead of auditing.
-    try:
+    try:  # noqa: SIM105
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except (AttributeError, ValueError):
         pass

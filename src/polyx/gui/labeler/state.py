@@ -216,11 +216,11 @@ class LabelerState(QObject):
         boxes: list[BBox] = []
         if txt.exists():
             for line in txt.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
+                line = line.strip()  # noqa: PLW2901
                 if line:
-                    try:
+                    try:  # noqa: SIM105
                         boxes.append(BBox.from_yolo_line(line))
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
         self._annotations[key] = boxes
 

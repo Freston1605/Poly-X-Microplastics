@@ -87,7 +87,7 @@ def _count_split(yaml_dir: Path, data: dict, split_value) -> int:
         # list .txt file with image paths
         try:
             return sum(1 for line in p.read_text(encoding="utf-8").splitlines() if line.strip())
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0
     return 0
 
@@ -99,7 +99,7 @@ def _find_label_for(img_path: Path) -> Path | None:
     parts = list(img_path.parts)
     for i in range(len(parts) - 1, -1, -1):
         if parts[i].lower() == "images":
-            new_parts = parts[:i] + ["labels"] + parts[i + 1 :]
+            new_parts = parts[:i] + ["labels"] + parts[i + 1 :]  # noqa: RUF005
             candidate = Path(*new_parts).with_suffix(".txt")
             if candidate.exists():
                 return candidate
@@ -339,7 +339,7 @@ class DatasetPage(TrainerPage):
             return
         try:
             d = _load_yaml(p)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.lbl_yaml_status.setText(f"✗ Error parseando YAML: {e}")
             self.lbl_yaml_status.setStyleSheet(f"color: {T.ERR_TX}; font-size: 10pt; border: none;")
             return
@@ -380,7 +380,7 @@ class DatasetPage(TrainerPage):
             return
         try:
             d = _load_yaml(yaml_path)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return
         yaml_dir = yaml_path.parent
 
@@ -410,7 +410,7 @@ class DatasetPage(TrainerPage):
                 imgs.extend(list(train_abs.rglob(f"*{ext}"))[:200])
         elif train_abs.is_file():
             for line in train_abs.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
+                line = line.strip()  # noqa: PLW2901
                 if not line or line.startswith("#"):
                     continue
                 pp = Path(line)
@@ -429,7 +429,7 @@ class DatasetPage(TrainerPage):
 
         random.shuffle(imgs)
         sample = imgs[:6]
-        for tile, img_path in zip(self.tiles, sample):
+        for tile, img_path in zip(self.tiles, sample):  # noqa: B905
             self._draw_preview(tile, img_path)
         for tile in self.tiles[len(sample) :]:
             tile.setPixmap(QPixmap())
@@ -451,7 +451,7 @@ class DatasetPage(TrainerPage):
                         cid = int(float(parts[0]))
                         cx, cy, w, h = [float(x) for x in parts[1:5]]
                         boxes.append((cid, cx, cy, w, h))
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
         # draw
         img = QImage(pm)
@@ -502,7 +502,7 @@ class DatasetPage(TrainerPage):
             return
         try:
             d = _load_yaml(yaml_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._set_check(0, False, str(e))
             self._validate_config_fast()
             return
@@ -584,7 +584,7 @@ class DatasetPage(TrainerPage):
         self.audit_list.clear()
         try:
             audit = audit_dataset(yaml_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.lbl_dist.setText("")
             it = QListWidgetItem(f"No se pudo analizar: {e}")
             it.setForeground(QColor(T.ERR))
@@ -673,7 +673,7 @@ class DatasetPage(TrainerPage):
         names: list[str] = []
         if cls_path.exists():
             names = [
-                l.strip() for l in cls_path.read_text(encoding="utf-8").splitlines() if l.strip()
+                l.strip() for l in cls_path.read_text(encoding="utf-8").splitlines() if l.strip()  # noqa: E741
             ]
 
         d = {

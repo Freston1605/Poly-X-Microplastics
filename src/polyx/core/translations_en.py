@@ -192,7 +192,7 @@ EN: dict[str, str] = {
     "Seleccionar carpeta…": "Select folder…",
     "Abrir carpeta de resultados": "Open results folder",
     "Exportar CSV de detecciones": "Export detections CSV",
-    "Generar reporte HTML": "Generate HTML report",
+    "Generar reporte HTML": "Generate HTML report",  # noqa: F601
     "Exportar a PDF": "Export to PDF",
     "Enviar al dataset de reentrenamiento": "Send to the retraining dataset",
     "Seleccionar imágenes…": "Select images…",
@@ -229,8 +229,8 @@ EN: dict[str, str] = {
     "Guardar (.txt)": "Save (.txt)",
     "Abrir carpeta…": "Open folder…",
     "Cargar modelo…": "Load model…",
-    "Pre-anotar TODAS": "Pre-annotate ALL",
-    "Pre-anotar imagen actual": "Pre-annotate current image",
+    "Pre-anotar TODAS": "Pre-annotate ALL",  # noqa: F601
+    "Pre-anotar imagen actual": "Pre-annotate current image",  # noqa: F601
     # ══ Trainer ═════════════════════════════════════════════════
     "%v / %m épocas": "%v / %m epochs",
     "(no se encontró\nla carpeta de train)": "(the train folder\nwas not found)",
@@ -309,9 +309,9 @@ EN: dict[str, str] = {
     "✗ Archivo no encontrado.": "✗ File not found.",
     "✗ Error": "✗ Error",
     "¿Qué mirar?": "What to look at",
-    "Guardar como…": "Save as…",
+    "Guardar como…": "Save as…",  # noqa: F601
     "Abrir carpeta runs_train/": "Open the runs_train/ folder",
-    "Exportar": "Export",
+    "Exportar": "Export",  # noqa: F601
     "Otras 6": "6 more",
     "Refrescar lista": "Refresh list",
     "Validar ahora": "Validate now",
@@ -349,7 +349,7 @@ EN: dict[str, str] = {
     "Cargar etiquetas (.txt)": "Load labels (.txt)",
     "Línea": "Line",
     "Sin calibrar": "Not calibrated",
-    "Imagen": "Image",
+    "Imagen": "Image",  # noqa: F601
     # ── Added with the architecture cross-check, the selection
     # by domain, the report scope and the tiling warning ──
     "Actualizar": "Update",
@@ -389,8 +389,8 @@ EN: dict[str, str] = {
     "MÓDULOS": "MODULES",
     "MÓDULO": "MODULE",
     "Abrir  →": "Open  →",
-    "LÉAME": "README",
-    "Manual de usuario": "User manual",
+    "LÉAME": "README",  # noqa: F601
+    "Manual de usuario": "User manual",  # noqa: F601
     "Polímeros": "Polymers",
     "fluorescencia Nile Red": "Nile Red fluorescence",
     "medición": "measurement",

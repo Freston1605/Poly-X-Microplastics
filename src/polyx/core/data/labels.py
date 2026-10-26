@@ -36,7 +36,7 @@ def read_labels(
     try:
         with open(txt_path, "r", encoding="utf-8") as f:
             for line in f:
-                line = line.strip()
+                line = line.strip()  # noqa: PLW2901
                 if not line:
                     continue
                 parts = line.split()
@@ -67,7 +67,7 @@ def read_labels(
                         y2=y2,
                     )
                 )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return instances
 
@@ -125,6 +125,6 @@ def read_classes_txt(txt_path: str | Path) -> Dict[int, str]:
                 name = line.strip()
                 if name:
                     class_names[i] = name
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return class_names

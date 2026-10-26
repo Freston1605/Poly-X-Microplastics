@@ -51,8 +51,8 @@ def _nvidia_smi() -> Optional[dict]:
     import subprocess
 
     try:
-        out = subprocess.run(
-            [
+        out = subprocess.run(  # noqa: PLW1510
+            [  # noqa: S607
                 "nvidia-smi",
                 "--query-gpu=name,memory.total,memory.free,driver_version",
                 "--format=csv,noheader,nounits",
@@ -79,7 +79,7 @@ def _nvidia_smi() -> Optional[dict]:
                     "n": len(out.stdout.strip().splitlines()),
                 }
         return best
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -102,7 +102,7 @@ def detect_gpu() -> GPUInfo:
             for i in range(n):
                 try:
                     total_i = torch.cuda.get_device_properties(i).total_memory
-                except Exception:
+                except Exception:  # noqa: BLE001, S112
                     continue
                 if total_i > best_total:
                     idx, best_total = i, float(total_i)
@@ -137,7 +137,7 @@ def detect_gpu() -> GPUInfo:
                 vm = psutil.virtual_memory()
                 total_gb = vm.total / (1024**3)
                 free_gb = vm.available / (1024**3)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
             import platform as _pl
 
@@ -156,7 +156,7 @@ def detect_gpu() -> GPUInfo:
                     "si el entrenamiento falla, prueba con CPU."
                 ),
             )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         torch_v = torch_v or "no importable"
         return GPUInfo(available=False, torch_version=torch_v, detail=f"{type(e).__name__}: {e}")
 

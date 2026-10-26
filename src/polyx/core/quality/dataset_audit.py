@@ -76,7 +76,7 @@ def _label_for(img: Path) -> Optional[Path]:
     parts = list(img.parts)
     for i in range(len(parts) - 1, -1, -1):
         if parts[i].lower() == "images":
-            cand = Path(*(parts[:i] + ["labels"] + parts[i + 1 :])).with_suffix(".txt")
+            cand = Path(*(parts[:i] + ["labels"] + parts[i + 1 :])).with_suffix(".txt")  # noqa: RUF005
             return cand if cand.exists() else None
     sib = img.parent.parent / "labels" / (img.stem + ".txt")
     if sib.exists():
@@ -96,7 +96,7 @@ def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> List[Path]:
     # .txt listing file
     out = []
     for line in split_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
+        line = line.strip()  # noqa: PLW2901
         if not line or line.startswith("#"):
             continue
         pp = Path(line)
@@ -145,7 +145,7 @@ def _scan_split(images: List[Path]) -> dict:
             seen.add(key)
         if n_boxes == 0:
             empty += 1
-    return dict(
+    return dict(  # noqa: C408
         per_class=dict(per_class),
         areas=dict(areas),
         per_class_per_img={k: dict(v) for k, v in per_class_per_img.items()},
@@ -167,7 +167,7 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
         return audit
     try:
         data = _load_yaml(yaml_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         audit.add(LEVEL_ERROR, "No se pudo leer data.yaml", str(e))
         return audit
 
@@ -182,7 +182,7 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
 
     names = data.get("names") or []
     if isinstance(names, dict):
-        names = [names[k] for k in sorted(names.keys(), key=lambda x: int(x))]
+        names = [names[k] for k in sorted(names.keys(), key=lambda x: int(x))]  # noqa: PLW0108
     audit.class_names = [str(n) for n in names]
 
     def cls_name(cid: int) -> str:

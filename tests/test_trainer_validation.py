@@ -74,7 +74,7 @@ def crear_dataset(
         lineas.append("val: images/val")
     lineas.append("names:")
     for c in range(clases):
-        lineas.append(f"  {c}: clase{c}")
+        lineas.append(f"  {c}: clase{c}")  # noqa: PERF401
     yaml_path.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return yaml_path
 

@@ -91,7 +91,7 @@ class ViewerCanvas(QWidget):
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
                 pix = QPixmap.fromImage(qimg)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
         self._pixmap = pix if not pix.isNull() else None
         self._fit_to_window()
@@ -161,7 +161,7 @@ class ViewerCanvas(QWidget):
     def _draw_detections(self, p: QPainter, iw: int, ih: int):
         font = QFont(T.APP_FONT_FAMILY, 8, QFont.Bold)
         p.setFont(font)
-        for i, det in enumerate(self.state.detections):
+        for i, det in enumerate(self.state.detections):  # noqa: B007
             if self._filter_cls and det.class_name != self._filter_cls:
                 continue
             color = _cls_color(det.class_id)
@@ -274,7 +274,7 @@ class ViewerCanvas(QWidget):
                 self.state.cancel_calib()
             return
 
-        if ev.button() == Qt.LeftButton:
+        if ev.button() == Qt.LeftButton:  # noqa: SIM102
             if self.state.calib_mode != "none":
                 img_pt = self._w2i(pos)
                 self.state.add_calib_point(img_pt)
@@ -310,7 +310,7 @@ class ViewerCanvas(QWidget):
     # ── Keyboard ─────────────────────────────────────────────
     def keyPressEvent(self, ev: QKeyEvent):
         key = ev.key()
-        mod = ev.modifiers()
+        mod = ev.modifiers()  # noqa: F841
         if key == Qt.Key_Escape:
             self.state.cancel_calib()
         elif key == Qt.Key_Left:

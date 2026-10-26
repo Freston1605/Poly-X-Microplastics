@@ -103,7 +103,7 @@ def _tramo_propio(ruta: Path, desde: int) -> list[dict]:
     if ini > 0 and bruto[ini - 1 : ini] != b"\n":
         salto = bruto.find(b"\n", ini - 1)
         ini = len(bruto) if salto == -1 else salto + 1
-    lineas = [l for l in bruto[ini:].decode("utf-8").splitlines() if l.strip()]
+    lineas = [l for l in bruto[ini:].decode("utf-8").splitlines() if l.strip()]  # noqa: E741
     recs: list[dict] = []
     for n, linea in enumerate(lineas):
         try:
@@ -198,7 +198,7 @@ def main() -> int:
     args = parser.parse_args()
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    if args.log_dir:
+    if args.log_dir:  # noqa: SIM108
         ruta_dir = Path(args.log_dir)
     else:
         ruta_dir = ob.folder_logs()

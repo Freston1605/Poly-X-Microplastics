@@ -93,16 +93,16 @@ PRESETS = {
 }
 
 AUG_LEVELS = {
-    "Ninguno": dict(
+    "Ninguno": dict(  # noqa: C408
         hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, fliplr=0.0, mosaic=0.0, mixup=0.0, copy_paste=0.0
     ),
-    "Suave": dict(
+    "Suave": dict(  # noqa: C408
         hsv_h=0.01, hsv_s=0.5, hsv_v=0.3, fliplr=0.5, mosaic=0.5, mixup=0.0, copy_paste=0.0
     ),
-    "Medio": dict(
+    "Medio": dict(  # noqa: C408
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, fliplr=0.5, mosaic=1.0, mixup=0.1, copy_paste=0.1
     ),
-    "Fuerte": dict(
+    "Fuerte": dict(  # noqa: C408
         hsv_h=0.02, hsv_s=0.9, hsv_v=0.5, fliplr=0.5, mosaic=1.0, mixup=0.2, copy_paste=0.3
     ),
 }
@@ -399,7 +399,7 @@ def validate_training_config(
 
     try:
         audit = audit_dataset(yaml_path)
-    except Exception as e:  # the audit must not bring down the pre-flight
+    except Exception as e:  # the audit must not bring down the pre-flight  # noqa: BLE001
         _error(f"No se pudo analizar el dataset: {e}")
         return ok, msgs
 

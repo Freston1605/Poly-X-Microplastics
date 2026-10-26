@@ -301,7 +301,7 @@ class RunPage(DetectorPage):
         try:
             slot = next(s for s in active if self.state.model_slots.index(s) == model_idx)
             pi = active.index(slot)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return
         if pi < len(self.previews):
             self.previews[pi].set_image_bytes(res.annotated_png, name=Path(res.image_path).name)

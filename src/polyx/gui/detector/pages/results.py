@@ -71,7 +71,7 @@ class ResultsPage(DetectorPage):
         self.lbl_prec = QLabel(tr("Precisión:  —"))
         self.lbl_rec = QLabel(tr("Recall:  —"))
         self.lbl_mis = QLabel(f"{LABEL_MISCLS}:  —")
-        for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):
+        for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):  # noqa: E741
             l.setStyleSheet(f"color: {T.INK2}; font-size: 10.5pt; font-weight: 500; border: none;")
             row.addWidget(l)
         row.addStretch(1)
@@ -276,7 +276,7 @@ class ResultsPage(DetectorPage):
         self.btn_reload.setEnabled(False)
         try:
             summary = reload_gt(self.state, progress=progress)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             dlg.close()
             self.btn_reload.setEnabled(True)
             QMessageBox.warning(self, tr("Recargar GT"), f"{type(e).__name__}: {e}")
@@ -509,7 +509,7 @@ class ResultsPage(DetectorPage):
             self._hist_canvas.draw()
             self._hist_placeholder.setVisible(False)
             self._hist_canvas.setVisible(True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._hist_placeholder.setText(f"matplotlib no disponible: {e}")
             self._hist_placeholder.setVisible(True)
 
@@ -520,7 +520,7 @@ class ResultsPage(DetectorPage):
         )
         if not path:
             return
-        all_results = [r for rs in self.state.results.values() for r in rs]
+        all_results = [r for rs in self.state.results.values() for r in rs]  # noqa: F841
         try:
             with open(path, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
@@ -589,7 +589,7 @@ class ResultsPage(DetectorPage):
                                     p.morphotype or "",
                                 ]
                             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
 
             QMessageBox.warning(self, tr("Error"), f"No se pudo guardar: {e}")
@@ -640,7 +640,7 @@ class ResultsPage(DetectorPage):
 
         try:
             from polyx.gui.viewer.window import ViewerWindow
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, tr("Revisar"), f"No se pudo abrir el Visor: {e}")
             return
 

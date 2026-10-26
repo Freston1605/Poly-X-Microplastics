@@ -146,14 +146,14 @@ TRANSLATIONS.update({s: s for s in NO_TRANSLATE})
 def _detect_language_system() -> str:
     try:
         cod = locale.getlocale()[0] or locale.getdefaultlocale()[0] or ""
-    except Exception:
+    except Exception:  # noqa: BLE001
         cod = ""
     return "es" if cod.lower().startswith("es") else "en" if cod else "es"
 
 
 def carry() -> str:
     """Resolves the language once, in precedence order."""
-    global _language
+    global _language  # noqa: PLW0603
     env = os.environ.get("POLYX_IDIOMA", "").strip().lower()
     if env in LANGUAGES:
         _language = env
@@ -164,7 +164,7 @@ def carry() -> str:
             if saved in LANGUAGES:
                 _language = saved
                 return _language
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     _language = _detect_language_system()
     return _language
@@ -181,18 +181,18 @@ def set_language(code: str) -> None:
     restart. Rebuilding every live window would be more fragile than a 2 s
     restart.
     """
-    global _language
+    global _language  # noqa: PLW0603
     if code not in LANGUAGES:
         return
     _language = code
-    try:
+    try:  # noqa: SIM105
         _FILE.write_text(json.dumps({"idioma": code}), encoding="utf-8")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     for f in _subscribers:
-        try:
+        try:  # noqa: SIM105
             f(code)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
 

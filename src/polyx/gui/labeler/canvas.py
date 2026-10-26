@@ -114,7 +114,7 @@ class BboxCanvas(QWidget):
                 h, w, c = arr.shape
                 qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
                 pix = QPixmap.fromImage(qimg)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
         previous = self._pixmap
         self._pixmap = pix if not pix.isNull() else None
@@ -289,7 +289,7 @@ class BboxCanvas(QWidget):
             self.update()
 
     def mouseReleaseEvent(self, ev: QMouseEvent):
-        pos = self._pos(ev)
+        pos = self._pos(ev)  # noqa: F841
         if ev.button() == Qt.MiddleButton:
             self._panning = False
             return
@@ -314,7 +314,7 @@ class BboxCanvas(QWidget):
                     w = max(0.001, min(1.0, w))
                     h = max(0.001, min(1.0, h))
                     new_box = BBox(self.state.active_class, cx, cy, w, h)
-                    boxes = list(self.state.current_boxes) + [new_box]
+                    boxes = list(self.state.current_boxes) + [new_box]  # noqa: RUF005
                     self.state.set_current_boxes(boxes)
                     self._selected_idx = len(boxes) - 1
                     self.box_drawn.emit()

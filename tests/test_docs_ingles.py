@@ -85,7 +85,7 @@ def _spanish_findings(prose: str) -> list[str]:
     """Return the Spanish marker hits found in prose (empty means clean)."""
     findings: list[str] = []
     for match in _SPANISH_WORDS.finditer(prose):
-        findings.append(f"spanish-word:{match.group(0).lower()}")
+        findings.append(f"spanish-word:{match.group(0).lower()}")  # noqa: PERF401
     for match in _ACCENTED_WORD.finditer(prose):
         word = match.group(0)
         if word.lower() not in _ACCENT_ALLOWLIST:

@@ -131,9 +131,9 @@ def correr_bench(repeticiones: int = 5):
         reps = 2 if h * w > 200000 else min(repeticiones, max(2, int(3.0e6 / max(h * w, 1))))
 
         t_ref = _medir_ms(
-            lambda: _propagaciones(dentro, semilla, G._propagar_geodesico_referencia), reps
+            lambda: _propagaciones(dentro, semilla, G._propagar_geodesico_referencia), reps  # noqa: B023
         )
-        t_new = _medir_ms(lambda: _propagaciones(dentro, semilla, M._spread_geodesic), reps)
+        t_new = _medir_ms(lambda: _propagaciones(dentro, semilla, M._spread_geodesic), reps)  # noqa: B023
         ratio = t_ref["mediana"] / t_new["mediana"] if t_new["mediana"] else float("inf")
         filas.append(
             {
@@ -153,7 +153,7 @@ def correr_bench(repeticiones: int = 5):
     lineas = [
         "# TIMING de _propagar_geodesico: referencia vs reescrita",
         "",
-        "Generado por `tests/bench_geodesia.py` (correrlo a mano: no es un "
+        "Generado por `tests/bench_geodesia.py` (correrlo a mano: no es un "  # noqa: ISC004
         "test). Numeros reales medidos en esta maquina, no placeholders.",
         "",
         "## Contexto de la maquina",
@@ -163,7 +163,7 @@ def correr_bench(repeticiones: int = 5):
         "",
         "## Que mide este artefacto (y que NO)",
         "",
-        "Cada mascara se mide replicando el patron de `largo_geodesico`: "
+        "Cada mascara se mide replicando el patron de `largo_geodesico`: "  # noqa: ISC004
         "las DOS propagaciones (d1 desde la semilla del rectangulo "
         "envolvente y d2 desde el extremo lejano), sobre el mismo recorte. "
         "Se reporta la mediana de repeticiones (con calentamiento "
@@ -176,7 +176,7 @@ def correr_bench(repeticiones: int = 5):
         "**ratio referencia/reescrita sobre el mismo corpus y el mismo "
         "hardware**, y eso es lo que mide este artefacto.",
         "",
-        "Nota sobre ratios por debajo de 1.0x: aparecen solo en mascaras "
+        "Nota sobre ratios por debajo de 1.0x: aparecen solo en mascaras "  # noqa: ISC004
         "cuyo costo total ronda el tick del reloj (~0.05-1.5 ms): ahi el "
         "ruido del temporizador domina y la ratio no es informativa (sub-1% "
         "del corpus). Ninguna CLASE queda por debajo de 1.0x en el resumen.",
@@ -187,7 +187,7 @@ def correr_bench(repeticiones: int = 5):
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for f in filas:
-        lineas.append(
+        lineas.append(  # noqa: PERF401
             f"| {f['clase']} | {f['nombre']} | {f['px']} | {f['lado']} "
             f"| {f['ref_ms']:.3f} | {f['new_ms']:.3f} | {f['ratio']:.2f}x "
             f"| {f['ref_max']:.3f} | {f['new_max']:.3f} |"

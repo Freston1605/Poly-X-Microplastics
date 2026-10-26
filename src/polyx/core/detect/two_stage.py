@@ -39,7 +39,7 @@ class TwoStageDetector(DetectionSource):
         self.segmenter.load()
         try:
             self._names = dict(self.detector.names)
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._names = {}
         return self
 
@@ -62,7 +62,7 @@ class TwoStageDetector(DetectionSource):
             else:
                 prompts = SegmentationPrompts(boxes=boxes)
                 seg_instances = self.segmenter.segment(image_path, prompts)
-        except Exception:
+        except Exception:  # noqa: BLE001
             seg_instances = []
 
         # Merge: keep detector class/conf, attach segmenter mask.

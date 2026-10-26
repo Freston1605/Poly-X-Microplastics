@@ -130,7 +130,7 @@ def run_batch(
         cv2.imencode(".png", annotated)[1].tofile(str(out_img))
 
         for d in dets:
-            rows.append(
+            rows.append(  # noqa: PERF401
                 {
                     "image": img_path.name,
                     "class_id": int(d.class_id),

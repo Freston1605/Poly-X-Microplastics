@@ -51,7 +51,7 @@ class _EvalWorker(QThread):
                 "recall": float(getattr(res.box, "mr", 0.0)),
             }
             self.metrics_ready.emit(d)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             import traceback
 
             self.failed.emit(f"{type(e).__name__}: {e}\n{traceback.format_exc()}")

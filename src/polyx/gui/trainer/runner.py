@@ -87,7 +87,7 @@ class TrainerRunner(QThread):
         try:
             import torch
             from ultralytics import YOLO  # noqa: F401
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.failed.emit(f"No se pudo importar Ultralytics / PyTorch: {e}")
             return
 
@@ -138,7 +138,7 @@ class TrainerRunner(QThread):
                     "[ATENCION] CUDA no disponible — se forzará entrenamiento en CPU."
                 )
                 effective_device = "cpu"
-            elif req in ("cpu",):
+            elif req in ("cpu",):  # noqa: FURB171
                 self.log_line.emit("[INFO] Entrenando en CPU (por configuración).")
                 effective_device = "cpu"
             else:
@@ -232,7 +232,7 @@ class TrainerRunner(QThread):
                             "[INFO] Solicitud de detención recibida: "
                             "se parará al final de esta época."
                         )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     self.log_line.emit(f"[WARN] callback error: {e}")
 
             def _on_train_start(trainer):
@@ -251,7 +251,7 @@ class TrainerRunner(QThread):
                             "Causas tipicas: OOM al probar, AMP check fallido, o driver "
                             "incompatible. Revisa la salida arriba."
                         )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     self.log_line.emit(f"[WARN] No se pudo verificar device del modelo: {e}")
 
             def _on_train_end(trainer):
@@ -262,7 +262,7 @@ class TrainerRunner(QThread):
             if isinstance(cache_val, str) and cache_val.lower() in ("false", "0", "no"):
                 cache_val = False
 
-            train_kwargs = dict(
+            train_kwargs = dict(  # noqa: C408
                 data=str(ds.yaml_path),
                 imgsz=int(p.imgsz),
                 epochs=int(p.epochs),
@@ -303,7 +303,7 @@ class TrainerRunner(QThread):
                 # architectures: the abort applies to the whole run, not per family.
                 if run_current["abortado"]:
                     break
-                if use_custom:
+                if use_custom:  # noqa: SIM108
                     weights = str(mdl.custom_weights)
                 else:
                     weights = mdl.weight_of(family_2)
@@ -377,7 +377,7 @@ class TrainerRunner(QThread):
                         if chosen is not None:
                             weight_final = chosen
                             f1_real = table[0]["f1"] if table else None
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         # A failed re-selection cannot throw away an hours-long
                         # training run: it is reported and best.pt is kept.
                         self.log_line.emit(
@@ -426,7 +426,7 @@ class TrainerRunner(QThread):
         except KeyboardInterrupt:
             self.aborted.emit()
             obs.event(self._log(), "train.aborted")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             import traceback
 
             self.failed.emit(f"{type(e).__name__}: {e}\n\n{traceback.format_exc()}")

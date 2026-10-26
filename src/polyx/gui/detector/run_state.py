@@ -68,7 +68,7 @@ def build_state_from_run(run_dir: Path, image_dir: Path):
     for img_path in images:
         preds = []
         for r in by_image.get(img_path.name, []):
-            preds.append(
+            preds.append(  # noqa: PERF401
                 Detection(
                     class_id=int(r.get("class_id", 0) or 0),
                     class_name=r.get("class", "0"),

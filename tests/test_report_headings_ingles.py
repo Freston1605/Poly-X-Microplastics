@@ -257,7 +257,7 @@ def _offending_headings(source: str) -> list[tuple[int, str, str]]:
     for line, literal in _heading_literals(source):
         for label in ROTULOS_ES | ROTULOS_ES_CON_UNIDAD:
             if label in literal:
-                offenders.append((line, label, literal))
+                offenders.append((line, label, literal))  # noqa: PERF401
     return offenders
 
 

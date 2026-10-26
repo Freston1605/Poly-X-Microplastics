@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         best = run_training(cfg, on_epoch=on_epoch, on_log=on_log)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     print(f"BEST: {best}")

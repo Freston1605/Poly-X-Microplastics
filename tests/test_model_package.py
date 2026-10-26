@@ -132,7 +132,7 @@ def _imports_prohibidos(arbol: ast.AST) -> list[str]:
         if isinstance(nodo, ast.Import):
             for alias in nodo.names:
                 if _es_qt(alias.name) or _es_prohibido(alias.name):
-                    encontrados.append(alias.name)
+                    encontrados.append(alias.name)  # noqa: PERF401
         elif isinstance(nodo, ast.ImportFrom):
             if nodo.level:
                 destino = _destino_relativo(nodo.level, nodo.module)
@@ -189,7 +189,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
         str(RAIZ / "src") + os.pathsep + str(RAIZ) + os.pathsep + entorno.get("PYTHONPATH", "")
     )
 
-    resultado = subprocess.run(
+    resultado = subprocess.run(  # noqa: PLW1510
         [sys.executable, "-c", guion],
         capture_output=True,
         text=True,

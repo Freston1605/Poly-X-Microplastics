@@ -46,7 +46,7 @@ def _val_images(data_yaml: Path) -> List[Path]:
         path = (root / path).resolve()
 
     if path.is_file():  # list of .txt paths
-        return [Path(l.strip()) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        return [Path(l.strip()) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
     if path.is_dir():
         exts = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
         return sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in exts)
@@ -149,7 +149,7 @@ def candidates(run_dir: Path) -> List[Path]:
     # an existing run they would be there and evaluated as if they were candidates.
     own = {BEST_REAL_NAME, BEST_LAB_NAME}
     seen, output = set(), []
-    for p in [weights / "best.pt", weights / "last.pt"] + sorted(weights.glob("epoch*.pt")):
+    for p in [weights / "best.pt", weights / "last.pt"] + sorted(weights.glob("epoch*.pt")):  # noqa: RUF005
         if p.exists() and p.name not in seen and p.name not in own:
             seen.add(p.name)
             output.append(p)
@@ -218,7 +218,7 @@ def choose_better_in_real(
                 "f1": _f1(pr, rc),
                 "map50": float(res.box.map50),
             }
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             _log(f"  [WARN] no se pudo evaluar {p.name}: {exc}")
             continue
         table.append(row)

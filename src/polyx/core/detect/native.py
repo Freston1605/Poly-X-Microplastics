@@ -46,7 +46,7 @@ class NativeDetector(DetectionSource):
             return []
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, self.threshold, 255, cv2.THRESH_BINARY)
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(  # noqa: RUF059
             binary, connectivity=8
         )
 
@@ -59,7 +59,7 @@ class NativeDetector(DetectionSource):
             y = stats[i, cv2.CC_STAT_TOP]
             w = stats[i, cv2.CC_STAT_WIDTH]
             h = stats[i, cv2.CC_STAT_HEIGHT]
-            cx, cy = centroids[i]
+            cx, cy = centroids[i]  # noqa: RUF059
 
             instances.append(
                 Instance(

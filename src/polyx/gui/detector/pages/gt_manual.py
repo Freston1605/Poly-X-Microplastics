@@ -340,7 +340,7 @@ class AnnotCanvas(QGraphicsView):
                 # 8-point handles
                 hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)  # size in scene
                 points = self._handle_points(b, hs)
-                for hidx, (hx, hy) in enumerate(points):
+                for hidx, (hx, hy) in enumerate(points):  # noqa: B007
                     h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
                     h.setPen(QPen(Qt.white, 1.2))
                     h.setBrush(QBrush(color))
@@ -373,7 +373,7 @@ class AnnotCanvas(QGraphicsView):
         """Returns the idx of the first box containing `pos`, -1 if none.
         Prefers the selected one when it is under the cursor."""
         # the currently selected one first (preference)
-        if 0 <= self.selected_idx < len(self.boxes):
+        if 0 <= self.selected_idx < len(self.boxes):  # noqa: SIM102
             if self.boxes[self.selected_idx].rect().contains(pos):
                 return self.selected_idx
         for i, b in enumerate(self.boxes):
@@ -660,10 +660,10 @@ class GTManualPage(DetectorPage):
         top.addWidget(self.combo_class)
 
         btn_fit = QPushButton(tr("Ajustar (F)"))
-        btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())
+        btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())  # noqa: PLW0108
         top.addWidget(btn_fit)
         btn_100 = QPushButton("100 %")
-        btn_100.clicked.connect(lambda: self.canvas.zoom_100())
+        btn_100.clicked.connect(lambda: self.canvas.zoom_100())  # noqa: PLW0108
         top.addWidget(btn_100)
         l1.addLayout(top)
 
@@ -723,16 +723,16 @@ class GTManualPage(DetectorPage):
 
         b_undo = QPushButton(tr("Deshacer"))
         b_undo.setIcon(iconos.icon("deshacer", 15, T.INK2))
-        b_undo.clicked.connect(lambda: self.canvas.undo())
+        b_undo.clicked.connect(lambda: self.canvas.undo())  # noqa: PLW0108
         btns.addWidget(b_undo)
         b_redo = QPushButton(tr("Rehacer"))
         b_redo.setIcon(iconos.icon("rehacer", 15, T.INK2))
-        b_redo.clicked.connect(lambda: self.canvas.redo())
+        b_redo.clicked.connect(lambda: self.canvas.redo())  # noqa: PLW0108
         btns.addWidget(b_redo)
 
         b_del = QPushButton(tr("Borrar selección"))
         b_del.setIcon(iconos.icon("papelera", 15, T.INK2))
-        b_del.clicked.connect(lambda: self.canvas.delete_selected())
+        b_del.clicked.connect(lambda: self.canvas.delete_selected())  # noqa: PLW0108
         btns.addWidget(b_del)
         b_clear = QPushButton(tr("Limpiar todo"))
         b_clear.clicked.connect(self._clear_with_confirm)
@@ -817,7 +817,7 @@ class GTManualPage(DetectorPage):
                     gt_txt,
                     wh[0],
                     wh[1],
-                    {i: n for i, n in enumerate(DEFAULT_CLASSES)},
+                    {i: n for i, n in enumerate(DEFAULT_CLASSES)},  # noqa: C416
                 )
         self.canvas.load_image(path, existing)
         self._on_boxes_changed()
@@ -884,7 +884,7 @@ class GTManualPage(DetectorPage):
             self._save_to_txt(path, dets)
             if not silent:
                 self.lbl_canvas_status.setText("Auto-guardado.")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             if not silent:
                 QMessageBox.warning(self, tr("Error guardando"), str(e))
 

@@ -32,7 +32,7 @@ from pathlib import Path
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-except Exception:
+except Exception:  # noqa: BLE001, S110
     pass
 
 RAIZ = Path(__file__).resolve().parent  # tools/manual: home of manual_texto_*.{es,en}
@@ -64,10 +64,10 @@ def imagen_base64(ruta: Path) -> tuple[str, int, int]:
     from PIL import Image
 
     with Image.open(ruta) as im:
-        im = im.convert("RGB") if im.mode in ("P", "RGBA", "LA") else im
+        im = im.convert("RGB") if im.mode in ("P", "RGBA", "LA") else im  # noqa: PLW2901
         if im.width > ANCHO_MAX:
             alto = round(im.height * ANCHO_MAX / im.width)
-            im = im.resize((ANCHO_MAX, alto), Image.LANCZOS)
+            im = im.resize((ANCHO_MAX, alto), Image.LANCZOS)  # noqa: PLW2901
         buf = io.BytesIO()
         # PNG y no JPEG: son capturas de interfaz, llenas de texto fino y
         # bordes de 1 px, justo donde el artefacto de bloque de JPEG se ve.
@@ -585,7 +585,7 @@ def a_pdf(html: Path, pdf: Path) -> bool:
         "--print-to-pdf-no-header",
         html.resolve().as_uri(),
     ]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # noqa: PLW1510
     if pdf.exists() and pdf.stat().st_size > 0:
         print(f"  [OK]  {pdf.name}  ({pdf.stat().st_size / 1_048_576:.1f} MB)")
         return True

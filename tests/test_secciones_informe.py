@@ -47,7 +47,7 @@ BASELINE_HTML = (
 # posicion de cada figura dentro del informe completo la cubre el gate de
 # tests/test_render_reporte_benigno.py (renders de TODAS las secciones
 # juntas, mismos ordinales en ambos lados); aqui solo se fija estructura.
-import re as _re
+import re as _re  # noqa: E402
 
 _PNG_URI_RE_SECTION = _re.compile(r"data:image/png;base64,[A-Za-z0-9+/=]+")
 
@@ -181,7 +181,7 @@ def test_resumen_devuelve_cuerpo_sin_h2(tmp_path):
     """Resumen: cuerpo no vacio, str, sin <h2>, y literal en el baseline."""
     import polyx.gui.report_html as rh
 
-    st, pre = _estado_benigno(tmp_path)
+    st, pre = _estado_benigno(tmp_path)  # noqa: RUF059
     cuerpo = rh._section_summary(
         pre.total_imgs, pre.total_dets, pre.avg_conf, pre.avg_size, pre.active, pre.any_gt
     )
@@ -254,7 +254,7 @@ def test_resultados_lleva_las_figuras_agregadas(tmp_path):
     """Resultados: cuerpo con figuras embebidas (base64), sin <h2>."""
     import polyx.gui.report_html as rh
 
-    st, pre = _estado_benigno(tmp_path)
+    st, pre = _estado_benigno(tmp_path)  # noqa: RUF059
     cuerpo = rh._section_results(dict(pre.per_class), pre.confs, pre.sizes)
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
@@ -299,7 +299,7 @@ def test_calibracion_vacia_sin_calibraciones(tmp_path):
     """
     import polyx.gui.report_html as rh
 
-    st, pre = _estado_benigno(tmp_path)
+    st, pre = _estado_benigno(tmp_path)  # noqa: RUF059
     assert rh._section_calibration(st) == ""
     assert "<h2 id='calib'>" not in BASELINE_TXT
 
@@ -320,7 +320,7 @@ def test_profundidad_vacia_sin_tramo_en_los_nombres(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    formas, n_aro, n_sin = rh._lot_forms(st, pre.all_results)
+    formas, n_aro, n_sin = rh._lot_forms(st, pre.all_results)  # noqa: RUF059
     assert formas, "el lote benigno debe tener al menos una particula medida"
     assert rh.section_depth(formas, pre.all_results) == ""
 

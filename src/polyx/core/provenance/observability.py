@@ -116,7 +116,7 @@ class _AboutFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         try:
             return _about_json(record)
-        except Exception:
+        except Exception:  # noqa: BLE001
             # A log that breaks cannot bring down the piece that uses it.
             return json.dumps(
                 {"level": record.levelname, "module": record.name, "event": "log.format_error"},
@@ -156,25 +156,25 @@ def _close_loggers() -> None:
             loggers_to_close = list(_loggers.values())
             try:
                 for name, lg in getattr(logging.Logger.manager, "loggerDict", {}).items():
-                    if isinstance(lg, logging.Logger) and (
+                    if isinstance(lg, logging.Logger) and (  # noqa: SIM102
                         name == "polyx" or name.startswith("polyx.")
                     ):
                         if lg not in loggers_to_close:
                             loggers_to_close.append(lg)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
             for lg in loggers_to_close:
                 for h in list(lg.handlers):
-                    try:
+                    try:  # noqa: SIM105
                         lg.removeHandler(h)
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
-                    try:
+                    try:  # noqa: SIM105
                         h.close()
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
             _loggers.clear()
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -194,13 +194,13 @@ def logger_for(module: str) -> logging.Logger:
         logger.propagate = False
 
         for h in list(logger.handlers):
-            try:
+            try:  # noqa: SIM105
                 logger.removeHandler(h)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
-            try:
+            try:  # noqa: SIM105
                 h.close()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
         try:
@@ -273,7 +273,7 @@ def prune(folder: Path | None = None, active_2: Path | str | None = None) -> Non
             except OSError:
                 continue  # could not be removed; continue with the next one
             total -= size
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         # Pruning is an observer's best effort: nothing below here
         # deserves to bring down a real run.
         pass
@@ -301,11 +301,11 @@ def event_error(
     It exists for what gets lost today: a background thread that blows up
     under pythonw leaves no console trace. Never raises.
     """
-    try:
+    try:  # noqa: SIM105
         logger._log(
             logging.ERROR, name_2, (), exc_info=exc, extra={"event": name_2, "data": data, "ms": ms}
         )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -316,9 +316,9 @@ def event(
 
     Never raises: a logging-system failure cannot stop the analysis.
     """
-    try:
+    try:  # noqa: SIM105
         logger._log(level, name_2, (), extra={"event": name_2, "data": data, "ms": ms})
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -336,7 +336,7 @@ def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO, **data
         yield
     except Exception as exc:
         ms = int((time.perf_counter() - t0) * 1000)
-        try:
+        try:  # noqa: SIM105
             logger._log(
                 logging.ERROR,
                 f"{name_2}.error",
@@ -344,7 +344,7 @@ def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO, **data
                 exc_info=exc,
                 extra={"event": f"{name_2}.error", "data": data, "ms": ms},
             )
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         raise
     ms = int((time.perf_counter() - t0) * 1000)

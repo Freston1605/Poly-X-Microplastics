@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 def _leer_jsonl(carpeta: Path, modulo: str) -> list[dict]:
     ruta = carpeta / f"{modulo}.jsonl"
     assert ruta.exists(), "el log no se escribio donde se pidio"
-    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]
+    return [json.loads(l) for l in ruta.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
 
 
 @pytest.fixture
@@ -100,7 +100,7 @@ def test_cronometro_en_error_relaza_y_ground_trasbazo(log_dir):
     from polyx.core import observability as ob
 
     log = ob.logger_for("prueba")
-    with pytest.raises(ValueError, match="boom"):
+    with pytest.raises(ValueError, match="boom"):  # noqa: SIM117
         with ob.timer(log, "prueba.fallo", imagen="mala.png"):
             raise ValueError("boom")
     recs = _leer_jsonl(log_dir, "prueba")

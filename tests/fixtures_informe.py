@@ -166,7 +166,7 @@ def estado_hostil(
     and still get the worst case.
     """
     nombres = _normalizar(nombres) if nombres is not None else [NOMBRE_FOTO_HOSTIL]
-    if alias is None:
+    if alias is None:  # noqa: SIM108
         aliases = [ALIAS_HOSTIL]
     else:
         aliases = _normalizar(alias)

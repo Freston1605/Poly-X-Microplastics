@@ -38,7 +38,7 @@ def _runs_root() -> Path:
 def _b64_image(path: Path) -> str:
     try:
         return base64.b64encode(path.read_bytes()).decode("ascii")
-    except Exception:
+    except Exception:  # noqa: BLE001
         return ""
 
 
@@ -54,7 +54,7 @@ def _read_results_csv_full(run_dir: Path) -> tuple[list[str], list[list[float]]]
     for line in lines[1:]:
         try:
             rows.append([float(c.strip()) for c in line.split(",")])
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
     return header, rows
 
@@ -200,7 +200,7 @@ class _ReportWorker(QThread):
         try:
             p = build_training_report(self.run_dir, self.out_path, self.include_refs)
             self.finished_ok.emit(str(p))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.failed.emit(f"{type(e).__name__}: {e}")
 
 
@@ -306,9 +306,9 @@ class ReportPage(TrainerPage):
 
     def _on_ok(self, p: str):
         self.lbl_status.setText(f"✓ Generado: {p}")
-        try:
+        try:  # noqa: SIM105
             webbrowser.open(Path(p).as_uri())
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     def _on_fail(self, msg: str):

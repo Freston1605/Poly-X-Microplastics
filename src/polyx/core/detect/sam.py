@@ -82,7 +82,7 @@ class Sam2Segmenter(DetectionSource):
         self._predictor.set_image(img_rgb)
         instances = []
 
-        for i, (x1, y1, x2, y2) in enumerate(boxes):
+        for i, (x1, y1, x2, y2) in enumerate(boxes):  # noqa: B007
             input_box = np.array([[x1, y1, x2, y2]], dtype=np.float32)
             masks, scores, _ = self._predictor.predict(
                 box=input_box,

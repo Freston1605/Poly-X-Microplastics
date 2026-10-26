@@ -64,14 +64,14 @@ class ReviewDialog(QDialog):
         top.addWidget(QLabel(tr("Clase (para nuevas cajas):")))
         self.combo_class = QComboBox()
         self.combo_class.addItems(DEFAULT_CLASSES)
-        self.combo_class.currentIndexChanged.connect(lambda i: self.canvas.set_active_class(i))
+        self.combo_class.currentIndexChanged.connect(lambda i: self.canvas.set_active_class(i))  # noqa: PLW0108
         top.addWidget(self.combo_class)
 
         btn_fit = QPushButton(tr("Ajustar (F)"))
-        btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())
+        btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())  # noqa: PLW0108
         top.addWidget(btn_fit)
         btn_100 = QPushButton("100 %")
-        btn_100.clicked.connect(lambda: self.canvas.zoom_100())
+        btn_100.clicked.connect(lambda: self.canvas.zoom_100())  # noqa: PLW0108
         top.addWidget(btn_100)
         top.addStretch(1)
         self.lbl_counts = QLabel("—")

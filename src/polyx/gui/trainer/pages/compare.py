@@ -35,7 +35,7 @@ def _read_results_csv(run_dir: Path) -> dict | None:
             return None
         header = [c.strip() for c in lines[0].split(",")]
         last = [c.strip() for c in lines[-1].split(",")]
-        d = dict(zip(header, last))
+        d = dict(zip(header, last))  # noqa: B905
 
         # extract the ones we care about (tolerate v8/v11 names)
         def pick(*keys):
@@ -55,7 +55,7 @@ def _read_results_csv(run_dir: Path) -> dict | None:
             "recall": pick("metrics/recall(B)", "metrics/recall"),
             "box_loss": pick("train/box_loss"),
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 

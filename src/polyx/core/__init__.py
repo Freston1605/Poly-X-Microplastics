@@ -30,7 +30,7 @@ from .measure import (
     Calibration,
     calibrate_from_plate,
     calibration,
-    measure,
+    measure,  # noqa: F811  (re-exported function shadows the submodule)
     morphology,
     resolver,
     segment,
@@ -43,7 +43,7 @@ from .provenance import (
     sha256_file,
     timer,
 )
-from .provenance import provenance as provenance_mod
+from .provenance import provenance as provenance_mod  # noqa: F401
 from .quality import (
     aggregate_per_class,
     assignment,
@@ -56,7 +56,7 @@ from .report_simple import generate as generate_simple_report
 from .training import TrainingConfig
 from .training import train as train_model
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # detect
     "Instance",
     "DetectionSource",

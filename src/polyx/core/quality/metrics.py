@@ -103,7 +103,7 @@ def match_image(
         for gi, gt in enumerate(gts):
             if gt_used[gi]:
                 continue
-            if use_mask_iou:
+            if use_mask_iou:  # noqa: SIM108
                 v = mask_iou(preds[pi], gt)
             else:
                 v = iou(preds[pi], gt)
@@ -161,10 +161,10 @@ def aggregate_per_class(
 ) -> Dict[int, ClassMetrics]:
     """Returns {class_id: ClassMetrics} summed over all images."""
     out = {cid: ClassMetrics() for cid in class_ids}
-    for preds, gts in zip(all_preds, all_gts):
+    for preds, gts in zip(all_preds, all_gts):  # noqa: B905
         m = match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou)
         # TP per class: use the TP pairs
-        for pi, gi in m.tp_pairs:
+        for pi, gi in m.tp_pairs:  # noqa: B007
             cid = preds[pi].class_id
             if cid in out:
                 out[cid].tp += 1
@@ -200,9 +200,9 @@ def confusion_matrix(
     n = len(class_ids)
     cm = np.zeros((n + 1, n + 1), dtype=int)
     idx_of = {c: i for i, c in enumerate(class_ids)}
-    for preds, gts in zip(all_preds, all_gts):
+    for preds, gts in zip(all_preds, all_gts):  # noqa: B905
         m = match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou)
-        for pi, gi in m.tp_pairs:
+        for pi, gi in m.tp_pairs:  # noqa: B007
             i = idx_of.get(gts[gi].class_id)
             if i is not None:
                 cm[i, i] += 1

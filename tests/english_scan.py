@@ -95,7 +95,7 @@ def is_protected_comment(raw: str) -> bool:
     _, body, _ = split_comment(raw)
     if not body.strip():
         return True
-    if _PROSE_CHARACTER.search(body) is None:
+    if _PROSE_CHARACTER.search(body) is None:  # noqa: SIM103
         return True
     return False
 
@@ -391,7 +391,7 @@ def _is_code_shaped(token: str) -> bool:
     ):
         return True
     # All-caps constants such as PET or JSONL are code-shaped too.
-    if len(token) > 1 and token.isupper():
+    if len(token) > 1 and token.isupper():  # noqa: SIM103
         return True
     return False
 

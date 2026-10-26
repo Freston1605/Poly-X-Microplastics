@@ -293,12 +293,12 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
         arr = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
         if arr is not None:
             if arr.shape[1] > width_max:
-                height = int(round(arr.shape[0] * width_max / arr.shape[1]))
+                height = int(round(arr.shape[0] * width_max / arr.shape[1]))  # noqa: RUF046
                 arr = cv2.resize(arr, (width_max, height), interpolation=cv2.INTER_AREA)
             ok, buf = cv2.imencode(".jpg", arr, [cv2.IMWRITE_JPEG_QUALITY, 88])
             if ok:
                 return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return "data:image/png;base64," + _img_b64(data)
 
@@ -315,7 +315,7 @@ def _team() -> List[tuple]:
         import psutil
 
         rows_2.append((tr("Memoria RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     try:
         import torch
@@ -330,7 +330,7 @@ def _team() -> List[tuple]:
             ]
         else:
             rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return rows_2
 
@@ -347,7 +347,7 @@ def _training_of(weight: Path) -> Optional[Dict]:
         import torch
 
         ck = torch.load(str(weight), map_location="cpu", weights_only=False)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
     args = ck.get("train_args") or {}
     met = ck.get("train_metrics") or {}
@@ -554,7 +554,7 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: List[tuple]) -> s
         return ""
     a = [p[0] for p in pares]
     b = [p[1] for p in pares]
-    max_size = max(max(a), max(b), 1)
+    max_size = max(max(a), max(b), 1)  # noqa: PLW3301
     fig, ax = plt.subplots(figsize=(4.6, 4.2))
     ax.plot([0, max_size], [0, max_size], "--", color="#999", linewidth=1, label="acuerdo exacto")
     ax.scatter(a, b, s=26, alpha=0.75, color=T.DOC.ACCENT, edgecolor="white", linewidth=0.5)
@@ -925,7 +925,7 @@ def _fig_boxplot_groups(
         tick_labels=labels_2,
         patch_artist=True,
         showfliers=True,
-        flierprops=dict(marker="o", markersize=3, alpha=0.35, markeredgewidth=0),
+        flierprops=dict(marker="o", markersize=3, alpha=0.35, markeredgewidth=0),  # noqa: C408
     )
     for patch in bp["boxes"]:
         patch.set_facecolor(T.DOC.ACCENT)
@@ -1211,11 +1211,11 @@ def section_depth(shapes, results_2) -> str:
     # correlation is weak by design, and that is why n is declared.
     paragraphs = []
     for station, rows_2 in sorted(profiles.items()):
-        rows_2 = sorted(rows_2)
+        rows_2 = sorted(rows_2)  # noqa: PLW2901
         x = [f[0] for f in rows_2]
         n_part = [f[1] for f in rows_2]
         med = [f[2] for f in rows_2]
-        with_size = [(a, b) for a, b in zip(x, med) if b == b]  # discards NaN
+        with_size = [(a, b) for a, b in zip(x, med) if b == b]  # discards NaN  # noqa: B905
         parts = [_text_trend(x, n_part, tr("el número de partículas"))]
         if len(with_size) >= 3:
             parts.append(
@@ -1336,7 +1336,7 @@ def _figure_calibration(state) -> str:
         # Line widths proportional to the photo size: a 2 px stroke is
         # invisible in a 4096 image, and a 20 px one covers the edge that
         # is precisely what we want to show.
-        thickness = max(2, int(round(min(vis.shape[:2]) / 500)))
+        thickness = max(2, int(round(min(vis.shape[:2]) / 500)))  # noqa: RUF046
 
         # Fitted circumference + centre.
         cv2.circle(vis, (int(cx), int(cy)), int(r_px), (0, 255, 0), thickness)
@@ -1355,7 +1355,7 @@ def _figure_calibration(state) -> str:
         if not ok:
             return ""
         img64 = base64.b64encode(buf.tobytes()).decode("ascii")
-    except Exception:
+    except Exception:  # noqa: BLE001
         # An illustrative figure cannot bring down the whole report.
         return ""
 
@@ -1424,7 +1424,7 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float], title: str) 
         if not ok:
             return ""
         img = f"<img src='data:image/png;base64,{_img_b64(buf.tobytes())}' style='max-width:100%'>"
-    except Exception:
+    except Exception:  # noqa: BLE001
         # A particle that cannot be cropped cannot bring down the report
         # entirely: the card is illustrative and the tables are already computed.
         return ""
@@ -1474,7 +1474,7 @@ def _record_particle(det, image_path_2, um_por_px: Optional[float], title: str) 
 
 
 def _fig_confusion_matrix(cm: np.ndarray, class_names: List[str]) -> str:
-    labels = list(class_names) + ["background"]
+    labels = list(class_names) + ["background"]  # noqa: RUF005
     fig, ax = plt.subplots(figsize=(5.5, 4.8))
     im = ax.imshow(cm, cmap="Blues")
     ax.set_xticks(range(len(labels)))
@@ -1513,7 +1513,7 @@ def _table_width(
             )
             + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
             + "".join(
-                "<th class='r'>manual</th><th class='r'>modelo</th>" for _ in classes + ["total"]
+                "<th class='r'>manual</th><th class='r'>modelo</th>" for _ in classes + ["total"]  # noqa: RUF005
             )
             + "</tr>"
         )
@@ -1639,7 +1639,7 @@ def _section_count(results_2: Dict[int, list], state, active, classes: List[str]
             palabra = tr("imágenes") if len(items_2) != 1 else tr("imagen")
             rows_t.append(
                 (
-                    f"{_esc(station)} &middot; tramo {_esc(range_value)} "
+                    f"{_esc(station)} &middot; tramo {_esc(range_value)} "  # noqa: ISC004
                     f"<span style='font-size:8.5pt;color:var(--ink3)'>"
                     f"({len(items_2)} {palabra})</span>",
                     man,
@@ -1837,7 +1837,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
     rows = ""
-    for cid, name in zip(cls_ids, cls_names):
+    for cid, name in zip(cls_ids, cls_names):  # noqa: B905
         cm_ = per_class_metrics[cid]
         rows += (
             f"<tr><td>{name}</td>"
@@ -1974,7 +1974,7 @@ def _section_verdict(results_2, state) -> str:
 
             # Verdict: the winner is whoever has the best F1 with class at their best threshold.
             summary.sort(key=lambda x: x[2][3], reverse=True)
-            g_alias, g_act, g_best = summary[0]
+            g_alias, g_act, g_best = summary[0]  # noqa: RUF059
             text_2 = tr(
                 "<p><strong>Mejor desempeño: {alias}</strong>, con F1 {f1} "
                 "al umbral {umbral} (P {p} · R {r}).</p>"
@@ -2428,7 +2428,7 @@ def _section_methods(
         methods_rows.append(
             (
                 tr("Partículas sin polímero asignable"),
-                f"{_res_assignment.no_assignables} / {_res_assignment.total} "
+                f"{_res_assignment.no_assignables} / {_res_assignment.total} "  # noqa: ISC004
                 f"({_res_assignment.percentage_no_assignable:.1f} %)",
             )
         )
@@ -2441,7 +2441,7 @@ def _section_methods(
         import ultralytics
 
         _ul_see = ultralytics.__version__
-    except Exception:
+    except Exception:  # noqa: BLE001
         _ul_see = "—"
     _model_names = _esc(", ".join(s.alias for s in active)) if active else "—"
     methods_for = (
@@ -2795,6 +2795,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
 
         # ── What was set apart for falling on the ring ──
         if n_en_el_aro:
+            from polyx.core.measure.calibration import FRACTION_AREA_USEFUL
             warning_review += (
                 f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
                 f"background:var(--bg_soft)'>"
@@ -3057,7 +3058,7 @@ def _section_records(state, shapes: List[tuple], max_records: int = 12) -> str:
                 from polyx.core.measure.calibration import read_image
 
                 bgr = read_image(path_2)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 bgr = None
             if bgr is None:
                 continue
@@ -3329,7 +3330,7 @@ def _generate_report_impl(
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: F841
     active = state.active_models()
 
     # ── Batch metrics ──

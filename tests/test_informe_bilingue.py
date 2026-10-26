@@ -135,7 +135,7 @@ def _texto_visible(html: str) -> list[str]:
         ("&ntilde;", "ñ"),
     ]:
         h = h.replace(a, b)
-    return [l.strip() for l in h.split("\n") if l.strip()]
+    return [l.strip() for l in h.split("\n") if l.strip()]  # noqa: E741
 
 
 def test_el_informe_en_ingles_no_arrastra_frases_en_español(tmp_path):

@@ -80,11 +80,11 @@ def open_in_system(path_2: str | Path) -> bool:
         return False
     try:
         if IS_WINDOWS:
-            os.startfile(str(path_2))  # type: ignore[attr-defined]
+            os.startfile(str(path_2))  # type: ignore[attr-defined]  # noqa: S606
             return True
         command = ["open"] if IS_MAC else ["xdg-open"]
-        subprocess.Popen(
-            command + [str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        subprocess.Popen(  # noqa: S603
+            command + [str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL  # noqa: RUF005
         )
         return True
     except (OSError, AttributeError, subprocess.SubprocessError):
@@ -112,18 +112,18 @@ def device_available() -> str:
     """
     try:
         import torch
-    except Exception:
+    except Exception:  # noqa: BLE001
         return DEVICE_CPU
     try:
         if torch.cuda.is_available():
             return DEVICE_CUDA
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     try:
         mps = getattr(torch.backends, "mps", None)
         if mps is not None and mps.is_available():
             return DEVICE_MPS
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return DEVICE_CPU
 
@@ -146,7 +146,7 @@ def label_devices() -> str:
 def description_device(device: str) -> str:
     """Short phrase explaining what that device is, for the report."""
     d = (device or "").strip().lower()
-    if d in ("mps",):
+    if d in ("mps",):  # noqa: FURB171
         return "GPU integrada del Mac (Metal Performance Shaders)"
     if d in ("cpu", "-1"):
         return "procesador (CPU)"
@@ -214,8 +214,8 @@ def launch_updater(path_2: str | Path) -> bool:
             # 'start' with an empty title: without that "" the first quoted
             # argument is taken as the window title and the script
             # never gets to run.
-            subprocess.Popen(
-                ["cmd", "/c", "start", "", str(path_2)],
+            subprocess.Popen(  # noqa: S603
+                ["cmd", "/c", "start", "", str(path_2)],  # noqa: S607
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
             return True
@@ -223,13 +223,13 @@ def launch_updater(path_2: str | Path) -> bool:
             # Terminal.app so the user can see the download progress.
             # Running it in the background would leave the application apparently
             # hung for several minutes without saying anything.
-            subprocess.Popen(
-                ["open", "-a", "Terminal", str(path_2)],
+            subprocess.Popen(  # noqa: S603
+                ["open", "-a", "Terminal", str(path_2)],  # noqa: S607
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
             return True
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603
             ["/bin/bash", str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         return True

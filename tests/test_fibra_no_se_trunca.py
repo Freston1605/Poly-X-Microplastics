@@ -54,7 +54,7 @@ def _foto_fibra_con_bultos(largo=120, grosor=9, bulto=7):
     # no en la que me pareceria razonable. La diferencia importa: con un 20%
     # inventado, la unica forma de pasar la prueba era no recortar nada, y de
     # ahi salio la fuga que llego al informe.
-    recorte = int(round(largo * RECORTE_REAL_DEL_DETECTOR))
+    recorte = int(round(largo * RECORTE_REAL_DEL_DETECTOR))  # noqa: RUF046
     caja = (x0 + recorte, y - grosor, x0 + largo - recorte, y + grosor)
     return img, caja, float(largo)
 
@@ -62,11 +62,11 @@ def _foto_fibra_con_bultos(largo=120, grosor=9, bulto=7):
 def test_el_watershed_no_parte_una_fibra_con_dos_zonas_gruesas():
     """La causa del -31% en la fibra real. Cada bulto es un nucleo, y con eso
     el watershed la cortaba por el medio como si fueran dos particulas."""
-    img, caja, _ = _foto_fibra_con_bultos()
+    img, caja, _ = _foto_fibra_con_bultos()  # noqa: RUF059
     # Mascara antes de separar: la componente conexa entera.
     canal = img.max(axis=2)
     entera = (canal > 100).astype(np.uint8) * 255
-    n, etiquetas, stats, _ = cv2.connectedComponentsWithStats(entera, 8)
+    n, etiquetas, stats, _ = cv2.connectedComponentsWithStats(entera, 8)  # noqa: RUF059
     idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
     componente = (etiquetas == idx).astype(np.uint8) * 255
     semilla = (int(np.mean(np.nonzero(componente)[1])), int(np.mean(np.nonzero(componente)[0])))

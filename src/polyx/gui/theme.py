@@ -263,20 +263,20 @@ def animations() -> bool:
 
 
 def set_animations(active: bool) -> None:
-    global _animations
+    global _animations  # noqa: PLW0603
     _animations = bool(active)
     _save()
     for f in _subscribers:
-        try:
+        try:  # noqa: SIM105
             f(_theme)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
 
 def _save() -> None:
-    try:
+    try:  # noqa: SIM105
         _FILE.write_text(json.dumps({"tema": _theme, "animaciones": _animations}), encoding="utf-8")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -604,12 +604,12 @@ def on_background(color: str, t: float = 0.08) -> str:
 # ════════════════════════════════════════════════════════════════════
 def carry() -> str:
     """Resolves the theme once, in precedence order."""
-    global _theme, _animations
+    global _theme, _animations  # noqa: PLW0603
     saved: dict = {}
     try:
         if _FILE.exists():
             saved = json.loads(_FILE.read_text(encoding="utf-8")) or {}
-    except Exception:
+    except Exception:  # noqa: BLE001
         # A corrupt JSON cannot prevent the program from starting: it falls back to
         # the default values and continues.
         saved = {}
@@ -630,7 +630,7 @@ def carry() -> str:
 
 
 def _apply(name_2: str) -> None:
-    global GLOBAL_QSS
+    global GLOBAL_QSS  # noqa: PLW0603
     _post(name_2)
     GLOBAL_QSS = _build_qss()
 
@@ -643,16 +643,16 @@ def set_theme(name_2: str) -> None:
     rebuild (the launcher does) or to wait for the next opening (the
     modules, which are separate processes).
     """
-    global _theme
+    global _theme  # noqa: PLW0603
     if name_2 not in PALETTES:
         return
     _theme = name_2
     _apply(name_2)
     _save()
     for f in _subscribers:
-        try:
+        try:  # noqa: SIM105
             f(name_2)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
 

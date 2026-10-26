@@ -29,7 +29,7 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     parts = [
         "<!DOCTYPE html><html><head><meta charset='utf-8'>",
         "<title>Poly-X run report</title>",
-        "<style>body{font-family:sans-serif;margin:2rem;} table{border-collapse:collapse;} "
+        "<style>body{font-family:sans-serif;margin:2rem;} table{border-collapse:collapse;} "  # noqa: ISC004
         "td,th{border:1px solid #ccc;padding:4px 8px;} img{max-width:320px;}</style>",
         "</head><body>",
     ]
@@ -49,7 +49,7 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
         + "</tr>"
     )
     for r in rows[:500]:
-        parts.append(
+        parts.append(  # noqa: PERF401
             "<tr>" + "".join(f"<td>{html.escape(str(v))}</td>" for v in r.values()) + "</tr>"
         )
     parts.append("</table>")

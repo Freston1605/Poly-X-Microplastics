@@ -31,7 +31,7 @@ def _ensure_standard_output() -> None:
     for name in ("stdout", "stderr"):
         if getattr(_sys, name, None) is None:
             try:
-                destination = open(_os.devnull, "w", encoding="utf-8", errors="replace")
+                destination = open(_os.devnull, "w", encoding="utf-8", errors="replace")  # noqa: SIM115
             except OSError:
                 continue
             setattr(_sys, name, destination)

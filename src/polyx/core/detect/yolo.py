@@ -11,11 +11,6 @@ import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
-    compute_box_size_um,
-    find_gt_for_image,
-    policy_tiling,
-    read_yolo_txt,
-    size_image,
 )
 from polyx.core.provenance.observability import event, logger_for
 
@@ -31,7 +26,7 @@ def _is_oom(e: Exception) -> bool:
 
         if isinstance(e, torch.cuda.OutOfMemoryError):
             return True
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return "out of memory" in str(e).lower()
 
@@ -41,7 +36,7 @@ def _cuda_empty_cache() -> None:
         import torch
 
         torch.cuda.empty_cache()
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
 
@@ -104,7 +99,7 @@ class YoloModel:
             return candidates[-1], dict.fromkeys(candidates, "cpu")
         try:
             import torch
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 1920, {}
         max_ok = 0
         for sz in candidates:
@@ -124,13 +119,13 @@ class YoloModel:
             except torch.cuda.OutOfMemoryError:
                 detail[sz] = "oom"
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 detail[sz] = f"err: {type(e).__name__}"
                 break
             finally:
-                try:
+                try:  # noqa: SIM105
                     torch.cuda.empty_cache()
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
         return (max_ok or 1920), detail
 
@@ -188,7 +183,7 @@ class YoloModel:
         xyxy = r.boxes.xyxy.cpu().numpy()
         confs = r.boxes.conf.cpu().numpy()
         clss = r.boxes.cls.cpu().numpy().astype(int)
-        for (x1, y1, x2, y2), c, cls in zip(xyxy, confs, clss):
+        for (x1, y1, x2, y2), c, cls in zip(xyxy, confs, clss):  # noqa: B905
             out.append(
                 Detection(
                     class_id=int(cls),
@@ -231,7 +226,7 @@ class YoloModel:
             return []
         H, W = img.shape[:2]
         overlap = min(max(overlap, 0.0), 0.9)
-        step = max(1, int(round(tile * (1.0 - overlap))))
+        step = max(1, int(round(tile * (1.0 - overlap))))  # noqa: RUF046
         xs = _tile_starts(W, tile, step)
         ys = _tile_starts(H, tile, step)
 
@@ -265,13 +260,13 @@ class YoloModel:
                 save=False,
                 max_det=self.MAX_DET,
             )
-            for (x0, y0), r in zip(chunk_org, results):
+            for (x0, y0), r in zip(chunk_org, results):  # noqa: B905
                 if r.boxes is None or len(r.boxes) == 0:
                     continue
                 xyxy = r.boxes.xyxy.cpu().numpy()
                 cf = r.boxes.conf.cpu().numpy()
                 cl = r.boxes.cls.cpu().numpy().astype(int)
-                for (a, b, c, d), cc, k in zip(xyxy, cf, cl):
+                for (a, b, c, d), cc, k in zip(xyxy, cf, cl):  # noqa: B905
                     dets.append(
                         Detection(
                             class_id=int(k),
@@ -369,7 +364,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
             if im.getexif().get(274) in (5, 6, 7, 8):
                 width, height = height, width
             return width, height
-    except Exception:
+    except Exception:  # noqa: BLE001
         # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
         # which is already used throughout the rest of the project for that same reason.
         try:
@@ -377,7 +372,7 @@ def size_image(image_path: str | Path) -> Optional[Tuple[int, int]]:
             if img is None:
                 return None
             return int(img.shape[1]), int(img.shape[0])
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
 
@@ -424,7 +419,7 @@ def policy_tiling(
         t = min(candidates_2) if candidates_2 else 1280
     t = max(256, min(t, side))
     overlap = min(max(float(overlap), 0.0), 0.9)
-    step = max(1, int(round(t * (1.0 - overlap))))
+    step = max(1, int(round(t * (1.0 - overlap))))  # noqa: RUF046
     n = len(_tile_starts(int(width), t, step)) * len(_tile_starts(int(height), t, step))
     return {
         "tile": t,
@@ -540,7 +535,7 @@ def read_yolo_txt(
                         y2=y2,
                     )
                 )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     return out
 
@@ -640,9 +635,9 @@ class YoloSegModel(YoloModel):
         if getattr(r, "masks", None) is not None and r.masks is not None:
             try:
                 masks = r.masks.data.cpu().numpy()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 masks = None
-        for idx, ((x1, y1, x2, y2), c, cls) in enumerate(zip(xyxy, confs, clss)):
+        for idx, ((x1, y1, x2, y2), c, cls) in enumerate(zip(xyxy, confs, clss)):  # noqa: B905
             mask = None
             mask_source = "yolo-seg"
             if masks is not None and idx < len(masks):

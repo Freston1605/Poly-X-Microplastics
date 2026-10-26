@@ -197,7 +197,7 @@ class TestOpenTrainerWiring:
         window._launch_module("polyx.gui.trainer")
 
         assert len(avisos) == 1
-        title, msg = avisos[0]
+        title, msg = avisos[0]  # noqa: RUF059
         assert "no se pudo" in msg.lower() or "fall" in msg.lower()
         window.deleteLater()
 
@@ -205,8 +205,8 @@ class TestOpenTrainerWiring:
 # ── Module boundary tests ───────────────────────────────────────────
 # These tests ensure the GUI doesn't import the old core re-export package.
 
-import ast
-import importlib
+import ast  # noqa: E402
+import importlib  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parents[1]
 PAQUETE_GUI = RAIZ / "src" / "polyx" / "gui"
@@ -257,7 +257,7 @@ def _resuelve_relativo(partes: tuple[str, ...], nivel: int, modulo: str | None) 
     total_parts = len(partes)
     if nivel <= total_parts:
         # Within polyx/gui/
-        base = ("polyx", "gui") + partes[:-nivel]
+        base = ("polyx", "gui") + partes[:-nivel]  # noqa: RUF005
     elif nivel == total_parts + 1:
         # Reached polyx/
         base = ("polyx",)
@@ -267,7 +267,7 @@ def _resuelve_relativo(partes: tuple[str, ...], nivel: int, modulo: str | None) 
     else:
         return ""
     if modulo:
-        return ".".join(base + (modulo,))
+        return ".".join(base + (modulo,))  # noqa: RUF005
     return ".".join(base)
 
 
@@ -278,7 +278,7 @@ def _imports_heredados(arbol: ast.AST, partes: list[str]) -> list[str]:
         if isinstance(nodo, ast.Import):
             for alias in nodo.names:
                 if _es_paquete_heredado(alias.name):
-                    encontrados.append(alias.name)
+                    encontrados.append(alias.name)  # noqa: PERF401
         elif isinstance(nodo, ast.ImportFrom):
             if nodo.level:
                 # Relative import - resolve against current package
@@ -345,7 +345,7 @@ def test_fuera_de_gui_no_importa_qt(ruta: Path):
     ]
     # Also check ImportFrom at module level
     for nodo in ast.walk(arbol):
-        if isinstance(nodo, ast.ImportFrom) and not nodo.level:
+        if isinstance(nodo, ast.ImportFrom) and not nodo.level:  # noqa: SIM102
             if nodo.module and nodo.module.split(".", 1)[0] in (
                 "PySide6",
                 "PySide2",

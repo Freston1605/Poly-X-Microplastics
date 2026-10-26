@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         metrics = evaluate(cfg, on_log=on_log)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     out = Path(args.output)
