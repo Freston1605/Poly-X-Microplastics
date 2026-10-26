@@ -20,6 +20,30 @@ It integrates the whole pipeline: **training → labelling → detection → pap
 
 ## 📦 Structure
 
+### The root and its contract
+
+The root deliberately mixes two surfaces with different audiences:
+
+- **End-user surface** (the double-click surface seen right after the ZIP
+  download): `SETUP.bat`, `iniciar_polyx.bat`, `Poly-X.vbs`, `LEEME.txt`,
+  `LEEME_macOS.md`, the updaters (`actualizar.{bat,ps1}`,
+  `actualizar_macOS.command`), the uninstaller and the packagers
+  (`empaquetar_*.bat`, `migrar_instalacion.ps1`). The assumption
+  "they live at the root" is wired in: `polyx.core.platform.name_updater()`
+  plus `polyx.gui.updates` build `ROOT/name_updater()`, `Poly-X.vbs`
+  requires sitting next to `SETUP.bat`, and `empaquetar_para_llevar.bat`
+  builds the offline package from `src\polyx\`, `docs\` and
+  `tools\manual\`. Moving them means updating all of that and the
+  cross-references between the scripts themselves.
+- **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
+  `tools/audit` (UI-translation audit and report fixtures), `tools/manual`
+  (the manual chain), `tools/packaging` (PyInstaller). The compiled manual
+  lives in `docs/manual/` and is NOT versioned (see .gitignore: it is
+  regenerated from `tools/manual`).
+- **Local research work**: `manuscript-workspace/` is not versioned — it is
+  a draft-testing workspace, material of the paper that the README keeps
+  out of the repository on purpose.
+
 ```
 polyx/                    # Código fuente
 ├── __init__.py           # v2.0.0

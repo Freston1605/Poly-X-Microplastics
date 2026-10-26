@@ -124,6 +124,9 @@ Manual_PolyX*.pdf
 docs/manual/*.html
 docs/manual/*.pdf
 
+# Borradores de paper (material del estudio, no del programa).
+manuscript-workspace/
+
 # Hoja de ruta personal, no es material del programa.
 SUGERENCIAS_Y_PROXIMOS_PASOS.md
 # Guias y manuales de terceros (Claude Code, etc.): no son de este proyecto.
