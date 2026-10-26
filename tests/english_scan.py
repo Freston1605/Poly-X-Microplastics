@@ -997,9 +997,7 @@ def _data_keyword_positions(text: str) -> set[tuple[int, int]]:
     return _keyword_positions_after(text, set(OBSERVABILITY_SINKS), skip_definitions=True)
 
 
-def identifier_occurrences(
-    text: str, stems: Iterable[str] | None = None
-) -> list[tuple[int, str]]:
+def identifier_occurrences(text: str, stems: Iterable[str] | None = None) -> list[tuple[int, str]]:
     """Yield ``(line, name)`` for every identifier outside import context.
 
     Module paths, imported symbols and the local bindings of imported module

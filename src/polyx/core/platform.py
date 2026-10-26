@@ -83,7 +83,9 @@ def open_in_system(path_2: str | Path) -> bool:
             return True
         command = ["open"] if IS_MAC else ["xdg-open"]
         subprocess.Popen(  # noqa: S603
-            command + [str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL  # noqa: RUF005
+            [*command, str(path_2)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         return True
     except (OSError, AttributeError, subprocess.SubprocessError):

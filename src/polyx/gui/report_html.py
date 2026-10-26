@@ -1512,7 +1512,8 @@ def _table_width(
             )
             + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
             + "".join(
-                "<th class='r'>manual</th><th class='r'>modelo</th>" for _ in classes + ["total"]  # noqa: RUF005
+                "<th class='r'>manual</th><th class='r'>modelo</th>"
+                for _ in classes + ["total"]  # noqa: RUF005
             )
             + "</tr>"
         )
@@ -2795,6 +2796,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # ── What was set apart for falling on the ring ──
         if n_en_el_aro:
             from polyx.core.measure.calibration import FRACTION_AREA_USEFUL
+
             warning_review += (
                 f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
                 f"background:var(--bg_soft)'>"

@@ -673,7 +673,9 @@ class DatasetPage(TrainerPage):
         names: list[str] = []
         if cls_path.exists():
             names = [
-                l.strip() for l in cls_path.read_text(encoding="utf-8").splitlines() if l.strip()  # noqa: E741
+                line.strip()
+                for line in cls_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
             ]
 
         d = {
