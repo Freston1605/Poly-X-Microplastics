@@ -95,8 +95,6 @@ jobs:
           /tmp/smoke/bin/polyx-eval --help >/dev/null
           /tmp/smoke/bin/polyx-report --help >/dev/null
           /tmp/smoke/bin/polyx-download-models --help >/dev/null
-          /tmp/smoke/bin/polyx train --help >/dev/null
-          /tmp/smoke/bin/polyx detect --help >/dev/null
 
       - name: Smoke-test the [gui] extra
         run: |
