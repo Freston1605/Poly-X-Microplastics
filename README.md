@@ -282,11 +282,11 @@ readers treat it correctly.
 To see what is still untranslated:
 
 ```bat
-.venv\Scripts\python.exe auditar_traduccion.py
+.venv\Scripts\python.exe scripts\audit_translations.py
 ```
 
 It walks the syntax tree of every module looking for `tr()` calls and checks them
-against the dictionary. It must report **0 untranslated**. With `--listar` it
+against the dictionary. It must report **0 untranslated**. With `--list` it
 also prints the strings that are missing.
 
 ## Themes
