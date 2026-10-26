@@ -31,6 +31,13 @@ class GPUInfo:
     # it lacks dedicated VRAM (it shares system RAM) and lacks compute capability,
     # so VRAM-based recommendations are interpreted differently.
     is_mps: bool = False
+    # AMD GPU used through ROCm (HIP). It exposes the same torch.cuda API as
+    # NVIDIA, but the build reports torch.version.hip instead of torch.version.cuda.
+    is_rocm: bool = False
+    backend: str = ""  # "cuda", "rocm", "mps" or "cpu"
+    torch_hip: str = ""  # ROCm/HIP version torch was built with
+    torch_rocm: str = ""  # alias of torch_hip
+    rocm_version: str = ""  # alias of torch_hip
     detail: str = ""
 
     @property
@@ -82,18 +89,63 @@ def _nvidia_smi() -> dict | None:
         return None
 
 
+def _rocm_smi() -> dict | None:
+    """Consults an AMD GPU through rocm-smi, outside of torch."""
+    import json as _json
+    import subprocess
+
+    try:
+        out = subprocess.run(  # noqa: PLW1510
+            ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--json"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if out.returncode != 0 or not out.stdout.strip():
+            return None
+        data = _json.loads(out.stdout)
+        best = None
+        count = 0
+        for key, info in data.items():
+            if not isinstance(info, dict):
+                continue
+            count += 1
+            name = (
+                info.get("Card series") or info.get("Card model") or info.get("Device Name") or key
+            )
+            total_raw = info.get("VRAM Total Memory (B)") or info.get("vram_total") or 0
+            free_raw = info.get("VRAM Total Free Memory (B)") or info.get("vram_free") or 0
+            try:
+                total = float(total_raw) / (1024**3)
+                free = float(free_raw) / (1024**3)
+            except (TypeError, ValueError):
+                total = free = 0.0
+            if best is None or total > best["total_gb"]:
+                best = {
+                    "name": str(name),
+                    "total_gb": total,
+                    "free_gb": free,
+                    "driver": info.get("Driver version") or "",
+                    "n": count,
+                }
+        return best
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def detect_gpu() -> GPUInfo:
     """Identifies the card the training will run on.
 
     With several GPUs the one with the most VRAM is chosen, not 0: on a
     machine with integrated and dedicated graphics, 0 can be the bad one.
     """
-    torch_v = torch_cuda = ""
+    torch_v = torch_cuda = torch_hip = ""
     try:
         import torch
 
         torch_v = torch.__version__
         torch_cuda = getattr(torch.version, "cuda", None) or ""
+        torch_hip = getattr(torch.version, "hip", None) or ""
         if torch.cuda.is_available():
             n = torch.cuda.device_count()
             # Choose the card with the most total VRAM
@@ -108,6 +160,7 @@ def detect_gpu() -> GPUInfo:
             props = torch.cuda.get_device_properties(idx)
             free, total = torch.cuda.mem_get_info(idx)
             smi = _nvidia_smi()
+            is_rocm = bool(torch_hip)
             return GPUInfo(
                 available=True,
                 name=props.name,
@@ -118,6 +171,11 @@ def detect_gpu() -> GPUInfo:
                 capacity=f"{props.major}.{props.minor}",
                 torch_version=torch_v,
                 torch_cuda=torch_cuda,
+                torch_hip=torch_hip,
+                torch_rocm=torch_hip,
+                rocm_version=torch_hip,
+                is_rocm=is_rocm,
+                backend="rocm" if is_rocm else "cuda",
                 driver=(smi or {}).get("driver", ""),
             )
         # ── Apple Silicon Mac: the GPU is used through Metal (MPS) ──
@@ -143,6 +201,7 @@ def detect_gpu() -> GPUInfo:
             return GPUInfo(
                 available=True,
                 is_mps=True,
+                backend="mps",
                 name=f"GPU integrada de Apple ({_pl.machine()})",
                 vram_total_gb=total_gb,
                 vram_free_gb=free_gb,
@@ -157,7 +216,16 @@ def detect_gpu() -> GPUInfo:
             )
     except Exception as e:  # noqa: BLE001
         torch_v = torch_v or "no importable"
-        return GPUInfo(available=False, torch_version=torch_v, detail=f"{type(e).__name__}: {e}")
+        return GPUInfo(
+            available=False,
+            torch_version=torch_v,
+            torch_cuda=torch_cuda,
+            torch_hip=torch_hip,
+            torch_rocm=torch_hip,
+            rocm_version=torch_hip,
+            backend="cpu",
+            detail=f"{type(e).__name__}: {e}",
+        )
 
     # torch does not see CUDA: is the card missing, or was torch built without CUDA?
     smi = _nvidia_smi()
@@ -172,10 +240,37 @@ def detect_gpu() -> GPUInfo:
             n_gpus=smi.get("n", 1),
             torch_version=torch_v,
             torch_cuda=torch_cuda,
+            torch_hip=torch_hip,
+            torch_rocm=torch_hip,
+            rocm_version=torch_hip,
+            backend="cuda",
             detail=(
                 f"nvidia-smi ve la tarjeta (driver {smi['driver']}) pero "
                 f"torch {torch_v} está compilado "
                 f"{'sin CUDA' if not torch_cuda else f'para CUDA {torch_cuda}'}."
+            ),
+        )
+    rsmi = _rocm_smi()
+    if rsmi:
+        return GPUInfo(
+            available=False,
+            gpu_sin_torch=True,
+            name=rsmi["name"],
+            vram_total_gb=rsmi["total_gb"],
+            vram_free_gb=rsmi["free_gb"],
+            driver=rsmi["driver"],
+            n_gpus=rsmi.get("n", 1),
+            torch_version=torch_v,
+            torch_cuda=torch_cuda,
+            torch_hip=torch_hip,
+            torch_rocm=torch_hip,
+            rocm_version=torch_hip,
+            is_rocm=True,
+            backend="rocm",
+            detail=(
+                f"rocm-smi ve la tarjeta (driver {rsmi['driver']}) pero "
+                f"torch {torch_v} está compilado "
+                f"{'sin ROCm' if not torch_hip else f'para ROCm {torch_hip}'}."
             ),
         )
     # On a Mac talking about `NVIDIA GPU` means nothing: there the path is MPS and
@@ -190,6 +285,11 @@ def detect_gpu() -> GPUInfo:
         return GPUInfo(
             available=False,
             torch_version=torch_v,
+            torch_cuda=torch_cuda,
+            torch_hip=torch_hip,
+            torch_rocm=torch_hip,
+            rocm_version=torch_hip,
+            backend="cpu",
             detail=(
                 "Este Mac tiene procesador Intel: no dispone de MPS, que "
                 "requiere Apple Silicon (M1 o posterior). Se entrena y "
@@ -203,7 +303,11 @@ def detect_gpu() -> GPUInfo:
         available=False,
         torch_version=torch_v,
         torch_cuda=torch_cuda,
-        detail="Ni torch ni nvidia-smi encuentran una GPU NVIDIA.",
+        torch_hip=torch_hip,
+        torch_rocm=torch_hip,
+        rocm_version=torch_hip,
+        backend="cpu",
+        detail="Ni torch ni nvidia-smi/rocm-smi encuentran una GPU compatible (CUDA/ROCm).",
     )
 
 

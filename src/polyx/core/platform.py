@@ -95,29 +95,93 @@ def open_in_system(path_2: str | Path) -> bool:
 # ── Compute device ──
 
 DEVICE_CUDA = "0"
+DEVICE_ROCM = "0"
+DEVICE_HIP = "0"
+DEVICE_AMD = "0"
 DEVICE_MPS = "mps"
 DEVICE_CPU = "cpu"
 
 
+def _torch_module():
+    try:
+        import torch
+
+        return torch
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def is_cuda_available() -> bool:
+    """Whether an NVIDIA GPU is usable through CUDA."""
+    torch = _torch_module()
+    if torch is None:
+        return False
+    try:
+        if not torch.cuda.is_available():
+            return False
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        version_obj = getattr(torch, "version", None)
+        return not bool(getattr(version_obj, "hip", None) if version_obj is not None else None)
+    except Exception:  # noqa: BLE001
+        return True
+
+
+def is_rocm_available() -> bool:
+    """Whether an AMD GPU is usable through ROCm (HIP)."""
+    torch = _torch_module()
+    if torch is None:
+        return False
+    try:
+        if not torch.cuda.is_available():
+            return False
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        version_obj = getattr(torch, "version", None)
+        return bool(getattr(version_obj, "hip", None) if version_obj is not None else None)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+cuda_available = is_cuda_available
+rocm_available = is_rocm_available
+hip_available = is_rocm_available
+amd_available = is_rocm_available
+
+
+def accelerator_backend() -> str:
+    """Name of the accelerator that ``device_available`` will pick."""
+    if is_rocm_available():
+        return "rocm"
+    if is_cuda_available():
+        return "cuda"
+    torch = _torch_module()
+    if torch is not None:
+        try:
+            mps = getattr(torch.backends, "mps", None)
+            if mps is not None and mps.is_available():
+                return "mps"
+        except Exception:  # noqa: BLE001, S110
+            pass
+    return "cpu"
+
+
+backend = accelerator_backend
+compute_backend = accelerator_backend
+torch_backend = accelerator_backend
+
+
 def device_available() -> str:
-    """The best device this machine can use: '0', 'mps' or 'cpu'.
-
-    Tested in performance order and NOT cached at module level: a GPU can be
-    taken over by another process between program startup and inference
-    time, and what matters here is the current state.
-
-    ``torch.backends.mps.is_built()`` in addition to ``is_available()``: a
-    torch installed from a generic wheel may come without MPS compiled even
-    though the Mac supports it, and then ``is_available()`` returns False
-    with no explanation why.
-    """
+    """The best device this machine can use: '0', 'mps' or 'cpu'."""
     try:
         import torch
     except Exception:  # noqa: BLE001
         return DEVICE_CPU
     try:
         if torch.cuda.is_available():
-            return DEVICE_CUDA
+            return DEVICE_ROCM if is_rocm_available() else DEVICE_CUDA
     except Exception:  # noqa: BLE001, S110
         pass
     try:
@@ -141,6 +205,8 @@ def label_devices() -> str:
             if architecture_mac() == "Apple Silicon"
             else "Dispositivo (cpu):"
         )
+    if is_rocm_available():
+        return "Dispositivo (0/rocm/cpu):"
     return "Dispositivo (0/cpu):"
 
 
@@ -152,7 +218,13 @@ def description_device(device: str) -> str:
     if d in ("cpu", "-1"):
         return "procesador (CPU)"
     if d.isdigit():
+        if is_rocm_available():
+            return f"GPU AMD #{d} (ROCm)"
         return f"GPU NVIDIA #{d} (CUDA)"
+    if d in ("rocm", "hip", "amd"):
+        return "GPU AMD (ROCm)"
+    if d == "cuda":
+        return "GPU NVIDIA (CUDA)"
     return device or "—"
 
 

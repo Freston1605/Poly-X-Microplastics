@@ -387,7 +387,11 @@ class ParametersPage(TrainerPage):
                 extra.append(f"capacidad {info.capacity}")
             if info.driver:
                 extra.append(f"driver {info.driver}")
-            if info.torch_cuda:
+            if info.is_rocm and (info.torch_hip or info.torch_rocm):
+                extra.append(
+                    f"torch {info.torch_version} / ROCm {info.torch_hip or info.torch_rocm}"
+                )
+            elif info.torch_cuda:
                 extra.append(f"torch {info.torch_version} / CUDA {info.torch_cuda}")
             self.lbl_gpu.setText(
                 f"<b>GPU detectada:</b> {info.name} · "

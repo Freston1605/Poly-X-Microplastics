@@ -40,8 +40,11 @@ class _HwProbeWorker(QThread):
             import torch
 
             d["torch_version"] = torch.__version__
-            d["cuda_build"] = torch.version.cuda
+            d["cuda_build"] = getattr(torch.version, "cuda", None)
+            d["hip_build"] = getattr(torch.version, "hip", None)
+            d["rocm_build"] = d["hip_build"]
             d["cuda_available"] = bool(torch.cuda.is_available())
+            d["is_rocm"] = bool(d["hip_build"]) and d["cuda_available"]
             if d["cuda_available"]:
                 d["device_name"] = torch.cuda.get_device_name(0)
                 free, total = torch.cuda.mem_get_info(0)
@@ -309,7 +312,8 @@ class TrainPage(TrainerPage):
                 f"<b style='color:{T.OK_TX};'>● ENTRENARÁ EN GPU</b> &nbsp; · &nbsp; "
                 f"<b>{d.get('device_name', '?')}</b> &nbsp; · &nbsp; "
                 f"VRAM libre {d.get('vram_free_gb', 0):.1f} / {d.get('vram_total_gb', 0):.1f} GB "
-                f"&nbsp; · &nbsp; torch {d.get('torch_version', '?')} (CUDA {d.get('cuda_build', '?')})"
+                f"&nbsp; · &nbsp; torch {d.get('torch_version', '?')} "
+                f"({'ROCm' if d.get('is_rocm') else 'CUDA'} {d.get('hip_build') if d.get('is_rocm') else d.get('cuda_build', '?')})"
             )
         elif "error" in d:
             self.lbl_hw.setText(
@@ -318,10 +322,16 @@ class TrainPage(TrainerPage):
         else:
             tv = d.get("torch_version", "?")
             cb = d.get("cuda_build")
-            if cb is None:
+            hb = d.get("hip_build")
+            if cb is None and hb is None:
                 msg = (
-                    f"PyTorch {tv} fue instalado <b>SIN CUDA</b> — entrenará en CPU "
+                    f"PyTorch {tv} fue instalado <b>SIN CUDA/ROCm</b> — entrenará en CPU "
                     f"(muy lento). Reinstala con SETUP.bat detectando GPU."
+                )
+            elif hb is not None and cb is None:
+                msg = (
+                    f"PyTorch {tv} con ROCm {hb} pero <code>torch.cuda.is_available()</code> "
+                    f"= False — revisa drivers AMD / reinicia el equipo."
                 )
             else:
                 msg = (
