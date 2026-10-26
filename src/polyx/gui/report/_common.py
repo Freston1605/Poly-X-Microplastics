@@ -36,9 +36,11 @@ from polyx.core.i18n import language, tr
 from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 
+from polyx.core import report_metrics as _core_report_metrics
 from polyx.core import stats as _core_stats
 from polyx.gui import theme as T
 
+globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
 
 # ────────────────────────────────────────────────────────────────────
@@ -47,7 +49,6 @@ globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith
 REPORT_CSS = Path(__file__).with_name("report.css").read_text(encoding="utf-8")
 
 
-_ORDER_CLASSES = ["PET", "PP", "LDPE"]
 
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
 # the second and third plate of the same stretch. Crops add `__f<row>c<col>`.
@@ -55,35 +56,6 @@ _RE_PLATE = re.compile(r"^(\d+)\.(\d+)(x*)$")
 _STATION = {"1": "Chiu Chiu", "2": "Taira", "3": "Desembocadura"}
 _ORDER_STATION = ["Chiu Chiu", "Taira", "Desembocadura"]
 _PLATE = {"": "a", "x": "b", "xx": "c"}
-
-
-def _count_per_class(detections) -> Counter:
-    """Particles by reported polymer.
-
-    Uses the *reported* class, not plain ``class_name``: under active
-    abstention, a particle whose confidence does not support the polymer
-    counts under `«no asignable»`. It is still a detected particle — just no
-    polymer is attributed to it.
-    """
-    c = Counter()
-    for d in detections:
-        c[class_id_reported(d)] += 1
-    return c
-
-
-def _classes_views(results_planes) -> list[str]:
-    """Classes present in the batch, in presentation order.
-
-    Taken from the detections **and** from the Ground Truth: a polymer the
-    model never detects would still be a table row, with a zero, which is
-    exactly the figure worth looking at.
-    """
-    views = {class_id_reported(d) for r in results_planes for d in list(r.predictions) + list(r.gt)}
-    order = [c for c in _ORDER_CLASSES if c in views]
-    # `«no asignable»` goes at the end and not alphabetically among the polymers: it is not
-    # a polymer, it is the absence of one.
-    rest = sorted(views - set(order) - {NO_ASSIGNABLE})
-    return order + rest + ([NO_ASSIGNABLE] if NO_ASSIGNABLE in views else [])
 
 
 def _sample_of(path_2) -> tuple | None:
@@ -680,13 +652,6 @@ NUM = "@@N@@"
 # against the frozen baseline (tests/fixtures/baseline_informe/) is the slice
 # contract: changing a literal, a tr(), an _esc or the order of computation breaks
 # tests/test_render_reporte_benigno.py.
-
-
-def _pr_f1(tp: int, fp: int, fn: int):
-    """Precision, recall and F1 from the tp/fp/fn counters."""
-    p = tp / (tp + fp) if (tp + fp) else 0.0
-    r = tp / (tp + fn) if (tp + fn) else 0.0
-    return p, r, (2 * p * r / (p + r) if (p + r) else 0.0)
 
 
 def _lot_forms(state, all_results):
