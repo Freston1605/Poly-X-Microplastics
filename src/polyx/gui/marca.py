@@ -36,11 +36,9 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPixmap
 
 from . import iconos
+from polyx.core import paths as _paths
 from polyx.core import platform
 from polyx.core.i18n import tr
-
-#: Project root (…/Microplasticos), two levels above `polyx/gui`.
-_ROOT = Path(__file__).resolve().parents[3]
 
 #: AppUserModelID prefix. The format Windows requires is
 #: Company.Product.SubProduct.Version; what matters is that it is stable
@@ -158,10 +156,9 @@ def icon_module(module: str) -> QIcon:
     # The launcher uses the usual .ico, which is the Desktop shortcut's:
     # that way the pinned icon and the window icon are the same drawing.
     if cfg["icono"] is None:
-        for path_2 in (_ROOT / "assets" / "polyx.ico",
-                     _ROOT / "polyx" / "assets" / "polyx.ico"):
-            if path_2.exists():
-                return QIcon(str(path_2))
+        ico = _paths.ASSETS_DIR / "polyx.ico"
+        if ico.exists():
+            return QIcon(str(ico))
 
     ic = QIcon()
     for tam in _SIZES:

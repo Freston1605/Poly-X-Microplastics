@@ -13,7 +13,9 @@ from polyx.core.platform import user_data_dir
 
 # src/polyx/core/paths.py -> parents[0]=core, [1]=polyx, [2]=src, [3]=project root
 ROOT = Path(__file__).resolve().parents[3]
-ASSETS_DIR = ROOT / "assets"
+# Bundled, read-only assets ship inside the package (src/polyx/assets) so
+# they travel with the wheel; the repo-root assets/ directory is gone.
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 
 USER_DATA_DIR = user_data_dir()
 MODELS_DIR = USER_DATA_DIR / "models"
@@ -37,5 +39,5 @@ def discover_default_model() -> Optional[Path]:
     return None
 
 def ensure_dirs():
-    for d in (MODELS_DIR, RUNS_DIR, DATA_DIR, ASSETS_DIR):
+    for d in (MODELS_DIR, RUNS_DIR, DATA_DIR):
         d.mkdir(parents=True, exist_ok=True)
