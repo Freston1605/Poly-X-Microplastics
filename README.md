@@ -4,7 +4,7 @@
 > by Nile Red fluorescence under UV light (254 nm), using YOLO v8/v11 models.**
 
 **Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV · 2026
-**Version:** 2.0.0 · **Windows 10/11 and macOS** · Python 3.11
+**Version:** 2.0.0 · **Windows 10/11, macOS and Linux (Ubuntu tested in CI)** · Python 3.11
 
 ---
 
@@ -22,13 +22,14 @@ Requires **Python 3.11**. The headless engines and report generation work
 without Qt; the GUI needs PySide6, which the `[gui]` extra pulls in. Model
 weights are not bundled (~50 MB) and are fetched by `polyx-download-models`.
 
-### From source (desktop app, Windows/macOS)
+### From source (desktop app, Windows/macOS/Linux)
 
-Download the repository, then run `install/SETUP.bat` (Windows) or
-`install/Lanzar_macOS.command` (macOS). They create the virtual environment,
-install the pinned stack and, on Windows, offer a Desktop shortcut. Full
-step-by-step instructions (with photographs) are in
-`docs/manual/Manual_PolyX.html`.
+Download the repository, then run `install/SETUP.bat` (Windows),
+`install/Lanzar_macOS.command` (macOS) or `bash install/setup.sh` (Linux).
+They create the virtual environment, install the pinned stack and, on
+Windows/macOS, offer a Desktop shortcut (Linux drops a `polyx.desktop`
+entry in `~/.local/share/applications`). Full step-by-step instructions
+(with photographs) are in `docs/manual/Manual_PolyX.html`.
 
 ### Development (uv)
 
