@@ -79,3 +79,24 @@ path = "src/polyx/__init__.py"
 # to a newer, untested torch. The CPU wheels come from the default index;
 # GPU dev setups override with the CUDA wheel via SETUP.bat / uv pip.
 constraint-dependencies = ["torch==2.7.1", "torchvision==0.22.1"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "S", "SIM", "RUF", "PLW", "PERF", "ISC", "I", "C4", "FURB"]
+ignore = [
+    "E501",        # line length — handled by ruff format (phase B)
+    "E701", "E702", # multiple statements on one line (legacy style)
+    "UP006", "UP035", "UP037", "UP045",  # type modernisation (phase C)
+    "RUF001", "RUF002", "RUF003",  # ambiguous unicode (intentional: ×, –, ñ)
+    "S101",        # assert is fine in tests and invariants
+    "RUF012",      # mutable class defaults (common in dataclasses/config)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/polyx/gui/theme.py" = ["F821"]
+"tests/*" = ["S101", "S105", "S106", "S107", "PLR2004", "S603", "S102", "S310", "S110", "S607", "S606", "S112", "S311", "S608"]
+"tools/*" = ["S101", "T201", "S603", "S105"]
