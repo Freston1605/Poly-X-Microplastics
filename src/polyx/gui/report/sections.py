@@ -1294,6 +1294,79 @@ def _shape_method_text(curves: int, pct_curves: str) -> str:
 
 {tr("<p><em>Limitaciones conocidas.</em> Dos partículas solapadas más allá de un 40&nbsp;% de su diámetro se siguen midiendo como una sola: a esa altura ya no hay un cuello por el que cortar. Y en una fibra muy enroscada el camino geodésico ataja por el interior de cada codo, subestimando la longitud hasta un 19&nbsp;% en el caso más cerrado que se ensayó.</p>")}"""
 
+def _shape_with_size(state, shapes, with_size) -> tuple:
+    """Size tables, records and folder aggregation for measured particles."""
+    lengths = np.array([d.length_um for d, _ in with_size], dtype=float)
+    elderly, path_elderly = max(with_size, key=lambda t: t[0].length_um)
+    minor_2, path_minor = min(with_size, key=lambda t: t[0].length_um)
+
+    def _num(v, dec=0):
+        return f"{v:.{dec}f}" if v else "—"
+
+    def _row(label_3, d, path_2):
+        return (
+            f"<tr><td><strong>{label_3}</strong></td><td>{_esc(d.class_name)}</td>"
+            f"<td>{_num(d.length_um)}</td><td>{_num(d.width_um)}</td>"
+            f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspect, 1)}</td>"
+            f"<td>{_num(d.curvature, 2)}</td><td>{_morphotype(d.morphotype)}</td>"
+            f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>"
+        )
+
+    lengths = np.array([d.length_um for d, _ in with_size], dtype=float)
+    elderly, path_elderly = max(with_size, key=lambda t: t[0].length_um)
+    minor_2, path_minor = min(with_size, key=lambda t: t[0].length_um)
+
+    def _num(v, dec=0):
+        """Cell with the value, or a dash when that magnitude was not measured."""
+        return f"{v:.{dec}f}" if v else "—"
+
+    def _row(label_3, d, path_2):
+        return (
+            f"<tr><td><strong>{label_3}</strong></td><td>{_esc(d.class_name)}</td>"
+            f"<td>{_num(d.length_um)}</td><td>{_num(d.width_um)}</td>"
+            f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspect, 1)}</td>"
+            f"<td>{_num(d.curvature, 2)}</td><td>{_morphotype(d.morphotype)}</td>"
+            f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>"
+        )
+
+    tables = _extremes_and_distribution(
+        elderly, path_elderly, minor_2, path_minor, lengths, _num, _row
+    )
+
+    # ── Sizes by stretch, stacked by class ──
+    per_class_2: dict[str, list[float]] = {}
+    for d, _path in with_size:
+        per_class_2.setdefault(d.class_name, []).append(d.length_um)
+    tables += _size_stacked_figure(per_class_2)
+
+    # ── Table by class, with its largest ──
+    tables += _per_class_size_table(per_class_2, with_size)
+
+    # The example card is drawn further below, AFTER explaining the
+    # method: showing the crop with a yellow line on top before
+    # saying that this line is the Feret diameter explains nothing.
+    cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
+    um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
+    record_elderly = (elderly, path_elderly, um_elderly)
+
+    # The smallest one is shown too, not only tabulated: a minimum size
+    # without a photo cannot be distinguished from noise, or the shape card
+    # and a reader has no way to check that there really is a
+    # particle there and not a background speck that was badly segmented.
+    cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
+    um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
+    record_minor = (minor_2, path_minor, um_minor)
+    by_html_folder = _size_per_folder(with_size)
+    cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
+    um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
+    record_elderly = (elderly, path_elderly, um_elderly)
+    cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
+    um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
+    record_minor = (minor_2, path_minor, um_minor)
+    by_html_folder = _size_per_folder(with_size)
+    return tables, record_elderly, record_minor, by_html_folder
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1343,51 +1416,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         table_morphotype = _morphotype_table(shapes, warning_review)
 
         if with_size:
-            lengths = np.array([d.length_um for d, _ in with_size], dtype=float)
-            elderly, path_elderly = max(with_size, key=lambda t: t[0].length_um)
-            minor_2, path_minor = min(with_size, key=lambda t: t[0].length_um)
-
-            def _num(v, dec=0):
-                """Cell with the value, or a dash when that magnitude was not measured."""
-                return f"{v:.{dec}f}" if v else "—"
-
-            def _row(label_3, d, path_2):
-                return (
-                    f"<tr><td><strong>{label_3}</strong></td><td>{_esc(d.class_name)}</td>"
-                    f"<td>{_num(d.length_um)}</td><td>{_num(d.width_um)}</td>"
-                    f"<td>{_num(d.area_um2)}</td><td>{_num(d.aspect, 1)}</td>"
-                    f"<td>{_num(d.curvature, 2)}</td><td>{_morphotype(d.morphotype)}</td>"
-                    f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>"
-                )
-
-            tables = _extremes_and_distribution(
-                elderly, path_elderly, minor_2, path_minor, lengths, _num, _row
-            )
-
-            # ── Sizes by stretch, stacked by class ──
-            per_class_2: dict[str, list[float]] = {}
-            for d, _path in with_size:
-                per_class_2.setdefault(d.class_name, []).append(d.length_um)
-            tables += _size_stacked_figure(per_class_2)
-
-            # ── Table by class, with its largest ──
-            tables += _per_class_size_table(per_class_2, with_size)
-
-            # The example card is drawn further below, AFTER explaining the
-            # method: showing the crop with a yellow line on top before
-            # saying that this line is the Feret diameter explains nothing.
-            cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
-            um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
-            record_elderly = (elderly, path_elderly, um_elderly)
-
-            # The smallest one is shown too, not only tabulated: a minimum size
-            # without a photo cannot be distinguished from noise, or the shape card
-            # and a reader has no way to check that there really is a
-            # particle there and not a background speck that was badly segmented.
-            cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
-            um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
-            record_minor = (minor_2, path_minor, um_minor)
-            by_html_folder = _size_per_folder(with_size)
+            tables, record_elderly, record_minor, by_html_folder = _shape_with_size(state, shapes, with_size)
 
         # ── Fibre/fragment count per photo ──
         # It goes inside the forma section: it answers `how many fibres and how many
