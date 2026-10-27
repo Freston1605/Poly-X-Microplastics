@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 import cv2
+from polyx.core.image_io import read_image
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 
@@ -189,7 +190,7 @@ class DetectorRunner(QThread):
                     return
 
                 # Load the image once for GT/annotation
-                img_bgr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+                img_bgr = read_image(img_path)
                 if img_bgr is None:
                     obs.event(_log, "image.undecodable", level=logging.WARNING, file=str(img_path))
                     done += len(slots)

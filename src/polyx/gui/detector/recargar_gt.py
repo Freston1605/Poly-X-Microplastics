@@ -15,6 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
+from polyx.core.image_io import read_image
 import numpy as np
 
 from polyx.core.detect.yolo import (
@@ -119,7 +120,7 @@ def reload_gt(state, progress=None) -> dict:
             continue
         summary["cambiadas"].append(path_2.name)
 
-        img_bgr = cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8), cv2.IMREAD_COLOR)
+        img_bgr = read_image(path_2)
         if img_bgr is None:
             continue
 

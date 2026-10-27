@@ -844,6 +844,43 @@ def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[
     return figures_html
 
 
+def _methods_paragraph(p, active, model_names: str, ul_version: str, total_imgs: int, total_dets: int, any_gt: bool) -> str:
+    """Redacted methods paragraph ready to copy into the manuscript."""
+    return (
+        "<p><strong>" + tr("Resumen de la configuración empleada:") + "</strong></p>"
+        "<blockquote style='border-left:3px solid var(--accent); margin:8px 0; "
+        "padding:6px 14px; color:#424a53; background:#f6f8fa; border-radius:0 6px 6px 0;'>"
+        + tr(
+            "La detección automatizada se realizó con el modelo YOLO «{modelos}» "
+            "(Ultralytics {ul}) a una resolución de entrada de {imgsz} px, umbral de "
+            "confianza {conf} y supresión de no-máximos con IoU {iou}. "
+        ).format(
+            modelos=model_names,
+            ul=ul_version,
+            imgsz=p.imgsz,
+            conf=f"{p.conf:g}",
+            iou=f"{p.iou_nms:g}",
+        )
+        + (
+            tr(
+                "Las métricas de error se calcularon contra anotación manual "
+                "independiente, emparejando predicciones y etiquetas con IoU ≥ {iou}. "
+            ).format(iou=f"{p.iou_tp:g}")
+            if any_gt
+            else ""
+        )
+        + (
+            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=f"{p.um_per_px:g}")
+            if p.um_per_px > 0
+            else ""
+        )
+        + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones.").format(
+            imgs=total_imgs, dets=total_dets
+        )
+        + "</blockquote>"
+    )
+
+
 def _section_methods(
     state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
 ) -> tuple:
@@ -925,38 +962,8 @@ def _section_methods(
     except Exception:  # noqa: BLE001
         _ul_see = "—"
     _model_names = _esc(", ".join(s.alias for s in active)) if active else "—"
-    methods_for = (
-        "<p><strong>" + tr("Resumen de la configuración empleada:") + "</strong></p>"
-        "<blockquote style='border-left:3px solid var(--accent); margin:8px 0; "
-        "padding:6px 14px; color:#424a53; background:#f6f8fa; border-radius:0 6px 6px 0;'>"
-        + tr(
-            "La detección automatizada se realizó con el modelo YOLO «{modelos}» "
-            "(Ultralytics {ul}) a una resolución de entrada de {imgsz} px, umbral de "
-            "confianza {conf} y supresión de no-máximos con IoU {iou}. "
-        ).format(
-            modelos=_model_names,
-            ul=_ul_see,
-            imgsz=p.imgsz,
-            conf=f"{p.conf:g}",
-            iou=f"{p.iou_nms:g}",
-        )
-        + (
-            tr(
-                "Las métricas de error se calcularon contra anotación manual "
-                "independiente, emparejando predicciones y etiquetas con IoU ≥ {iou}. "
-            ).format(iou=f"{p.iou_tp:g}")
-            if any_gt
-            else ""
-        )
-        + (
-            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=f"{p.um_per_px:g}")
-            if p.um_per_px > 0
-            else ""
-        )
-        + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones.").format(
-            imgs=total_imgs, dets=total_dets
-        )
-        + "</blockquote>"
+    methods_for = _methods_paragraph(
+        p, active, _model_names, _ul_see, total_imgs, total_dets, any_gt
     )
     return methods_html, team_html, methods_for
 

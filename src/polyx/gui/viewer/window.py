@@ -764,8 +764,9 @@ class ViewerWindow(QMainWindow):
             import numpy as np
 
             from polyx.core.detect.yolo import read_yolo_txt
+            from polyx.core.image_io import read_image
 
-            bgr = cv2.imdecode(np.fromfile(str(img), dtype=np.uint8), cv2.IMREAD_COLOR)
+            bgr = read_image(img)
 
             if bgr is None:
                 raise OSError("no se pudo leer la imagen")
@@ -830,8 +831,9 @@ class ViewerWindow(QMainWindow):
         import numpy as np
 
         from polyx.core.detect.yolo import Detection
+        from polyx.core.image_io import read_image
 
-        arr = cv2.imdecode(np.fromfile(str(img), dtype=np.uint8), cv2.IMREAD_COLOR)
+        arr = read_image(img)
 
         if arr is None:
             QMessageBox.warning(self, tr("Error"), tr("No se pudo leer la imagen."))
@@ -1274,11 +1276,13 @@ class ViewerWindow(QMainWindow):
         import cv2
         import numpy as np
 
+        from polyx.core.image_io import read_image
+
         # imdecode and not imread: on Windows imread fails with paths that contain
 
         # accents or non-ASCII characters, and returns None without warning.
 
-        frame = cv2.imdecode(np.fromfile(str(img), dtype=np.uint8), cv2.IMREAD_COLOR)
+        frame = read_image(img)
 
         if frame is None:
             return
