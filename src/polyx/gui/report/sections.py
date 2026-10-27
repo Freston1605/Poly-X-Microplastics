@@ -94,6 +94,78 @@ def _per_image_rows(rs) -> list:
     return rows_img
 
 
+def _grouped_count_tables(parseable, grouped, classes, there_is_a_manual):
+    """Grouped count tables (by depth and by station) plus the grouping note."""
+    per_section: dict[tuple, list] = {}
+    per_station: dict[str, list] = {}
+    for r, (station, range_value, _plate) in parseable:
+        per_section.setdefault((station, range_value), []).append(r)
+        per_station.setdefault(station, []).append(r)
+
+    def _add(items_2):
+        man, det = Counter(), Counter()
+        for r in items_2:
+            if r.has_gt:
+                man.update(_count_per_class(r.gt))
+            det.update(_count_per_class(r.predictions))
+        return man, det
+
+    def _order_est(e):
+        return _ORDER_STATION.index(e) if e in _ORDER_STATION else 99
+
+    rows_t = []
+    for clue in sorted(per_section, key=lambda k: (_order_est(k[0]), k[1])):
+        station, range_value = clue
+        items_2 = per_section[clue]
+        man, det = _add(items_2)
+        palabra = tr("imágenes") if len(items_2) != 1 else tr("imagen")
+        rows_t.append(
+            (
+                f"{_esc(station)} &middot; tramo {_esc(range_value)} "  # noqa: ISC004
+                f"<span style='font-size:8.5pt;color:var(--ink3)'>"
+                f"({len(items_2)} {palabra})</span>",
+                man,
+                det,
+            )
+        )
+    table_range = (
+        "<h3>@@N@@.2 "
+        + tr("Por tramo de profundidad")
+        + "</h3>"
+        + tr(
+            "<p>Las placas del mismo tramo se <strong>suman</strong>: son "
+            "submuestras de la misma masa de sedimento, no repeticiones "
+            "fotográficas. El tramo es la unidad de análisis.</p>"
+        )
+        + _table_width(rows_t, classes, tr("Tramo"), there_is_a_manual)
+    )
+
+    rows_e = []
+    for station in sorted(per_station, key=_order_est):
+        man, det = _add(per_station[station])
+        rows_e.append((_esc(station), man, det))
+    table_station = (
+        "<h3>@@N@@.3 "
+        + tr("Por estación")
+        + "</h3>"
+        + _table_width(rows_e, classes, tr("Estación"), there_is_a_manual, totals=False)
+    )
+
+    outside = len(grouped) - len(parseable)
+    note_grouping = ""
+    if outside:
+        note_grouping = (
+            "<p class='caption'>"
+            + tr(
+                "{n} imagen(es) no siguen la nomenclatura <code>tramo.testigo</code> y "
+                "quedan fuera de las tablas agrupadas; sí están en la tabla por "
+                "imagen."
+            ).format(n=outside)
+            + "</p>"
+        )
+    return table_range, table_station, note_grouping
+
+
 def _section_count(results_2: dict[int, list], state, active, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
@@ -127,72 +199,9 @@ def _section_count(results_2: dict[int, list], state, active, classes: list[str]
     table_range = table_station = ""
     note_grouping = ""
     if parseable:
-        per_section: dict[tuple, list] = {}
-        per_station: dict[str, list] = {}
-        for r, (station, range_value, _plate) in parseable:
-            per_section.setdefault((station, range_value), []).append(r)
-            per_station.setdefault(station, []).append(r)
-
-        def _add(items_2):
-            man, det = Counter(), Counter()
-            for r in items_2:
-                if r.has_gt:
-                    man.update(_count_per_class(r.gt))
-                det.update(_count_per_class(r.predictions))
-            return man, det
-
-        def _order_est(e):
-            return _ORDER_STATION.index(e) if e in _ORDER_STATION else 99
-
-        rows_t = []
-        for clue in sorted(per_section, key=lambda k: (_order_est(k[0]), k[1])):
-            station, range_value = clue
-            items_2 = per_section[clue]
-            man, det = _add(items_2)
-            palabra = tr("imágenes") if len(items_2) != 1 else tr("imagen")
-            rows_t.append(
-                (
-                    f"{_esc(station)} &middot; tramo {_esc(range_value)} "  # noqa: ISC004
-                    f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                    f"({len(items_2)} {palabra})</span>",
-                    man,
-                    det,
-                )
-            )
-        table_range = (
-            "<h3>@@N@@.2 "
-            + tr("Por tramo de profundidad")
-            + "</h3>"
-            + tr(
-                "<p>Las placas del mismo tramo se <strong>suman</strong>: son "
-                "submuestras de la misma masa de sedimento, no repeticiones "
-                "fotográficas. El tramo es la unidad de análisis.</p>"
-            )
-            + _table_width(rows_t, classes, tr("Tramo"), there_is_a_manual)
+        table_range, table_station, note_grouping = _grouped_count_tables(
+            parseable, grouped, classes, there_is_a_manual
         )
-
-        rows_e = []
-        for station in sorted(per_station, key=_order_est):
-            man, det = _add(per_station[station])
-            rows_e.append((_esc(station), man, det))
-        table_station = (
-            "<h3>@@N@@.3 "
-            + tr("Por estación")
-            + "</h3>"
-            + _table_width(rows_e, classes, tr("Estación"), there_is_a_manual, totals=False)
-        )
-
-        outside = len(grouped) - len(parseable)
-        if outside:
-            note_grouping = (
-                "<p class='caption'>"
-                + tr(
-                    "{n} imagen(es) no siguen la nomenclatura <code>tramo.testigo</code> y "
-                    "quedan fuera de las tablas agrupadas; sí están en la tabla por "
-                    "imagen."
-                ).format(n=outside)
-                + "</p>"
-            )
 
     tagline = tr(", el primer modelo activo.") if len(active) > 1 else "."
     intro = (
