@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from .morphology_constants import *
 from .segmentation import segment, box_margin
 from .shape import measure, extremes_feret
 from .geodesic import path_geodesic

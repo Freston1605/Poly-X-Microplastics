@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from .morphology_constants import *
+from . import morphology_constants as C
 
 
 def box_margin(box_width: float, box_height: float) -> int:
@@ -109,14 +109,14 @@ def separate_glued(mask: np.ndarray, seed) -> np.ndarray:
     # one -- is already covered by `medir_deteccion()`, which flags for review any
     # particle longer than 1.5 times the diagonal of its box. Between underestimating
     # silently and overestimating with a warning, warning is the right choice.
-    if _elongation(mask) >= ELONGATION_ELONGATED:
+    if _elongation(mask) >= C.ELONGATION_ELONGATED:
         return mask
 
     dt = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
     if dt.max() < 2:
         return mask
 
-    _, cores = cv2.threshold(dt, THRESHOLD_CORE * dt.max(), 255, cv2.THRESH_BINARY)
+    _, cores = cv2.threshold(dt, C.THRESHOLD_CORE * dt.max(), 255, cv2.THRESH_BINARY)
     cores = cores.astype(np.uint8)
     n, marks = cv2.connectedComponents(cores)
     if n <= 2:  # background + one core: isolated particle
@@ -169,7 +169,7 @@ def _contrast_threshold(canal, x1, y1, x2, y2, ox, oy):
         return None, False
     background = float(np.median(canal[ring]))
     peak = float(np.percentile(inside_box, 90))
-    if peak - background < CONTRAST_MINIMUM:
+    if peak - background < C.CONTRAST_MINIMUM:
         # WITHOUT CONTRAST A SIZE IS NOT INVENTED. Returning None makes the
         # report say the particle could not be separated from the background.
         return None, True
@@ -319,10 +319,10 @@ def segment(
     # It is the case that motivated this crop and from which 8.9 mm sizes came.
     if record is not None:
         record["largo_sin_recortar_px"] = feret_maximum(_contour_elderly(mask))
-    if _elongation(mask) < ELONGATION_ELONGATED:
-        slack = max(2, int(round(SLACK_COMPACT * min(box_width, box_height))))  # noqa: RUF046
+    if _elongation(mask) < C.ELONGATION_ELONGATED:
+        slack = max(2, int(round(C.SLACK_COMPACT * min(box_width, box_height))))  # noqa: RUF046
     else:
-        slack = max(2, int(round(SLACK_ELONGATED * max(box_width, box_height))))  # noqa: RUF046
+        slack = max(2, int(round(C.SLACK_ELONGATED * max(box_width, box_height))))  # noqa: RUF046
     hx1 = max(0, int(x1) - ox - slack)
     hy1 = max(0, int(y1) - oy - slack)
     hx2 = min(mask.shape[1], int(np.ceil(x2)) - ox + slack)

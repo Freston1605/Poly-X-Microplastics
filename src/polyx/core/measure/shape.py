@@ -3,7 +3,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 from dataclasses import dataclass
-from .morphology_constants import *
+from . import morphology_constants as C
 from .geodesic import length_geodesic, path_geodesic
 from .segmentation import segment, box_margin, _cutout, feret_maximum
 
@@ -38,7 +38,7 @@ class Morphology:
     curvature: float = 1.0  # length / chord; 1.0 = straight
     filling: float = 0.0  # particle area / its box area
     solidity: float = 1.0  # area / its convex hull area
-    morphotype: str = INDETERMINATE
+    morphotype: C.Morphotype = C.Morphotype.INDETERMINATE
     method: str = ""  # where the length came from
     # What fraction of the Feret line falls OUTSIDE the particle. It is only
     # filled in by `dibujar_medicion()`, which is what draws it. On a concave
@@ -53,7 +53,7 @@ class Morphology:
 
     @property
     def curve(self) -> bool:
-        return self.curvature >= CURVE_FROM
+        return self.curvature >= C.CURVE_FROM
 
 
 
@@ -77,9 +77,9 @@ def _choose_length(feret, geo, thinness, solidity):
     The geodesic only wins on a thin, non-convex particle; otherwise the
     Feret (the tighter bound) is reported.
     """
-    if thinness >= THINNESS_FOR_GEODESIC and solidity < SOLIDITY_CONVEX and geo >= feret:
-        return geo, Method.GEODESIC
-    return feret, Method.FERET
+    if thinness >= C.THINNESS_FOR_GEODESIC and solidity < C.SOLIDITY_CONVEX and geo >= feret:
+        return geo, C.Method.GEODESIC
+    return feret, C.Method.FERET
 
 
 def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
@@ -181,7 +181,7 @@ def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     m.filling = area / (rw * rh) if rw * rh > 0 else 0.0
     m.solidity = solidity
     m.method = method
-    m.morphotype = FIBER if m.aspect >= ASPECT_FIBER else FRAGMENT
+    m.morphotype = C.Morphotype.FIBER if m.aspect >= C.ASPECT_FIBER else C.Morphotype.FRAGMENT
 
     if um_por_px and um_por_px > 0:
         m.area_um2 = area * um_por_px * um_por_px
@@ -243,7 +243,7 @@ def measure_detection(
         # something that was not this particle, and what is reported is the piece that
         # stayed inside the box, not the whole particle.
         previous = float(record.get("largo_sin_recortar_px", 0.0) or 0.0)
-        if m.ok and diagonal > 0 and previous > DRAIN_X_DIAGONAL * diagonal:
+        if m.ok and diagonal > 0 and previous > C.DRAIN_X_DIAGONAL * diagonal:
             m.review = True
             m.warning = (m.warning + " | " if m.warning else "") + (
                 f"la mascara se salia {previous / diagonal:.1f}x la diagonal de su "
