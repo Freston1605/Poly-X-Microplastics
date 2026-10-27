@@ -56,8 +56,6 @@ class Morphology:
         return self.curvature >= C.CURVE_FROM
 
 
-
-
 def extremes_feret(contour: np.ndarray):
     """The two farthest-apart points of the contour, for drawing."""
     if contour is None or len(contour) < 2:
@@ -294,4 +292,12 @@ def apply_to_detection(
         det.diam_um = 2.0 * float(np.sqrt(m.area_um2 / np.pi)) if m.area_um2 else None
     return True
 
-__all__ = ['Morphology', 'apply_to_detection', 'extremes_feret', 'feret_maximum', 'measure', 'measure_detection']
+
+__all__ = [
+    "Morphology",
+    "apply_to_detection",
+    "extremes_feret",
+    "feret_maximum",
+    "measure",
+    "measure_detection",
+]

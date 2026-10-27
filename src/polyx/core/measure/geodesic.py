@@ -166,4 +166,5 @@ def path_geodesic(mask: np.ndarray):
         path.append(p)
     return [(int(c[1] + x0), int(c[0] + y0)) for c in path]
 
-__all__ = ['_spread_geodesic', 'length_geodesic', 'path_geodesic']
+
+__all__ = ["_spread_geodesic", "length_geodesic", "path_geodesic"]

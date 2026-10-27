@@ -413,7 +413,9 @@ class YoloSegModel(YoloModel):
         device: str = "0",
         auto_fallback: bool = True,
     ) -> list[Detection]:
-        res = self._predict_with_fallback(image_path, conf, iou, imgsz, device, auto_fallback, task="segment")
+        res = self._predict_with_fallback(
+            image_path, conf, iou, imgsz, device, auto_fallback, task="segment"
+        )
         out: list[Detection] = []
         if not res:
             return out

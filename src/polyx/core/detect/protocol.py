@@ -365,6 +365,7 @@ class SegmentationSource(Protocol):
     @property
     def last_imgsz(self) -> int: ...
 
+
 def _tile_starts(total: int, tile: int, step: int) -> list[int]:
     """Start positions of the tiles along one axis (the last one flush with the edge)."""
     if total <= tile:
@@ -373,4 +374,3 @@ def _tile_starts(total: int, tile: int, step: int) -> list[int]:
     if not starts or starts[-1] != total - tile:
         starts.append(total - tile)
     return starts
-

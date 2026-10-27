@@ -341,6 +341,7 @@ def _contour_elderly(mask: np.ndarray) -> np.ndarray | None:
     cont, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return max(cont, key=cv2.contourArea) if cont else None
 
+
 def feret_maximum(contour: np.ndarray) -> float:
     """Maximum Feret diameter: the greatest distance between two edge points.
 
@@ -361,4 +362,13 @@ def feret_maximum(contour: np.ndarray) -> float:
     d = env[:, None, :] - env[None, :, :]
     return float(np.sqrt((d**2).sum(-1)).max())
 
-__all__ = ['_contour_elderly', '_cutout', '_elongation', 'box_margin', 'feret_maximum', 'segment', 'separate_glued']
+
+__all__ = [
+    "_contour_elderly",
+    "_cutout",
+    "_elongation",
+    "box_margin",
+    "feret_maximum",
+    "segment",
+    "separate_glued",
+]

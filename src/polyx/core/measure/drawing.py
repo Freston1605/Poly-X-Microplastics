@@ -93,4 +93,5 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
             pass
         return None, None
 
-__all__ = ['_draw_feret', 'draw_measurement']
+
+__all__ = ["_draw_feret", "draw_measurement"]
