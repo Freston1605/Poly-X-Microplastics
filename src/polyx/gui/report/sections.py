@@ -1096,6 +1096,28 @@ def _review_warning(shapes, n_review: int) -> str:
     )
 
 
+def _count_per_image(por_img: dict[str, list]) -> str:
+    """Per-image fibre/fragment count table."""
+    rows_img = ""
+    for name_2 in sorted(por_img):
+        ds = por_img[name_2]
+        nf = sum(1 for d in ds if d.morphotype == "fibra")
+        lengths_i = [d.length_um for d in ds if d.length_um]
+        rows_img += (
+            f"<tr><td style='font-size:9pt'>{_esc(name_2)}</td><td>{len(ds)}</td>"
+            f"<td>{nf}</td><td>{len(ds) - nf}</td>"
+            f"<td>{(f'{np.median(lengths_i):.0f}' if lengths_i else '—')}</td>"
+            f"<td>{(f'{max(lengths_i):.0f}' if lengths_i else '—')}</td></tr>"
+        )
+    return (
+        f"<h3>{NUM}.7 {tr('Recuento por imagen')}</h3>"
+        f"<table class='data'><tr>"
+        f"{tr('<th>Imagen</th><th>Total</th><th>Fibras</th><th>Partículas</th>')}"
+        f"{tr('<th>Largo mediano<br>(µm)</th><th>Mayor<br>(µm)</th>')}"
+        f"</tr>{rows_img}</table>"
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1233,27 +1255,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         por_img: dict[str, list] = {}
         for d, path_2 in shapes:
             por_img.setdefault(Path(path_2).name, []).append(d)
-        rows_img = ""
-        for name_2 in sorted(por_img):
-            ds = por_img[name_2]
-            nf = sum(1 for d in ds if d.morphotype == "fibra")
-            lengths_i = [d.length_um for d in ds if d.length_um]
-            rows_img += (
-                f"<tr><td style='font-size:9pt'>{_esc(name_2)}</td><td>{len(ds)}</td>"
-                f"<td>{nf}</td><td>{len(ds) - nf}</td>"
-                f"<td>{(f'{np.median(lengths_i):.0f}' if lengths_i else '—')}</td>"
-                f"<td>{(f'{max(lengths_i):.0f}' if lengths_i else '—')}</td></tr>"
-            )
-        # The first column is renamed `Total` and not `Partículas`: with the
-        # nomenclature change there would be two columns with the same name, one
-        # as a sum and another as a morphotype. `Total = Fibras + Partículas`.
-        count_2 = (
-            f"<h3>{NUM}.7 {tr('Recuento por imagen')}</h3>"
-            f"<table class='data'><tr>"
-            f"{tr('<th>Imagen</th><th>Total</th><th>Fibras</th><th>Partículas</th>')}"
-            f"{tr('<th>Largo mediano<br>(µm)</th><th>Mayor<br>(µm)</th>')}"
-            f"</tr>{rows_img}</table>"
-        )
+        count_2 = _count_per_image(por_img)
 
         # An `—` in the size columns is not an analysis failure: the
         # particle WAS measured, in pixels, but without µm/px there is no way to
