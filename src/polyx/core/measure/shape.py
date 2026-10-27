@@ -78,8 +78,8 @@ def _choose_length(feret, geo, thinness, solidity):
     Feret (the tighter bound) is reported.
     """
     if thinness >= THINNESS_FOR_GEODESIC and solidity < SOLIDITY_CONVEX and geo >= feret:
-        return geo, "geodesico"
-    return feret, "Feret maximo"
+        return geo, Method.GEODESIC
+    return feret, Method.FERET
 
 
 def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:

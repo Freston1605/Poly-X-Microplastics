@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 __all__ = [
     "FIBER",
     "FRAGMENT",
     "INDETERMINATE",
+    "Morphotype",
+    "Method",
     "ASPECT_FIBER",
     "THINNESS_FOR_GEODESIC",
     "SOLIDITY_CONVEX",
@@ -20,13 +24,24 @@ __all__ = [
 
 import numpy as np
 
-FIBER = "fibra"
+class Morphotype(str, Enum):
+    """Morphotype of a particle, stored as a string for report compatibility."""
+
+    FIBER = "fibra"
+    FRAGMENT = "fragmento"
+    INDETERMINATE = "indeterminado"
 
 
-FRAGMENT = "fragmento"
+FIBER = Morphotype.FIBER
+FRAGMENT = Morphotype.FRAGMENT
+INDETERMINATE = Morphotype.INDETERMINATE
 
 
-INDETERMINATE = "indeterminado"
+class Method(str, Enum):
+    """How the reported length was obtained."""
+
+    GEODESIC = "geodesico"
+    FERET = "Feret maximo"
 
 
 ASPECT_FIBER = 3.0
