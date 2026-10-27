@@ -1,6 +1,6 @@
 """Minimal self-contained HTML report for headless Poly-X runs (no Qt).
 
-Not the full paper-quality report (that lives in gui/report_html.py and
+Not the full paper-quality report (that lives in gui/report/ and
 needs Qt state). This produces a compact, dependency-free summary from
 summary.json + centroids.csv so headless runs are self-documenting.
 """
