@@ -2,9 +2,7 @@
 
 from ._common import *
 from .stats import *
-import polyx.gui.report._common as _common
 
-globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
 
 
 def _fig_to_b64(fig) -> str:
@@ -521,3 +519,5 @@ def _fig_confusion_matrix(cm: np.ndarray, class_names: list[str]) -> str:
             ax.text(j, i, str(int(val)), ha="center", va="center", fontsize=9, color=color)
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     return _fig_to_b64(fig)
+
+__all__ = [name for name in globals() if not name.startswith('__')]

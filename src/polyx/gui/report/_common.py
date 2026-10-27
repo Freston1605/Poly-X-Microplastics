@@ -43,11 +43,11 @@ from polyx.core import report_inputs as _core_inputs
 from polyx.core.platform import machine_info
 from polyx.gui import theme as T
 
-globals().update({k: v for k, v in vars(_core_model_info).items() if not k.startswith("__")})
-globals().update({k: v for k, v in vars(_core_inputs).items() if not k.startswith("__")})
 
 globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
+globals().update({k: v for k, v in vars(_core_inputs).items() if not k.startswith("__")})
+globals().update({k: v for k, v in vars(_core_model_info).items() if not k.startswith("__")})
 
 # ────────────────────────────────────────────────────────────────────
 # Report styles (identical to the manual)
@@ -920,6 +920,9 @@ def generate_report(
             sections=sections,
         )
 
+
+# Expose all names (including helpers) for star imports before loading submodules.
+__all__ = [name for name in globals() if not name.startswith("__")]
 
 # Late imports: submodules use helpers defined above.
 from .figures import *  # noqa: E402

@@ -2,17 +2,10 @@
 
 import sys
 
-import polyx.gui.report._common as _common
-import polyx.gui.report.figures as _figures
-import polyx.gui.report.stats as _stats
-
 from ._common import *
 from .figures import *
 from .stats import *
 
-globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
-globals().update({k: v for k, v in vars(_figures).items() if not k.startswith("__")})
-globals().update({k: v for k, v in vars(_stats).items() if not k.startswith("__")})
 
 
 def _section_team(active) -> str:
@@ -1613,3 +1606,5 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
     # reported corresponds to what is in the photo, instead of having to
     # trust the table.
     return _build_records(state, shapes, max_records)
+
+__all__ = [name for name in globals() if not name.startswith('__')]
