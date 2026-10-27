@@ -480,6 +480,120 @@ def _comparison_verdict(state, results_2, active_2, there_is_gt: bool) -> str:
     ).format(alias=_esc(best), f1=f"{best_f1:.3f}")
 
 
+def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo: dict) -> str:
+    """Comparison figures (bars, per-class, agreement, sweep)."""
+    figures_cmp = ""
+    if not there_is_gt:
+        return figures_cmp
+    data_bars = []
+    by_model_class: dict[str, dict[str, tuple]] = {}
+    for mi in active_2:
+        alias = state.model_slots[mi].alias
+        rs = [r for r in results_2.get(mi, []) if r.has_gt]
+        tp = sum(r.tp for r in rs)
+        fp = sum(r.fp for r in rs)
+        fn = sum(r.fn for r in rs)
+        mc = sum(r.miscls for r in rs)
+        p_l, r_l, f_l = _pr_f1(tp, fp, fn)
+        p_c, r_c, f_c = _pr_f1(tp, fp + mc, fn + mc)
+        data_bars.append((alias, p_l, r_l, f_l, p_c, r_c, f_c))
+
+        gts_m = [r.gt for r in rs]
+        preds_m = [r.predictions for r in rs]
+        ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
+        if ids:
+            from polyx.core.quality.metrics import aggregate_per_class
+
+            metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
+            names_cls = {
+                cid: next(
+                    (
+                        d.class_name
+                        for lst in gts_m + preds_m
+                        for d in lst
+                        if d.class_id == cid
+                    ),
+                    str(cid),
+                )
+                for cid in ids
+            }
+            by_model_class[alias] = {
+                names_cls[cid]: (
+                    metrics[cid].precision,
+                    metrics[cid].recall,
+                    metrics[cid].f1,
+                )
+                for cid in ids
+            }
+
+    f_bars = _fig_comparison_metrics(data_bars)
+    if f_bars:
+        figures_cmp += (
+            f"<div class='fig'><img src='data:image/png;base64,{f_bars}' />"
+            "<div class='caption'>"
+            + tr(
+                "Figura. Precisión, Recall y F1 de cada modelo al umbral "
+                "{umbral}, en los dos criterios. La distancia entre paneles es "
+                "la confusión entre polímeros."
+            ).format(umbral=f"{state.params.conf:g}")
+            + "</div></div>"
+        )
+
+    f_class_id = _fig_metrics_by_class(by_model_class)
+    if f_class_id:
+        figures_cmp += (
+            f"<div class='fig'><img src='data:image/png;base64,{f_class_id}' />"
+            "<div class='caption'>"
+            + tr(
+                "Figura. F1 por clase. Un modelo puede ganar en el agregado y "
+                "perder en el polímero que interesa."
+            )
+            + "</div></div>"
+        )
+
+    # Photo-by-photo agreement between the first two models.
+    if len(active_2) >= 2:
+        a, b = active_2[0], active_2[1]
+        pares = []
+        for path_2 in sorted(by_photo):
+            ra, rb = by_photo[path_2].get(a), by_photo[path_2].get(b)
+            if ra is not None and rb is not None:
+                pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
+        f_agreement = _fig_agreement_by_image(
+            state.model_slots[a].alias, state.model_slots[b].alias, pares
+        )
+        if f_agreement:
+            figures_cmp += (
+                f"<div class='fig'><img src='data:image/png;base64,{f_agreement}' />"
+                "<div class='caption'>"
+                + tr(
+                    "Figura. Detecciones por imagen de un modelo frente al "
+                    "otro; la diagonal es el acuerdo exacto. Escala "
+                    "simétrica-logarítmica, porque casi todas las placas "
+                    "tienen pocas partículas y unas pocas cientos."
+                )
+                + "</div></div>"
+            )
+
+    # F1 curve against the threshold: it supports the choice of the operating
+    # point with evidence, instead of asserting it.
+    sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
+    f_sweep = _fig_sweep(sweep)
+    if f_sweep:
+        figures_cmp += (
+            f"<div class='fig'><img src='data:image/png;base64,{f_sweep}' />"
+            "<div class='caption'>"
+            + tr(
+                "Figura. F1 (con clase) frente al umbral de confianza; la "
+                "estrella marca el máximo de cada modelo. La curva arranca en "
+                "{umbral}, el umbral con que se ejecutó: por debajo las "
+                "detecciones no se calcularon."
+            ).format(umbral=f"{state.params.conf:g}")
+            + "</div></div>"
+        )
+    return figures_cmp
+
+
 def _section_comparison(state, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
@@ -530,112 +644,7 @@ def _section_comparison(state, results_2) -> str:
         verdict = _comparison_verdict(state, results_2, active_2, there_is_gt)
 
         # ── Side-by-side figures ──
-        figures_cmp = ""
-        if there_is_gt:
-            data_bars = []
-            by_model_class: dict[str, dict[str, tuple]] = {}
-            for mi in active_2:
-                alias = state.model_slots[mi].alias
-                rs = [r for r in results_2.get(mi, []) if r.has_gt]
-                tp = sum(r.tp for r in rs)
-                fp = sum(r.fp for r in rs)
-                fn = sum(r.fn for r in rs)
-                mc = sum(r.miscls for r in rs)
-                p_l, r_l, f_l = _pr_f1(tp, fp, fn)
-                p_c, r_c, f_c = _pr_f1(tp, fp + mc, fn + mc)
-                data_bars.append((alias, p_l, r_l, f_l, p_c, r_c, f_c))
-
-                gts_m = [r.gt for r in rs]
-                preds_m = [r.predictions for r in rs]
-                ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
-                if ids:
-                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
-                    names_cls = {
-                        cid: next(
-                            (
-                                d.class_name
-                                for lst in gts_m + preds_m
-                                for d in lst
-                                if d.class_id == cid
-                            ),
-                            str(cid),
-                        )
-                        for cid in ids
-                    }
-                    by_model_class[alias] = {
-                        names_cls[cid]: (
-                            metrics[cid].precision,
-                            metrics[cid].recall,
-                            metrics[cid].f1,
-                        )
-                        for cid in ids
-                    }
-
-            f_bars = _fig_comparison_metrics(data_bars)
-            if f_bars:
-                figures_cmp += (
-                    f"<div class='fig'><img src='data:image/png;base64,{f_bars}' />"
-                    "<div class='caption'>"
-                    + tr(
-                        "Figura. Precisión, Recall y F1 de cada modelo al umbral "
-                        "{umbral}, en los dos criterios. La distancia entre paneles es "
-                        "la confusión entre polímeros."
-                    ).format(umbral=f"{state.params.conf:g}")
-                    + "</div></div>"
-                )
-
-            f_class_id = _fig_metrics_by_class(by_model_class)
-            if f_class_id:
-                figures_cmp += (
-                    f"<div class='fig'><img src='data:image/png;base64,{f_class_id}' />"
-                    "<div class='caption'>"
-                    + tr(
-                        "Figura. F1 por clase. Un modelo puede ganar en el agregado y "
-                        "perder en el polímero que interesa."
-                    )
-                    + "</div></div>"
-                )
-
-            # Photo-by-photo agreement between the first two models.
-            if len(active_2) >= 2:
-                a, b = active_2[0], active_2[1]
-                pares = []
-                for path_2 in sorted(by_photo):
-                    ra, rb = by_photo[path_2].get(a), by_photo[path_2].get(b)
-                    if ra is not None and rb is not None:
-                        pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
-                f_agreement = _fig_agreement_by_image(
-                    state.model_slots[a].alias, state.model_slots[b].alias, pares
-                )
-                if f_agreement:
-                    figures_cmp += (
-                        f"<div class='fig'><img src='data:image/png;base64,{f_agreement}' />"
-                        "<div class='caption'>"
-                        + tr(
-                            "Figura. Detecciones por imagen de un modelo frente al "
-                            "otro; la diagonal es el acuerdo exacto. Escala "
-                            "simétrica-logarítmica, porque casi todas las placas "
-                            "tienen pocas partículas y unas pocas cientos."
-                        )
-                        + "</div></div>"
-                    )
-
-            # F1 curve against the threshold: it supports the choice of the operating
-            # point with evidence, instead of asserting it.
-            sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
-            f_sweep = _fig_sweep(sweep)
-            if f_sweep:
-                figures_cmp += (
-                    f"<div class='fig'><img src='data:image/png;base64,{f_sweep}' />"
-                    "<div class='caption'>"
-                    + tr(
-                        "Figura. F1 (con clase) frente al umbral de confianza; la "
-                        "estrella marca el máximo de cada modelo. La curva arranca en "
-                        "{umbral}, el umbral con que se ejecutó: por debajo las "
-                        "detecciones no se calcularon."
-                    ).format(umbral=f"{state.params.conf:g}")
-                    + "</div></div>"
-                )
+        figures_cmp = _comparison_figures(state, results_2, active_2, there_is_gt, by_photo)
 
         compare_html = (
             tr(
