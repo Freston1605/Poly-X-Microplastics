@@ -10,13 +10,13 @@ __all__ = [
     "CURVE_FROM",
     "DRAIN_X_DIAGONAL",
     "ELONGATION_ELONGATED",
-    "Method",
-    "Morphotype",
     "SLACK_COMPACT",
     "SLACK_ELONGATED",
     "SOLIDITY_CONVEX",
     "THINNESS_FOR_GEODESIC",
     "THRESHOLD_CORE",
+    "Method",
+    "Morphotype",
 ]
 
 

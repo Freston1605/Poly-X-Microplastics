@@ -51,7 +51,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import polyx.core.measure as measure
-from polyx.core.detect.yolo import read_yolo_txt
+from polyx.core.detect.protocol import read_yolo_txt
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.

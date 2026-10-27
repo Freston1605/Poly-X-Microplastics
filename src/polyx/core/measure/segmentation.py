@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
+
 from . import morphology_constants as C
 
 
@@ -340,7 +341,7 @@ def _contour_elderly(mask: np.ndarray) -> np.ndarray | None:
     cont, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return max(cont, key=cv2.contourArea) if cont else None
 
-__all__ = ['box_margin', '_cutout', '_elongation', 'separate_glued', 'segment', '_contour_elderly']
+__all__ = ['_contour_elderly', '_cutout', '_elongation', 'box_margin', 'segment', 'separate_glued']
 
 def feret_maximum(contour: np.ndarray) -> float:
     """Maximum Feret diameter: the greatest distance between two edge points.

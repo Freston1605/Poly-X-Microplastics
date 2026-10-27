@@ -8,25 +8,84 @@ from .calibration import (
     search_index,
     summary_batch,
 )
-from .morphology_constants import *
-from .segmentation import *
-from .geodesic import *
-from .shape import *
-from .drawing import *
+from .drawing import (
+    _draw_feret,
+    draw_measurement,
+)
+from .geodesic import (
+    _spread_geodesic,
+    length_geodesic,
+    path_geodesic,
+)
+from .morphology_constants import (
+    ASPECT_FIBER,
+    CONTRAST_MINIMUM,
+    CURVE_FROM,
+    DRAIN_X_DIAGONAL,
+    ELONGATION_ELONGATED,
+    SLACK_COMPACT,
+    SLACK_ELONGATED,
+    SOLIDITY_CONVEX,
+    THINNESS_FOR_GEODESIC,
+    THRESHOLD_CORE,
+    Method,
+    Morphotype,
+)
+from .segmentation import (
+    _contour_elderly,
+    _contrast_threshold,
+    _cutout,
+    _elongation,
+    box_margin,
+    feret_maximum,
+    segment,
+    separate_glued,
+)
+from .shape import (
+    Morphology,
+    _choose_length,
+    apply_to_detection,
+    extremes_feret,
+    measure,
+    measure_detection,
+)
 
 __all__ = [
+    "ASPECT_FIBER",
+    "CONTRAST_MINIMUM",
+    "CURVE_FROM",
+    "DRAIN_X_DIAGONAL",
+    "ELONGATION_ELONGATED",
+    "SLACK_COMPACT",
+    "SLACK_ELONGATED",
+    "SOLIDITY_CONVEX",
+    "THINNESS_FOR_GEODESIC",
+    "THRESHOLD_CORE",
     "Calibration",
+    "Method",
+    "Morphology",
+    "Morphotype",
+    "_choose_length",
+    "_contour_elderly",
+    "_contrast_threshold",
+    "_cutout",
+    "_draw_feret",
+    "_elongation",
+    "_spread_geodesic",
+    "apply_to_detection",
+    "box_margin",
     "calibrate_from_plate",
     "carry_index",
+    "draw_measurement",
+    "extremes_feret",
+    "feret_maximum",
+    "length_geodesic",
+    "measure",
+    "measure_detection",
+    "path_geodesic",
     "resolver",
     "search_index",
+    "segment",
+    "separate_glued",
     "summary_batch",
 ]
-# Re-export the morphology submodules' public surfaces.
-from .morphology_constants import __all__ as _c
-from .segmentation import __all__ as _s
-from .geodesic import __all__ as _g
-from .shape import __all__ as _sh
-from .drawing import __all__ as _d
-
-__all__ = __all__ + _c + _s + _g + _sh + _d

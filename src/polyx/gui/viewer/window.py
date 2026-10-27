@@ -760,7 +760,7 @@ class ViewerWindow(QMainWindow):
         txt = candidates[0]
 
         try:
-            from polyx.core.detect.yolo import read_yolo_txt
+            from polyx.core.detect.protocol import read_yolo_txt
             from polyx.core.image_io import read_image
 
             bgr = read_image(img)

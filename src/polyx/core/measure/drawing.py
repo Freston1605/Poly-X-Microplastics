@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from .segmentation import segment, box_margin
-from .shape import measure, extremes_feret
+
 from .geodesic import path_geodesic
+from .segmentation import box_margin, segment
+from .shape import extremes_feret, measure
 
 
 def _draw_feret(vis: np.ndarray, mask: np.ndarray, p, q, color) -> float:

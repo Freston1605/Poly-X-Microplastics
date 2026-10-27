@@ -5,7 +5,7 @@ computational engine. It is safe to import in headless environments
 (CI, servers, CLI tools) without a display or GPU.
 """
 
-from . import data, detect, measure, quality
+from . import data, detect, quality
 from .data.labels import (
     classes_txt_path,
     read_classes_txt,

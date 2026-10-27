@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from dataclasses import dataclass
+
 from . import morphology_constants as C
-from .geodesic import length_geodesic, path_geodesic
-from .segmentation import segment, box_margin, _cutout, feret_maximum
+from .geodesic import length_geodesic
+from .segmentation import _cutout, box_margin, feret_maximum, segment
 
 
 class Morphology:
@@ -294,4 +294,4 @@ def apply_to_detection(
         det.diam_um = 2.0 * float(np.sqrt(m.area_um2 / np.pi)) if m.area_um2 else None
     return True
 
-__all__ = ['Morphology', 'feret_maximum', 'extremes_feret', 'measure', 'measure_detection', 'apply_to_detection']
+__all__ = ['Morphology', 'apply_to_detection', 'extremes_feret', 'feret_maximum', 'measure', 'measure_detection']

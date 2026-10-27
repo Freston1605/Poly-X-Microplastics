@@ -9,10 +9,7 @@ import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
-    compute_box_size_um,
-    find_gt_for_image,
     policy_tiling,
-    read_yolo_txt,
     size_image,
 )
 from polyx.core.image_io import read_image
@@ -151,23 +148,23 @@ class YoloModel:
         res = None
         for i, sz in enumerate(sizes):
             try:
-                kwargs = dict(
-                    source=str(image_path),
-                    conf=conf,
-                    iou=iou,
-                    imgsz=sz,
-                    device=device,
-                    verbose=False,
-                    save=False,
-                    max_det=self.MAX_DET,
-                )
+                kwargs = {
+                    "source": str(image_path),
+                    "conf": conf,
+                    "iou": iou,
+                    "imgsz": sz,
+                    "device": device,
+                    "verbose": False,
+                    "save": False,
+                    "max_det": self.MAX_DET,
+                }
                 if task is not None:
                     kwargs["task"] = task
                 res = self._model.predict(**kwargs)
                 self.last_imgsz = sz
                 self.last_fallback = i > 0
                 break
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
                     raise
                 event(

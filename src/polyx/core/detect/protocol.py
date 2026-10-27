@@ -149,6 +149,8 @@ def size_image(image_path: str | Path) -> tuple[int, int] | None:
         # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
         # which is already used throughout the rest of the project for that same reason.
         try:
+            from polyx.core.image_io import read_image
+
             img = read_image(image_path)
             if img is None:
                 return None
@@ -307,7 +309,7 @@ def find_gt_for_image(image_path: Path, gt_folder: Path | None) -> Path | None:
     return None
 
 
-def compute_box_size_um(det: Detection, um_per_px: float | None) -> None:
+def compute_box_size_um(det: Instance, um_per_px: float | None) -> None:
     """Approximate size from the BOX, not the particle.
 
     It is a fallback: it overestimates the area 1.87x at the median of this
