@@ -1073,6 +1073,29 @@ def _ring_warning(n_en_el_aro: int) -> str:
     )
 
 
+def _review_warning(shapes, n_review: int) -> str:
+    """Paragraph for particles whose size warrants manual review, or ''."""
+    if not n_review:
+        return ""
+    _pc = 100.0 * n_review / len(shapes)
+    _pc_txt = f"{_pc:.1f}" if _pc < 1 else f"{_pc:.0f}"
+    return (
+        f"<p style='border-left:3px solid {T.DOC.WARN};padding:6px 12px;"
+        f"background:#fff8e6'>"
+        + tr(
+            "<strong>{n} de {total} partículas ({pct}&nbsp;%) tienen una talla "
+            "que pide comprobación</strong>: al segmentarlas, la máscara se "
+            "salía bastante más allá de la caja del detector, casi siempre "
+            "porque el umbral enganchó una partícula vecina o una zona "
+            "brillante del fondo. En esos casos la máscara se <em>recorta a la "
+            "caja</em>, de modo que la talla reportada no está inflada; lo que "
+            "puede es quedarse <em>corta</em>, si la partícula seguía de verdad "
+            "más allá de la caja. Van marcadas con ⚠ en sus fichas."
+        ).format(n=n_review, total=len(shapes), pct=_pc_txt)
+        + "</p>"
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1113,28 +1136,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # bounds it, so what is reported is the piece inside the box and the
         # bias goes DOWN. The text below says it in that direction.
         n_review = sum(1 for d, _ in shapes if getattr(d, "review", False))
-        warning_review = ""
-        if n_review:
-            # One decimal below 1%: with `:.0f` a proportion of 4 out of
-            # 909 came out as `(0 %)` next to `4 particulas`, which reads as if
-            # the figure were broken.
-            _pc = 100.0 * n_review / len(shapes)
-            _pc_txt = f"{_pc:.1f}" if _pc < 1 else f"{_pc:.0f}"
-            warning_review = (
-                f"<p style='border-left:3px solid {T.DOC.WARN};padding:6px 12px;"
-                f"background:#fff8e6'>"
-                + tr(
-                    "<strong>{n} de {total} partículas ({pct}&nbsp;%) tienen una talla "
-                    "que pide comprobación</strong>: al segmentarlas, la máscara se "
-                    "salía bastante más allá de la caja del detector, casi siempre "
-                    "porque el umbral enganchó una partícula vecina o una zona "
-                    "brillante del fondo. En esos casos la máscara se <em>recorta a la "
-                    "caja</em>, de modo que la talla reportada no está inflada; lo que "
-                    "puede es quedarse <em>corta</em>, si la partícula seguía de verdad "
-                    "más allá de la caja. Van marcadas con ⚠ en sus fichas."
-                ).format(n=n_review, total=len(shapes), pct=_pc_txt)
-                + "</p>"
-            )
+        warning_review = _review_warning(shapes, n_review)
 
         # ── What was set apart for falling on the ring ──
         warning_review += _ring_warning(n_en_el_aro)
