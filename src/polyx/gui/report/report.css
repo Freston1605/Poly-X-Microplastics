@@ -1,0 +1,332 @@
+:root{
+    --ink:#1f2328;
+    --ink2:#424a53;
+    --ink3:#656d76;
+    --muted:#8c959f;
+    --rule:#d0d7de;
+    --rule_soft:#eaeef2;
+    --bg:#ffffff;
+    --bg_soft:#f6f8fa;
+    --accent:#0969da;
+    --accent_d:#0550ae;
+    --ok:#1f6b5e;
+    --warn:#9a6700;
+    --err:#cf222e;
+    --vio:#6639ba;
+}
+*{
+    box-sizing:border-box;
+}
+body{
+    font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    margin:0;
+    padding:0;
+    line-height:1.55;
+}
+.container{
+    max-width:1100px;
+    margin:0 auto;
+    padding:40px 48px 80px;
+}
+header.cover{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:22px;
+    margin-bottom:28px;
+}
+.kicker{
+    font-size:10pt;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent_d);
+    font-weight:600;
+    margin-bottom:8px;
+}
+h1{
+    font-size:28pt;
+    margin:4px 0 8px;
+    line-height:1.18;
+}
+h2{
+    font-size:18pt;
+    margin-top:38px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--rule);
+}
+h3{
+    font-size:13pt;
+    margin-top:22px;
+    color:var(--ink2);
+}
+h4{
+    font-size:11pt;
+    margin-top:14px;
+    color:var(--ink2);
+}
+.meta{
+    font-size:10pt;
+    color:var(--ink3);
+}
+.toc{
+    background:var(--bg_soft);
+    border-left:3px solid var(--accent);
+    padding:14px 20px;
+    margin:18px 0 28px;
+}
+.toc h3{
+    margin:0 0 8px;
+    color:var(--ink);
+}
+.toc ol{
+    margin:0;
+    padding-left:22px;
+    font-size:10.5pt;
+}
+.toc a{
+    color:var(--ink2);
+    text-decoration:none;
+}
+.toc a:hover{
+    color:var(--accent);
+}
+.kpis{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin:16px 0;
+}
+.kpi{
+    background:var(--bg);
+    border:1px solid var(--rule);
+    border-radius:8px;
+    padding:14px 16px;
+}
+.kpi .v{
+    font-size:22pt;
+    font-weight:700;
+    color:var(--ink);
+    margin:4px 0 6px;
+}
+.kpi .l{
+    font-size:9pt;
+    font-weight:600;
+    color:var(--ink3);
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+}
+.kpi .b{
+    height:3px;
+    background:var(--accent);
+    border-radius:2px;
+}
+table.data{
+    width:100%;
+    border-collapse:collapse;
+    font-size:10pt;
+    margin:12px 0;
+}
+table.data th{
+    background:var(--bg_soft);
+    text-align:left;
+    padding:8px 10px;
+    border-bottom:1px solid var(--rule);
+    font-weight:600;
+}
+table.data td{
+    padding:7px 10px;
+    border-bottom:1px solid var(--rule_soft);
+}
+table.data tr:last-child td{
+    border-bottom:none;
+}
+table.data td.r{
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+}
+.fig{
+    margin:18px 0;
+}
+.fig img{
+    width:100%;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    display:block;
+}
+.caption{
+    font-size:9pt;
+    color:var(--ink3);
+    margin-top:6px;
+    text-align:center;
+}
+.gallery{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin:14px 0;
+}
+.gallery .item{
+    border:1px solid var(--rule);
+    border-radius:6px;
+    overflow:hidden;
+    background:var(--bg_soft);
+}
+.gallery .item img{
+    width:100%;
+    display:block;
+}
+.gallery .item .cap{
+    font-size:8.5pt;
+    color:var(--ink3);
+    padding:5px 8px;
+}
+/* Comparación lado a lado: Predicción vs Ground Truth */ .compare{
+    border:1px solid var(--rule);
+    border-radius:8px;
+    overflow:hidden;
+    margin:18px 0;
+    background:var(--bg_soft);
+}
+.compare-pair{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+}
+.compare-pair figure{
+    margin:0;
+    border-right:1px solid var(--rule);
+    background:var(--bg);
+}
+.compare-pair figure:last-child{
+    border-right:none;
+}
+.compare-pair img{
+    width:100%;
+    display:block;
+}
+.compare-pair figcaption{
+    font-size:9pt;
+    color:var(--ink2);
+    font-weight:600;
+    padding:7px 10px;
+    text-align:center;
+    border-top:1px solid var(--rule_soft);
+}
+.compare-pair figcaption .sub{
+    display:block;
+    font-weight:400;
+    color:var(--ink3);
+    font-size:8.5pt;
+    margin-top:2px;
+}
+.compare-meta{
+    font-size:9pt;
+    color:var(--ink2);
+    padding:9px 12px;
+    border-top:1px solid var(--rule);
+    font-variant-numeric:tabular-nums;
+}
+.compare-meta .tag{
+    display:inline-block;
+    margin-right:10px;
+}
+/* Conteo por polimero de una sola foto, bajo el par de imagenes. */ table.conteo{
+    width:100%;
+    border-collapse:collapse;
+    font-size:9.5pt;
+    border-top:1px solid var(--rule);
+    background:var(--bg);
+}
+table.conteo th{
+    background:var(--bg_soft);
+    text-align:right;
+    padding:6px 12px;
+    font-weight:600;
+    color:var(--ink2);
+    border-bottom:1px solid var(--rule_soft);
+}
+table.conteo th:first-child{
+    text-align:left;
+}
+table.conteo td{
+    padding:5px 12px;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+    border-bottom:1px solid var(--rule_soft);
+}
+table.conteo td:first-child{
+    text-align:left;
+    font-weight:600;
+}
+table.conteo tr.tot td{
+    border-bottom:none;
+    background:var(--bg_soft);
+    font-weight:700;
+}
+table.conteo td.dif-pos{
+    color:var(--err);
+}
+table.conteo td.dif-neg{
+    color:var(--accent_d);
+}
+.nogt{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:180px;
+    color:var(--muted);
+    font-size:10pt;
+    text-align:center;
+    padding:16px;
+    background:repeating-linear-gradient(45deg,#fbfcfd,#fbfcfd 12px,#f0f2f4 12px,#f0f2f4 24px);
+}
+.badge{
+    display:inline-block;
+    padding:2px 7px;
+    border-radius:4px;
+    font-size:8.5pt;
+    font-weight:600;
+    letter-spacing:.04em;
+}
+.b-blue{
+    background:#ddf4ff;
+    color:var(--accent_d);
+}
+.b-green{
+    background:#d8f5ea;
+    color:var(--ok);
+}
+.b-amber{
+    background:#fff8c5;
+    color:var(--warn);
+}
+.b-red{
+    background:#ffebe9;
+    color:var(--err);
+}
+.b-violet{
+    background:#ece0fd;
+    color:var(--vio);
+}
+footer{
+    border-top:1px solid var(--rule);
+    margin-top:60px;
+    padding-top:18px;
+    font-size:9.5pt;
+    color:var(--ink3);
+}
+@media print{
+    .container{
+        max-width:none;
+        padding:24px;
+    }
+    h2{
+        page-break-after:avoid;
+    }
+    .fig,.gallery .item{
+        page-break-inside:avoid;
+    }
+    /* Que la foto y su tabla no queden en paginas distintas del PDF. */ .compare{
+        page-break-inside:avoid;
+    }
+}

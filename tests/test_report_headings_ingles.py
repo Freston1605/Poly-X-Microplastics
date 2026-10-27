@@ -34,7 +34,11 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-REPORT_PATH = REPO_ROOT / "src" / "polyx" / "gui" / "report_html.py"
+REPORT_PATHS = [
+    REPO_ROOT / "src" / "polyx" / "gui" / "report" / "_common.py",
+    REPO_ROOT / "src" / "polyx" / "gui" / "report" / "sections.py",
+    REPO_ROOT / "src" / "polyx" / "gui" / "report" / "figures.py",
+]
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "baseline_informe"
 
 # The twelve Spanish labels, as they appear in the visible text. The ``<br>``
@@ -262,8 +266,13 @@ def _offending_headings(source: str) -> list[tuple[int, str, str]]:
 
 
 def test_no_queda_ningun_rotulo_en_espanol_fuera_de_tr():
-    source = REPORT_PATH.read_text(encoding="utf-8")
-    offenders = _offending_headings(source)
+    offenders = []
+    for report_path in REPORT_PATHS:
+        source = report_path.read_text(encoding="utf-8")
+        for line, label, literal in _offending_headings(source):
+            offenders.append((f"{report_path.name}:{line}", label, literal))
+        for removed in ("LABEL_TP", "LABEL_FP", "LABEL_FN", "LABEL_MISCLS"):
+            assert removed not in source, f"{removed} must not be used by {report_path.name}"
     detail = "\n  ".join(
         f"line {line}: {label!r} in {literal!r}" for line, label, literal in offenders
     )
@@ -271,8 +280,6 @@ def test_no_queda_ningun_rotulo_en_espanol_fuera_de_tr():
         "raw Spanish report heading outside tr(); translate it at the render "
         "site with the S05 heading manifest:\n  " + detail
     )
-    for removed in ("LABEL_TP", "LABEL_FP", "LABEL_FN", "LABEL_MISCLS"):
-        assert removed not in source, f"{removed} must not be used by report_html.py"
 
 
 def test_el_escanner_caza_un_rotulo_sintetico():

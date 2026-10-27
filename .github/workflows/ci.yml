@@ -48,7 +48,7 @@ jobs:
         run: uv sync --python ${{ matrix.python-version }} --extra gui
 
       - name: Lint
-        run: uv run ruff check src/ tests/ tools/
+        run: uv run ruff check src/ tests/ tools/ install/
 
       - name: Install script smoke checks
         run: |
@@ -57,7 +57,7 @@ jobs:
           uv run pytest -q tests/test_install.py
 
       - name: Check formatting
-        run: uv run ruff format --check src/ tests/ tools/
+        run: uv run ruff format --check src/ tests/ tools/ install/
 
       # offscreen: la suite no abre ventanas pero PySide6 pide una
       # plataforma. MPLCONFIGDIR: matplotlib quiere un config dir
@@ -100,6 +100,8 @@ jobs:
           /tmp/smoke/bin/polyx-eval --help >/dev/null
           /tmp/smoke/bin/polyx-report --help >/dev/null
           /tmp/smoke/bin/polyx-download-models --help >/dev/null
+          /tmp/smoke/bin/polyx train --help >/dev/null
+          /tmp/smoke/bin/polyx detect --help >/dev/null
 
       - name: Smoke-test the [gui] extra
         run: |
