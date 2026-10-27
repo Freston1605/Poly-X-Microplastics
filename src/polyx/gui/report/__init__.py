@@ -19,13 +19,6 @@ from polyx.core.report_metrics import (
 )
 from polyx.gui import theme as T
 
-# Three presentation colours of the report (fixed palette: a report is
-# printed and archived, so it must not follow the UI theme).
-_PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
-
-
-_MAX_GROUPS_BOXPLOT = 12
-
 from .figures import (
     _fig_agreement_by_image,
     _fig_boxplot_groups,
@@ -94,6 +87,12 @@ from .stats import (
     _text_kruskal,
     _text_trend,
 )
+
+# Three presentation colours of the report (fixed palette: a report is
+# printed and archived, so it must not follow the UI theme).
+_PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
+
+_MAX_GROUPS_BOXPLOT = 12
 
 __all__ = [
     "IDS_SECTIONS",
