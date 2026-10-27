@@ -1153,6 +1153,29 @@ def _extremes_and_distribution(elderly, path_elderly, minor_2, path_minor, lengt
 </table>"""
 
 
+def _per_class_size_table(per_class_2: dict, with_size) -> str:
+    """Size table by polymer class."""
+    rows_cls = ""
+    for cls in _ORDER_CLASSES + [c for c in per_class_2 if c not in _ORDER_CLASSES]:
+        v = sorted(per_class_2.get(cls, []))
+        if not v:
+            continue
+        nf = sum(1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibra")
+        rows_cls += (
+            f"<tr><td>{cls}</td><td>{len(v)}</td>"
+            f"<td>{v[0]:.0f}</td><td>{v[len(v) // 2]:.0f}</td>"
+            f"<td>{v[-1]:.0f}</td><td>{nf}</td></tr>"
+        )
+    if not rows_cls:
+        return ""
+    return (
+        f"<h3>{NUM}.6 {tr('Talla por tipo de plástico')}</h3>"
+        f"<table class='data'><tr><th>Class</th><th>n</th>"
+        f"<th>smallest<br>(µm)</th><th>median<br>(µm)</th>"
+        f"<th>largest<br>(µm)</th><th>Fibers</th></tr>{rows_cls}</table>"
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1232,26 +1255,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
                 tables += f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>"
 
             # ── Table by class, with its largest ──
-            rows_cls = ""
-            for cls in _ORDER_CLASSES + [c for c in per_class_2 if c not in _ORDER_CLASSES]:
-                v = sorted(per_class_2.get(cls, []))
-                if not v:
-                    continue
-                nf = sum(
-                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibra"
-                )
-                rows_cls += (
-                    f"<tr><td>{cls}</td><td>{len(v)}</td>"
-                    f"<td>{v[0]:.0f}</td><td>{v[len(v) // 2]:.0f}</td>"
-                    f"<td>{v[-1]:.0f}</td><td>{nf}</td></tr>"
-                )
-            if rows_cls:
-                tables += (
-                    f"<h3>{NUM}.6 {tr('Talla por tipo de plástico')}</h3>"
-                    f"<table class='data'><tr><th>Class</th><th>n</th>"
-                    f"<th>smallest<br>(µm)</th><th>median<br>(µm)</th>"
-                    f"<th>largest<br>(µm)</th><th>Fibers</th></tr>{rows_cls}</table>"
-                )
+            tables += _per_class_size_table(per_class_2, with_size)
 
             # The example card is drawn further below, AFTER explaining the
             # method: showing the crop with a yellow line on top before
