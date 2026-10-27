@@ -1132,6 +1132,27 @@ def _example_cards(record_elderly, record_minor) -> str:
     return example
 
 
+def _extremes_and_distribution(elderly, path_elderly, minor_2, path_minor, lengths, _num, _row) -> str:
+    """Extremes table + size distribution table."""
+    return f"""
+<h3>{NUM}.4 {tr("Partícula mayor y menor")}</h3>
+<table class='data'>
+<tr>{tr("<th></th><th>Clase</th><th>Largo</th><th>Ancho</th><th>Área</th><th>Aspecto</th><th>Curvatura</th><th>Morfotipo</th><th>Imagen</th>")}</tr>
+{_row(tr("Mayor"), elderly, path_elderly)}
+{_row(tr("Menor"), minor_2, path_minor)}
+</table>
+
+<h3>{NUM}.5 {tr("Distribución de tallas")}</h3>
+<table class='data'>
+<tr>{tr("<th>Estadístico</th><th>Largo (µm)</th>")}</tr>
+<tr>{tr("<td>mínimo</td>")}<td>{lengths.min():.0f}</td></tr>
+<tr>{tr("<td>percentil 10</td>")}<td>{np.percentile(lengths, 10):.0f}</td></tr>
+<tr>{tr("<td>mediana</td>")}<td>{np.median(lengths):.0f}</td></tr>
+<tr>{tr("<td>percentil 90</td>")}<td>{np.percentile(lengths, 90):.0f}</td></tr>
+<tr>{tr("<td>máximo</td>")}<td>{lengths.max():.0f}</td></tr>
+</table>"""
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1198,23 +1219,9 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
                     f"<td style='font-size:9pt'>{_esc(Path(path_2).name)}</td></tr>"
                 )
 
-            tables = f"""
-<h3>{NUM}.4 {tr("Partícula mayor y menor")}</h3>
-<table class='data'>
-<tr>{tr("<th></th><th>Clase</th><th>Largo</th><th>Ancho</th><th>Área</th><th>Aspecto</th><th>Curvatura</th><th>Morfotipo</th><th>Imagen</th>")}</tr>
-{_row(tr("Mayor"), elderly, path_elderly)}
-{_row(tr("Menor"), minor_2, path_minor)}
-</table>
-
-<h3>{NUM}.5 {tr("Distribución de tallas")}</h3>
-<table class='data'>
-<tr>{tr("<th>Estadístico</th><th>Largo (µm)</th>")}</tr>
-<tr>{tr("<td>mínimo</td>")}<td>{lengths.min():.0f}</td></tr>
-<tr>{tr("<td>percentil 10</td>")}<td>{np.percentile(lengths, 10):.0f}</td></tr>
-<tr>{tr("<td>mediana</td>")}<td>{np.median(lengths):.0f}</td></tr>
-<tr>{tr("<td>percentil 90</td>")}<td>{np.percentile(lengths, 90):.0f}</td></tr>
-<tr>{tr("<td>máximo</td>")}<td>{lengths.max():.0f}</td></tr>
-</table>"""
+            tables = _extremes_and_distribution(
+                elderly, path_elderly, minor_2, path_minor, lengths, _num, _row
+            )
 
             # ── Sizes by stretch, stacked by class ──
             per_class_2: dict[str, list[float]] = {}
