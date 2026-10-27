@@ -1477,3 +1477,222 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
                 + "".join(parts)
             )
     return records_html
+
+
+def section_depth(shapes, results_2) -> str:
+    """How many particles and of which size sit at each depth of the core.
+
+    The interval is not just any folder: it is an ORDERED variable. That
+    makes it possible to ask about TRENDS — whether there are more
+    particles at the bottom than at the top, or whether the bottom ones
+    are bigger — and not only whether the groups differ, which is all the
+    generic per-folder comparison can answer.
+
+    ``formas`` is ``[(Detection, ruta)]`` with a measured size;
+    ``resultados`` are the ImageResult records, needed to count ALL the
+    particles and not only the ones that could be measured in
+    micrometers.
+
+    Returns "" when the names do not follow the ``tramo.testigo``
+    pattern: without an interval there is no depth, and the report cannot
+    demand that naming.
+    """
+    # -- Count by stretch, summing the plates of the same stretch --
+    # They are summed because they are subsamples of the same sediment mass, not
+    # photographic replicates. It is the same rule as the count section.
+    count: dict[tuple, int] = {}
+    plates: dict[tuple, set] = {}
+    for r in results_2:
+        m = _sample_of(r.image_path)
+        if m is None:
+            continue
+        station, range_value, plate = m
+        count[(station, range_value)] = count.get((station, range_value), 0) + len(r.predictions)
+        plates.setdefault((station, range_value), set()).add(plate)
+
+    # -- Sizes by stretch --
+    sizes_2: dict[tuple, list[float]] = {}
+    for d, path_2 in shapes:
+        m = _sample_of(path_2)
+        if m is None or not d.length_um:
+            continue
+        sizes_2.setdefault((m[0], m[1]), []).append(float(d.length_um))
+
+    if len(count) < 3:
+        # With one or two stretches there is no profile to draw or trend to
+        # measure; saying so is more useful than a two-point figure.
+        return ""
+
+    profiles: dict[str, list] = {}
+    for (station, range_value), n in sorted(count.items()):
+        vals = np.asarray(sizes_2.get((station, range_value), []), dtype=float)
+        if len(vals):
+            median_2 = float(np.median(vals))
+            q1, q3 = (float(np.percentile(vals, 25)), float(np.percentile(vals, 75)))
+        else:
+            median_2 = q1 = q3 = float("nan")
+        profiles.setdefault(station, []).append((range_value, n, median_2, q1, q3))
+
+    fig = _fig_profile_depth(profiles)
+
+    # -- Trend, by station --
+    # n is the number of STRETCHES, not of particles: two particles from the same
+    # plate are not independent observations of depth, and counting them
+    # as such would inflate any significance. With few stretches the
+    # correlation is weak by design, and that is why n is declared.
+    paragraphs = []
+    for station, rows_2 in sorted(profiles.items()):
+        rows_2 = sorted(rows_2)  # noqa: PLW2901
+        x = [f[0] for f in rows_2]
+        n_part = [f[1] for f in rows_2]
+        med = [f[2] for f in rows_2]
+        with_size = [(a, b) for a, b in zip(x, med) if b == b]  # discards NaN  # noqa: B905
+        parts = [_text_trend(x, n_part, tr("el número de partículas"))]
+        if len(with_size) >= 3:
+            parts.append(
+                _text_trend(
+                    [a for a, _ in with_size], [b for _, b in with_size], tr("la talla mediana")
+                )
+            )
+        parts = [p for p in parts if p]
+        if parts:
+            paragraphs.append(f"<p><strong>{_esc(station)}.</strong> " + " ".join(parts) + "</p>")
+
+    # -- Table --
+    rows_table = ""
+    for station, rows_2 in sorted(profiles.items()):
+        for range_value, n, median_2, _q1, _q3 in sorted(rows_2):
+            vals = sizes_2.get((station, range_value), [])
+            # A stretch can have counted particles and none with a size, if
+            # that photo was never calibrated. The count is shown and a dash in
+            # the size columns, which is what actually happened.
+            cells = [
+                _esc(station),
+                str(range_value),
+                str(len(plates.get((station, range_value), ()))),
+                str(n),
+                str(len(vals)),
+                f"{median_2:.0f}" if vals else "—",
+                f"{max(vals):.0f}" if vals else "—",
+            ]
+            rows_table += (
+                "<tr><td>"
+                + cells[0]
+                + "</td>"
+                + "".join(f"<td class='r'>{c}</td>" for c in cells[1:])
+                + "</tr>"
+            )
+
+    return (
+        tr(
+            "<p>El tramo es la <strong>profundidad</strong> a la que se tomó el "
+            "sedimento, y a diferencia de una carpeta cualquiera está "
+            "<em>ordenado</em>. Eso permite preguntar por una tendencia —si hay "
+            "más partículas abajo que arriba, o si las de abajo son más "
+            "grandes— y no solo si los grupos difieren entre sí.</p>"
+        )
+        + (f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>" if fig else "")
+        + "".join(paragraphs)
+        + tr(
+            "<p class='caption' style='text-align:left'>La correlación se calcula "
+            "sobre los <strong>tramos</strong>, no sobre las partículas: dos "
+            "partículas de la misma placa no son observaciones independientes de la "
+            "profundidad, y contarlas como tales inflaría cualquier significación. "
+            "El valor de p sale de barajar la serie 20 000 veces, no de una "
+            "aproximación que con tan pocos tramos no valdría.</p>"
+        )
+        + f"<table class='data'><tr>{tr('<th>Estación</th><th>Tramo</th><th>Placas</th><th>Partículas</th><th>Con talla</th><th>Mediana (µm)</th><th>Mayor (µm)</th>')}</tr>{rows_table}</table>"
+    )
+
+
+def _size_per_folder(with_size):
+    """Body of the 'talla_carpetas' section: size by folder, then by photo.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title, with the ``{NUM}.N``
+    sub-header placeholders intact. Empty when fewer than two folders hold
+    measured particles, so the assembler drops the section like it does
+    today.
+    """
+    # ── Size by folder (`{tr('Talla por carpeta')}`), and by photo within each folder ──
+    # Generalizes the `by station/stretch` contrast from the paper
+    # pipeline (which depended on a filename pattern specific
+    # to one study) to the only thing ANY batch has: which
+    # folder each photo came from. It is useful for contrasting sampling sites,
+    # treatments, or any other grouping that the user has
+    # expressed as folders when choosing the images.
+    by_html_folder = ""
+    groups_folder: dict[str, list[float]] = {}
+    for d, path_2 in with_size:
+        folder = Path(path_2).parent.name or str(Path(path_2).parent)
+        groups_folder.setdefault(folder, []).append(d.length_um)
+
+    if len(groups_folder) >= 2:
+        fig_folder = _fig_boxplot_groups(
+            groups_folder, tr("Talla por carpeta"), tr("carpeta de origen")
+        )
+        verdict_folder = _text_kruskal(
+            _kruskal_wallis(list(groups_folder.values())), len(groups_folder)
+        )
+        by_html_folder = (
+            f"<h3>{NUM}.1 {tr('Talla por carpeta')}</h3>"
+            + tr(
+                "<p>Compara la talla entre las carpetas del lote analizado: "
+                "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
+                "es un sitio de muestreo, una estación o una condición.</p>"
+            )
+            + f"<img src='data:image/png;base64,{fig_folder}' style='max-width:100%'>"
+            f"<p>{verdict_folder}</p>"
+        )
+
+        # -- Per photo, within folders with more than one image --
+        parts_photo = []
+        for folder in sorted(groups_folder, key=lambda c: -len(groups_folder[c])):
+            if len(parts_photo) >= _MAX_FOLDER_PER_PHOTO:
+                break
+            folder_photos: dict[str, list[float]] = {}
+            for d, path_2 in with_size:
+                if Path(path_2).parent.name == folder:
+                    folder_photos.setdefault(Path(path_2).name, []).append(d.length_um)
+            if len(folder_photos) < 2:
+                continue
+            fig_photo = _fig_boxplot_groups(
+                folder_photos,
+                tr("Talla por foto — {carpeta}").format(carpeta=folder),
+                tr("foto"),
+                max_groups=20,
+            )
+            verdict_photo = _text_kruskal(
+                _kruskal_wallis(list(folder_photos.values())), len(folder_photos)
+            )
+            parts_photo.append(
+                f"<p><strong>{_esc(folder)}</strong> "
+                + tr("({n} fotos)").format(n=len(folder_photos))
+                + "</p>"
+                f"<img src='data:image/png;base64,{fig_photo}' style='max-width:100%'>"
+                f"<p>{verdict_photo}</p>"
+            )
+        if parts_photo:
+            n_folders_with_photos = sum(
+                1
+                for c in groups_folder
+                if len({Path(r).name for d, r in with_size if Path(r).parent.name == c}) >= 2
+            )
+            note_tope = (
+                tr(
+                    " Se muestran las {n} carpetas con más partículas "
+                    "de las {total} que tienen más de una foto."
+                ).format(n=_MAX_FOLDER_PER_PHOTO, total=n_folders_with_photos)
+                if n_folders_with_photos > _MAX_FOLDER_PER_PHOTO
+                else ""
+            )
+            by_html_folder += (
+                f"<h3>{NUM}.2 {tr('Talla por foto, dentro de cada carpeta')}</h3>"
+                + tr(
+                    "<p>Compara la talla entre las fotos individuales de una "
+                    "misma carpeta: por ejemplo, si el tamaño cambia con la "
+                    "profundidad o el momento de muestreo dentro de un mismo "
+                    "sitio.{nota}</p>"
+                ).format(nota=note_tope)
+                + "".join(parts_photo)
+            )
+    return by_html_folder
