@@ -874,6 +874,24 @@ def _methods_paragraph(p, active, model_names: str, ul_version: str, total_imgs:
     )
 
 
+def _um_px_text(p, state) -> str:
+    """Text for the um/px row of the methods table."""
+    if p.um_per_px > 0:
+        return f"{p.um_per_px:g}"
+    _ums_methods = [
+        c.um_por_px
+        for c in (getattr(state, "calibrations", None) or {}).values()
+        if getattr(c, "valid", False)
+    ]
+    _mic = _average_ic95(_ums_methods)
+    if _mic:
+        _average_m, _margin_m, _n_m = _mic
+        return f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
+    if _ums_methods:
+        return f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
+    return "—"
+
+
 def _section_methods(
     state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
 ) -> tuple:
@@ -893,22 +911,7 @@ def _section_methods(
     # method even if the real calibration is photo by photo (that is explained in
     # detail in the `Calibracion de escala` section, with the minimum and
     # maximum that show how much it varies).
-    if p.um_per_px > 0:
-        um_px_txt = f"{p.um_per_px:g}"
-    else:
-        _ums_methods = [
-            c.um_por_px
-            for c in (getattr(state, "calibrations", None) or {}).values()
-            if getattr(c, "valid", False)
-        ]
-        _mic = _average_ic95(_ums_methods)
-        if _mic:
-            _average_m, _margin_m, _n_m = _mic
-            um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
-        elif _ums_methods:
-            um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
-        else:
-            um_px_txt = "—"
+    um_px_txt = _um_px_text(p, state)
     methods_rows = [
         (tr("Modelos cargados"), _esc(", ".join(s.alias for s in active)) or "—"),
         (tr("Confianza mínima"), f"{p.conf:g}"),
