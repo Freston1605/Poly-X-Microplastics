@@ -52,8 +52,8 @@ def capturar() -> dict[str, str]:
     Returns a dict variant -> sha256 hex digest, printed at the end so the
     M006/S05 English baseline hash lands in the task record.
     """
-    import polyx.gui.report._common as report_common
     import polyx.gui.report_html as rh
+    from polyx.gui.report import machine
 
     # The report embeds a machine-equipment table (_team) whose live values
     # (OS kernel, RAM, GPU, torch version) differ per runner. The byte
@@ -61,16 +61,17 @@ def capturar() -> dict[str, str]:
     # matplotlib 3.9.2), so the equipment rows are pinned to canonical values
     # here and in tests/test_render_reporte_benigno.py (fixture
     # _idioma_del_baseline_y_logs_muertos). Never capture with live rows:
-    # the fixture would not reproduce them on any other machine. The patch
-    # lands on _common, the module _section_team reads the function from at
-    # call time.
-    report_common._team = lambda: [
-        ("Operating system", "Linux"),
-        ("Processor", "pinned"),
-        ("RAM", "16.0 GB"),
-        ("GPU", "not available"),
-        ("PyTorch", "pinned"),
-    ]
+    # the fixture would not reproduce them on any other machine.
+    def patched_team():
+        return [
+            ("Operating system", "Linux"),
+            ("Processor", "pinned"),
+            ("RAM", "16.0 GB"),
+            ("GPU", "not available"),
+            ("PyTorch", "pinned"),
+        ]
+
+    machine._team = patched_team
 
     # The gate compares figures by stable marker (see _normalizar_figuras in
     # tests/test_render_reporte_benigno.py): matplotlib PNG bytes differ per

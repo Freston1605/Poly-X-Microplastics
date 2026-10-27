@@ -60,7 +60,7 @@ English report headings.
   The snapshots were regenerated with `tools/audit/capturar_fixtures_informe.py`
   on the pinned stack. The capture script and
   `tests/test_render_reporte_benigno.py` pin the machine-equipment table
-  (`polyx.gui.report._common._team`) to the same canonical rows, so the byte gate compares an
+  (`polyx.gui.report.machine._team`) to the same canonical rows, so the byte gate compares an
   environment-independent document; the figure bytes are the pinned
   matplotlib's. **The byte-identity gate is now defined against the pinned
   venv** (the repo's own AGENTS.md/CONTRIBUTING rule: run the suite in

@@ -138,9 +138,7 @@ def test_report_css_queda_fuera_de_la_superficie():
 
 
 def test_el_shim_apunta_al_fichero_de_la_implementacion():
-    """``rh.__file__`` resuelve al paquete real: el CSS vive al lado de _common."""
-    import polyx.gui.report._common as common
+    """``rh.__file__`` resuelve al paquete real."""
     import polyx.gui.report_html as shim
 
-    assert Path(shim.__file__).resolve() == Path(common.__file__).resolve()
-    assert Path(shim.__file__).name == "_common.py"
+    assert Path(shim.__file__).parent.name == "report"

@@ -14,7 +14,8 @@ from pathlib import Path
 
 from polyx.core.i18n import tr
 
-from ._common import IDS_SECTIONS, SECTIONS, _batch_metrics, _document_html, _lot_forms
+from .registry import IDS_SECTIONS, SECTIONS, _document_html
+from .samples import _batch_metrics, _lot_forms
 from .sections import (
     _section_calibration,
     _section_comparison,

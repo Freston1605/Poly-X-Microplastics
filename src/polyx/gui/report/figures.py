@@ -11,7 +11,12 @@ from polyx.core.i18n import tr
 from polyx.core.report_metrics import _ORDER_CLASSES
 from polyx.gui import theme as T
 
-from ._common import _MAX_GROUPS_BOXPLOT, _PALETTE, NUM, _esc
+from . import registry
+from .markup import _esc
+
+NUM = registry.NUM
+_MAX_GROUPS_BOXPLOT = 12
+_PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
 
 
 def _fig_to_b64(fig) -> str:

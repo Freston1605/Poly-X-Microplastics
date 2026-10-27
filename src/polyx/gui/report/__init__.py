@@ -1,11 +1,14 @@
 """HTML report package: the one-way section-builder DAG.
 
-``render -> sections -> figures -> _common`` is the dependency direction.
-This module is the package's public surface: it re-exports, from the module
-that owns each one, exactly the names the pre-split ``polyx.gui.report_html``
+``render -> sections -> figures -> (machine/markup/samples/particle/registry)``
+is the dependency direction. Each module has a single responsibility:
+machine (provenance), markup (HTML primitives and CSS), samples (sampling,
+ordering, batch aggregation), particle (particle cards), registry (section
+catalog, anchors, document assembly). This module is the package's public
+surface: it re-exports the names the pre-split ``polyx.gui.report_html``
 module exposed. The 76-name contract is pinned by
-``tests/test_report_surface.py``; ``polyx.gui.report_html`` is the
-compatibility shim over this surface.
+``tests/test_report_surface.py``; ``polyx.gui.report_html`` is a compatibility
+shim over this surface.
 """
 
 from polyx.core.report_metrics import (
@@ -14,37 +17,8 @@ from polyx.core.report_metrics import (
     _count_per_class,
     _pr_f1,
 )
+from polyx.gui import theme as T
 
-from ._common import (
-    _ANCHORS,
-    _MAX_FOLDER_PER_PHOTO,
-    _MAX_GROUPS_BOXPLOT,
-    _ORDER_STATION,
-    _PALETTE,
-    _PLATE,
-    _RE_PLATE,
-    _STATION,
-    _WIDTH_GALLERY,
-    IDS_SECTIONS,
-    NUM,
-    PRESETS,
-    SECTIONS,
-    _batch_metrics,
-    _clue_order,
-    _document_html,
-    _esc,
-    _img_b64,
-    _lot_forms,
-    _record_particle,
-    _sample_of,
-    _table_count,
-    _table_width,
-    _team,
-    _training_of,
-    _uri_gallery,
-    anchor,
-    choose_records,
-)
 from .figures import (
     _fig_agreement_by_image,
     _fig_boxplot_groups,
@@ -60,9 +34,25 @@ from .figures import (
     _fig_to_b64,
     _figure_calibration,
 )
+from .machine import _team, _training_of
+from .markup import _WIDTH_GALLERY, _esc, _img_b64, _table_count, _table_width, _uri_gallery
+from .particle import _record_particle
+from .registry import _ANCHORS, IDS_SECTIONS, NUM, PRESETS, SECTIONS, _document_html, anchor
 from .render import (
     _generate_report_impl,
     generate_report,
+)
+from .samples import (
+    _MAX_FOLDER_PER_PHOTO,
+    _ORDER_STATION,
+    _PLATE,
+    _RE_PLATE,
+    _STATION,
+    _batch_metrics,
+    _clue_order,
+    _lot_forms,
+    _sample_of,
+    choose_records,
 )
 from .sections import (
     _section_calibration,
@@ -97,6 +87,12 @@ from .stats import (
     _text_kruskal,
     _text_trend,
 )
+
+# Three presentation colours of the report (fixed palette: a report is
+# printed and archived, so it must not follow the UI theme).
+_PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
+
+_MAX_GROUPS_BOXPLOT = 12
 
 __all__ = [
     "IDS_SECTIONS",
