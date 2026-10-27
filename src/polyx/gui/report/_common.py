@@ -16,24 +16,18 @@ from __future__ import annotations
 
 import base64
 import html
-import io
-import math
 import platform
 import re
 from collections import Counter
-from datetime import datetime
 from pathlib import Path
 
 # matplotlib in non-interactive mode
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
 matplotlib.use("Agg")
 
 from polyx.core.i18n import language, tr
-from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
-from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 from polyx.core.report_metrics import _classes_views
 from polyx.gui import theme as T
 

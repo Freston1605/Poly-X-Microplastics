@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+import polyx.gui.report._common as _common
 from polyx.core.i18n import tr
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
@@ -19,11 +20,10 @@ from polyx.core.stats import (
 )
 from polyx.gui import theme as T
 
-import polyx.gui.report._common as _common
 from ._common import (
-    NUM,
     _MAX_FOLDER_PER_PHOTO,
     _ORDER_STATION,
+    NUM,
     _clue_order,
     _esc,
     _img_b64,

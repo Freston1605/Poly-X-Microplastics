@@ -11,7 +11,7 @@ from polyx.core.i18n import tr
 from polyx.core.report_metrics import _ORDER_CLASSES
 from polyx.gui import theme as T
 
-from ._common import NUM, _MAX_GROUPS_BOXPLOT, _PALETTE, _esc
+from ._common import _MAX_GROUPS_BOXPLOT, _PALETTE, NUM, _esc
 
 
 def _fig_to_b64(fig) -> str:
