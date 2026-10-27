@@ -990,6 +990,17 @@ def _section_references(include_refs: bool = True) -> str:
     return refs_html
 
 
+def _calibration_manual(p) -> str:
+    """Calibration block when a single manual scale is used."""
+    return tr(
+        "<p>Escala única para todo el lote, introducida a mano: "
+        "<strong>{um} µm/píxel</strong>. No se midió ninguna placa, "
+        "de modo que este factor no está trazado a un patrón de longitud y "
+        "cualquier variación en la distancia de disparo entre fotos queda sin "
+        "corregir.</p>"
+    ).format(um=f"{p.um_per_px:g}")
+
+
 def _section_calibration(state) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
@@ -1065,13 +1076,7 @@ def _section_calibration(state) -> str:
                         f"<p>{tr('Incidencias durante la calibración:')}</p><ul>{items}</ul>"
                     )
     elif p.um_per_px > 0:
-        calib_html = tr(
-            "<p>Escala única para todo el lote, introducida a mano: "
-            "<strong>{um} µm/píxel</strong>. No se midió ninguna placa, "
-            "de modo que este factor no está trazado a un patrón de longitud y "
-            "cualquier variación en la distancia de disparo entre fotos queda sin "
-            "corregir.</p>"
-        ).format(um=f"{p.um_per_px:g}")
+        calib_html = _calibration_manual(p)
     return calib_html
 
 
@@ -1419,10 +1424,6 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         shape_html = method_2 + example + table_morphotype + tables + count_2
     return shape_html, by_html_folder
 
-
-def _build_records(state, shapes, max_records: int) -> str:
-    """Build the particle fichas cards."""
-    return _build_records(state, shapes, max_records)
 
 def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
     """Body of the 'fichas' section: one annotated card per sampled particle.
