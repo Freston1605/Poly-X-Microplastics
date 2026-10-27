@@ -27,6 +27,7 @@ from polyx.core.detect.protocol import (
 )
 from polyx.core.image_io import read_image
 from polyx.core.measure.shape import apply_to_detection
+from polyx.core.platform import device_available
 from polyx.core.quality.metrics import match_image
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
@@ -88,8 +89,6 @@ def run_batch(
         if img is None:
             continue
         H, W = img.shape[:2]
-        from .platform import device_available
-
         dev = device if device is not None and str(device).strip() != "" else device_available()
         dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=dev)
         if measure_shape:

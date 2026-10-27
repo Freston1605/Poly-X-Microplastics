@@ -383,7 +383,7 @@ def resolver(
         if bgr is None:
             bgr = read_image(image_path)
         if bgr is None:
-            return Calibration(diameter_mm=diameter_mm, warning="no se pudo leer la imagen")
+            return Calibration(origin=ORIGIN_NONE, diameter_mm=diameter_mm, warning="no se pudo leer la imagen")
         cal = calibrate_from_plate(bgr, diameter_mm, height_plate_mm, distance_camera_mm)
         if cal.valid:
             return cal

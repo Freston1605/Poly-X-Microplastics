@@ -52,7 +52,10 @@ def make_detector(
 def register_detector(name: str, cls: type) -> None:
     """Register a custom detector class."""
     if not (
-        isinstance(cls, type) and all(hasattr(cls, attr) for attr in ("load", "predict", "names"))
+        isinstance(cls, type)
+        and all(hasattr(cls, attr) for attr in ("load", "predict", "names"))
+        and callable(getattr(cls, "load", None))
+        and callable(getattr(cls, "predict", None))
     ):
         raise TypeError("Detector class must implement DetectionSource protocol")
     _DETECTOR_REGISTRY[name] = cls

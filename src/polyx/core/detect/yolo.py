@@ -192,7 +192,7 @@ class YoloModel:
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
-        **kwargs,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         res = self._predict_with_fallback(image_path, conf, iou, imgsz, device, auto_fallback)
         out: list[Detection] = []
@@ -229,7 +229,7 @@ class YoloModel:
         agnostic_nms: bool = True,
         imgsz: int | None = None,
         batch: int = 8,
-        **kwargs,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         """Tile-based inference (SAHI / Slicing Aided Hyper Inference).
 
@@ -418,7 +418,7 @@ class YoloSegModel(YoloModel):
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
-        **kwargs,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         res = self._predict_with_fallback(
             image_path, conf, iou, imgsz, device, auto_fallback, task="segment"
