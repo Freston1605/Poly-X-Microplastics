@@ -9,6 +9,11 @@ import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
+    compute_box_size_um,
+    find_gt_for_image,
+    policy_tiling,
+    read_yolo_txt,
+    size_image,
 )
 from polyx.core.image_io import read_image
 from polyx.core.provenance.observability import event, logger_for
@@ -128,25 +133,25 @@ class YoloModel:
                     pass
         return (max_ok or 1920), detail
 
-    def predict(
+    def _predict_with_fallback(
         self,
-        image_path: str | Path,
-        conf: float = 0.25,
-        iou: float = 0.45,
-        imgsz: int = 640,
-        device: str = "0",
-        auto_fallback: bool = True,
-    ) -> list[Detection]:
+        image_path,
+        conf,
+        iou,
+        imgsz,
+        device,
+        auto_fallback,
+        task=None,
+    ):
+        """Run inference with VRAM auto-fallback. Returns the raw Ultralytics result list."""
         self.load()
-        # Auto-fallback: if the requested imgsz exhausts VRAM, it retries with each
-        # smaller size in the ladder instead of aborting the whole analysis.
         sizes = [int(imgsz)]
         if auto_fallback:
             sizes += [s for s in self.FALLBACK_SIZES if s < int(imgsz)]
         res = None
         for i, sz in enumerate(sizes):
             try:
-                res = self._model.predict(
+                kwargs = dict(
                     source=str(image_path),
                     conf=conf,
                     iou=iou,
@@ -156,10 +161,13 @@ class YoloModel:
                     save=False,
                     max_det=self.MAX_DET,
                 )
+                if task is not None:
+                    kwargs["task"] = task
+                res = self._model.predict(**kwargs)
                 self.last_imgsz = sz
                 self.last_fallback = i > 0
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
                     raise
                 event(
@@ -173,6 +181,18 @@ class YoloModel:
                     reason="gpu_oom",
                 )
                 _cuda_empty_cache()
+        return res
+
+    def predict(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 640,
+        device: str = "0",
+        auto_fallback: bool = True,
+    ) -> list[Detection]:
+        res = self._predict_with_fallback(image_path, conf, iou, imgsz, device, auto_fallback)
         out: list[Detection] = []
         if not res:
             return out
@@ -342,93 +362,6 @@ class YoloModel:
         )
 
 
-def size_image(image_path: str | Path) -> tuple[int, int] | None:
-    """(width, height) reading only the header, without decoding the whole image.
-
-    It is queried before every inference, so decoding a 3260 px photo just
-    to measure it would cost more than the decision itself.
-
-    Returns the size ALREADY ROTATED per EXIF, because that is the frame the
-    rest of the program works in: ``cv2.imdecode`` applies the orientation
-    and Pillow does not. Without the fix, a photo tagged orientation 6
-    measured 4096x3072 but decoded 3072x4096, so boxes normalized against
-    one size were denormalized against the other and ended up displaced.
-    """
-    try:
-        from PIL import Image
-
-        with Image.open(str(image_path)) as im:
-            width, height = int(im.size[0]), int(im.size[1])
-            # 5, 6, 7, 8 are the orientations that swap the axes.
-            if im.getexif().get(274) in (5, 6, 7, 8):
-                width, height = height, width
-            return width, height
-    except Exception:  # noqa: BLE001
-        # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
-        # which is already used throughout the rest of the project for that same reason.
-        try:
-            img = read_image(image_path)
-            if img is None:
-                return None
-            return int(img.shape[1]), int(img.shape[0])
-        except Exception:  # noqa: BLE001
-            return None
-
-
-def policy_tiling(
-    width: int,
-    height: int,
-    imgsz: int,
-    threshold_px: int = 2000,
-    tile: int = 0,
-    overlap: float = 0.25,
-) -> dict | None:
-    """Decides whether the photo gets tiled, and with which geometry, from its
-    size alone.
-
-        ``None`` means a single pass over the full image.
-
-        The threshold is not compared against the area but against the **longer
-        side**, because what makes a particle disappear is the rescale to
-        ``imgsz``: a 3260 px photo entering at 2080 shrinks every particle to
-        0.64x, and below the network's stride it stops existing. Tiling avoids
-        that rescale.
-
-        With ``tile=0`` the tile side comes from ``min(umbral_px, imgsz)``: this
-        way the crop enters the network without being shrunk, which is exactly
-        the goal.
-
-        WHETHER to tile and AT WHICH SIZE are two different questions, and
-        mixing them up caused a failure: to force tiling, ``predict_auto``
-        passes ``umbral_px=0`` -- its way of saying "do not decide, tile" --,
-        and that yielded ``min(0, imgsz) = 0``, which the clamp raised to 256.
-        On a 4096x3072 photo that is 336 tiles of 256 px: extremely slow and
-        with ZERO detections, because each tile gets rescaled 8x up to imgsz and
-        the model sees nothing resembling what it was trained on. With
-        umbral_px at 0 the size is governed by imgsz, the only thing that truly
-        determines it.
-    """
-    side = max(int(width), int(height))
-    if side <= int(threshold_px):
-        return None
-    if int(tile) > 0:
-        t = int(tile)
-    else:
-        candidates_2 = [v for v in (int(threshold_px), int(imgsz)) if v > 0]
-        t = min(candidates_2) if candidates_2 else 1280
-    t = max(256, min(t, side))
-    overlap = min(max(float(overlap), 0.0), 0.9)
-    step = max(1, int(round(t * (1.0 - overlap))))  # noqa: RUF046
-    n = len(_tile_starts(int(width), t, step)) * len(_tile_starts(int(height), t, step))
-    return {
-        "tile": t,
-        "overlap": overlap,
-        "n_tiles": n,
-        "lado": side,
-        "umbral_px": int(threshold_px),
-    }
-
-
 def _tile_starts(total: int, tile: int, step: int) -> list[int]:
     """Start positions of the tiles along one axis (the last one flush with the edge)."""
     if total <= tile:
@@ -472,110 +405,6 @@ def _nms(dets: list[Detection], iou_thr: float = 0.45, agnostic: bool = True) ->
     return [dets[i] for i in keep]
 
 
-def read_yolo_txt(
-    txt_path: str | Path, img_w: int, img_h: int, class_names: dict[int, str]
-) -> list[Detection]:
-    """Reads a YOLO .txt (detection or seg polygon) and returns Detection with conf=1."""
-    out: list[Detection] = []
-    p = Path(txt_path)
-    if not p.exists():
-        return out
-    try:
-        for line in p.read_text(encoding="utf-8").splitlines():
-            parts = line.strip().split()
-            if len(parts) < 5:
-                continue
-            cls = int(float(parts[0]))
-            nums = [float(x) for x in parts[1:]]
-            if len(nums) >= 6 and len(nums) % 2 == 0:
-                pts = [(nums[k] * img_w, nums[k + 1] * img_h) for k in range(0, len(nums), 2)]
-                xs = [pt[0] for pt in pts]
-                ys = [pt[1] for pt in pts]
-                x1, x2 = min(xs), max(xs)
-                y1, y2 = min(ys), max(ys)
-                import cv2 as _cv2
-
-                mask = np.zeros((img_h, img_w), dtype=np.uint8)
-                arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-                _cv2.fillPoly(mask, [arr], 1)
-                out.append(
-                    Detection(
-                        class_id=cls,
-                        class_name=class_names.get(cls, str(cls)),
-                        conf=1.0,
-                        x1=x1,
-                        y1=y1,
-                        x2=x2,
-                        y2=y2,
-                        mask=mask.astype(bool),
-                        mask_source="gt-polygon",
-                    )
-                )
-            else:
-                if len(nums) < 4:
-                    continue
-                cx, cy, w, h = nums[:4]
-                cx *= img_w
-                cy *= img_h
-                w *= img_w
-                h *= img_h
-                x1 = cx - w / 2
-                y1 = cy - h / 2
-                x2 = cx + w / 2
-                y2 = cy + h / 2
-                out.append(
-                    Detection(
-                        class_id=cls,
-                        class_name=class_names.get(cls, str(cls)),
-                        conf=1.0,
-                        x1=x1,
-                        y1=y1,
-                        x2=x2,
-                        y2=y2,
-                    )
-                )
-    except Exception:  # noqa: BLE001, S110
-        pass
-    return out
-
-
-def find_gt_for_image(image_path: Path, gt_folder: Path | None) -> Path | None:
-    """Finds the GT .txt next to the image, in the sibling /labels, or in gt_folder."""
-    stem = image_path.stem
-    candidates = []
-    if gt_folder is not None:
-        candidates.append(gt_folder / f"{stem}.txt")
-    # same directory
-    candidates.append(image_path.parent / f"{stem}.txt")
-    # sibling labels/
-    if image_path.parent.name.lower() == "images":
-        candidates.append(image_path.parent.parent / "labels" / f"{stem}.txt")
-    else:
-        candidates.append(image_path.parent / "labels" / f"{stem}.txt")
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
-
-
-def compute_box_size_um(det: Detection, um_per_px: float | None) -> None:
-    """Approximate size from the BOX, not the particle.
-
-    It is a fallback: it overestimates the area 1.87x at the median of this
-    material because the box of an elongated particle is nearly empty, and
-    it depends on orientation. Used only when segmentation could not isolate
-    the particle. The good version is ``morfologia.medir_deteccion``.
-    """
-    if um_per_px is None or um_per_px <= 0:
-        return
-    area_px2 = det.w * det.h
-    area_um2 = area_px2 * (um_per_px**2)
-    # equivalent diameter (circle with the same area)
-    diam_um = 2.0 * (area_um2 / np.pi) ** 0.5
-    det.diam_um = diam_um
-    det.area_um2 = area_um2
-
-
 class YoloSegModel(YoloModel):
     """YOLO segmentation backend (task='segment').
 
@@ -596,31 +425,7 @@ class YoloSegModel(YoloModel):
         device: str = "0",
         auto_fallback: bool = True,
     ) -> list[Detection]:
-        self.load()
-        sizes = [int(imgsz)]
-        if auto_fallback:
-            sizes += [s for s in self.FALLBACK_SIZES if s < int(imgsz)]
-        res = None
-        for i, sz in enumerate(sizes):
-            try:
-                res = self._model.predict(
-                    source=str(image_path),
-                    conf=conf,
-                    iou=iou,
-                    imgsz=sz,
-                    device=device,
-                    verbose=False,
-                    save=False,
-                    task="segment",
-                    max_det=self.MAX_DET,
-                )
-                self.last_imgsz = sz
-                self.last_fallback = i > 0
-                break
-            except Exception as e:
-                if not auto_fallback or i == len(sizes) - 1 or not _is_oom(e):
-                    raise
-                _cuda_empty_cache()
+        res = self._predict_with_fallback(image_path, conf, iou, imgsz, device, auto_fallback, task="segment")
         out: list[Detection] = []
         if not res:
             return out

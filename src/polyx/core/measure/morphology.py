@@ -83,6 +83,8 @@ another machine."""
 
 from __future__ import annotations
 
+from .morphology_constants import *
+
 from dataclasses import dataclass
 
 import cv2
@@ -90,11 +92,7 @@ import numpy as np
 
 # Morphotypes. Cutoff at 3 on the REAL aspect ratio (not the box's): it is the cut
 # normally used to separate fiber from fragment.
-FIBER = "fibra"
-FRAGMENT = "fragmento"
-INDETERMINATE = "indeterminado"
 
-ASPECT_FIBER = 3.0
 
 # The geodesic diameter is used only if the particle is at least this thin,
 # measured as length/thickness. On a thick particle any concavity makes
@@ -106,7 +104,6 @@ ASPECT_FIBER = 3.0
 # 1.05 and 1.64 thinness and the fattest fiber at 6.7, so any value
 # between 3 and 6 separates the same. With it, the median length error drops from 3.1% to
 # 0.8% -- a circle goes from 104 to exactly 100 -- without touching any fiber.
-THINNESS_FOR_GEODESIC = 4.0
 
 # The particle must ALSO be NON-CONVEX for the geodesic to add
 # anything. On a convex shape the longest path inside is the straight one, so
@@ -119,7 +116,6 @@ THINNESS_FOR_GEODESIC = 4.0
 # Solidity (area / convex hull area) separates them unambiguously
 # on shapes of known size: bars and circles stay above 1.00,
 # arcs between 0.27 and 0.71.
-SOLIDITY_CONVEX = 0.90
 
 # Fraction of the maximum distance to the background above which a pixel is
 # considered a CORE of a particle. Two touching particles have two
@@ -132,11 +128,9 @@ SOLIDITY_CONVEX = 0.90
 # a curved fiber, not a four-lobed irregular one. Raising it to 0.90 makes
 # the curved fiber burst into 27 pieces, so the margin is wide below and
 # narrow above.
-THRESHOLD_CORE = 0.80
 
 # Above this the particle is considered curved and the chord length
 # stops working as its size. 1.15 = the contour travels 15% more than the straight line.
-CURVE_FROM = 1.15
 
 
 @dataclass
@@ -239,7 +233,6 @@ def _cutout(bgr: np.ndarray, x1, y1, x2, y2, margin: int):
 # motivated the crop to the box. Two circles of 20 px radius joined by a
 # bridge form a set of about 90x40 px -> elongation 2.25, below the
 # threshold, so that case is still cropped and separated as before.
-ELONGATION_ELONGATED = 3.0
 
 # How far the mask is allowed to overflow the detector box, as a
 # fraction of one side of the box. They are two numbers because the detector error
@@ -270,15 +263,11 @@ ELONGATION_ELONGATED = 3.0
 # accept that there is a particle there. Below it None is returned instead of
 # measuring: the 90th percentile of the box against the median of the ring, in
 # 0-255 levels.
-CONTRAST_MINIMUM = 12
 
-SLACK_COMPACT = 0.10
-SLACK_ELONGATED = 0.25
 
 # Threshold above which the mask is considered to have leaked. The length of the
 # UNCROPPED mask is measured against the diagonal of the box. 1.5 comes from the
 # data: over 98 hand-annotated particles, none exceeds 1.41.
-DRAIN_X_DIAGONAL = 1.5
 
 
 def _elongation(mask: np.ndarray) -> float:
@@ -847,7 +836,13 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
         if zoom > 1:
             par = cv2.resize(par, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
         return par, m
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from polyx.core.provenance.observability import logger_for
+
+            logger_for("detector").warning("draw_measurement failed: %s", exc)
+        except Exception:  # noqa: BLE001, S110
+            pass
         return None, None
 
 

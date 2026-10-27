@@ -125,14 +125,36 @@ Detections = list[Instance]
 
 # Utility functions (kept here for now; could move to a utils module)
 def size_image(image_path: str | Path) -> tuple[int, int] | None:
-    """Read image dimensions without loading full image."""
-    try:
-        import cv2
+    """(width, height) reading only the header, without decoding the whole image.
 
-        h, w = cv2.imread(str(image_path)).shape[:2]
-        return w, h
+    It is queried before every inference, so decoding a 3260 px photo just
+    to measure it would cost more than the decision itself.
+
+    Returns the size ALREADY ROTATED per EXIF, because that is the frame the
+    rest of the program works in: ``cv2.imdecode`` applies the orientation
+    and Pillow does not. Without the fix, a photo tagged orientation 6
+    measured 4096x3072 but decoded 3072x4096, so boxes normalized against
+    one size were denormalized against the other and ended up displaced.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(str(image_path)) as im:
+            width, height = int(im.size[0]), int(im.size[1])
+            # 5, 6, 7, 8 are the orientations that swap the axes.
+            if im.getexif().get(274) in (5, 6, 7, 8):
+                width, height = height, width
+            return width, height
     except Exception:  # noqa: BLE001
-        return None
+        # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
+        # which is already used throughout the rest of the project for that same reason.
+        try:
+            img = read_image(image_path)
+            if img is None:
+                return None
+            return int(img.shape[1]), int(img.shape[0])
+        except Exception:  # noqa: BLE001
+            return None
 
 
 def policy_tiling(
@@ -142,21 +164,51 @@ def policy_tiling(
     threshold_px: int = 2000,
     tile: int = 0,
     overlap: float = 0.25,
-) -> tuple[int, int, int, float]:
-    """Compute tiling parameters.
+) -> dict | None:
+    """Decides whether the photo gets tiled, and with which geometry, from its
+    size alone.
 
-    Returns (tile_size, overlap_px, n_tiles_x, n_tiles_y)
+        ``None`` means a single pass over the full image.
+
+        The threshold is not compared against the area but against the **longer
+        side**, because what makes a particle disappear is the rescale to
+        ``imgsz``: a 3260 px photo entering at 2080 shrinks every particle to
+        0.64x, and below the network's stride it stops existing. Tiling avoids
+        that rescale.
+
+        With ``tile=0`` the tile side comes from ``min(umbral_px, imgsz)``: this
+        way the crop enters the network without being shrunk, which is exactly
+        the goal.
+
+        WHETHER to tile and AT WHICH SIZE are two different questions, and
+        mixing them up caused a failure: to force tiling, ``predict_auto``
+        passes ``umbral_px=0`` -- its way of saying "do not decide, tile" --,
+        and that yielded ``min(0, imgsz) = 0``, which the clamp raised to 256.
+        On a 4096x3072 photo that is 336 tiles of 256 px: extremely slow and
+        with ZERO detections, because each tile gets rescaled 8x up to imgsz and
+        the model sees nothing resembling what it was trained on. With
+        umbral_px at 0 the size is governed by imgsz, the only thing that truly
+        determines it.
     """
-    long_side = max(width, height)
-    if long_side <= threshold_px:
-        return 0, 0, 1, 1
-    if tile == 0:
-        tile = min(threshold_px, imgsz)
-    tile = max(256, tile)
-    step = int(tile * (1 - overlap))
-    n_x = max(1, (width - tile) // step + 1)
-    n_y = max(1, (height - tile) // step + 1)
-    return tile, int(tile * overlap), n_x, n_y
+    side = max(int(width), int(height))
+    if side <= int(threshold_px):
+        return None
+    if int(tile) > 0:
+        t = int(tile)
+    else:
+        candidates_2 = [v for v in (int(threshold_px), int(imgsz)) if v > 0]
+        t = min(candidates_2) if candidates_2 else 1280
+    t = max(256, min(t, side))
+    overlap = min(max(float(overlap), 0.0), 0.9)
+    step = max(1, int(round(t * (1.0 - overlap))))  # noqa: RUF046
+    n = len(_tile_starts(int(width), t, step)) * len(_tile_starts(int(height), t, step))
+    return {
+        "tile": t,
+        "overlap": overlap,
+        "n_tiles": n,
+        "lado": side,
+        "umbral_px": int(threshold_px),
+    }
 
 
 def read_yolo_txt(
@@ -226,29 +278,51 @@ def read_yolo_txt(
                             y2=y2,
                         )
                     )
-    except Exception:  # noqa: BLE001, S110
-        pass
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from polyx.core.provenance.observability import logger_for
+
+            logger_for("detector").warning("read_yolo_txt failed: %s", exc)
+        except Exception:  # noqa: BLE001, S110
+            pass
     return instances
 
 
-def find_gt_for_image(image_path: str | Path, gt_folder: str | Path) -> Path | None:
-    """Find the ground-truth .txt file for an image."""
-    img_path = Path(image_path)
-    for ext in (".txt",):
-        candidate = Path(gt_folder) / img_path.with_suffix(ext).name
-        if candidate.exists():
-            return candidate
+def find_gt_for_image(image_path: Path, gt_folder: Path | None) -> Path | None:
+    """Finds the GT .txt next to the image, in the sibling /labels, or in gt_folder."""
+    stem = image_path.stem
+    candidates = []
+    if gt_folder is not None:
+        candidates.append(gt_folder / f"{stem}.txt")
+    # same directory
+    candidates.append(image_path.parent / f"{stem}.txt")
+    # sibling labels/
+    if image_path.parent.name.lower() == "images":
+        candidates.append(image_path.parent.parent / "labels" / f"{stem}.txt")
+    else:
+        candidates.append(image_path.parent / "labels" / f"{stem}.txt")
+    for c in candidates:
+        if c.exists():
+            return c
     return None
 
 
-def compute_box_size_um(det: Instance, um_per_px: float) -> None:
-    """Fill diam_um and area_um2 from box dimensions and calibration."""
-    if det.diam_um is not None:
+def compute_box_size_um(det: Detection, um_per_px: float | None) -> None:
+    """Approximate size from the BOX, not the particle.
+
+    It is a fallback: it overestimates the area 1.87x at the median of this
+    material because the box of an elongated particle is nearly empty, and
+    it depends on orientation. Used only when segmentation could not isolate
+    the particle. The good version is ``morfologia.medir_deteccion``.
+    """
+    if um_per_px is None or um_per_px <= 0:
         return
-    w = det.w
-    h = det.h
-    det.diam_um = ((w + h) / 2) * um_per_px
-    det.area_um2 = (w * h) * (um_per_px**2)
+    area_px2 = det.w * det.h
+    area_um2 = area_px2 * (um_per_px**2)
+    # equivalent diameter (circle with the same area)
+    diam_um = 2.0 * (area_um2 / np.pi) ** 0.5
+    det.diam_um = diam_um
+    det.area_um2 = area_um2
 
 
 @dataclass
@@ -288,3 +362,13 @@ class SegmentationSource(Protocol):
 
     @property
     def last_imgsz(self) -> int: ...
+
+def _tile_starts(total: int, tile: int, step: int) -> list[int]:
+    """Start positions of the tiles along one axis (the last one flush with the edge)."""
+    if total <= tile:
+        return [0]
+    starts = list(range(0, total - tile + 1, step))
+    if not starts or starts[-1] != total - tile:
+        starts.append(total - tile)
+    return starts
+
