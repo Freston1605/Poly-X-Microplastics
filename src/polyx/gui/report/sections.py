@@ -504,11 +504,8 @@ def _comparison_verdict(state, results_2, active_2, there_is_gt: bool) -> str:
     ).format(alias=_esc(best), f1=f"{best_f1:.3f}")
 
 
-def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo: dict) -> str:
-    """Comparison figures (bars, per-class, agreement, sweep)."""
-    figures_cmp = ""
-    if not there_is_gt:
-        return figures_cmp
+def _comparison_data(state, results_2, active_2):
+    """Per-model bar data and per-class metrics for comparison."""
     data_bars = []
     by_model_class: dict[str, dict[str, tuple]] = {}
     for mi in active_2:
@@ -544,7 +541,15 @@ def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo:
                 )
                 for cid in ids
             }
+    return data_bars, by_model_class
 
+
+def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo: dict) -> str:
+    """Comparison figures (bars, per-class, agreement, sweep)."""
+    figures_cmp = ""
+    if not there_is_gt:
+        return figures_cmp
+    data_bars, by_model_class = _comparison_data(state, results_2, active_2)
     f_bars = _fig_comparison_metrics(data_bars)
     if f_bars:
         figures_cmp += (
