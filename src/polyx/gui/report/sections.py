@@ -1,18 +1,53 @@
 """Sections."""
 
-from ._common import *
-from .stats import *
+from collections import Counter
+from pathlib import Path
+
+import numpy as np
+
+from polyx.core.i18n import tr
+from polyx.core.quality.assignment import resume
+from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
+from polyx.core.report_metrics import _ORDER_CLASSES, _count_per_class, _pr_f1
+from polyx.core.stats import (
+    _average_ic95,
+    _kruskal_wallis,
+    _morphotype,
+    _sweep_confidence,
+    _text_kruskal,
+    _text_trend,
+)
+from polyx.gui import theme as T
+
 import polyx.gui.report._common as _common
-
-globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
-from .figures import *  # noqa: E402
-import polyx.gui.report.figures as _figures  # noqa: E402
-
-globals().update({k: v for k, v in vars(_figures).items() if not k.startswith("__")})
-
-import polyx.gui.report.stats as _stats  # noqa: E402
-
-globals().update({k: v for k, v in vars(_stats).items() if not k.startswith("__")})
+from ._common import (
+    NUM,
+    _MAX_FOLDER_PER_PHOTO,
+    _ORDER_STATION,
+    _clue_order,
+    _esc,
+    _img_b64,
+    _record_particle,
+    _sample_of,
+    _table_count,
+    _table_width,
+    _uri_gallery,
+    choose_records,
+)
+from .figures import (
+    _fig_agreement_by_image,
+    _fig_boxplot_groups,
+    _fig_class_distribution,
+    _fig_comparison_metrics,
+    _fig_confidence_hist,
+    _fig_confusion_matrix,
+    _fig_metrics_by_class,
+    _fig_profile_depth,
+    _fig_size_hist,
+    _fig_sizes_by_section,
+    _fig_sweep,
+    _figure_calibration,
+)
 
 
 def _section_team(active) -> str:

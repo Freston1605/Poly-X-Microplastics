@@ -20,7 +20,6 @@ import io
 import math
 import platform
 import re
-import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -36,13 +35,7 @@ from polyx.core.i18n import language, tr
 from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 from polyx.core.report_metrics import _classes_views
-
-from polyx.core import report_metrics as _core_report_metrics
-from polyx.core import stats as _core_stats
 from polyx.gui import theme as T
-
-globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
-globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
 
 
 # ────────────────────────────────────────────────────────────────────
