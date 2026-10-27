@@ -1,7 +1,5 @@
 """Sections."""
 
-import sys
-
 from ._common import *
 from .stats import *
 import polyx.gui.report._common as _common
@@ -19,10 +17,7 @@ globals().update({k: v for k, v in vars(_stats).items() if not k.startswith("__"
 
 def _section_team(active) -> str:
     """Table of components and of how each loaded model was trained."""
-    rows_eq = "".join(
-        f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>"
-        for k, v in sys.modules.get("polyx.gui.report_html", sys.modules[__name__])._team()
-    )
+    rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in _common._team())
     html = (
         f"<h3>@@N@@.1 {tr('Equipo de cómputo')}</h3>"
         f"<table class='data'><tr>{tr('<th>Componente</th><th>Detalle</th>')}</tr>"
@@ -33,9 +28,7 @@ def _section_team(active) -> str:
     for s in active:
         if s.path is None:
             continue
-        info = sys.modules.get("polyx.gui.report_html", sys.modules[__name__])._training_of(
-            Path(s.path)
-        )
+        info = _common._training_of(Path(s.path))
         if info:
             training_runs.append((s.alias, info))
     if not training_runs:

@@ -113,6 +113,7 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
     importlib.reload(i18n)
+    import polyx.gui.report._common as report_common
     import polyx.gui.report_html as rh
 
     importlib.reload(rh)
@@ -122,8 +123,9 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     # the identical lambda): the report's _team() reads live OS/RAM/GPU/
     # torch values that differ per runner, and a byte gate cannot depend on
     # them. Production keeps the live rows; only this fixture and the
-    # capture script override the function.
-    rh._team = lambda: [
+    # capture script override the function. The patch lands on _common, the
+    # module _section_team reads the function from at call time.
+    report_common._team = lambda: [
         ("Operating system", "Linux"),
         ("Processor", "pinned"),
         ("RAM", "16.0 GB"),
