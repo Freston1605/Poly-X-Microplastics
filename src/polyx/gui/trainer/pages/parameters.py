@@ -488,7 +488,7 @@ class ParametersPage(TrainerPage):
 
     def _optimize_all(self):
         """Applies the priority order: imgsz, then batch, then speed."""
-        from ..hw import recommend_config
+        from ..hw import RecommendRequest, recommend_config
 
         info = getattr(self, "_last_gpu_info", None) or detect_gpu()
         if not info.available:
@@ -516,11 +516,13 @@ class ParametersPage(TrainerPage):
             pass
 
         r = recommend_config(
-            self.state.model.size,
-            info.vram_free_gb,
-            imgsz_native=side_native,
-            dataset_gb=dataset_gb,
-            ram_free_gb=ram_gb,
+            RecommendRequest(
+                size=self.state.model.size,
+                vram_free_gb=info.vram_free_gb,
+                imgsz_native=side_native,
+                dataset_gb=dataset_gb,
+                ram_free_gb=ram_gb,
+            )
         )
 
         # 1. imgsz — the combo is editable, so any value is accepted

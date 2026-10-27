@@ -82,6 +82,46 @@ class TrainerRunner(QThread):
         )
         self.log_line.emit("=" * 60)
 
+    def _diagnose_hardware(self, torch, p) -> str:
+        """Emit hardware diagnostics and resolve the effective device string."""
+        cuda_ok = torch.cuda.is_available()
+        torch_cuda = getattr(torch.version, "cuda", None)
+        torch_hip = getattr(torch.version, "hip", None)
+        build_str = (
+            torch_cuda
+            if torch_cuda is not None
+            else (torch_hip if torch_hip is not None else "CPU-only")
+        )
+        backend_name = "ROCm" if (cuda_ok and torch_hip is not None) else "CUDA"
+        self.log_line.emit("=" * 60)
+        self.log_line.emit(
+            f"[HW] PyTorch {torch.__version__}  ·  {backend_name} build: {build_str}"
+        )
+        self.log_line.emit(f"[HW] torch.cuda.is_available(): {cuda_ok}")
+        if cuda_ok:
+            dev_name = torch.cuda.get_device_name(0)
+            free, total = torch.cuda.mem_get_info(0)
+            self.log_line.emit(
+                f"[HW] GPU 0: {dev_name}  ·  "
+                f"VRAM libre {free / 1024**3:.2f} / {total / 1024**3:.2f} GB"
+            )
+        self.log_line.emit(f"[HW] Device solicitado: '{p.device}'")
+
+        req = (p.device or "0").strip().lower()
+        if not cuda_ok and req != "cpu":
+            self.log_line.emit(
+                "[ATENCION] GPU (CUDA/ROCm) no disponible — se forzará entrenamiento en CPU."
+            )
+            effective_device = "cpu"
+        elif req in ("cpu",):  # noqa: FURB171
+            self.log_line.emit("[INFO] Entrenando en CPU (por configuración).")
+            effective_device = "cpu"
+        else:
+            effective_device = f"cuda:{req}" if req.isdigit() else req
+            self.log_line.emit(f"[INFO] Entrenando en GPU: {effective_device}")
+        self.log_line.emit("=" * 60)
+        return effective_device
+
     def run(self):
         _t0 = __import__("time").perf_counter()
         try:
@@ -115,45 +155,7 @@ class TrainerRunner(QThread):
                 optimizador=getattr(p, "optimizer", None),
             )
 
-            # ── Explicit hardware diagnostics ──
-            cuda_ok = torch.cuda.is_available()
-            torch_cuda = getattr(torch.version, "cuda", None)
-            torch_hip = getattr(torch.version, "hip", None)
-            build_str = (
-                torch_cuda
-                if torch_cuda is not None
-                else (torch_hip if torch_hip is not None else "CPU-only")
-            )
-            backend_name = "ROCm" if (cuda_ok and torch_hip is not None) else "CUDA"
-            self.log_line.emit("=" * 60)
-            self.log_line.emit(
-                f"[HW] PyTorch {torch.__version__}  ·  {backend_name} build: {build_str}"
-            )
-            self.log_line.emit(f"[HW] torch.cuda.is_available(): {cuda_ok}")
-            if cuda_ok:
-                dev_name = torch.cuda.get_device_name(0)
-                free, total = torch.cuda.mem_get_info(0)
-                self.log_line.emit(
-                    f"[HW] GPU 0: {dev_name}  ·  "
-                    f"VRAM libre {free / 1024**3:.2f} / {total / 1024**3:.2f} GB"
-                )
-            self.log_line.emit(f"[HW] Device solicitado: '{p.device}'")
-
-            # Resolve the effective device
-            req = (p.device or "0").strip().lower()
-            if not cuda_ok and req != "cpu":
-                self.log_line.emit(
-                    "[ATENCION] GPU (CUDA/ROCm) no disponible — se forzará entrenamiento en CPU."
-                )
-                effective_device = "cpu"
-            elif req in ("cpu",):  # noqa: FURB171
-                self.log_line.emit("[INFO] Entrenando en CPU (por configuración).")
-                effective_device = "cpu"
-            else:
-                # 'cuda:0' is more explicit than '0' and avoids ambiguity
-                effective_device = f"cuda:{req}" if req.isdigit() else req
-                self.log_line.emit(f"[INFO] Entrenando en GPU: {effective_device}")
-            self.log_line.emit("=" * 60)
+            effective_device = self._diagnose_hardware(torch, p)
 
             # Which families are trained. With custom weights,
             # checking architectures makes little sense: the .pt already fixes one.

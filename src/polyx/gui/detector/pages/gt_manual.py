@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
+from polyx.core.image_io import read_image
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
@@ -77,7 +78,7 @@ def _qpixmap_de(path: Path) -> QPixmap:
     reliably opens accented paths on Windows, which is the reason the rest of
     the project already reads this way.
     """
-    bgr = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    bgr = read_image(path)
     if bgr is None:
         return QPixmap()
     h, w = bgr.shape[:2]

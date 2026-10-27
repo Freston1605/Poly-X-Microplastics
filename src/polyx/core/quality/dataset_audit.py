@@ -157,19 +157,18 @@ def _scan_split(images: list[Path]) -> dict:
     )
 
 
-# ──────────────────────────────────────────────────────────────────
-def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
-    audit = DatasetAudit()
-    yaml_path = Path(yaml_path)
-    if not yaml_path.exists():
-        audit.add(LEVEL_ERROR, "data.yaml no encontrado", str(yaml_path))
-        return audit
+# ── Helpers for audit_dataset ────────────────────────────────────
+def _cls_name(audit: DatasetAudit, cid: int) -> str:
+    return audit.class_names[cid] if 0 <= cid < len(audit.class_names) else f"clase {cid}"
+
+
+def _setup_context(yaml_path: Path, audit: DatasetAudit):
+    """Load yaml and resolve root. Returns (data, yaml_dir, root) or None on failure."""
     try:
         data = _load_yaml(yaml_path)
     except Exception as e:  # noqa: BLE001
         audit.add(LEVEL_ERROR, "No se pudo leer data.yaml", str(e))
-        return audit
-
+        return None
     yaml_dir = yaml_path.parent
     root_value = data.get("path")
     if root_value:
@@ -178,22 +177,21 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             root = (yaml_dir / root).resolve()
     else:
         root = yaml_dir
+    return data, yaml_dir, root
 
+
+def _resolve_names(data: dict, audit: DatasetAudit) -> None:
     names = data.get("names") or []
     if isinstance(names, dict):
         names = [names[k] for k in sorted(names.keys(), key=lambda x: int(x))]  # noqa: PLW0108
     audit.class_names = [str(n) for n in names]
 
-    def cls_name(cid: int) -> str:
-        return audit.class_names[cid] if 0 <= cid < len(audit.class_names) else f"clase {cid}"
 
+def _scan_all_splits(data, yaml_dir, root, audit):
     scans = {}
     for split in ("train", "val", "test"):
         split_value = data.get(split)
         resolved = _resolve_split(yaml_dir, data, split_value)
-        # Missing train/val key: it is not a moved path, it is a dataset that cannot
-        # be trained or validated. Without this check the audit came out «ok»
-        # with a data.yaml that only had 'names'.
         if not split_value and split in ("train", "val"):
             audit.add(
                 LEVEL_ERROR,
@@ -201,7 +199,6 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
                 f"El data.yaml no tiene clave '{split}'. Ultralytics la "
                 "necesita para entrenar y medir métricas.",
             )
-        # Path declared but missing -> almost always a data.yaml moved from another PC
         elif split_value and (resolved is None or not resolved.exists()):
             lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
             audit.add(
@@ -214,16 +211,18 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
         imgs = _iter_images(resolved, yaml_dir, root)
         scans[split] = _scan_split(imgs)
         scans[split]["path_exists"] = bool(resolved and resolved.exists())
-        audit.per_class[split] = {cls_name(c): n for c, n in scans[split]["per_class"].items()}
+        audit.per_class[split] = {_cls_name(audit, c): n for c, n in scans[split]["per_class"].items()}
 
     tr, vl = scans["train"], scans["val"]
 
-    # Median area per class (train) -- useful for spotting indistinguishable classes
     for c, ar in tr["areas"].items():
         if ar:
-            audit.box_area_median[cls_name(c)] = statistics.median(ar)
+            audit.box_area_median[_cls_name(audit, c)] = statistics.median(ar)
 
-    # ── Checks ──
+    return scans, tr, vl
+
+
+def _check_structure(audit, tr, vl):
     if not audit.class_names:
         audit.add(LEVEL_ERROR, "Sin clases definidas", "El data.yaml no tiene clave 'names'.")
     if tr["n_imgs"] == 0 and tr.get("path_exists"):
@@ -237,13 +236,14 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas.",
         )
 
+
+def _check_class_coverage(audit, tr, vl):
     train_classes = set(tr["per_class"].keys())
     val_classes = set(vl["per_class"].keys())
 
-    # THE STAR CHECK: classes trained but NEVER validated
     missing_in_val = train_classes - val_classes
     if missing_in_val and vl["n_imgs"] > 0:
-        names_2 = ", ".join(sorted(cls_name(c) for c in missing_in_val))
+        names_2 = ", ".join(sorted(_cls_name(audit, c) for c in missing_in_val))
         audit.add(
             LEVEL_ERROR,
             f"Clases sin validación: {names_2}",
@@ -251,22 +251,22 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             "no medirá su rendimiento (te dará una falsa sensación de éxito). "
             "Agrega imágenes de estas clases al split de validación.",
         )
-    # Val with a single class while train has several
     if len(val_classes) == 1 and len(train_classes) > 1:
         audit.add(
             LEVEL_ERROR,
-            f"Validación de una sola clase ({cls_name(next(iter(val_classes)))})",
+            f"Validación de una sola clase ({_cls_name(audit, next(iter(val_classes)))})",
             "El set de validación contiene una única clase pese a que el "
             "modelo aprende varias. Las métricas multiclase no son válidas.",
         )
 
-    # Class imbalance in train
+
+def _check_imbalance(audit, tr, cls_name_fn):
     counts = tr["per_class"]
     if len(counts) >= 2:
         mx, mn = max(counts.values()), min(counts.values())
         if mn > 0 and mx / mn >= 10:
-            top = cls_name(max(counts, key=counts.get))
-            bot = cls_name(min(counts, key=counts.get))
+            top = cls_name_fn(max(counts, key=counts.get))
+            bot = cls_name_fn(min(counts, key=counts.get))
             audit.add(
                 LEVEL_WARN,
                 "Desbalance fuerte de clases en train",
@@ -274,7 +274,8 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
                 f"({mx / mn:.0f}× más). Considera balancear o usar pesos por clase.",
             )
 
-    # Dominance by a few images per class (low diversity)
+
+def _check_dominance(audit, tr, cls_name_fn):
     for c, per_img in tr["per_class_per_img"].items():
         total = tr["per_class"].get(c, 0)
         if total >= 50 and per_img:
@@ -282,12 +283,13 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             if top_n / total >= 0.40:
                 audit.add(
                     LEVEL_WARN,
-                    f"«{cls_name(c)}»: poca diversidad",
+                    f"«{cls_name_fn(c)}»: poca diversidad",
                     f"El {top_n / total * 100:.0f}% de sus cajas viene de una sola "
                     f"imagen ({top_img}). El modelo puede sobreajustar a esa escena.",
                 )
 
-    # Classes with almost identical size (hard to separate if only colour changes)
+
+def _check_size_similarity(audit):
     meds = audit.box_area_median
     cls_list = list(meds.items())
     for i in range(len(cls_list)):
@@ -304,7 +306,8 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
                         "parecen visualmente, esperá confusión entre ambas.",
                     )
 
-    # Mechanical labelling problems (train+val combined)
+
+def _check_mechanical(audit, tr, vl):
     for split, sc in (("train", tr), ("val", vl)):
         if sc["degenerate"]:
             audit.add(
@@ -331,7 +334,8 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
                 "Se entrenarán como fondo (sin objetos). Confirma que es intencional.",
             )
 
-    # Size of val
+
+def _check_val_size(audit, vl):
     if 0 < vl["n_imgs"] < 5:
         audit.add(
             LEVEL_WARN,
@@ -339,10 +343,44 @@ def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
             "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20.",
         )
 
+
+def _finalize(audit):
     if audit.ok and not any(f.level == LEVEL_WARN for f in audit.findings):
         audit.add(
             LEVEL_OK,
             "Dataset sin problemas detectados",
             "Distribución de clases, validación y formato se ven correctos.",
         )
+
+
+# ──────────────────────────────────────────────────────────────────
+def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
+    audit = DatasetAudit()
+    yaml_path = Path(yaml_path)
+    if not yaml_path.exists():
+        audit.add(LEVEL_ERROR, "data.yaml no encontrado", str(yaml_path))
+        return audit
+
+    ctx = _setup_context(yaml_path, audit)
+    if ctx is None:
+        return audit
+    data, yaml_dir, root = ctx
+
+    _resolve_names(data, audit)
+
+    scans, tr, vl = _scan_all_splits(data, yaml_dir, root, audit)
+
+    def cls_name(cid: int) -> str:
+        return _cls_name(audit, cid)
+
+    # ── Checks ──
+    _check_structure(audit, tr, vl)
+    _check_class_coverage(audit, tr, vl)
+    _check_imbalance(audit, tr, cls_name)
+    _check_dominance(audit, tr, cls_name)
+    _check_size_similarity(audit)
+    _check_mechanical(audit, tr, vl)
+    _check_val_size(audit, vl)
+    _finalize(audit)
+
     return audit

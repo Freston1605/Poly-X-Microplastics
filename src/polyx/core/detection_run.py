@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 
 import cv2
+from polyx.core.image_io import read_image
 import numpy as np
 
 from polyx.core.detect.protocol import (
@@ -83,7 +84,7 @@ def run_batch(
     has_gt_any = False
 
     for img_path in images:
-        img = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+        img = read_image(img_path)
         if img is None:
             continue
         H, W = img.shape[:2]
