@@ -108,7 +108,7 @@ class Calibration:
 
 # Canonical implementation lives in polyx.core.image_io; re-exported here
 # for backwards compatibility with callers that import from this module.
-from polyx.core.image_io import read_image  # noqa: E402, F401
+from polyx.core.image_io import read_image  # noqa: E402
 
 
 def hough_approximate(bgr: np.ndarray) -> tuple | None:

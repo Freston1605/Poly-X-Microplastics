@@ -15,8 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
-from polyx.core.image_io import read_image
-import numpy as np
 
 from polyx.core.detect.yolo import (
     compute_box_size_um,
@@ -24,6 +22,7 @@ from polyx.core.detect.yolo import (
     read_yolo_txt,
     size_image,
 )
+from polyx.core.image_io import read_image
 from polyx.core.quality.metrics import match_image
 
 from .runner import _color_bgr_for_class, _draw_annotated

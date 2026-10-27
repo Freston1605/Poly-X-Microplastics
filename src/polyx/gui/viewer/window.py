@@ -760,8 +760,6 @@ class ViewerWindow(QMainWindow):
         txt = candidates[0]
 
         try:
-            import cv2
-            import numpy as np
 
             from polyx.core.detect.yolo import read_yolo_txt
             from polyx.core.image_io import read_image
@@ -827,8 +825,6 @@ class ViewerWindow(QMainWindow):
 
             return
 
-        import cv2
-        import numpy as np
 
         from polyx.core.detect.yolo import Detection
         from polyx.core.image_io import read_image
@@ -1274,7 +1270,6 @@ class ViewerWindow(QMainWindow):
     def _save_annotated_image(self, img: Path, save_dir: Path):
 
         import cv2
-        import numpy as np
 
         from polyx.core.image_io import read_image
 

@@ -694,38 +694,16 @@ def _section_comparison(state, results_2) -> str:
     return compare_html
 
 
-def _section_gallery(
-    results_2: dict[int, list],
-    state,
-    classes_batch,
-    max_gallery: int = 60,
-    include_gallery: bool = True,
-) -> str:
-    """Body of the 'galeria' section: side-by-side prediction vs Ground Truth.
-
-    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
-    heading and the section number. Empty when the gallery is disabled or no
-    candidate image has prediction bytes.
-    """
-    # ── Side-by-side gallery: Prediction vs Ground Truth ──
+def _build_gallery(state, results_2, classes_batch, max_gallery: int, include_gallery: bool = True) -> str:
+    """Build the side-by-side gallery HTML."""
     gallery_html = ""
     omitted = 0
     if include_gallery:
         blocks = []
-        # Gallery image cap: each one is embedded as base64, so
-        # without a limit a batch of several hundred produces a gigabyte HTML.
-        # It is grouped by image and not by model. Flattening model by model, the
-        # cap was exhausted inside the first one and the second never appeared in
-        # the gallery: with two models loaded only the photos from one were seen,
-        # which is precisely the visual side-by-side that is wanted. Now the cap counts
-        # images, and from each one all models enter, one below the other.
-        per_image: dict = {}
+        per_image = {}
         for mi in sorted(results_2):
             for r in results_2[mi]:
                 per_image.setdefault(r.image_path, []).append((mi, r))
-        # Order by station/stretch/plate when the plate name
-        # allows it: the report is read following the core downwards, not in the
-        # arbitrary order in which the files were loaded.
         order_imgs = sorted(per_image, key=_clue_order)
         candidates = []
         for path_2 in order_imgs[:max_gallery]:
@@ -734,7 +712,6 @@ def _section_gallery(
         for mi, r in candidates:
             slot = state.model_slots[mi]
             if True:
-                # Prediction image (we prefer pred_png; otherwise the combined one)
                 pred_bytes = getattr(r, "pred_png", None) or r.annotated_png
                 if not pred_bytes:
                     continue
@@ -746,8 +723,6 @@ def _section_gallery(
                     + "</span>"
                     "</figcaption></figure>"
                 )
-
-                # Ground Truth image (control)
                 gt_bytes = getattr(r, "gt_png", None)
                 if r.has_gt and gt_bytes:
                     right = (
@@ -764,9 +739,6 @@ def _section_gallery(
                         f"<span class='sub'>{tr('no disponible')}</span>"
                         f"</figcaption></figure>"
                     )
-
-                # Photo header: name and, if the name allows it,
-                # which stretch and plate it comes from.
                 sample = _sample_of(r.image_path)
                 where = ""
                 if sample:
@@ -779,21 +751,15 @@ def _section_gallery(
                     f"<strong>{_esc(r.image_path.name)}</strong>{where}"
                     f"&nbsp;<span class='tag'>modelo: {_esc(slot.alias)}</span>"
                 )
-
-                # Photo table: particles per polymer. Matches and
-                # failures paired box by box are another question and live in
-                # the error analysis section.
                 table = _table_count(
                     _count_per_class(r.gt) if r.has_gt else None,
                     _count_per_class(r.predictions),
                     classes_batch,
                 )
-
                 blocks.append(
                     f"<div class='compare'><div class='compare-pair'>{left}{right}</div>"
                     f"<div class='compare-meta'>{meta}</div>{table}</div>"
                 )
-
         if blocks:
             note = ""
             if omitted:
@@ -820,6 +786,22 @@ def _section_gallery(
                 + "".join(blocks)
             )
     return gallery_html
+
+
+def _section_gallery(
+    results_2: dict[int, list],
+    state,
+    classes_batch,
+    max_gallery: int = 60,
+    include_gallery: bool = True,
+) -> str:
+    """Body of the 'galeria' section: side-by-side prediction vs Ground Truth.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number. Empty when the gallery is disabled or no
+    candidate image has prediction bytes.
+    """
+    return _build_gallery(state, results_2, classes_batch, max_gallery, include_gallery)
 
 
 def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[float]) -> str:

@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 
 import cv2
-from polyx.core.image_io import read_image
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 
@@ -21,6 +20,7 @@ from polyx.core.detect.yolo import (
     find_gt_for_image,
     read_yolo_txt,
 )
+from polyx.core.image_io import read_image
 from polyx.core.morphology import apply_to_detection
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
