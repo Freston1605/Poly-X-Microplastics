@@ -6,7 +6,7 @@ inside the body: the import-laziness gate
 (``tests/test_importes_diferidos_informe.py``) requires that importing the
 report package does not pay for them.
 
-They are re-exported from ``polyx.gui.report._common`` on purpose: the
+They were re-exported from ``polyx.gui.report._common`` (removed in refactor) on purpose: the
 section builders read ``_team`` and ``_training_of`` through that module at
 call time, which is what lets the byte-identity fixtures pin the live
 equipment table to canonical rows (``tools/audit/capturar_fixtures_informe.py``

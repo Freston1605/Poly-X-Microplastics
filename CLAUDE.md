@@ -85,12 +85,16 @@ src/                      # Source code (installable package)
         ├── pdf_export.py # HTML → PDF
         ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
-        ├── report/      # HTML report: render → sections → figures → _common
-        │   ├── render.py   # generate_report: builds the document
-        │   ├── sections.py # the section builders (HTML blocks)
-        │   ├── figures.py  # matplotlib figures (Agg)
-        │   ├── _common.py  # shared helpers, document shell, reads report.css
-        │   └── stats.py    # re-export bridge over polyx.core.stats
+        ├── report/      # HTML report: render → sections → figures → machine/markup/samples/particle/registry
+        │   ├── render.py     # generate_report: builds the document
+        │   ├── sections.py   # the section builders (HTML blocks)
+        │   ├── figures.py    # matplotlib figures (Agg)
+        │   ├── machine.py    # equipment table, checkpoint training info
+        │   ├── markup.py     # HTML primitives, CSS, tables
+        │   ├── samples.py    # sampling, ordering, batch aggregation
+        │   ├── particle.py   # particle card with mask overlay
+        │   ├── registry.py   # section catalog, anchors, document shell
+        │   └── stats.py      # re-export bridge over polyx.core.stats
         ├── qt.py         # PySide6 guard (extra [gui])
         ├── detector/     # Module 2: Batch analysis
         │   ├── window.py, state.py, runner.py

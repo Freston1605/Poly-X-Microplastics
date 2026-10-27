@@ -11,8 +11,6 @@ from polyx.core.i18n import tr
 from polyx.core.report_metrics import _ORDER_CLASSES
 from polyx.gui import theme as T
 
-from polyx.gui import theme as T
-
 from . import registry
 from .markup import _esc
 

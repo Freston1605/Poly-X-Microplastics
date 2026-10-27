@@ -7,7 +7,7 @@ detections feed the shape/fichas sections, minus the ring) and
 These keep their lazy imports (``polyx.core.measure.calibration`` inside
 ``_lot_forms``) so the import-laziness gate stays satisfied.
 
-Re-exported from ``polyx.gui.report._common`` on purpose: the package
+Re-exported from ``polyx.gui.report._common`` (removed in refactor) on purpose: the package
 surface, ``render.py`` and the section builders import them from there, and
 nothing external needs to know this module exists.
 """

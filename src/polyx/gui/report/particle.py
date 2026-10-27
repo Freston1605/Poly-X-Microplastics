@@ -8,7 +8,7 @@ Feret/geodesic for comparison. It uses the SAME ``box_margin`` as
 ``polyx.core.measure.*``) and returns ``""`` on any failure so the
 report never crashes over a bad crop.
 
-Re-exported from ``polyx.gui.report._common`` for the package surface and
+Re-exported from ``polyx.gui.report._common`` (removed in refactor) for the package surface and
 call sites.
 """
 
