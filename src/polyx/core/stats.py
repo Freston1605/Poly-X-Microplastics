@@ -269,6 +269,7 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
     name_2 = tr(_NAME_MORPHOTYPE.get(value, value))
     return name_2.lower() if lowercase else name_2
 
+
 def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
     """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
 
@@ -305,6 +306,3 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
             rows_2.append((u, p, rec, f1, nd))
         output_2[slot.alias] = rows_2
     return output_2
-
-
-

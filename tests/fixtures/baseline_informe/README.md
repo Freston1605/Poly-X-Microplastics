@@ -11,10 +11,10 @@ re-verified or recaptured, and why it must not be regenerated casually.
 Current render metadata (recaptured on the PINNED stack — Python 3.11,
 matplotlib 3.9.2, torch present, equipment rows and ultralytics version
 pinned, figures normalized to ordinal markers — see below):
-    benign sha256 = cb21222319b0512d36d5f98e6ba9d88abbc635782a118c42af8e38f1539991c2
-    benign normalized bytes = 18853
-    hostile sha256 = c3d1467735961f065f1b068274a127632ad5c2971c983cb22e1b0e957ee501ef
-    hostile normalized bytes = 19108
+    benign sha256 = fd269e1492b180f36f1dce11627637ce8ab8c7fec22e40aaa7a1f3144a8b9766
+    benign normalized bytes = 19980
+    hostile sha256 = 01f7ddd4282ca377614962cb827b3828e8cb8c5eb98bd0047960cdaf4e15735
+    hostile normalized bytes = 20235
 """
 ```
 
@@ -67,6 +67,13 @@ English report headings.
   `.venv` built from `requirements.txt`). A dev run with a different
   matplotlib (e.g. system Python 3.14) may fail the figure-bearing byte
   tests by design until it runs the pinned venv.
+- **Recapture (PR #16, report package split):** the `<style>` block left
+  `report_html.py` for `polyx/gui/report/report.css` and was reformatted to
+  one rule per line, so both snapshots grew. Nothing else changed: outside
+  `<style>` the two documents are byte-identical to the PR #4 snapshots, and
+  the CSS is identical to the old `REPORT_CSS` string once whitespace is
+  normalized. The two `informe.html` files, their `informe.sha256`, the
+  `TAMANO_BASELINE` pin and this README were updated together.
 
 ## Language contract
 

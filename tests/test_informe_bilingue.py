@@ -170,27 +170,47 @@ def test_ninguna_traduccion_se_congela_al_importar():
     Con eso, cambiar el idioma y volver a generar el informe deja ese texto en
     el idioma anterior. Ya paso con el nombre del morfotipo. Se comprueba sobre
     el arbol sintactico porque en tiempo de ejecucion no se distingue.
+
+    Desde PR #16 el codigo del informe vive en ``polyx/gui/report/`` y
+    ``report_html.py`` es solo un shim de compatibilidad: el barrido tiene que
+    cubrir el paquete entero, no el shim, o el filtro pasaria vacio sin
+    encontrar ni un tr(). Por eso ademas se cuenta el total de llamadas: un
+    camino equivocado no puede aprobar por no encontrar nada.
     """
     import ast
     from pathlib import Path as _P
 
-    ruta = _P(__file__).resolve().parents[1] / "src" / "polyx" / "gui" / "report_html.py"
-    arbol = ast.parse(ruta.read_text(encoding="utf-8"))
-    dentro_de_funcion = set()
-    for nodo in arbol.body:
-        if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            for sub in ast.walk(nodo):
-                dentro_de_funcion.add(id(sub))
-    congeladas = [
-        n.lineno
-        for n in ast.walk(arbol)
-        if isinstance(n, ast.Call)
-        and isinstance(n.func, ast.Name)
-        and n.func.id == "tr"
-        and id(n) not in dentro_de_funcion
-    ]
+    gui = _P(__file__).resolve().parents[1] / "src" / "polyx" / "gui"
+    fuentes = [*sorted((gui / "report").glob("*.py")), gui / "report_html.py"]
+    assert all(ruta.is_file() for ruta in fuentes), f"faltan fuentes del informe en {gui}"
+
+    congeladas: list[str] = []
+    vistas = 0
+    for ruta in fuentes:
+        arbol = ast.parse(ruta.read_text(encoding="utf-8"))
+        dentro_de_funcion = set()
+        for nodo in arbol.body:
+            if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                for sub in ast.walk(nodo):
+                    dentro_de_funcion.add(id(sub))
+        llamadas = [
+            n
+            for n in ast.walk(arbol)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "tr"
+        ]
+        vistas += len(llamadas)
+        congeladas += [
+            f"{ruta.name}:{n.lineno}" for n in llamadas if id(n) not in dentro_de_funcion
+        ]
+
+    # Anti-vacuidad: el informe traduce mas de 200 tr() repartidos en tres
+    # ficheros; por debajo de este suelo el barrido no esta leyendo el codigo.
+    assert vistas >= 150, (
+        f"el barrido encontro solo {vistas} tr() en {len(fuentes)} ficheros: "
+        f"el camino de las fuentes del informe quedo desactualizado"
+    )
     assert not congeladas, (
-        f"tr() en el cuerpo del modulo, lineas {congeladas}: se resuelve al "
+        f"tr() en el cuerpo del modulo ({', '.join(congeladas)}): se resuelve al "
         f"importar y no sigue al idioma elegido"
     )
 
