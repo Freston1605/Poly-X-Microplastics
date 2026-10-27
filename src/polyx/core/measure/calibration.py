@@ -27,6 +27,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+# Canonical implementation lives in polyx.core.image_io; re-exported here
+# for backwards compatibility with callers that import from this module.
+from polyx.core.image_io import read_image
+
 # Directions in which the ring edge is searched. 720 = one every half degree:
 # enough for the fit to survive reflections and partial occlusions.
 N_ANGLES = 720
@@ -104,18 +108,6 @@ class Calibration:
         if self.origin == ORIGIN_INDEX:
             return f"{self.um_por_px:.4f} µm/px — heredada del recorte"
         return f"{self.um_por_px:.4f} µm/px — introducida a mano"
-
-
-def read_image(path_2: str | Path) -> np.ndarray | None:
-    """Reads with ``fromfile`` because folder names carry accents and parentheses.
-
-    ``cv2.imread`` fails silently with non-ASCII paths on Windows and returns
-    None, which here would be confused with "there is no plate".
-    """
-    try:
-        return cv2.imdecode(np.fromfile(str(path_2), dtype=np.uint8), cv2.IMREAD_COLOR)
-    except (OSError, ValueError):
-        return None
 
 
 def hough_approximate(bgr: np.ndarray) -> tuple | None:

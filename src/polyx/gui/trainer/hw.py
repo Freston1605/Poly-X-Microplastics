@@ -414,17 +414,26 @@ class Recommendation:
             self.notes = []
 
 
-def recommend_config(
-    size: str,
-    vram_free_gb: float,
-    imgsz_native: int = 0,
-    batch_min: int = 2,
-    batch_max: int = 32,
-    n_cpus: int = 0,
-    dataset_gb: float = 0.0,
-    ram_free_gb: float = 0.0,
-    safety: float = 0.85,
-) -> Recommendation:
+@dataclass
+class RecommendRequest:
+    """Parameter object for :func:`recommend_config`.
+
+    Groups the GPU/dataset/tuning inputs that used to be passed as nine
+    loose positional/keyword arguments.
+    """
+
+    size: str
+    vram_free_gb: float
+    imgsz_native: int = 0
+    batch_min: int = 2
+    batch_max: int = 32
+    n_cpus: int = 0
+    dataset_gb: float = 0.0
+    ram_free_gb: float = 0.0
+    safety: float = 0.85
+
+
+def recommend_config(request: RecommendRequest) -> Recommendation:
     """Training config with priority **imgsz → batch → speed**.
 
     The order is not negotiable and follows the physics of the problem: the
@@ -444,6 +453,16 @@ def recommend_config(
     AMP stays always on: it is not just speed, it is what makes the high
     imgsz possible, so turning it off would violate priority 1.
     """
+    size = request.size
+    vram_free_gb = request.vram_free_gb
+    imgsz_native = request.imgsz_native
+    batch_min = request.batch_min
+    batch_max = request.batch_max
+    n_cpus = request.n_cpus
+    dataset_gb = request.dataset_gb
+    ram_free_gb = request.ram_free_gb
+    safety = request.safety
+
     amp = True
     cap = max(0.5, vram_free_gb * safety)
     notes: list[str] = []
