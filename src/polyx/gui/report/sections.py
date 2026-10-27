@@ -1428,19 +1428,8 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
     return shape_html, by_html_folder
 
 
-def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
-    """Body of the 'fichas' section: one annotated card per sampled particle.
-
-    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
-    heading and the section number. Empty when there are no measured particles
-    or the cap is zero. The ``cv2`` / ``morfologia`` / ``calibracion`` imports
-    stay lazy inside this body, exactly as lazy as when the block was inline
-    (S01 fresh-interpreter laziness gate).
-    """
-    # One entry per particle, with its number, its crop and the measurement drawn
-    # on top. That is what makes it possible to check particle by particle that the size
-    # reported corresponds to what is in the photo, instead of having to
-    # trust the table.
+def _build_records(state, shapes, max_records: int) -> str:
+    """Build the particle fichas cards."""
     records_html = ""
     if shapes and max_records:
         import cv2
@@ -1574,3 +1563,18 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
                 + "".join(parts)
             )
     return records_html
+
+def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
+    """Body of the 'fichas' section: one annotated card per sampled particle.
+
+    Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
+    heading and the section number. Empty when there are no measured particles
+    or the cap is zero. The ``cv2`` / ``morfologia`` / ``calibracion`` imports
+    stay lazy inside this body, exactly as lazy as when the block was inline
+    (S01 fresh-interpreter laziness gate).
+    """
+    # One entry per particle, with its number, its crop and the measurement drawn
+    # on top. That is what makes it possible to check particle by particle that the size
+    # reported corresponds to what is in the photo, instead of having to
+    # trust the table.
+    return _build_records(state, shapes, max_records)
