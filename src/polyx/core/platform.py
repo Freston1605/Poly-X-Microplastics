@@ -331,6 +331,47 @@ def user_data_dir() -> Path:
     return base / "polyx"
 
 
+def machine_info() -> dict:
+    """Gather machine/GPU info for the report's equipment table."""
+    import platform as _platform
+
+    info = {
+        "os": f"{_platform.system()} {_platform.release()}",
+        "processor": _platform.processor() or None,
+        "ram_gb": None,
+        "gpu_name": None,
+        "vram_gb": None,
+        "compute_capability": None,
+        "torch_version": None,
+        "torch_cuda": None,
+        "torch_hip": None,
+        "has_gpu": False,
+        "is_rocm": False,
+    }
+    try:
+        import psutil
+
+        info["ram_gb"] = psutil.virtual_memory().total / (1024**3)
+    except Exception:  # noqa: BLE001, S110
+        pass
+    try:
+        import torch
+
+        info["torch_version"] = torch.__version__
+        info["torch_cuda"] = getattr(getattr(torch, "version", None), "cuda", None)
+        info["torch_hip"] = getattr(getattr(torch, "version", None), "hip", None)
+        if torch.cuda.is_available():
+            info["has_gpu"] = True
+            info["is_rocm"] = bool(getattr(getattr(torch, "version", None), "hip", None))
+            props = torch.cuda.get_device_properties(0)
+            info["gpu_name"] = props.name
+            info["vram_gb"] = props.total_memory / (1024**3)
+            info["compute_capability"] = f"{props.major}.{props.minor}"
+    except Exception:  # noqa: BLE001, S110
+        pass
+    return info
+
+
 def environment_python(root: Path | None = None) -> Path | None:
     """Path to the .venv python, which hangs off a different folder per OS.
 

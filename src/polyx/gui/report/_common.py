@@ -38,9 +38,12 @@ from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 
 from polyx.core import report_metrics as _core_report_metrics
 from polyx.core import stats as _core_stats
+from polyx.core import model_info as _core_model_info
 from polyx.core import report_inputs as _core_inputs
+from polyx.core.platform import machine_info
 from polyx.gui import theme as T
 
+globals().update({k: v for k, v in vars(_core_model_info).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_core_inputs).items() if not k.startswith("__")})
 
 globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
@@ -150,69 +153,26 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
 
 def _team() -> list[tuple]:
     """Machine components, so the report can state where it was run."""
-
+    info = machine_info()
     rows_2 = [
-        (tr("Sistema operativo"), f"{platform.system()} {platform.release()}"),
-        (tr("Procesador"), platform.processor() or "—"),
+        (tr("Sistema operativo"), info["os"]),
+        (tr("Procesador"), info["processor"] or "—"),
     ]
-    try:
-        import psutil
-
-        rows_2.append((tr("Memoria RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
-    except Exception:  # noqa: BLE001, S110
-        pass
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            props = torch.cuda.get_device_properties(0)
-            rows_2 += [
-                ("GPU", props.name),
-                ("VRAM", f"{props.total_memory / 1024**3:.1f} GB"),
-                ("Compute capability", f"{props.major}.{props.minor}"),
-                (
-                    "PyTorch",
-                    f"{torch.__version__} ({'ROCm' if getattr(torch.version, 'hip', None) else 'CUDA'} {getattr(torch.version, 'hip', None) or getattr(torch.version, 'cuda', None)})",
-                ),
-            ]
-        else:
-            rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]
-    except Exception:  # noqa: BLE001, S110
-        pass
+    if info["ram_gb"] is not None:
+        rows_2.append((tr("Memoria RAM"), f"{info['ram_gb']:.1f} GB"))
+    if info["has_gpu"]:
+        rows_2 += [
+            ("GPU", info["gpu_name"]),
+            ("VRAM", f"{info['vram_gb']:.1f} GB"),
+            ("Compute capability", info["compute_capability"]),
+            (
+                "PyTorch",
+                f"{info['torch_version']} ({'ROCm' if info['is_rocm'] else 'CUDA'} {info['torch_hip'] or info['torch_cuda']})",
+            ),
+        ]
+    else:
+        rows_2 += [("GPU", tr("no disponible")), ("PyTorch", info["torch_version"] or "—")]
     return rows_2
-
-
-def _training_of(weight: Path) -> dict | None:
-    """Reads from the checkpoint with which configuration and result the model
-    was trained.
-
-    Ultralytics keeps ``train_args`` and ``train_metrics`` inside the .pt
-    itself, so the report can declare imgsz, batch, epochs and metrics
-    without requiring the run folder to still exist.
-    """
-    try:
-        import torch
-
-        ck = torch.load(str(weight), map_location="cpu", weights_only=False)
-    except Exception:  # noqa: BLE001
-        return None
-    args = ck.get("train_args") or {}
-    met = ck.get("train_metrics") or {}
-    if not args and not met:
-        return None
-    return {
-        "base": args.get("model", "—"),
-        "imgsz": args.get("imgsz", "—"),
-        "batch": args.get("batch", "—"),
-        "epocas": args.get("epochs", "—"),
-        "optimizador": args.get("optimizer", "—"),
-        "lr0": args.get("lr0", "—"),
-        "amp": args.get("amp", "—"),
-        "precision": met.get("metrics/precision(B)"),
-        "recall": met.get("metrics/recall(B)"),
-        "map50": met.get("metrics/mAP50(B)"),
-        "map": met.get("metrics/mAP50-95(B)"),
-    }
 
 
 _PALETTE = (T.DOC.ACCENT, T.DOC.VIO, T.DOC.WARN)
