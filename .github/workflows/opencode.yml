@@ -4,9 +4,9 @@
 #
 # The model comes from the OpenCode Go subscription: the repo secret
 # OPENCODE_GO_API_KEY holds the `oc_sk_...` key from the Console, and the
-# provider below points at the Go inference endpoint. `mimo-v2.6-flash` is
-# the cheap in-plan model (there is no `-free` variant of it; the actually
-# free Go models are `beam-free` and `iceman-contributor-free`).
+# provider below points at the Go inference endpoint. `beam-free` is $0
+# against the plan (limited time and regions); swap it for a paid-in-plan
+# model such as `oc-go/mimo-v2.6-flash` for stronger edits.
 name: opencode
 
 on:
@@ -77,7 +77,7 @@ jobs:
                 }
               }
             },
-            "model": "oc-go/mimo-v2.6-flash"
+            "model": "oc-go/beam-free"
           }
           EOF
 
@@ -87,7 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           opencode run --standalone --auto \
-            --model oc-go/mimo-v2.6-flash \
+            --model oc-go/beam-free \
             "You are running in GitHub Actions for ${{ github.repository }}.
             Triggering comment: ${{ github.event.comment.body }}
             Target issue/PR number: ${{ github.event.issue.number || github.event.pull_request.number }}.
