@@ -896,6 +896,42 @@ def _um_px_text(p, state) -> str:
     return "—"
 
 
+def _methods_rows(p, state, active, all_results, total_imgs: int, total_dets: int, um_px_txt: str) -> list:
+    """Build the methods table rows."""
+    methods_rows = [
+        (tr("Modelos cargados"), _esc(", ".join(s.alias for s in active)) or "—"),
+        (tr("Confianza mínima"), f"{p.conf:g}"),
+        ("IoU NMS", f"{p.iou_nms:g}"),
+        (tr("IoU para emparejar Verdaderos Positivos"), f"{p.iou_tp:g}"),
+        (tr("Tamaño de imagen (imgsz)"), f"{p.imgsz}"),
+        (tr("Dispositivo"), p.device),
+        (tr("μm por píxel"), um_px_txt),
+        (
+            tr("Filtro tamaño (μm)"),
+            f"{p.size_min_um} – {p.size_max_um}"
+            if (p.size_min_um or p.size_max_um)
+            else tr("sin filtro"),
+        ),
+        (tr("Imágenes procesadas"), str(total_imgs)),
+        (tr("Total de detecciones"), str(total_dets)),
+    ]
+    _res_assignment = resume(
+        [d for r in all_results for d in r.predictions], getattr(p, "conf_assignment", 0.0)
+    )
+    if _res_assignment.active:
+        methods_rows.append(
+            (tr("Confianza mínima para asignar polímero"), f"{p.conf_assignment:g}")
+        )
+        methods_rows.append(
+            (
+                tr("Partículas sin polímero asignable"),
+                f"{_res_assignment.no_assignables} / {_res_assignment.total} "  # noqa: ISC004
+                f"({_res_assignment.percentage_no_assignable:.1f} %)",
+            )
+        )
+    return methods_rows
+
+
 def _section_methods(
     state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
 ) -> tuple:
@@ -916,40 +952,7 @@ def _section_methods(
     # detail in the `Calibracion de escala` section, with the minimum and
     # maximum that show how much it varies).
     um_px_txt = _um_px_text(p, state)
-    methods_rows = [
-        (tr("Modelos cargados"), _esc(", ".join(s.alias for s in active)) or "—"),
-        (tr("Confianza mínima"), f"{p.conf:g}"),
-        ("IoU NMS", f"{p.iou_nms:g}"),
-        (tr("IoU para emparejar Verdaderos Positivos"), f"{p.iou_tp:g}"),
-        (tr("Tamaño de imagen (imgsz)"), f"{p.imgsz}"),
-        (tr("Dispositivo"), p.device),
-        (tr("μm por píxel"), um_px_txt),
-        (
-            tr("Filtro tamaño (μm)"),
-            f"{p.size_min_um} – {p.size_max_um}"
-            if (p.size_min_um or p.size_max_um)
-            else tr("sin filtro"),
-        ),
-        (tr("Imágenes procesadas"), str(total_imgs)),
-        (tr("Total de detecciones"), str(total_dets)),
-    ]
-    # Abstention: how many particles were counted without attributing a polymer to them. It goes in
-    # Methods and not buried in a results table because it is an analysis
-    # decision, and whoever reads the report needs to know it was taken.
-    _res_assignment = resume(
-        [d for r in all_results for d in r.predictions], getattr(p, "conf_assignment", 0.0)
-    )
-    if _res_assignment.active:
-        methods_rows.append(
-            (tr("Confianza mínima para asignar polímero"), f"{p.conf_assignment:g}")
-        )
-        methods_rows.append(
-            (
-                tr("Partículas sin polímero asignable"),
-                f"{_res_assignment.no_assignables} / {_res_assignment.total} "  # noqa: ISC004
-                f"({_res_assignment.percentage_no_assignable:.1f} %)",
-            )
-        )
+    methods_rows = _methods_rows(p, state, active, all_results, total_imgs, total_dets, um_px_txt)
     methods_html = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in methods_rows)
     team_html = _section_team(active)
 
