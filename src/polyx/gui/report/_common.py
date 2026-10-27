@@ -16,32 +16,20 @@ from __future__ import annotations
 
 import base64
 import html
-import io
-import math
 import platform
 import re
-import sys
 from collections import Counter
-from datetime import datetime
 from pathlib import Path
 
 # matplotlib in non-interactive mode
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
 matplotlib.use("Agg")
 
 from polyx.core.i18n import language, tr
-from polyx.core.quality.assignment import NO_ASSIGNABLE, class_id_reported, resume
-from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
-
-from polyx.core import report_metrics as _core_report_metrics
-from polyx.core import stats as _core_stats
+from polyx.core.report_metrics import _classes_views
 from polyx.gui import theme as T
-
-globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
-globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -155,6 +143,10 @@ def _table_count(manual: Counter | None, detected: Counter, classes: list[str]) 
 # 4096 px images weighed 14.5 MB and a batch of several hundred produced a
 # gigabyte file that no browser opens.
 _WIDTH_GALLERY = 1100
+
+
+def _img_b64(data: bytes) -> str:
+    return base64.b64encode(data).decode("ascii")
 
 
 def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
@@ -309,132 +301,6 @@ def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
         leftovers = [t for t in fibers + others if id(t[0]) not in ya]
         chosen += leftovers[: max_records - len(chosen)]
     return chosen
-
-
-def section_depth(shapes, results_2) -> str:
-    """How many particles and of which size sit at each depth of the core.
-
-    The interval is not just any folder: it is an ORDERED variable. That
-    makes it possible to ask about TRENDS — whether there are more
-    particles at the bottom than at the top, or whether the bottom ones
-    are bigger — and not only whether the groups differ, which is all the
-    generic per-folder comparison can answer.
-
-    ``formas`` is ``[(Detection, ruta)]`` with a measured size;
-    ``resultados`` are the ImageResult records, needed to count ALL the
-    particles and not only the ones that could be measured in
-    micrometers.
-
-    Returns "" when the names do not follow the ``tramo.testigo``
-    pattern: without an interval there is no depth, and the report cannot
-    demand that naming.
-    """
-    # -- Count by stretch, summing the plates of the same stretch --
-    # They are summed because they are subsamples of the same sediment mass, not
-    # photographic replicates. It is the same rule as the count section.
-    count: dict[tuple, int] = {}
-    plates: dict[tuple, set] = {}
-    for r in results_2:
-        m = _sample_of(r.image_path)
-        if m is None:
-            continue
-        station, range_value, plate = m
-        count[(station, range_value)] = count.get((station, range_value), 0) + len(r.predictions)
-        plates.setdefault((station, range_value), set()).add(plate)
-
-    # -- Sizes by stretch --
-    sizes_2: dict[tuple, list[float]] = {}
-    for d, path_2 in shapes:
-        m = _sample_of(path_2)
-        if m is None or not d.length_um:
-            continue
-        sizes_2.setdefault((m[0], m[1]), []).append(float(d.length_um))
-
-    if len(count) < 3:
-        # With one or two stretches there is no profile to draw or trend to
-        # measure; saying so is more useful than a two-point figure.
-        return ""
-
-    profiles: dict[str, list] = {}
-    for (station, range_value), n in sorted(count.items()):
-        vals = np.asarray(sizes_2.get((station, range_value), []), dtype=float)
-        if len(vals):
-            median_2 = float(np.median(vals))
-            q1, q3 = (float(np.percentile(vals, 25)), float(np.percentile(vals, 75)))
-        else:
-            median_2 = q1 = q3 = float("nan")
-        profiles.setdefault(station, []).append((range_value, n, median_2, q1, q3))
-
-    fig = _fig_profile_depth(profiles)
-
-    # -- Trend, by station --
-    # n is the number of STRETCHES, not of particles: two particles from the same
-    # plate are not independent observations of depth, and counting them
-    # as such would inflate any significance. With few stretches the
-    # correlation is weak by design, and that is why n is declared.
-    paragraphs = []
-    for station, rows_2 in sorted(profiles.items()):
-        rows_2 = sorted(rows_2)  # noqa: PLW2901
-        x = [f[0] for f in rows_2]
-        n_part = [f[1] for f in rows_2]
-        med = [f[2] for f in rows_2]
-        with_size = [(a, b) for a, b in zip(x, med) if b == b]  # discards NaN  # noqa: B905
-        parts = [_text_trend(x, n_part, tr("el número de partículas"))]
-        if len(with_size) >= 3:
-            parts.append(
-                _text_trend(
-                    [a for a, _ in with_size], [b for _, b in with_size], tr("la talla mediana")
-                )
-            )
-        parts = [p for p in parts if p]
-        if parts:
-            paragraphs.append(f"<p><strong>{_esc(station)}.</strong> " + " ".join(parts) + "</p>")
-
-    # -- Table --
-    rows_table = ""
-    for station, rows_2 in sorted(profiles.items()):
-        for range_value, n, median_2, _q1, _q3 in sorted(rows_2):
-            vals = sizes_2.get((station, range_value), [])
-            # A stretch can have counted particles and none with a size, if
-            # that photo was never calibrated. The count is shown and a dash in
-            # the size columns, which is what actually happened.
-            cells = [
-                _esc(station),
-                str(range_value),
-                str(len(plates.get((station, range_value), ()))),
-                str(n),
-                str(len(vals)),
-                f"{median_2:.0f}" if vals else "—",
-                f"{max(vals):.0f}" if vals else "—",
-            ]
-            rows_table += (
-                "<tr><td>"
-                + cells[0]
-                + "</td>"
-                + "".join(f"<td class='r'>{c}</td>" for c in cells[1:])
-                + "</tr>"
-            )
-
-    return (
-        tr(
-            "<p>El tramo es la <strong>profundidad</strong> a la que se tomó el "
-            "sedimento, y a diferencia de una carpeta cualquiera está "
-            "<em>ordenado</em>. Eso permite preguntar por una tendencia —si hay "
-            "más partículas abajo que arriba, o si las de abajo son más "
-            "grandes— y no solo si los grupos difieren entre sí.</p>"
-        )
-        + (f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>" if fig else "")
-        + "".join(paragraphs)
-        + tr(
-            "<p class='caption' style='text-align:left'>La correlación se calcula "
-            "sobre los <strong>tramos</strong>, no sobre las partículas: dos "
-            "partículas de la misma placa no son observaciones independientes de la "
-            "profundidad, y contarlas como tales inflaría cualquier significación. "
-            "El valor de p sale de barajar la serie 20 000 veces, no de una "
-            "aproximación que con tan pocos tramos no valdría.</p>"
-        )
-        + f"<table class='data'><tr>{tr('<th>Estación</th><th>Tramo</th><th>Placas</th><th>Partículas</th><th>Con talla</th><th>Mediana (µm)</th><th>Mayor (µm)</th>')}</tr>{rows_table}</table>"
-    )
 
 
 def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> str:
@@ -708,99 +574,6 @@ def _lot_forms(state, all_results):
     return shapes, n_en_el_aro, n_formless
 
 
-def _size_per_folder(with_size):
-    """Body of the 'talla_carpetas' section: size by folder, then by photo.
-
-    Returns the HTML body WITHOUT its ``<h2>`` title, with the ``{NUM}.N``
-    sub-header placeholders intact. Empty when fewer than two folders hold
-    measured particles, so the assembler drops the section like it does
-    today.
-    """
-    # ── Size by folder (`{tr('Talla por carpeta')}`), and by photo within each folder ──
-    # Generalizes the `by station/stretch` contrast from the paper
-    # pipeline (which depended on a filename pattern specific
-    # to one study) to the only thing ANY batch has: which
-    # folder each photo came from. It is useful for contrasting sampling sites,
-    # treatments, or any other grouping that the user has
-    # expressed as folders when choosing the images.
-    by_html_folder = ""
-    groups_folder: dict[str, list[float]] = {}
-    for d, path_2 in with_size:
-        folder = Path(path_2).parent.name or str(Path(path_2).parent)
-        groups_folder.setdefault(folder, []).append(d.length_um)
-
-    if len(groups_folder) >= 2:
-        fig_folder = _fig_boxplot_groups(
-            groups_folder, tr("Talla por carpeta"), tr("carpeta de origen")
-        )
-        verdict_folder = _text_kruskal(
-            _kruskal_wallis(list(groups_folder.values())), len(groups_folder)
-        )
-        by_html_folder = (
-            f"<h3>{NUM}.1 {tr('Talla por carpeta')}</h3>"
-            + tr(
-                "<p>Compara la talla entre las carpetas del lote analizado: "
-                "cada carpeta como un grupo distinto. Útil cuando cada carpeta "
-                "es un sitio de muestreo, una estación o una condición.</p>"
-            )
-            + f"<img src='data:image/png;base64,{fig_folder}' style='max-width:100%'>"
-            f"<p>{verdict_folder}</p>"
-        )
-
-        # -- Per photo, within folders with more than one image --
-        parts_photo = []
-        for folder in sorted(groups_folder, key=lambda c: -len(groups_folder[c])):
-            if len(parts_photo) >= _MAX_FOLDER_PER_PHOTO:
-                break
-            folder_photos: dict[str, list[float]] = {}
-            for d, path_2 in with_size:
-                if Path(path_2).parent.name == folder:
-                    folder_photos.setdefault(Path(path_2).name, []).append(d.length_um)
-            if len(folder_photos) < 2:
-                continue
-            fig_photo = _fig_boxplot_groups(
-                folder_photos,
-                tr("Talla por foto — {carpeta}").format(carpeta=folder),
-                tr("foto"),
-                max_groups=20,
-            )
-            verdict_photo = _text_kruskal(
-                _kruskal_wallis(list(folder_photos.values())), len(folder_photos)
-            )
-            parts_photo.append(
-                f"<p><strong>{_esc(folder)}</strong> "
-                + tr("({n} fotos)").format(n=len(folder_photos))
-                + "</p>"
-                f"<img src='data:image/png;base64,{fig_photo}' style='max-width:100%'>"
-                f"<p>{verdict_photo}</p>"
-            )
-        if parts_photo:
-            n_folders_with_photos = sum(
-                1
-                for c in groups_folder
-                if len({Path(r).name for d, r in with_size if Path(r).parent.name == c}) >= 2
-            )
-            note_tope = (
-                tr(
-                    " Se muestran las {n} carpetas con más partículas "
-                    "de las {total} que tienen más de una foto."
-                ).format(n=_MAX_FOLDER_PER_PHOTO, total=n_folders_with_photos)
-                if n_folders_with_photos > _MAX_FOLDER_PER_PHOTO
-                else ""
-            )
-            by_html_folder += (
-                f"<h3>{NUM}.2 {tr('Talla por foto, dentro de cada carpeta')}</h3>"
-                + tr(
-                    "<p>Compara la talla entre las fotos individuales de una "
-                    "misma carpeta: por ejemplo, si el tamaño cambia con la "
-                    "profundidad o el momento de muestreo dentro de un mismo "
-                    "sitio.{nota}</p>"
-                ).format(nota=note_tope)
-                + "".join(parts_photo)
-            )
-    return by_html_folder
-
-
 def _batch_metrics(state, solo_images):
     """Compute the batch-wide inputs every section builder consumes.
 
@@ -916,192 +689,3 @@ def _document_html(alive, active) -> str:
 </footer>
 </div></body></html>
 """
-
-
-def _generate_report_impl(
-    state,
-    output_path: Path,
-    include_refs: bool = True,
-    include_gallery: bool = True,
-    max_gallery: int = 60,
-    max_records: int = 12,
-    solo_images=None,
-    sections=None,
-) -> Path:
-    """Generates the HTML report. `state` is a ``DetectorState`` with results.
-
-    ``max_gallery`` limits how many images are embedded in the gallery.
-    Images go into the HTML itself in base64, so without a cap a large
-    batch produced an unmanageable file (14.5 MB with just 4 images).
-
-    ``solo_imagenes`` narrows the report down to a set of paths. With
-    ``None`` the whole batch is in. The filter is applied before anything
-    is computed, so that the totals, the charts and the confusion matrix
-    describe exactly the same subset being shown; if only the gallery
-    were filtered, the figures above would talk about one batch and the
-    images about another.
-
-    ``secciones`` is the set of :data:`SECCIONES` identifiers to include;
-    ``None`` includes all of them. A requested section that has no
-    content — errors without ground truth, for example — is skipped
-    anyway: ticking it does not invent data that does not exist.
-    """
-    requested = set(IDS_SECTIONS if sections is None else sections)
-    # The two old checkboxes still take precedence if passed as False, so as not to
-    # change the meaning of calls that already existed.
-    if not include_refs:
-        requested.discard("referencias")
-    if not include_gallery:
-        requested.discard("galeria")
-    out_path = Path(output_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: F841
-    active = state.active_models()
-
-    # ── Batch metrics ──
-    # The precomputation block now lives in _metricas_de_lote; the impl only
-    # unpacks. The tuple order is the order in which the assembler
-    # consumes them, so the unpacking names the same variables as
-    # always.
-    (
-        results_2,
-        all_results,
-        total_imgs,
-        total_dets,
-        confs,
-        sizes,
-        avg_conf,
-        avg_size,
-        any_gt,
-        classes_batch,
-        per_class,
-    ) = _batch_metrics(state, solo_images)
-
-    # ── Error analysis: matrix + per-class metrics (main model) ──
-    err_section = _section_errors(state, results_2, active, any_gt)
-
-    # ── Verdict and confidence sweep ──
-    verdict_html = _section_verdict(results_2, state)
-
-    # ── Models side by side, photo by photo ──
-    compare_html = _section_comparison(state, results_2)
-
-    # ── Side-by-side gallery: Prediction vs Ground Truth ──
-    gallery_html = _section_gallery(
-        results_2, state, classes_batch, max_gallery=max_gallery, include_gallery=include_gallery
-    )
-
-    # ── Aggregate figures ──
-    figures_html = _section_results(per_class, confs, sizes)
-
-    # ── Methods ──
-    methods_html, team_html, methods_for = _section_methods(
-        state, active, all_results, total_imgs, total_dets, any_gt
-    )
-
-    count_html = _section_count(results_2, state, active, classes_batch)
-
-    refs_html = _section_references(include_refs)
-
-    # ── Scale calibration ──
-    calib_html = _section_calibration(state)
-
-    # ── Shape and size ──
-    # It is separated from `Resultados` because it answers another question: not how many
-    # particles there are, but what shape they have. Morphotype and curvature are
-    # variables that the microplastics literature reports and that the detector
-    # box cannot give. `formas` is computed once because the depth profile
-    # and the cards also consume it.
-    shapes, n_en_el_aro, n_formless = _lot_forms(state, all_results)
-    # The depth profile only exists if the names carry the stretch.
-    depth_html = section_depth(shapes, all_results) if shapes else ""
-    shape_html, by_html_folder = _section_shape(state, shapes, n_en_el_aro, n_formless)
-    # ── Card for each particle ──
-    records_html = _section_records(state, shapes, max_records)
-
-    # ── Assemble HTML ──
-    # Each block is (id, body). The body does NOT carry its <h2>: the title and
-    # number are set by the assembler, which is the only one that knows which sections
-    # survived the filter and therefore which number belongs to each one.
-    bodies = {
-        "resumen": _section_summary(total_imgs, total_dets, avg_conf, avg_size, active, any_gt),
-        "metodos": f"""
-<table class='data'><tr>{tr("<th>Parámetro</th><th>Valor</th>")}</tr>{methods_html}</table>
-{team_html}
-{methods_for}""",
-        "calibracion": calib_html,
-        "forma": shape_html,
-        "talla_carpetas": by_html_folder,
-        "profundidad": depth_html,
-        "fichas": records_html,
-        "resultados": figures_html,
-        "modelos": _section_models(state, results_2, all_results, any_gt),
-        "errores": err_section,
-        "comparacion": f"{verdict_html}\n{compare_html}",
-        "galeria": gallery_html,
-        "conteo": count_html,
-        "referencias": refs_html,
-    }
-
-    # An id in ``pedidas`` with an empty body is dropped here: the checkbox was ticked but
-    # there was nothing to fill it with (errors without ground truth, count without samples).
-    # tr() on the title: SECCIONES stores the Spanish version, which is the
-    # dictionary key. The interface already translated it for its checkboxes; the
-    # document did not, and came out with the titles in Spanish even though the rest did not.
-    alive = [
-        (sid, tr(title), bodies.get(sid, ""))
-        for sid, title in SECTIONS
-        if sid in requested and (bodies.get(sid) or "").strip()
-    ]
-
-    # Cover, table of contents, section numbering and footer live in _documento_html:
-    # the impl remains the ordered list of calls that feeds cuerpos.
-    html = _document_html(alive, active)
-    out_path.write_text(html, encoding="utf-8")
-    return out_path
-
-
-def generate_report(
-    state,
-    output_path: Path,
-    include_refs: bool = True,
-    include_gallery: bool = True,
-    max_gallery: int = 60,
-    max_records: int = 12,
-    solo_images=None,
-    sections=None,
-) -> Path:
-    """Generates the HTML report with an observability wrapper.
-
-    Generates the HTML report, measuring it and recording report.generate /
-    report.finish / report.error in the detector JSONL. Re-throws failures:
-    the caller decides what to do, the log keeps the diagnosis.
-    """
-    from polyx.core.observability import logger_for, timer
-
-    n_results = sum(len(rs) for rs in (state.results or {}).values())
-    with timer(
-        logger_for("detector"),
-        "report",
-        results_2=n_results,
-        output=str(output_path),
-        sections=sorted(sections) if sections else None,
-        solo_images=(len(solo_images) if solo_images is not None else None),
-    ):
-        return _generate_report_impl(
-            state,
-            output_path,
-            include_refs=include_refs,
-            include_gallery=include_gallery,
-            max_gallery=max_gallery,
-            max_records=max_records,
-            solo_images=solo_images,
-            sections=sections,
-        )
-
-
-# Late imports: submodules use helpers defined above.
-from .figures import *  # noqa: E402
-from .sections import *  # noqa: E402
-from .stats import *  # noqa: E402

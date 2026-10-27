@@ -1,10 +1,17 @@
 """Figures."""
 
-from ._common import *
-from .stats import *
-import polyx.gui.report._common as _common
+import base64
+import io
+from pathlib import Path
 
-globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
+import matplotlib.pyplot as plt
+import numpy as np
+
+from polyx.core.i18n import tr
+from polyx.core.report_metrics import _ORDER_CLASSES
+from polyx.gui import theme as T
+
+from ._common import _MAX_GROUPS_BOXPLOT, _PALETTE, NUM, _esc
 
 
 def _fig_to_b64(fig) -> str:
@@ -12,10 +19,6 @@ def _fig_to_b64(fig) -> str:
     fig.savefig(buf, format="png", bbox_inches="tight", dpi=120)
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode("ascii")
-
-
-def _img_b64(data: bytes) -> str:
-    return base64.b64encode(data).decode("ascii")
 
 
 # ────────────────────────────────────────────────────────────────────

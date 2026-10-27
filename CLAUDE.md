@@ -84,7 +84,13 @@ src/                      # Source code (installable package)
         ├── preferencias.py  # Preferences dialog (theme, language)
         ├── pdf_export.py # HTML → PDF
         ├── updates.py    # Update checker
-        ├── report_html.py  # Report generator (base64, paper-quality)
+        ├── report_html.py  # Compat shim re-exporting gui/report/
+        ├── report/      # HTML report: render → sections → figures → _common
+        │   ├── render.py   # generate_report: builds the document
+        │   ├── sections.py # the section builders (HTML blocks)
+        │   ├── figures.py  # matplotlib figures (Agg)
+        │   ├── _common.py  # shared helpers, document shell, reads report.css
+        │   └── stats.py    # re-export bridge over polyx.core.stats
         ├── qt.py         # PySide6 guard (extra [gui])
         ├── detector/     # Module 2: Batch analysis
         │   ├── window.py, state.py, runner.py
@@ -219,7 +225,7 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 - **`T.DOC`** — frozen palette (the light one) for the **HTML reports**. A report
   gets printed, attached and archived: if it came out dark because whoever generated
   it works at night, it would waste ink and two reports of the same analysis would
-  not look alike. `report_html.py` and `informe.py` use `T.DOC.*`.
+  not look alike. `polyx/gui/report/` and `trainer/pages/summary.py` use `T.DOC.*`.
 
 ### How a theme change is applied
 
