@@ -625,6 +625,15 @@ def _comparison_table(state, results_2, active_2, there_is_gt: bool, by_photo: d
     return f"<table class='data'>{header_line}{rows_2}</table>"
 
 
+def _group_by_photo(results_2, active_2) -> dict:
+    """Group per-image results by photo path across models."""
+    by_photo = {}
+    for mi in active_2:
+        for r in results_2.get(mi, []):
+            by_photo.setdefault(r.image_path, {})[mi] = r
+    return by_photo
+
+
 def _section_comparison(state, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
@@ -637,10 +646,7 @@ def _section_comparison(state, results_2) -> str:
     compare_html = ""
     active_2 = [mi for mi, s in enumerate(state.model_slots) if s.path is not None]
     if len(active_2) > 1:
-        by_photo = {}
-        for mi in active_2:
-            for r in results_2.get(mi, []):
-                by_photo.setdefault(r.image_path, {})[mi] = r
+        by_photo = _group_by_photo(results_2, active_2)
 
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
         # Verdict: only declared if there is ground truth to judge with. Without it,
