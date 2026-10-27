@@ -57,6 +57,7 @@ from polyx.core.detect.yolo import (
     size_image,
 )
 from polyx.core.i18n import tr
+from polyx.core.image_io import read_image
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -77,7 +78,7 @@ def _qpixmap_de(path: Path) -> QPixmap:
     reliably opens accented paths on Windows, which is the reason the rest of
     the project already reads this way.
     """
-    bgr = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    bgr = read_image(path)
     if bgr is None:
         return QPixmap()
     h, w = bgr.shape[:2]

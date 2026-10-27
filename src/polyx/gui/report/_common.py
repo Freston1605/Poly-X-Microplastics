@@ -173,7 +173,9 @@ def _uri_gallery(data: bytes, width_max: int = _WIDTH_GALLERY) -> str:
     try:
         import cv2
 
-        arr = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        from polyx.core.image_io import decode_image_bytes
+
+        arr = decode_image_bytes(data)
         if arr is not None:
             if arr.shape[1] > width_max:
                 height = int(round(arr.shape[0] * width_max / arr.shape[1]))  # noqa: RUF046

@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
 )
+from polyx.core.image_io import read_image
 from polyx.core.provenance.observability import event, logger_for
 
 # Canonical alias: `Detection` is `Instance` from the protocol. Kept for
@@ -220,7 +220,7 @@ class YoloModel:
         differ, useful when the detection matters more than the class).
         """
         self.load()
-        img = cv2.imdecode(np.fromfile(str(image_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+        img = read_image(image_path)
         if img is None:
             return []
         H, W = img.shape[:2]
@@ -367,7 +367,7 @@ def size_image(image_path: str | Path) -> tuple[int, int] | None:
         # Paths with accents or formats Pillow cannot open: it falls back to the cv2 path,
         # which is already used throughout the rest of the project for that same reason.
         try:
-            img = cv2.imdecode(np.fromfile(str(image_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+            img = read_image(image_path)
             if img is None:
                 return None
             return int(img.shape[1]), int(img.shape[0])

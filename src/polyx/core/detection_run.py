@@ -25,6 +25,7 @@ from polyx.core.detect.protocol import (
     find_gt_for_image,
     read_yolo_txt,
 )
+from polyx.core.image_io import read_image
 from polyx.core.measure.morphology import apply_to_detection
 from polyx.core.quality.metrics import match_image
 
@@ -83,7 +84,7 @@ def run_batch(
     has_gt_any = False
 
     for img_path in images:
-        img = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+        img = read_image(img_path)
         if img is None:
             continue
         H, W = img.shape[:2]
