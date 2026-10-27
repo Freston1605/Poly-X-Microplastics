@@ -1184,6 +1184,49 @@ def _size_stacked_figure(per_class_2: dict) -> str:
     return f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>"
 
 
+def _no_scale_warning(por_img: dict, no_scale: list) -> str:
+    """Warning when some images have no µm/px scale."""
+    if not no_scale:
+        return ""
+    all_value = len(no_scale) == len(por_img)
+    which_2 = (
+        tr("<strong>Ninguna imagen tiene escala</strong>")
+        if all_value
+        else tr(
+            "<strong>{n} de {total} imágenes no tienen escala</strong> ({cuales})"
+        ).format(
+            n=len(no_scale),
+            total=len(por_img),
+            cuales=", ".join(sorted(no_scale)[:6]) + (", …" if len(no_scale) > 6 else ""),
+        )
+    )
+    return (
+        "<p>"
+        + which_2
+        + tr(
+            ", y por eso su largo aparece como «—». Las partículas <em>sí</em> "
+            "se midieron —el conteo y la forma de la tabla son correctos—, pero "
+            "una medida en píxeles no se puede pasar a micrómetros sin saber "
+            "cuántos µm mide cada píxel.</p>"
+        )
+        + tr(
+            "<p>Para obtenerlo, en <em>Parámetros</em>: activa <strong>«Medir "
+            "la placa Petri»</strong> —cada foto obtiene su propia escala del "
+            "anillo de la placa, que es lo más fiable— o escribe un valor de "
+            "<strong>µm/píxel</strong>"
+        )
+        + (
+            "."
+            if all_value
+            else tr(
+                ". Si ya está activo, en esas fotos concretas no se encontró el "
+                "anillo de la placa: revisa que se vea entero en el encuadre."
+            )
+        )
+        + "</p>"
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1294,44 +1337,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # it looked as if the measurement had failed. It says what is missing and how
         # to fix it, instead of inventing a number or saying nothing.
         no_scale = [n for n, ds in por_img.items() if not any(d.length_um for d in ds)]
-        if no_scale:
-            all_value = len(no_scale) == len(por_img)
-            which_2 = (
-                tr("<strong>Ninguna imagen tiene escala</strong>")
-                if all_value
-                else tr(
-                    "<strong>{n} de {total} imágenes no tienen escala</strong> ({cuales})"
-                ).format(
-                    n=len(no_scale),
-                    total=len(por_img),
-                    cuales=", ".join(sorted(no_scale)[:6]) + (", …" if len(no_scale) > 6 else ""),
-                )
-            )
-            count_2 += (
-                "<p>"
-                + which_2
-                + tr(
-                    ", y por eso su largo aparece como «—». Las partículas <em>sí</em> "
-                    "se midieron —el conteo y la forma de la tabla son correctos—, pero "
-                    "una medida en píxeles no se puede pasar a micrómetros sin saber "
-                    "cuántos µm mide cada píxel.</p>"
-                )
-                + tr(
-                    "<p>Para obtenerlo, en <em>Parámetros</em>: activa <strong>«Medir "
-                    "la placa Petri»</strong> —cada foto obtiene su propia escala del "
-                    "anillo de la placa, que es lo más fiable— o escribe un valor de "
-                    "<strong>µm/píxel</strong>"
-                )
-                + (
-                    "."
-                    if all_value
-                    else tr(
-                        ". Si ya está activo, en esas fotos concretas no se encontró el "
-                        "anillo de la placa: revisa que se vea entero en el encuadre."
-                    )
-                )
-                + "</p>"
-            )
+        count_2 += _no_scale_warning(por_img, no_scale)
 
         # Outside the f-string: inside it we would have to nest quotes of the same type.
         pct_curves = f"{100.0 * curves / len(shapes):.1f}"
