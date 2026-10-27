@@ -70,6 +70,7 @@ def capturar() -> dict[str, str]:
             ("GPU", "not available"),
             ("PyTorch", "pinned"),
         ]
+
     machine._team = patched_team
 
     # The gate compares figures by stable marker (see _normalizar_figuras in

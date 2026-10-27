@@ -124,13 +124,15 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     # torch values that differ per runner, and a byte gate cannot depend on
     # them. Production keeps the live rows; only this fixture and the
     # capture script override the function.
-    patched_team = lambda: [
-        ("Operating system", "Linux"),
-        ("Processor", "pinned"),
-        ("RAM", "16.0 GB"),
-        ("GPU", "not available"),
-        ("PyTorch", "pinned"),
-    ]
+    def patched_team():
+        return [
+            ("Operating system", "Linux"),
+            ("Processor", "pinned"),
+            ("RAM", "16.0 GB"),
+            ("GPU", "not available"),
+            ("PyTorch", "pinned"),
+        ]
+
     machine._team = patched_team
 
     # Same for the Ultralytics version in the methods paragraph: a dev

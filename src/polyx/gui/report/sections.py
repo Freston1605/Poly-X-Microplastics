@@ -5,9 +5,6 @@ from pathlib import Path
 
 import numpy as np
 
-from . import machine
-
-_common = machine
 from polyx.core.i18n import tr
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
@@ -22,6 +19,7 @@ from polyx.core.stats import (
 )
 from polyx.gui import theme as T
 
+from . import machine
 from .figures import (
     _fig_agreement_by_image,
     _fig_boxplot_groups,
@@ -40,6 +38,8 @@ from .markup import _esc, _img_b64, _table_count, _table_width, _uri_gallery
 from .particle import _record_particle
 from .registry import NUM
 from .samples import _MAX_FOLDER_PER_PHOTO, _ORDER_STATION, _clue_order, _sample_of, choose_records
+
+_common = machine
 
 
 def _section_team(active) -> str:
