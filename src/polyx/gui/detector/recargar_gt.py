@@ -16,7 +16,7 @@ from pathlib import Path
 
 import cv2
 
-from polyx.core.detect.yolo import (
+from polyx.core.detect.protocol import (
     compute_box_size_um,
     find_gt_for_image,
     read_yolo_txt,

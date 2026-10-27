@@ -491,7 +491,7 @@ class Detection:
 overestimates the area **1.87×**, and a fibre lying diagonally has a **square**
 box — which is why it was reported as a fragment.
 
-`src/polyx/core/measure/morphology.py` segments inside each box (Otsu on the highest-contrast
+`src/polyx/core/measure/segmentation.py` (with `shape.py` and `drawing.py`) segments inside each box (Otsu on the highest-contrast
 channel, the central connected component, clipped to the box) and measures over the
 mask. **The length comes from two standard measures and the larger one is reported:**
 

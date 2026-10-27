@@ -50,12 +50,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.detect.yolo import (
-    Detection,
+from polyx.core.detect.protocol import (
     find_gt_for_image,
     read_yolo_txt,
     size_image,
 )
+from polyx.core.detect.yolo import Detection
 from polyx.core.i18n import tr
 from polyx.core.image_io import read_image
 from polyx.gui import iconos

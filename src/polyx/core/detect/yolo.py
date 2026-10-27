@@ -9,6 +9,7 @@ import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
+    _tile_starts,
     policy_tiling,
     size_image,
 )
@@ -357,16 +358,6 @@ class YoloModel:
             imgsz=imgsz,
             batch=batch,
         )
-
-
-def _tile_starts(total: int, tile: int, step: int) -> list[int]:
-    """Start positions of the tiles along one axis (the last one flush with the edge)."""
-    if total <= tile:
-        return [0]
-    starts = list(range(0, total - tile + 1, step))
-    if not starts or starts[-1] != total - tile:
-        starts.append(total - tile)
-    return starts
 
 
 def _box_iou(a: Detection, b: Detection) -> float:
