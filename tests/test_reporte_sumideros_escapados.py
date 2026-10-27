@@ -276,7 +276,9 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
         "map50": 0.7,
         "map": 0.6,
     }
-    monkeypatch.setattr("polyx.gui.report._common._training_of", lambda peso: entrenamiento)
+    from polyx.gui.report import machine
+
+    monkeypatch.setattr("polyx.gui.report.machine._training_of", lambda peso: entrenamiento)
 
     from polyx.gui.detector.state import ModelSlot
 
