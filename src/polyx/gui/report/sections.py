@@ -2,18 +2,16 @@
 
 import sys
 
-from ._common import *
-from .stats import *
 import polyx.gui.report._common as _common
+import polyx.gui.report.figures as _figures
+import polyx.gui.report.stats as _stats
+
+from ._common import *
+from .figures import *
+from .stats import *
 
 globals().update({k: v for k, v in vars(_common).items() if not k.startswith("__")})
-from .figures import *  # noqa: E402
-import polyx.gui.report.figures as _figures  # noqa: E402
-
 globals().update({k: v for k, v in vars(_figures).items() if not k.startswith("__")})
-
-import polyx.gui.report.stats as _stats  # noqa: E402
-
 globals().update({k: v for k, v in vars(_stats).items() if not k.startswith("__")})
 
 
