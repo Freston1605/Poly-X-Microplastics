@@ -271,6 +271,20 @@ def _section_summary(
 </p>"""
 
 
+def _error_rows(per_class_metrics, cls_ids, cls_names) -> str:
+    """Per-class error table rows."""
+    rows = ""
+    for cid, name in zip(cls_ids, cls_names):  # noqa: B905
+        cm_ = per_class_metrics[cid]
+        rows += (
+            f"<tr><td>{name}</td>"
+            f"<td class='r'>{cm_.tp}</td><td class='r'>{cm_.fp}</td><td class='r'>{cm_.fn}</td>"
+            f"<td class='r'>{cm_.precision:.3f}</td><td class='r'>{cm_.recall:.3f}</td>"
+            f"<td class='r'>{cm_.f1:.3f}</td></tr>"
+        )
+    return rows
+
+
 def _section_errors(state, results_2, active, any_gt: bool) -> str:
     """Body of the 'errores' section: confusion matrix plus per-class metrics.
 
@@ -298,15 +312,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     )
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
-    rows = ""
-    for cid, name in zip(cls_ids, cls_names):  # noqa: B905
-        cm_ = per_class_metrics[cid]
-        rows += (
-            f"<tr><td>{name}</td>"
-            f"<td class='r'>{cm_.tp}</td><td class='r'>{cm_.fp}</td><td class='r'>{cm_.fn}</td>"
-            f"<td class='r'>{cm_.precision:.3f}</td><td class='r'>{cm_.recall:.3f}</td>"
-            f"<td class='r'>{cm_.f1:.3f}</td></tr>"
-        )
+    rows = _error_rows(per_class_metrics, cls_ids, cls_names)
     # The classes that the model knows but that appear neither in the GT nor in
     # the predictions are left out of the table, because they have no metric
     # to compute. They are declared anyway: a report that announces PET/PP/LDPE and
