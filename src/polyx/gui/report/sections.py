@@ -1268,6 +1268,32 @@ def _no_scale_warning(por_img: dict, no_scale: list) -> str:
     )
 
 
+def _shape_method_text(curves: int, pct_curves: str) -> str:
+    """Method explanation text for the forma section."""
+    return f"""
+<h3>{NUM}.1 {tr("Cómo se mide el largo")}</h3>
+{tr("<p>Las magnitudes se miden sobre la <strong>máscara de cada partícula</strong>, no sobre la caja del detector. La caja de una partícula alargada está casi vacía y depende de cómo haya caído: una fibra tumbada en diagonal tiene caja cuadrada, de modo que medir sobre la caja la reportaría como si no fuera fibra, y con una talla equivocada. La máscara se obtiene umbralizando cada recorte a medio camino entre el nivel del fondo —la mediana del anillo que rodea la caja— y el de la partícula —el percentil 90 dentro de ella—.</p>")}
+
+{tr("<p><strong>El criterio general es la línea recta más larga que cabe en la partícula</strong>, es decir la mayor distancia entre dos puntos de su contorno: el <em>diámetro de Feret máximo</em>. Para una partícula de forma irregular pero no doblada, esa recta es su talla, y tiene dos propiedades que la hacen fiable: no depende de la orientación con que la partícula haya caído, y un borde dentado no la altera.</p>")}
+
+{tr("<p><strong>Esa recta deja de servir cuando la partícula está contorsionada.</strong> En una fibra doblada la distancia entre sus extremos es la cuerda, no su longitud: en un arco de media circunferencia se queda un 35&nbsp;% corta. Para esos casos se mide el <em>diámetro geodésico</em>, que es el camino más largo que cabe <strong>dentro</strong> de la partícula. Al no poder salirse de la máscara, ese camino rodea la curva y devuelve la longitud recorrida.</p>")}
+
+<table class='data'>
+<tr>{tr("<th>Forma de la partícula</th><th>Qué se reporta como largo</th>")}</tr>
+<tr>{tr("<td>Compacta o irregular, pero no doblada</td><td>Feret máximo (la recta más larga)</td>")}</tr>
+<tr>{tr("<td>Alargada y contorsionada (fibra)</td><td>Diámetro geodésico (sigue la curva)</td>")}</tr>
+</table>
+
+{tr("<p>La distinción se hace por el <strong>grosor</strong>: solo se usa el geodésico si el largo supera al menos cuatro veces el grosor máximo inscrito de la partícula. La razón es que en una partícula gruesa cualquier concavidad obliga al camino geodésico a bordearla en vez de atravesarla, y entonces el número se infla; en una fibra delgada eso no puede ocurrir.</p>")}
+
+{tr("<p>Contrastado con formas de talla conocida —rectas, rectas giradas 45&nbsp;°, arcos de 60, 120 y 180&nbsp;°, un círculo y una recta de borde dentado— el largo así medido da un <strong>error mediano del 0,8&nbsp;% y del 4,7&nbsp;% en el peor caso</strong>.</p>")}
+
+{tr("<p><strong>{n} partículas ({pct} %) están contorsionadas</strong>, entendiendo por tal que su largo supera en más de un 15&nbsp;% su extensión en línea recta.</p>").format(n=curves, pct=pct_curves)}
+
+{tr("<p><em>Partículas en contacto.</em> Dos partículas que se tocan forman una sola mancha, y medirlas juntas sumaría sus tallas. Se separan por <em>watershed</em> sobre la transformada de distancia: el centro de cada una queda lejos del fondo y el cuello que las une queda cerca, de modo que el corte cae por el cuello. Sobre círculos de talla conocida las separa hasta un 27&nbsp;% de solapamiento del diámetro, sin partir ninguna partícula de una sola pieza.</p>")}
+
+{tr("<p><em>Limitaciones conocidas.</em> Dos partículas solapadas más allá de un 40&nbsp;% de su diámetro se siguen midiendo como una sola: a esa altura ya no hay un cuello por el que cortar. Y en una fibra muy enroscada el camino geodésico ataja por el interior de cada codo, subestimando la longitud hasta un 19&nbsp;% en el caso más cerrado que se ensayó.</p>")}"""
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1382,29 +1408,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
 
         # Outside the f-string: inside it we would have to nest quotes of the same type.
         pct_curves = f"{100.0 * curves / len(shapes):.1f}"
-        method_2 = f"""
-<h3>{NUM}.1 {tr("Cómo se mide el largo")}</h3>
-{tr("<p>Las magnitudes se miden sobre la <strong>máscara de cada partícula</strong>, no sobre la caja del detector. La caja de una partícula alargada está casi vacía y depende de cómo haya caído: una fibra tumbada en diagonal tiene caja cuadrada, de modo que medir sobre la caja la reportaría como si no fuera fibra, y con una talla equivocada. La máscara se obtiene umbralizando cada recorte a medio camino entre el nivel del fondo —la mediana del anillo que rodea la caja— y el de la partícula —el percentil 90 dentro de ella—.</p>")}
-
-{tr("<p><strong>El criterio general es la línea recta más larga que cabe en la partícula</strong>, es decir la mayor distancia entre dos puntos de su contorno: el <em>diámetro de Feret máximo</em>. Para una partícula de forma irregular pero no doblada, esa recta es su talla, y tiene dos propiedades que la hacen fiable: no depende de la orientación con que la partícula haya caído, y un borde dentado no la altera.</p>")}
-
-{tr("<p><strong>Esa recta deja de servir cuando la partícula está contorsionada.</strong> En una fibra doblada la distancia entre sus extremos es la cuerda, no su longitud: en un arco de media circunferencia se queda un 35&nbsp;% corta. Para esos casos se mide el <em>diámetro geodésico</em>, que es el camino más largo que cabe <strong>dentro</strong> de la partícula. Al no poder salirse de la máscara, ese camino rodea la curva y devuelve la longitud recorrida.</p>")}
-
-<table class='data'>
-<tr>{tr("<th>Forma de la partícula</th><th>Qué se reporta como largo</th>")}</tr>
-<tr>{tr("<td>Compacta o irregular, pero no doblada</td><td>Feret máximo (la recta más larga)</td>")}</tr>
-<tr>{tr("<td>Alargada y contorsionada (fibra)</td><td>Diámetro geodésico (sigue la curva)</td>")}</tr>
-</table>
-
-{tr("<p>La distinción se hace por el <strong>grosor</strong>: solo se usa el geodésico si el largo supera al menos cuatro veces el grosor máximo inscrito de la partícula. La razón es que en una partícula gruesa cualquier concavidad obliga al camino geodésico a bordearla en vez de atravesarla, y entonces el número se infla; en una fibra delgada eso no puede ocurrir.</p>")}
-
-{tr("<p>Contrastado con formas de talla conocida —rectas, rectas giradas 45&nbsp;°, arcos de 60, 120 y 180&nbsp;°, un círculo y una recta de borde dentado— el largo así medido da un <strong>error mediano del 0,8&nbsp;% y del 4,7&nbsp;% en el peor caso</strong>.</p>")}
-
-{tr("<p><strong>{n} partículas ({pct} %) están contorsionadas</strong>, entendiendo por tal que su largo supera en más de un 15&nbsp;% su extensión en línea recta.</p>").format(n=curves, pct=pct_curves)}
-
-{tr("<p><em>Partículas en contacto.</em> Dos partículas que se tocan forman una sola mancha, y medirlas juntas sumaría sus tallas. Se separan por <em>watershed</em> sobre la transformada de distancia: el centro de cada una queda lejos del fondo y el cuello que las une queda cerca, de modo que el corte cae por el cuello. Sobre círculos de talla conocida las separa hasta un 27&nbsp;% de solapamiento del diámetro, sin partir ninguna partícula de una sola pieza.</p>")}
-
-{tr("<p><em>Limitaciones conocidas.</em> Dos partículas solapadas más allá de un 40&nbsp;% de su diámetro se siguen midiendo como una sola: a esa altura ya no hay un cuello por el que cortar. Y en una fibra muy enroscada el camino geodésico ataja por el interior de cada codo, subestimando la longitud hasta un 19&nbsp;% en el caso más cerrado que se ensayó.</p>")}"""
+        method_2 = _shape_method_text(curves, pct_curves)
         if n_formless:
             method_2 += tr(
                 "<p>En {n} partículas no se pudo separar la partícula del fondo; su "
