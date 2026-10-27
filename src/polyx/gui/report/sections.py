@@ -1420,6 +1420,10 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
     return shape_html, by_html_folder
 
 
+def _build_records(state, shapes, max_records: int) -> str:
+    """Build the particle fichas cards."""
+    return _build_records(state, shapes, max_records)
+
 def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
     """Body of the 'fichas' section: one annotated card per sampled particle.
 
