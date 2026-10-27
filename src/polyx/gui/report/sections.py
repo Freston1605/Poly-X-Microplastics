@@ -71,6 +71,29 @@ def _section_team(active) -> str:
     return html
 
 
+def _per_image_rows(rs) -> list:
+    """Build the per-image count rows."""
+    rows_img = []
+    for r in rs:
+        sample = _sample_of(r.image_path)
+        label_2 = _esc(r.image_path.name)
+        if sample:
+            station, range_value, plate = sample
+            label_2 = (
+                f"{_esc(r.image_path.name)}<br>"
+                f"<span style='font-size:8.5pt;color:var(--ink3)'>"
+                f"{_esc(station)} &middot; tramo {_esc(range_value)} &middot; placa {_esc(plate)}</span>"
+            )
+        rows_img.append(
+            (
+                label_2,
+                _count_per_class(r.gt) if r.has_gt else Counter(),
+                _count_per_class(r.predictions),
+            )
+        )
+    return rows_img
+
+
 def _section_count(results_2: dict[int, list], state, active, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
@@ -95,24 +118,7 @@ def _section_count(results_2: dict[int, list], state, active, classes: list[str]
     there_is_a_manual = any(r.has_gt for r in rs)
 
     # -- Per image --
-    rows_img = []
-    for r in rs:
-        sample = _sample_of(r.image_path)
-        label_2 = _esc(r.image_path.name)
-        if sample:
-            station, range_value, plate = sample
-            label_2 = (
-                f"{_esc(r.image_path.name)}<br>"
-                f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                f"{_esc(station)} &middot; tramo {_esc(range_value)} &middot; placa {_esc(plate)}</span>"
-            )
-        rows_img.append(
-            (
-                label_2,
-                _count_per_class(r.gt) if r.has_gt else Counter(),
-                _count_per_class(r.predictions),
-            )
-        )
+    rows_img = _per_image_rows(rs)
     table_img = _table_width(rows_img, classes, "Sample (image)", there_is_a_manual)
 
     # -- Per stretch and per station, if the names follow the pattern --
