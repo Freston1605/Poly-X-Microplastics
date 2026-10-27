@@ -50,7 +50,7 @@ jobs:
       - name: Install OpenCode
         run: npm install -g @opencode/cli
 
-      # Go is not a built-in OpenCode provider config in CI, so declare it as
+      # OpenCode is not a built-in provider config in CI, so declare it as
       # an OpenAI-compatible custom provider over the Go endpoint. The key is
       # resolved from the environment at request time, never written to disk.
       - name: Write OpenCode config for Go
@@ -81,7 +81,41 @@ jobs:
           }
           EOF
 
+      # Probe the endpoint with a 1-token request before spending minutes in
+      # the agent. A dead provider, revoked key or retired model surfaces
+      # here as a short comment instead of a red run with no explanation.
+      # Always exits 0: the caller decides what to do with `ok`.
+      - name: Preflight check (Go endpoint)
+        id: preflight
+        env:
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          status=$(curl -s -o /tmp/preflight.json -w '%{http_code}' --max-time 60 \
+            -X POST https://opencode.ai/inference/go/openai/v1/chat/completions \
+            -H "Authorization: Bearer $OPENCODE_GO_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -H "x-opencode-session: preflight-${{ github.run_id }}" \
+            -d '{"model":"beam-free","messages":[{"role":"user","content":"Reply OK"}],"max_tokens":8}' \
+            || true)
+          status=$(printf '%s' "$status" | tail -n 1)
+          [ -n "$status" ] || status=000
+          echo "preflight HTTP status: $status"
+          if [ "$status" = "200" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          # Never print the response body unconditionally: keep logs clean,
+          # but surface the provider's error code for debugging.
+          echo "Provider error: $(head -c 500 /tmp/preflight.json)"
+          gh issue comment "$TARGET_NUMBER" \
+            --body "⚠️ OpenCode could not run: the Go inference endpoint returned HTTP \`$status\` for \`beam-free\`. Check the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) (key, plan limits, or model availability)." \
+            || echo "::warning::could not post preflight comment"
+
       - name: Run OpenCode
+        if: steps.preflight.outputs.ok == 'true'
         env:
           OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,3 +128,15 @@ jobs:
             Use git and the gh CLI (GITHUB_TOKEN is set) to implement the request:
             create a branch, commit, open a PR, and reply to the triggering issue/PR comment when finished.
             Keep changes minimal and run any available tests first."
+
+      # Anything that fails after a healthy preflight (agent error, tests,
+      # git push, PR creation) still gets a visible answer on the issue.
+      - name: Comment on failure
+        if: failure() && steps.preflight.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          gh issue comment "$TARGET_NUMBER" \
+            --body "❌ OpenCode ran but failed before finishing. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})." \
+            || echo "::warning::could not post failure comment"
