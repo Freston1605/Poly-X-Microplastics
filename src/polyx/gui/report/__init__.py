@@ -4,6 +4,7 @@ from ._common import *
 from .figures import *
 from .stats import *
 from .sections import *
+from .render import *
 import polyx.gui.report._common as _common
 import polyx.gui.report.figures as _figures
 import polyx.gui.report.stats as _stats

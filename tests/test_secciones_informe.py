@@ -380,12 +380,15 @@ def test_generar_impl_centrada_en_secciones():
     Mide con ast sobre el codigo fuente (no sobre el modulo vivo) el span
     real de la funcion, y lee SECCIONES del modulo importado para que una
     seccion nueva sin constructor en el impl falle aqui y no en produccion.
+    La ruta sale del propio code object y no de ``rh.__file__``: el gate
+    sobrevive que el impl cambie de fichero dentro del paquete.
     """
     import ast
 
     import polyx.gui.report_html as rh
 
-    fuente = Path(rh.__file__).resolve().read_text(encoding="utf-8")
+    ruta_impl = Path(rh._generate_report_impl.__code__.co_filename).resolve()
+    fuente = ruta_impl.read_text(encoding="utf-8")
     impl = next(
         n
         for n in ast.walk(ast.parse(fuente))

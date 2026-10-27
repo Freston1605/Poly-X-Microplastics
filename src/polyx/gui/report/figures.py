@@ -14,10 +14,6 @@ def _fig_to_b64(fig) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _img_b64(data: bytes) -> str:
-    return base64.b64encode(data).decode("ascii")
-
-
 # ────────────────────────────────────────────────────────────────────
 # Count by polymer and by sample
 # ────────────────────────────────────────────────────────────────────
