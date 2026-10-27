@@ -60,9 +60,14 @@ _PUBLIC_SURFACE = [
         ("Calibracion",),
     ),
     (
-        "src/polyx/core/measure/morphology.py",
-        ("Morphology", "segment", "measure"),
-        ("Morfologia", "segmentar", "medir"),
+        "src/polyx/core/measure/shape.py",
+        ("Morphology", "measure"),
+        ("Morfologia", "medir"),
+    ),
+    (
+        "src/polyx/core/measure/segmentation.py",
+        ("segment",),
+        ("segmentar",),
     ),
     (
         "src/polyx/core/provenance/observability.py",
