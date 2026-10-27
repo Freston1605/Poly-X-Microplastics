@@ -251,8 +251,11 @@ def set_identity_app(app_id: str) -> bool:
     try:
         import ctypes
 
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-        return True
+        windll = getattr(ctypes, "windll", None)
+        if windll is not None:
+            windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            return True
+        return False
     except (AttributeError, OSError):
         # Windows Server without a complete shell32, or an old version. It is not
         # a reason not to start: only the taskbar icon is lost.

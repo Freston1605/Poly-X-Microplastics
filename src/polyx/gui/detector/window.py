@@ -159,15 +159,15 @@ class DetectorWindow(QMainWindow):
 
     def _build_pages(self):
         # Late import to avoid cycles
-        from .pages.comparar import ComparePage
-        from .pages.ejecutar import RunPage
-        from .pages.errores import ErrorsPage
+        from .pages.compare import ComparePage
+        from .pages.errors import ErrorsPage
+        from .pages.execute import RunPage
         from .pages.gt_manual import GTManualPage
-        from .pages.imagenes import ImagesPage
-        from .pages.modelos import ModelsPage
-        from .pages.parametros import ParametersPage
-        from .pages.reporte import ReportPage
-        from .pages.resultados import ResultsPage
+        from .pages.images import ImagesPage
+        from .pages.models import ModelsPage
+        from .pages.parameters import ParametersPage
+        from .pages.report import ReportPage
+        from .pages.results import ResultsPage
 
         pages = [
             ModelsPage(self.state),

@@ -88,7 +88,10 @@ def run_batch(
         if img is None:
             continue
         H, W = img.shape[:2]
-        dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=device)
+        from .platform import device_available
+
+        dev = device if device is not None and str(device).strip() != "" else device_available()
+        dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=dev)
         if measure_shape:
             for d in dets:
                 _measure(d, img, um_per_px)

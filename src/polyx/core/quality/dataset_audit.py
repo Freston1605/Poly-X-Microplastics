@@ -84,7 +84,7 @@ def _label_for(img: Path) -> Path | None:
     return same if same.exists() else None
 
 
-def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> list[Path]:
+def _iter_images(split_path: Path | None, yaml_dir: Path, root: Path) -> list[Path]:
     if split_path is None or not split_path.exists():
         return []
     if split_path.is_dir():
@@ -109,9 +109,11 @@ def _iter_images(split_path: Path, yaml_dir: Path, root: Path) -> list[Path]:
 
 def _scan_split(images: list[Path]) -> dict:
     """Reads labels of a split. Returns per-class counts, box stats and issues."""
-    per_class = defaultdict(int)
-    areas = defaultdict(list)
-    per_class_per_img = defaultdict(lambda: defaultdict(int))  # class -> {img: n}
+    per_class: dict[int, int] = defaultdict(int)
+    areas: dict[int, list[float]] = defaultdict(list)
+    per_class_per_img: dict[int, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )  # class -> {img: n}
     degenerate = out_range = duplicates = empty = no_label = 0
     n_imgs = len(images)
     for img in images:

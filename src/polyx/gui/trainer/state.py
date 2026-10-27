@@ -267,7 +267,7 @@ class TrainerState(QObject):
         a = self.aug
         for k, v in d.items():
             if k == "aug_level":
-                a.level = v
+                a.level = str(v)
                 aug_vals = AUG_LEVELS.get(v, AUG_LEVELS["Medio"])
                 for ak, av in aug_vals.items():
                     setattr(a, ak, av)

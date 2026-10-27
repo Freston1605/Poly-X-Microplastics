@@ -33,8 +33,8 @@ class Sam2Segmenter(DetectionSource):
         if self._predictor is not None:
             return self
         try:
-            from sam2.build_sam import build_sam2
-            from sam2.sam2_image_predictor import SAM2ImagePredictor
+            from sam2.build_sam import build_sam2  # ty: ignore[unresolved-import]
+            from sam2.sam2_image_predictor import SAM2ImagePredictor  # ty: ignore[unresolved-import]
         except ImportError as e:
             raise RuntimeError(
                 "SAM2 not installed. Install with: pip install git+https://github.com/facebookresearch/sam2.git"
@@ -70,6 +70,7 @@ class Sam2Segmenter(DetectionSource):
         """Generate masks for the given boxes using SAM2."""
         if self._predictor is None:
             self.load()
+        assert self._predictor is not None
 
         import cv2
 

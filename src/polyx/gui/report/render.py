@@ -196,7 +196,7 @@ def generate_report(
     report.finish / report.error in the detector JSONL. Re-throws failures:
     the caller decides what to do, the log keeps the diagnosis.
     """
-    from polyx.core.observability import logger_for, timer
+    from polyx.core.provenance import logger_for, timer
 
     n_results = sum(len(rs) for rs in (state.results or {}).values())
     with timer(

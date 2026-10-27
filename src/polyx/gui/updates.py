@@ -22,9 +22,9 @@ import urllib.request
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.core.observability import event, logger_for
 from polyx.core.paths import ROOT
 from polyx.core.platform import name_updater
+from polyx.core.provenance import event, logger_for
 
 REPO = "CrissFerrada/Poly-X-Microplastics"
 BRANCH = "main"

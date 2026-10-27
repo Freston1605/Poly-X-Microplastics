@@ -150,15 +150,15 @@ class TrainerWindow(QMainWindow):
         self.state.train_failed.connect(lambda _: self._set_status("● Error", T.ERR))
 
     def _build_pages(self):
-        from .pages.augmentacion import AugmentationPage
-        from .pages.comparar import ComparePage
+        from .pages.augmentation import AugmentationPage
+        from .pages.compare import ComparePage
         from .pages.dataset import DatasetPage
-        from .pages.entrenar import TrainPage
-        from .pages.evaluar import EvaluatePage
-        from .pages.exportar import ExportPage
-        from .pages.informe import ReportPage
-        from .pages.modelo import ModelPage
-        from .pages.parametros import ParametersPage
+        from .pages.evaluate import EvaluatePage
+        from .pages.export import ExportPage
+        from .pages.model import ModelPage
+        from .pages.parameters import ParametersPage
+        from .pages.summary import ReportPage
+        from .pages.train import TrainPage
 
         pages = [
             ModelPage(self.state),

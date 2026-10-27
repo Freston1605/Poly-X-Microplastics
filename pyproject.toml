@@ -50,11 +50,11 @@ Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHAN
 
 
 [dependency-groups]
-dev = ["pytest", "ruff>=0.17"]
+dev = ["pytest", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
 
 [project.optional-dependencies]
 gui = ["PySide6==6.7.2"]
-dev = ["pytest", "ruff>=0.17"]
+dev = ["pytest", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
 sam2 = ["sam2"]
 legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
@@ -103,3 +103,19 @@ ignore = [
 "src/polyx/gui/theme.py" = ["F821"]
 "tests/*" = ["S101", "S105", "S106", "S107", "PLR2004", "S603", "S102", "S310", "S110", "S607", "S606", "S112", "S311", "S608"]
 "tools/*" = ["S101", "T201", "S603", "S105"]
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[[tool.ty.overrides]]
+include = ["src/polyx/gui/theme.py"]
+rules.unresolved-reference = "ignore"
+
+[[tool.ty.overrides]]
+include = ["src/polyx/gui/**"]
+rules.unresolved-attribute = "ignore"
+rules.invalid-method-override = "ignore"
+rules.unresolved-import = "ignore"
+rules.not-subscriptable = "ignore"
+rules.not-iterable = "ignore"
+rules.unsupported-operator = "ignore"

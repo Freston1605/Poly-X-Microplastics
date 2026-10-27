@@ -17,7 +17,7 @@ def _count_per_class(detections) -> Counter:
     counts under `«no asignable»`. It is still a detected particle — just no
     polymer is attributed to it.
     """
-    c = Counter()
+    c: Counter[str] = Counter()
     for d in detections:
         c[class_id_reported(d)] += 1
     return c
