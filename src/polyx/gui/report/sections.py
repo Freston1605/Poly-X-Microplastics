@@ -1052,6 +1052,27 @@ def _morphotype_table(shapes, warning_review: str) -> str:
     )
 
 
+def _ring_warning(n_en_el_aro: int) -> str:
+    """Paragraph for particles that fell on the plate ring, or '' when none."""
+    if not n_en_el_aro:
+        return ""
+    from polyx.core.measure.calibration import FRACTION_AREA_USEFUL
+
+    return (
+        f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
+        f"background:var(--bg_soft)'>"
+        + tr(
+            "<strong>{n} detección(es) caen sobre el anillo de la placa</strong> "
+            "—más allá del {pct} % del radio ajustado— y quedan fuera de esta "
+            "sección: el aro es una banda brillante que el detector confunde "
+            "con material, y como sale enorme desplazaría a las partículas de "
+            "verdad del extremo grande. Siguen contadas en la sección de "
+            "conteo."
+        ).format(n=n_en_el_aro, pct=f"{100 * FRACTION_AREA_USEFUL:.0f}")
+        + "</p>"
+    )
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1116,22 +1137,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             )
 
         # ── What was set apart for falling on the ring ──
-        if n_en_el_aro:
-            from polyx.core.measure.calibration import FRACTION_AREA_USEFUL
-
-            warning_review += (
-                f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
-                f"background:var(--bg_soft)'>"
-                + tr(
-                    "<strong>{n} detección(es) caen sobre el anillo de la placa</strong> "
-                    "—más allá del {pct} % del radio ajustado— y quedan fuera de esta "
-                    "sección: el aro es una banda brillante que el detector confunde "
-                    "con material, y como sale enorme desplazaría a las partículas de "
-                    "verdad del extremo grande. Siguen contadas en la sección de "
-                    "conteo."
-                ).format(n=n_en_el_aro, pct=f"{100 * FRACTION_AREA_USEFUL:.0f}")
-                + "</p>"
-            )
+        warning_review += _ring_warning(n_en_el_aro)
 
         # ── Distribution by morphotype ──
         table_morphotype = _morphotype_table(shapes, warning_review)
