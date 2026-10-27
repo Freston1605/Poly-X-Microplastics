@@ -1176,6 +1176,14 @@ def _per_class_size_table(per_class_2: dict, with_size) -> str:
     )
 
 
+def _size_stacked_figure(per_class_2: dict) -> str:
+    """Stacked size histogram image tag, or '' when not renderable."""
+    fig = _fig_sizes_by_section(per_class_2)
+    if not fig:
+        return ""
+    return f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>"
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1250,9 +1258,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             per_class_2: dict[str, list[float]] = {}
             for d, _path in with_size:
                 per_class_2.setdefault(d.class_name, []).append(d.length_um)
-            fig = _fig_sizes_by_section(per_class_2)
-            if fig:
-                tables += f"<img src='data:image/png;base64,{fig}' style='max-width:100%'>"
+            tables += _size_stacked_figure(per_class_2)
 
             # ── Table by class, with its largest ──
             tables += _per_class_size_table(per_class_2, with_size)
