@@ -594,6 +594,37 @@ def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo:
     return figures_cmp
 
 
+def _comparison_table(state, results_2, active_2, there_is_gt: bool, by_photo: dict) -> str:
+    """Per-image model comparison table."""
+    header_line = "<tr><th>Image</th>"
+    for mi in active_2:
+        alias = state.model_slots[mi].alias
+        header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
+        if there_is_gt:
+            header_line += (
+                "<th><span style='font-weight:400;font-size:8.5pt'>"
+                "True Positives/False Positives/False Negatives</span></th>"
+            )
+    header_line += "</tr>"
+
+    rows_2 = ""
+    for path_2 in sorted(by_photo):
+        rows_2 += f"<tr><td>{_esc(Path(path_2).name)}</td>"
+        for mi in active_2:
+            r = by_photo[path_2].get(mi)
+            if r is None:
+                rows_2 += "<td class='r'>—</td>"
+                if there_is_gt:
+                    rows_2 += "<td class='r'>—</td>"
+                continue
+            rows_2 += f"<td class='r'>{len(r.predictions)}</td>"
+            if there_is_gt:
+                cell = f"{r.tp}/{r.fp}/{r.fn}" if r.has_gt else "—"
+                rows_2 += f"<td class='r'>{cell}</td>"
+        rows_2 += "</tr>"
+    return f"<table class='data'>{header_line}{rows_2}</table>"
+
+
 def _section_comparison(state, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
@@ -612,33 +643,6 @@ def _section_comparison(state, results_2) -> str:
                 by_photo.setdefault(r.image_path, {})[mi] = r
 
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
-        header_line = "<tr><th>Image</th>"
-        for mi in active_2:
-            alias = state.model_slots[mi].alias
-            header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
-            if there_is_gt:
-                header_line += (
-                    "<th><span style='font-weight:400;font-size:8.5pt'>"
-                    "True Positives/False Positives/False Negatives</span></th>"
-                )
-        header_line += "</tr>"
-
-        rows_2 = ""
-        for path_2 in sorted(by_photo):
-            rows_2 += f"<tr><td>{_esc(Path(path_2).name)}</td>"
-            for mi in active_2:
-                r = by_photo[path_2].get(mi)
-                if r is None:
-                    rows_2 += "<td class='r'>—</td>"
-                    if there_is_gt:
-                        rows_2 += "<td class='r'>—</td>"
-                    continue
-                rows_2 += f"<td class='r'>{len(r.predictions)}</td>"
-                if there_is_gt:
-                    cell = f"{r.tp}/{r.fp}/{r.fn}" if r.has_gt else "—"
-                    rows_2 += f"<td class='r'>{cell}</td>"
-            rows_2 += "</tr>"
-
         # Verdict: only declared if there is ground truth to judge with. Without it,
         # more detections is not better, and saying otherwise would be misleading.
         verdict = _comparison_verdict(state, results_2, active_2, there_is_gt)
@@ -654,7 +658,7 @@ def _section_comparison(state, results_2) -> str:
             )
             + verdict
             + figures_cmp
-            + f"<table class='data'>{header_line}{rows_2}</table>"
+            + _comparison_table(state, results_2, active_2, there_is_gt, by_photo)
         )
     elif len(active_2) == 1:
         compare_html = (
