@@ -338,6 +338,38 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
         """
 
 
+def _models_note_miscls(all_results, total_mc: int, any_gt: bool) -> str:
+    """Note explaining the two F1 columns, or '' when no ground truth."""
+    if not any_gt:
+        return ""
+    tp_g = sum(r.tp for r in all_results)
+    fp_g = sum(r.fp for r in all_results)
+    fn_g = sum(r.fn for r in all_results)
+    p_loc, r_loc, f_loc = _pr_f1(tp_g, fp_g, fn_g)
+    p_cls, r_cls, f_cls = _pr_f1(tp_g, fp_g + total_mc, fn_g + total_mc)
+    return tr(
+        "<p><strong>Los dos F1 miden cosas distintas.</strong> "
+        "<em>Localización</em> responde si el detector encuentra la partícula "
+        "(P {pl} · R {rl} · <strong>F1 {fl}</strong>). "
+        "<em>Con clase</em> exige además acertar el polímero, contando cada "
+        "caja mal clasificada como falso positivo de la clase predicha y "
+        "falso negativo de la real "
+        "(P {pc} · R {rc} · <strong>F1 {fc}</strong>).</p>"
+        "<p>La diferencia corresponde a <strong>{mc}</strong> "
+        "partícula(s) bien localizada(s) pero asignada(s) a la clase "
+        "incorrecta. Es la cifra que concilia esta tabla con la de "
+        "precisión por clase de la sección de errores.</p>"
+    ).format(
+        pl=f"{p_loc:.3f}",
+        rl=f"{r_loc:.3f}",
+        fl=f"{f_loc:.3f}",
+        pc=f"{p_cls:.3f}",
+        rc=f"{r_cls:.3f}",
+        fc=f"{f_cls:.3f}",
+        mc=total_mc,
+    )
+
+
 def _section_models(state, results_2, all_results, any_gt: bool) -> str:
     """Body of the 'modelos' section: per-model comparison table plus F1 note.
 
@@ -383,34 +415,7 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
         )
 
     # Note that accompanies the table, with the figures from the batch itself.
-    note_miscls = ""
-    if any_gt:
-        tp_g = sum(r.tp for r in all_results)
-        fp_g = sum(r.fp for r in all_results)
-        fn_g = sum(r.fn for r in all_results)
-        p_loc, r_loc, f_loc = _pr_f1(tp_g, fp_g, fn_g)
-        p_cls, r_cls, f_cls = _pr_f1(tp_g, fp_g + total_mc, fn_g + total_mc)
-        note_miscls = tr(
-            "<p><strong>Los dos F1 miden cosas distintas.</strong> "
-            "<em>Localización</em> responde si el detector encuentra la partícula "
-            "(P {pl} · R {rl} · <strong>F1 {fl}</strong>). "
-            "<em>Con clase</em> exige además acertar el polímero, contando cada "
-            "caja mal clasificada como falso positivo de la clase predicha y "
-            "falso negativo de la real "
-            "(P {pc} · R {rc} · <strong>F1 {fc}</strong>).</p>"
-            "<p>La diferencia corresponde a <strong>{mc}</strong> "
-            "partícula(s) bien localizada(s) pero asignada(s) a la clase "
-            "incorrecta. Es la cifra que concilia esta tabla con la de "
-            "precisión por clase de la sección de errores.</p>"
-        ).format(
-            pl=f"{p_loc:.3f}",
-            rl=f"{r_loc:.3f}",
-            fl=f"{f_loc:.3f}",
-            pc=f"{p_cls:.3f}",
-            rc=f"{r_cls:.3f}",
-            fc=f"{f_cls:.3f}",
-            mc=total_mc,
-        )
+    note_miscls = _models_note_miscls(all_results, total_mc, any_gt)
 
     return f"""
 <table class='data'><tr>{tr("<th>Modelo</th><th>Imágenes</th><th>Detecciones</th><th>Conf. media</th>")}
