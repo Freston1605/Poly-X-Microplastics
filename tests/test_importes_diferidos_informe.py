@@ -1,7 +1,7 @@
 """Laziness gate: deferred heavy imports of the report module stay deferred (M004/S01/T02).
 
 Importing polyx.gui.report_html must NOT pull in the heavy scientific stack:
-torch, ultralytics, polyx.core.morphology and polyx.core.calibration are all
+torch, ultralytics, polyx.core.measure.segmentation and polyx.core.calibration are all
 imported lazily inside function bodies (cv2 L283/L1192/L1253/L2554,
 torch L311/L335, psutil L305, calibracion L1167/L2144/L2216/L2566,
 morfologia L1255/L2555, ultralytics L2093) so that every consumer of the
@@ -40,7 +40,6 @@ from pathlib import Path
 LAZY_TARGETS = (
     "torch",
     "ultralytics",
-    "polyx.core.morphology",
     "polyx.core.calibration",
 )
 

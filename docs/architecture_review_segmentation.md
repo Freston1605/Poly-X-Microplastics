@@ -14,7 +14,7 @@ two-stage computer-vision segmentation (U-Net, SAM, YOLO-seg, Mask R-CNN, …).
   detection, measurement, reporting and GUI. Good seam.
 - SAM2 already exists as a prompt-driven segmenter (`sam.py`), proving the
   two-stage pattern (detector → segmenter) is reachable.
-- Measurement is deliberately mask-based (`core/measure/morphology.py`) and the
+- Measurement is deliberately mask-based (`core/measure/segmentation.py` + `shape.py` + `drawing.py`) and the
   box is only a fallback. The science already assumes a mask exists.
 - Provenance/observability layer (`core/provenance`) records run metadata —
   essential for reproducible two-stage experiments.

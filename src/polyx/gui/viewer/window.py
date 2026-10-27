@@ -760,7 +760,7 @@ class ViewerWindow(QMainWindow):
         txt = candidates[0]
 
         try:
-            from polyx.core.detect.yolo import read_yolo_txt
+            from polyx.core.detect.protocol import read_yolo_txt
             from polyx.core.image_io import read_image
 
             bgr = read_image(img)
@@ -930,7 +930,7 @@ class ViewerWindow(QMainWindow):
 
         try:
             from polyx.core.measure.calibration import read_image
-            from polyx.core.measure.morphology import apply_to_detection
+            from polyx.core.measure.shape import apply_to_detection
 
             bgr = read_image(path_2)
 
@@ -1018,7 +1018,7 @@ class ViewerWindow(QMainWindow):
             return
 
         try:
-            from polyx.core.measure.morphology import draw_measurement
+            from polyx.core.measure.drawing import draw_measurement
 
             img, m = draw_measurement(self._bgr_current, det, zoom=6)
 

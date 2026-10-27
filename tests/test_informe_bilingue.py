@@ -31,7 +31,7 @@ def _estado_minimo(tmp_path):
     """Un DetectorState con una deteccion medida sobre una foto sintetica."""
     import cv2
 
-    from polyx.core import morphology
+    import polyx.core.measure as measure
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)
@@ -40,7 +40,7 @@ def _estado_minimo(tmp_path):
     cv2.imwrite(str(ruta), img)
 
     d = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
-    morphology.apply_to_detection(d, img, 30.0)
+    measure.apply_to_detection(d, img, 30.0)
     d.number = 1
 
     st = DetectorState()
@@ -232,7 +232,7 @@ def _estado_completo(tmp_path):
     """Dos carpetas, tres fotos cada una, dos modelos y ground truth."""
     import cv2
 
-    from polyx.core import morphology
+    import polyx.core.measure as measure
     from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     clases = ["PET", "PP", "LDPE"]
@@ -276,7 +276,7 @@ def _estado_completo(tmp_path):
                         x2=x2,
                         y2=y2,
                     )
-                    morphology.apply_to_detection(d, img, escala)
+                    measure.apply_to_detection(d, img, escala)
                     n += 1
                     d.number = n
                     # El segundo modelo se salta una caja: si los dos dieran lo

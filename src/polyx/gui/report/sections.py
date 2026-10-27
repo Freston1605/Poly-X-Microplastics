@@ -1375,7 +1375,7 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
     if shapes and max_records:
         import cv2
 
-        from polyx.core.measure.morphology import draw_measurement
+        from polyx.core.measure.drawing import draw_measurement
 
         chosen = choose_records(shapes, max_records)
         n_fibers_sample = sum(1 for d, _ in chosen if d.morphotype == "fibra")

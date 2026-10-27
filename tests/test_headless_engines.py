@@ -255,7 +255,7 @@ def test_run_batch_empty_inputs_still_write_csv(tmp_path):
 def test_measurement_prefers_attached_mask_over_otsu():
     """The provided mask wins; the det.mask fallback works too."""
     from polyx.core.detect.protocol import Instance
-    from polyx.core.measure.morphology import apply_to_detection
+    from polyx.core.measure.shape import apply_to_detection
 
     img = np.full((150, 200, 3), 255, dtype=np.uint8)
     cv2.circle(img, (70, 60), 12, (0, 0, 0), -1)

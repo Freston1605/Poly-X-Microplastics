@@ -5,7 +5,7 @@ computational engine. It is safe to import in headless environments
 (CI, servers, CLI tools) without a display or GPU.
 """
 
-from . import data, detect, measure, quality
+from . import data, detect, quality
 from .data.labels import (
     classes_txt_path,
     read_classes_txt,
@@ -30,8 +30,6 @@ from .measure import (
     Calibration,
     calibrate_from_plate,
     calibration,
-    measure,  # noqa: F811  (re-exported function shadows the submodule)
-    morphology,
     resolver,
     segment,
 )
@@ -66,7 +64,6 @@ __all__ = [  # noqa: RUF022
     "YoloModel",
     "NativeDetector",
     # measure
-    "measure",
     "segment",
     "Calibration",
     "calibrate_from_plate",
@@ -92,7 +89,6 @@ __all__ = [  # noqa: RUF022
     "quality",
     "detect",
     "data",
-    "morphology",
     "calibration",
     "metrics",
     "assignment",

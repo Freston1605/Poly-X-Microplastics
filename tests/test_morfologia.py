@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morphology as M
+import polyx.core.measure as M
 from tests.formas import (
     CASOS,
     arco,
@@ -111,13 +111,13 @@ def test_el_circulo_tiene_aspecto_uno():
     círculo perfecto daba aspecto 1.27 y la clasificación arrancaba sesgada."""
     m = M.measure(circulo()[0])
     assert m.aspect == pytest.approx(1.0, abs=0.25)
-    assert m.morphotype == M.FRAGMENT
+    assert m.morphotype == M.Morphotype.FRAGMENT
 
 
 def test_una_barra_larga_se_clasifica_como_fibra():
     m = M.measure(recta(largo=200, grosor=10)[0])
     assert m.aspect > M.ASPECT_FIBER
-    assert m.morphotype == M.FIBER
+    assert m.morphotype == M.Morphotype.FIBER
 
 
 def test_la_curvatura_distingue_recta_de_arco():

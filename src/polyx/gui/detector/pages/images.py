@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.detect.yolo import find_gt_for_image
+from polyx.core.detect.protocol import find_gt_for_image
 from polyx.core.i18n import tr
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos

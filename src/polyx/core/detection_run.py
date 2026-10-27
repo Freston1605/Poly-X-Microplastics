@@ -26,7 +26,7 @@ from polyx.core.detect.protocol import (
     read_yolo_txt,
 )
 from polyx.core.image_io import read_image
-from polyx.core.measure.morphology import apply_to_detection
+from polyx.core.measure.shape import apply_to_detection
 from polyx.core.quality.metrics import match_image
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")

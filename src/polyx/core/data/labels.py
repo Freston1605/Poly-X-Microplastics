@@ -66,8 +66,13 @@ def read_labels(
                         y2=y2,
                     )
                 )
-    except Exception:  # noqa: BLE001, S110
-        pass
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from polyx.core.provenance.observability import logger_for
+
+            logger_for("data").warning("read_labels failed: %s", exc)
+        except Exception:  # noqa: BLE001, S110
+            pass
     return instances
 
 
@@ -124,6 +129,11 @@ def read_classes_txt(txt_path: str | Path) -> dict[int, str]:
                 name = line.strip()
                 if name:
                     class_names[i] = name
-    except Exception:  # noqa: BLE001, S110
-        pass
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from polyx.core.provenance.observability import logger_for
+
+            logger_for("data").warning("read_classes_txt failed: %s", exc)
+        except Exception:  # noqa: BLE001, S110
+            pass
     return class_names

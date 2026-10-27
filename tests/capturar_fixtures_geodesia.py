@@ -50,8 +50,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morphology
-from polyx.core.detect.yolo import read_yolo_txt
+import polyx.core.measure as measure
+from polyx.core.detect.protocol import read_yolo_txt
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.
@@ -202,7 +202,7 @@ def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> 
             for idx, det in enumerate(dets):
                 resumen["cajas"] += 1
                 try:
-                    mascara = morphology.segment(img_bgr, det.x1, det.y1, det.x2, det.y2)
+                    mascara = measure.segment(img_bgr, det.x1, det.y1, det.x2, det.y2)
                 except Exception as exc:  # noqa: BLE001
                     motivo = f"{SK_ERROR} ({type(exc).__name__})"
                     resumen["saltadas"][motivo] = resumen["saltadas"].get(motivo, 0) + 1

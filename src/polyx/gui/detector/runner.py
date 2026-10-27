@@ -14,15 +14,11 @@ from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
 from polyx.core.detect import make_detector
-from polyx.core.detect.yolo import (
-    Detection,
-    compute_box_size_um,
-    find_gt_for_image,
-    read_yolo_txt,
-)
+from polyx.core.detect.protocol import compute_box_size_um, find_gt_for_image, read_yolo_txt
+from polyx.core.detect.yolo import Detection
 from polyx.core.image_io import read_image
 from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
-from polyx.core.measure.morphology import apply_to_detection
+from polyx.core.measure.shape import apply_to_detection
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image

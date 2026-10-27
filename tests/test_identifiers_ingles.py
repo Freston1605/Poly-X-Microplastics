@@ -40,7 +40,7 @@ TEST_ALLOWLIST: frozenset = frozenset()
 # Known real modules the walk must see (anti-vacuity: proves the scan is not
 # silently passing over an empty or truncated file set).
 _KNOWN_MODULES = [
-    "src/polyx/core/measure/morphology.py",
+    "src/polyx/core/measure/shape.py",
     "src/polyx/core/provenance/observability.py",
     "src/polyx/gui/report_html.py",
     "src/polyx/gui/detector/state.py",
@@ -60,9 +60,14 @@ _PUBLIC_SURFACE = [
         ("Calibracion",),
     ),
     (
-        "src/polyx/core/measure/morphology.py",
-        ("Morphology", "segment", "measure"),
-        ("Morfologia", "segmentar", "medir"),
+        "src/polyx/core/measure/shape.py",
+        ("Morphology", "measure"),
+        ("Morfologia", "medir"),
+    ),
+    (
+        "src/polyx/core/measure/segmentation.py",
+        ("segment",),
+        ("segmentar",),
     ),
     (
         "src/polyx/core/provenance/observability.py",
