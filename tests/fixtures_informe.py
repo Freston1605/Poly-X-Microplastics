@@ -89,9 +89,9 @@ def _escribir_foto(ruta: Path) -> None:
 def deteccion_medida(img: np.ndarray) -> Detection:
     """Build the measured Detection (disc fit to the synthetic frame)."""
     d = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
-    from polyx.core import morphology
+    import polyx.core.measure as measure
 
-    morphology.apply_to_detection(d, img, 30.0)
+    measure.apply_to_detection(d, img, 30.0)
     return d
 
 

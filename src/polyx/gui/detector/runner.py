@@ -22,7 +22,7 @@ from polyx.core.detect.yolo import (
 )
 from polyx.core.image_io import read_image
 from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
-from polyx.core.measure.morphology import apply_to_detection
+from polyx.core.measure.shape import apply_to_detection
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image

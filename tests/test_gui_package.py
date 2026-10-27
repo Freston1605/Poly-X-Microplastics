@@ -196,7 +196,7 @@ def test_la_estructura_del_paquete_gui_existe():
 MODULOS_MOTOR = {
     "i18n": "i18n.py",
     "metrics": "quality/metrics.py",
-    "morphology": "measure/morphology.py",
+    "morphology": "measure/shape.py",
     "observability": "provenance/observability.py",
     "yolo": "detect/yolo.py",
 }

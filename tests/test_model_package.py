@@ -62,7 +62,11 @@ MODULOS_ESPERADOS = frozenset(
         "factory",
         "protocol",
         # measure/
-        "morphology",
+        "morphology_constants",
+        "segmentation",
+        "geodesic",
+        "shape",
+        "drawing",
         "calibration",
         # quality/
         "metrics",

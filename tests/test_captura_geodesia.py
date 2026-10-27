@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import capturar_fixtures_geodesia as CFG
 import generar_fixtures_geodesia as GFG
-from polyx.core import morphology as M
+import polyx.core.measure as M
 
 
 # ── helpers: foto sintetica y layout de run en miniatura ─────────────────

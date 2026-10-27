@@ -37,7 +37,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from polyx.core import morphology as M
+import polyx.core.measure as M
 from tests.formas import CASOS
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "geodesia"

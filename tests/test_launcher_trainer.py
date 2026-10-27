@@ -322,7 +322,7 @@ def test_el_escaneo_externo_cubre_los_limites_de_polyx():
     for rel_path in (
         "src/polyx/core/i18n.py",
         "src/polyx/core/quality/metrics.py",
-        "src/polyx/core/measure/morphology.py",
+        "src/polyx/core/measure/shape.py",
         "src/polyx/core/provenance/observability.py",
         "src/polyx/core/detect/yolo.py",
     ):

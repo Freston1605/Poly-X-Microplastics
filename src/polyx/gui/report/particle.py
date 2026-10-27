@@ -38,7 +38,7 @@ def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> 
         import cv2
 
         from polyx.core.measure.calibration import read_image
-        from polyx.core.measure.morphology import box_margin, segment
+        from polyx.core.measure.segmentation import box_margin, segment
 
         bgr = read_image(image_path_2)
         if bgr is None:

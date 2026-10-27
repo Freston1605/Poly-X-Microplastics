@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core import morphology as M
+import polyx.core.measure as M
 from polyx.core.detect.protocol import Instance as Detection
 from polyx.gui.report_html import _record_particle
 

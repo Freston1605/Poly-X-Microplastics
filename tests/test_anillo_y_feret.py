@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 
 from polyx.core import calibration as C
-from polyx.core import morphology as M
+import polyx.core.measure as M
 from polyx.core.detect.yolo import Detection
 
 # ── El anillo de la placa ──────────────────────────────────────────────
