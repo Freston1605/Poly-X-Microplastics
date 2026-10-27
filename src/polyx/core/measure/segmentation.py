@@ -148,6 +148,34 @@ def separate_glued(mask: np.ndarray, seed) -> np.ndarray:
     return output if output.any() else mask
 
 
+def _contrast_threshold(canal, x1, y1, x2, y2, ox, oy):
+    """Ring-vs-box contrast threshold.
+
+    Returns (threshold, abort). ``abort`` is True when there is no contrast
+    between the box and its surrounding ring, meaning the box does not
+    contain a particle: ``segment`` then returns None instead of inventing
+    a size. When ``threshold`` is None (but not abort) the caller falls
+    back to Otsu.
+    """
+    bx1 = int(np.clip(int(x1) - ox, 0, canal.shape[1]))
+    by1 = int(np.clip(int(y1) - oy, 0, canal.shape[0]))
+    bx2 = int(np.clip(int(np.ceil(x2)) - ox, 0, canal.shape[1]))
+    by2 = int(np.clip(int(np.ceil(y2)) - oy, 0, canal.shape[0]))
+    ring = np.ones(canal.shape, dtype=bool)
+    ring[by1:by2, bx1:bx2] = False
+    inside_box = canal[by1:by2, bx1:bx2]
+
+    if ring.sum() < 20 or inside_box.size < 9:
+        return None, False
+    background = float(np.median(canal[ring]))
+    peak = float(np.percentile(inside_box, 90))
+    if peak - background < CONTRAST_MINIMUM:
+        # WITHOUT CONTRAST A SIZE IS NOT INVENTED. Returning None makes the
+        # report say the particle could not be separated from the background.
+        return None, True
+    return background + 0.5 * (peak - background), False
+
+
 def segment(
     bgr: np.ndarray,
     x1: float,
@@ -204,35 +232,9 @@ def segment(
     # inside there is particle. The background level is the median of the ring, the
     # particle level the 90th percentile of the box, and the cut is halfway -- the
     # same technique with which `calibracion.py` finds the plate edge.
-    bx1 = int(np.clip(int(x1) - ox, 0, canal.shape[1]))
-    by1 = int(np.clip(int(y1) - oy, 0, canal.shape[0]))
-    bx2 = int(np.clip(int(np.ceil(x2)) - ox, 0, canal.shape[1]))
-    by2 = int(np.clip(int(np.ceil(y2)) - oy, 0, canal.shape[0]))
-    ring = np.ones(canal.shape, dtype=bool)
-    ring[by1:by2, bx1:bx2] = False
-    inside_box = canal[by1:by2, bx1:bx2]
-
-    threshold_2 = None
-    if ring.sum() >= 20 and inside_box.size >= 9:
-        background = float(np.median(canal[ring]))
-        peak = float(np.percentile(inside_box, 90))
-        if peak - background >= CONTRAST_MINIMUM:
-            threshold_2 = background + 0.5 * (peak - background)
-        else:
-            # WITHOUT CONTRAST A SIZE IS NOT INVENTED. Here it fell back to Otsu, which
-            # with no particle to separate splits the histogram of the NOISE and
-            # returns a fragmented mask -- with a normally looking size,
-            # indistinguishable from good data unless you look at the image.
-            #
-            # Measured over 100 hand-annotated boxes: 7 fall here, and the 7
-            # are from the two plates annotated in the wrong pixel frame,
-            # where the box points to a place without a particle. The cutoff is sharp:
-            # those 7 have contrast 2-7 and the next one has 34.
-            #
-            # Returning None makes the report say "the particle could not be separated from
-            # the background" and counts it separately, which is what really
-            # happened.
-            return None
+    threshold_2, abort = _contrast_threshold(canal, x1, y1, x2, y2, ox, oy)
+    if abort:
+        return None
 
     if threshold_2 is None:
         _, mask = cv2.threshold(canal, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)

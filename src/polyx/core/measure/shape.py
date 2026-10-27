@@ -71,6 +71,17 @@ def extremes_feret(contour: np.ndarray):
     return tuple(env[i].astype(int)), tuple(env[j].astype(int))
 
 
+def _choose_length(feret, geo, thinness, solidity):
+    """Pick between the geodesic and the maximum Feret as the reported length.
+
+    The geodesic only wins on a thin, non-convex particle; otherwise the
+    Feret (the tighter bound) is reported.
+    """
+    if thinness >= THINNESS_FOR_GEODESIC and solidity < SOLIDITY_CONVEX and geo >= feret:
+        return geo, "geodesico"
+    return feret, "Feret maximo"
+
+
 def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     """Size and shape from the mask of a particle."""
     m = Morphology()
@@ -140,10 +151,7 @@ def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     envelope = cv2.contourArea(cv2.convexHull(c))
     solidity = area / envelope if envelope > 0 else 1.0
 
-    if thinness >= THINNESS_FOR_GEODESIC and solidity < SOLIDITY_CONVEX and geo >= feret:
-        length, method = geo, "geodesico"
-    else:
-        length, method = feret, "Feret maximo"
+    length, method = _choose_length(feret, geo, thinness, solidity)
 
     # The width is that same maximum inscribed thickness: the diameter of the largest
     # circle that fits inside the particle.
