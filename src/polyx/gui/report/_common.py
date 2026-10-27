@@ -43,10 +43,19 @@ from polyx.gui import theme as T
 globals().update({k: v for k, v in vars(_core_report_metrics).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_core_stats).items() if not k.startswith("__")})
 
+
 # ────────────────────────────────────────────────────────────────────
 # Report styles (identical to the manual)
 # ────────────────────────────────────────────────────────────────────
-REPORT_CSS = Path(__file__).with_name("report.css").read_text(encoding="utf-8")
+def _report_css() -> str:
+    """The stylesheet in ``report.css``, read when a report is rendered.
+
+    Read on demand and not at import time: importing the report module must
+    not touch the disk, so a stylesheet missing from an install fails here,
+    naming the file, instead of breaking every import of
+    ``polyx.gui.report_html``.
+    """
+    return Path(__file__).with_name("report.css").read_text(encoding="utf-8")
 
 
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
@@ -883,7 +892,7 @@ def _document_html(alive, active) -> str:
     return f"""<!doctype html>
 <html lang='{language()}'><head><meta charset='utf-8'>
 <title>{tr("Informe de detección")} · Poly-X</title>
-<style>{REPORT_CSS}</style></head><body>
+<style>{_report_css()}</style></head><body>
 <div class='container'>
 
 <header class='cover'>
