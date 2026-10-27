@@ -1118,6 +1118,20 @@ def _count_per_image(por_img: dict[str, list]) -> str:
     )
 
 
+def _example_cards(record_elderly, record_minor) -> str:
+    """Annotated cards for the largest and smallest measured particle."""
+    example = ""
+    if record_elderly is not None:
+        example = _record_particle(
+            *record_elderly, f"2 {tr('Un ejemplo: la partícula mayor, medida')}"
+        )
+    if record_minor is not None:
+        example += _record_particle(
+            *record_minor, f"3 {tr('Un ejemplo: la partícula menor, medida')}"
+        )
+    return example
+
+
 def _section_shape(state, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
@@ -1337,14 +1351,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
         # Both, not only the largest: a minimum size without a photo cannot be
         # distinguished by eye from badly segmented noise, and it is the one most easily
         # questioned in a review.
-        if record_elderly is not None:
-            example = _record_particle(
-                *record_elderly, f"2 {tr('Un ejemplo: la partícula mayor, medida')}"
-            )
-        if record_minor is not None:
-            example += _record_particle(
-                *record_minor, f"3 {tr('Un ejemplo: la partícula menor, medida')}"
-            )
+        example = _example_cards(record_elderly, record_minor)
 
         # Section order: first how it is measured, then a measured case, and
         # finally the figures. The other way round, the tables arrive before anything has
