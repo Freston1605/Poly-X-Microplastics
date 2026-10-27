@@ -447,6 +447,39 @@ def _section_verdict(results_2, state) -> str:
     return text_2
 
 
+def _comparison_verdict(state, results_2, active_2, there_is_gt: bool) -> str:
+    """Verdict paragraph for the model comparison, or ''."""
+    if not there_is_gt:
+        return (
+            "<p class='caption' style='text-align:left'>"
+            + tr(
+                "Sin ground truth no se puede declarar un ganador: un "
+                "modelo con más detecciones puede estar acertando o "
+                "inventando. Carga anotaciones para obtener F1 por "
+                "modelo."
+            )
+            + "</p>"
+        )
+    marker_2 = []
+    for mi in active_2:
+        rs = results_2.get(mi, [])
+        tp = sum(r.tp for r in rs)
+        fp = sum(r.fp for r in rs)
+        fn = sum(r.fn for r in rs)
+        pr = tp / (tp + fp) if (tp + fp) else 0
+        rc = tp / (tp + fn) if (tp + fn) else 0
+        marker_2.append(
+            (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
+        )
+    marker_2.sort(reverse=True)
+    best_f1, best = marker_2[0]
+    return tr(
+        "<p><b>Mejor F1 de localización:</b> {alias} ({f1}) — encontrar la "
+        "partícula, sin exigir que acierte el polímero. El veredicto con clase "
+        "está más arriba.</p>"
+    ).format(alias=_esc(best), f1=f"{best_f1:.3f}")
+
+
 def _section_comparison(state, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
@@ -494,40 +527,7 @@ def _section_comparison(state, results_2) -> str:
 
         # Verdict: only declared if there is ground truth to judge with. Without it,
         # more detections is not better, and saying otherwise would be misleading.
-        verdict = ""
-        if there_is_gt:
-            marker_2 = []
-            for mi in active_2:
-                rs = results_2.get(mi, [])
-                tp = sum(r.tp for r in rs)
-                fp = sum(r.fp for r in rs)
-                fn = sum(r.fn for r in rs)
-                pr = tp / (tp + fp) if (tp + fp) else 0
-                rc = tp / (tp + fn) if (tp + fn) else 0
-                marker_2.append(
-                    (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
-                )
-            marker_2.sort(reverse=True)
-            best_f1, best = marker_2[0]
-            # This F1 is the permissive one (localization). It used to say only `F1 global` and
-            # coexisted with the strict verdict above: two different numbers
-            # called the same in the same section.
-            verdict = tr(
-                "<p><b>Mejor F1 de localización:</b> {alias} ({f1}) — encontrar la "
-                "partícula, sin exigir que acierte el polímero. El veredicto con clase "
-                "está más arriba.</p>"
-            ).format(alias=_esc(best), f1=f"{best_f1:.3f}")
-        else:
-            verdict = (
-                "<p class='caption' style='text-align:left'>"
-                + tr(
-                    "Sin ground truth no se puede declarar un ganador: un "
-                    "modelo con más detecciones puede estar acertando o "
-                    "inventando. Carga anotaciones para obtener F1 por "
-                    "modelo."
-                )
-                + "</p>"
-            )
+        verdict = _comparison_verdict(state, results_2, active_2, there_is_gt)
 
         # ── Side-by-side figures ──
         figures_cmp = ""
