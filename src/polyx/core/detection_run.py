@@ -16,7 +16,6 @@ import json
 from pathlib import Path
 
 import cv2
-from polyx.core.image_io import read_image
 import numpy as np
 
 from polyx.core.detect.protocol import (
@@ -26,6 +25,7 @@ from polyx.core.detect.protocol import (
     find_gt_for_image,
     read_yolo_txt,
 )
+from polyx.core.image_io import read_image
 from polyx.core.measure.morphology import apply_to_detection
 from polyx.core.quality.metrics import match_image
 

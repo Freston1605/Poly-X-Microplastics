@@ -5,13 +5,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import cv2
-from polyx.core.image_io import read_image
 import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
 )
+from polyx.core.image_io import read_image
 from polyx.core.provenance.observability import event, logger_for
 
 # Canonical alias: `Detection` is `Instance` from the protocol. Kept for

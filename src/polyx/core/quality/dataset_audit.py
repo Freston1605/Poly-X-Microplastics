@@ -247,7 +247,9 @@ class _Auditor:
             imgs = _iter_images(resolved, yaml_dir, root)
             scans[split] = _scan_split(imgs)
             scans[split]["path_exists"] = bool(resolved and resolved.exists())
-            audit.per_class[split] = {self._cls_name(c): n for c, n in scans[split]["per_class"].items()}
+            audit.per_class[split] = {
+                self._cls_name(c): n for c, n in scans[split]["per_class"].items()
+            }
 
         self.scans = scans
         self.tr = scans["train"]

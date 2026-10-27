@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 
 
-def read_image(path: str | Path) -> "np.ndarray | None":
+def read_image(path: str | Path) -> np.ndarray | None:
     """Read an image from disk, returning a BGR ``ndarray`` or ``None``."""
     try:
         return cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -21,7 +21,7 @@ def read_image(path: str | Path) -> "np.ndarray | None":
         return None
 
 
-def decode_image_bytes(data: bytes | bytearray | memoryview) -> "np.ndarray | None":
+def decode_image_bytes(data: bytes | bytearray | memoryview) -> np.ndarray | None:
     """Decode an in-memory buffer into a BGR ``ndarray`` (or ``None``)."""
     try:
         arr = np.frombuffer(data, dtype=np.uint8)

@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
-from polyx.core.image_io import read_image
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
@@ -58,6 +57,7 @@ from polyx.core.detect.yolo import (
     size_image,
 )
 from polyx.core.i18n import tr
+from polyx.core.image_io import read_image
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
