@@ -494,9 +494,7 @@ def _comparison_verdict(state, results_2, active_2, there_is_gt: bool) -> str:
         fn = sum(r.fn for r in rs)
         pr = tp / (tp + fp) if (tp + fp) else 0
         rc = tp / (tp + fn) if (tp + fn) else 0
-        marker_2.append(
-            (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
-        )
+        marker_2.append((2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias))
     marker_2.sort(reverse=True)
     best_f1, best = marker_2[0]
     return tr(
@@ -533,12 +531,7 @@ def _comparison_figures(state, results_2, active_2, there_is_gt: bool, by_photo:
             metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
             names_cls = {
                 cid: next(
-                    (
-                        d.class_name
-                        for lst in gts_m + preds_m
-                        for d in lst
-                        if d.class_id == cid
-                    ),
+                    (d.class_name for lst in gts_m + preds_m for d in lst if d.class_id == cid),
                     str(cid),
                 )
                 for cid in ids
@@ -625,7 +618,9 @@ def _comparison_table(state, results_2, active_2, there_is_gt: bool, by_photo: d
     header_line = "<tr><th>Image</th>"
     for mi in active_2:
         alias = state.model_slots[mi].alias
-        header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
+        header_line += (
+            f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
+        )
         if there_is_gt:
             header_line += (
                 "<th><span style='font-weight:400;font-size:8.5pt'>"
@@ -705,7 +700,9 @@ def _section_comparison(state, results_2) -> str:
     return compare_html
 
 
-def _build_gallery(state, results_2, classes_batch, max_gallery: int, include_gallery: bool = True) -> str:
+def _build_gallery(
+    state, results_2, classes_batch, max_gallery: int, include_gallery: bool = True
+) -> str:
     """Build the side-by-side gallery HTML."""
     gallery_html = ""
     omitted = 0
@@ -837,7 +834,9 @@ def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[
     return figures_html
 
 
-def _methods_paragraph(p, active, model_names: str, ul_version: str, total_imgs: int, total_dets: int, any_gt: bool) -> str:
+def _methods_paragraph(
+    p, active, model_names: str, ul_version: str, total_imgs: int, total_dets: int, any_gt: bool
+) -> str:
     """Redacted methods paragraph ready to copy into the manuscript."""
     return (
         "<p><strong>" + tr("Resumen de la configuración empleada:") + "</strong></p>"
@@ -1174,7 +1173,9 @@ def _example_cards(record_elderly, record_minor) -> str:
     return example
 
 
-def _extremes_and_distribution(elderly, path_elderly, minor_2, path_minor, lengths, _num, _row) -> str:
+def _extremes_and_distribution(
+    elderly, path_elderly, minor_2, path_minor, lengths, _num, _row
+) -> str:
     """Extremes table + size distribution table."""
     return f"""
 <h3>{NUM}.4 {tr("Partícula mayor y menor")}</h3>
@@ -1234,9 +1235,7 @@ def _no_scale_warning(por_img: dict, no_scale: list) -> str:
     which_2 = (
         tr("<strong>Ninguna imagen tiene escala</strong>")
         if all_value
-        else tr(
-            "<strong>{n} de {total} imágenes no tienen escala</strong> ({cuales})"
-        ).format(
+        else tr("<strong>{n} de {total} imágenes no tienen escala</strong> ({cuales})").format(
             n=len(no_scale),
             total=len(por_img),
             cuales=", ".join(sorted(no_scale)[:6]) + (", …" if len(no_scale) > 6 else ""),
