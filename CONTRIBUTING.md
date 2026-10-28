@@ -58,6 +58,9 @@ python -m pytest -q          # inside the project .venv
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).
+- Use the PR title format `<type>(<scope>): <short description>` (e.g.
+  `feat(detector): add per-image metrics`, `fix(morphology): handle empty contours`).
+  See `.github/PULL_REQUEST_TEMPLATE.md` for the checklist and guidance.
 
 ---
 
