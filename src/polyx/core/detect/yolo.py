@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -95,6 +96,7 @@ class YoloModel:
         On CPU there is no VRAM cap → returns the largest candidate untested.
         """
         self.load()
+        assert self._model is not None
         detail: dict[int, str] = {}
         dev = str(device).strip().lower()
         if dev in ("cpu", "-1"):
@@ -143,13 +145,14 @@ class YoloModel:
     ):
         """Run inference with VRAM auto-fallback. Returns the raw Ultralytics result list."""
         self.load()
+        assert self._model is not None
         sizes = [int(imgsz)]
         if auto_fallback:
             sizes += [s for s in self.FALLBACK_SIZES if s < int(imgsz)]
         res = None
         for i, sz in enumerate(sizes):
             try:
-                kwargs = {
+                kwargs: dict[str, Any] = {
                     "source": str(image_path),
                     "conf": conf,
                     "iou": iou,
@@ -189,6 +192,7 @@ class YoloModel:
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         res = self._predict_with_fallback(image_path, conf, iou, imgsz, device, auto_fallback)
         out: list[Detection] = []
@@ -225,6 +229,7 @@ class YoloModel:
         agnostic_nms: bool = True,
         imgsz: int | None = None,
         batch: int = 8,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         """Tile-based inference (SAHI / Slicing Aided Hyper Inference).
 
@@ -238,6 +243,7 @@ class YoloModel:
         differ, useful when the detection matters more than the class).
         """
         self.load()
+        assert self._model is not None
         img = read_image(image_path)
         if img is None:
             return []
@@ -412,6 +418,7 @@ class YoloSegModel(YoloModel):
         imgsz: int = 640,
         device: str = "0",
         auto_fallback: bool = True,
+        **kwargs,  # accepted for DetectionSource protocol conformance; ignored
     ) -> list[Detection]:
         res = self._predict_with_fallback(
             image_path, conf, iou, imgsz, device, auto_fallback, task="segment"

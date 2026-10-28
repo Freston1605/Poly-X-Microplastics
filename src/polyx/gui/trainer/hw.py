@@ -407,7 +407,7 @@ class Recommendation:
     vram_est_gb: float
     vram_cap_gb: float
     limited_by: str  # "vram" | "resolucion_nativa" | "tope_batch"
-    notes: list = None
+    notes: list[str] | None = None
 
     def __post_init__(self):
         if self.notes is None:
@@ -486,9 +486,9 @@ def recommend_config(request: RecommendRequest) -> Recommendation:
     if imgsz == 0:
         # Even the smallest imgsz does not fit with the minimum batch: the batch is lowered,
         # which is priority 2, before lowering the resolution further.
-        request = batch_min
+        requested_batch = batch_min
         for b in (2, 1):
-            if b >= request:
+            if b >= requested_batch:
                 continue
             for sz in ladder:
                 if estimate_vram_gb(size, sz, b, amp) <= cap:

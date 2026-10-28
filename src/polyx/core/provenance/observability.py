@@ -36,7 +36,7 @@ import os
 import stat
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
@@ -323,7 +323,9 @@ def event(
 
 
 @contextmanager
-def timer(logger: logging.Logger, name_2: str, level: int = logging.INFO, **data) -> Iterator[None]:
+def timer(
+    logger: logging.Logger, name_2: str, level: int = logging.INFO, **data
+) -> Generator[None, None, None]:
     """Context manager that emits ``nombre.start`` / ``nombre.finish`` with ms.
 
     If the block raises, it emits ``nombre.error`` at ERROR with the

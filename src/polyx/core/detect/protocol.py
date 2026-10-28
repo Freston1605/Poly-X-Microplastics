@@ -241,7 +241,7 @@ def read_yolo_txt(
                     # a throwaway expression silently filled a copy.
                     mask_u8 = np.zeros((img_h, img_w), dtype=np.uint8)
                     arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-                    cv2.fillPoly(mask_u8, [arr], 1)
+                    cv2.fillPoly(mask_u8, [arr], (1,))
                     mask = mask_u8.astype(bool)
                     instances.append(
                         Instance(

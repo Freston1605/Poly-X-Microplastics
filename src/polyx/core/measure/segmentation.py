@@ -258,7 +258,7 @@ def segment(
     # Removes salt noise without closing the gap of a U-shaped particle.
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=1)
 
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     if n <= 1:
         return None
     # Box center in crop coordinates.
@@ -319,7 +319,9 @@ def segment(
     # a bridge give elongation 1.7 -- squat -- and are cropped as always.
     # It is the case that motivated this crop and from which 8.9 mm sizes came.
     if record is not None:
-        record["largo_sin_recortar_px"] = feret_maximum(_contour_elderly(mask))
+        contour = _contour_elderly(mask)
+        if contour is not None:
+            record["largo_sin_recortar_px"] = feret_maximum(contour)
     if _elongation(mask) < C.ELONGATION_ELONGATED:
         slack = max(2, int(round(C.SLACK_COMPACT * min(box_width, box_height))))  # noqa: RUF046
     else:
