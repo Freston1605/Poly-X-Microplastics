@@ -48,6 +48,9 @@ class Instance:
     geodesic_um: float | None = None
     equivalent_rect_length_um: float | None = None
     method_length: str | None = None
+    # How the size fields were obtained: "mask" (measured over the real
+    # particle) or "box" (the declared fallback). None = never sized.
+    size_source: str | None = None
     review: bool = False
     warning_shape: str | None = None
     number: int | None = None
@@ -254,6 +257,7 @@ def compute_box_size_um(det: Instance, um_per_px: float | None) -> None:
     diam_um = 2.0 * (area_um2 / np.pi) ** 0.5
     det.diam_um = diam_um
     det.area_um2 = area_um2
+    det.size_source = "box"
 
 
 @dataclass

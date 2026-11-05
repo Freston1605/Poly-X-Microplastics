@@ -18,10 +18,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from polyx.core.detect.protocol import DetectionSource, Instance, compute_box_size_um
+from polyx.core.detect.protocol import DetectionSource, Instance
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
-from polyx.core.measure.shape import apply_to_detection
+from polyx.core.measure.shape import measure_detections
 from polyx.core.platform import device_available
 from polyx.core.provenance.observability import logger_for
 from polyx.core.quality.metrics import match_image
@@ -47,14 +47,13 @@ def _draw(img, dets):
     return out
 
 
-def _measure(det: Instance, img: np.ndarray, um_per_px: float | None) -> None:
-    """Box-size (+ shape) measurement, preferring an attached mask."""
-    compute_box_size_um(det, um_per_px if um_per_px and um_per_px > 0 else None)
-    apply_to_detection(
-        det,
+def _measure(dets: list[Instance], img: np.ndarray, um_per_px: float | None) -> int:
+    """Box size first (the declared fallback), then the real shape; mask-aware."""
+    return measure_detections(
+        dets,
         img,
         um_per_px if um_per_px and um_per_px > 0 else None,
-        mask=getattr(det, "mask", None),
+        masks=[getattr(d, "mask", None) for d in dets],
     )
 
 
@@ -88,8 +87,7 @@ def run_batch(
         dev = device if device is not None and str(device).strip() != "" else device_available()
         dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=dev)
         if measure_shape:
-            for d in dets:
-                _measure(d, img, um_per_px)
+            _measure(dets, img, um_per_px)
 
         # GT matching
         gt_txt = find_label_file(img_path, gt_folder) if gt_folder else None
@@ -103,8 +101,7 @@ def run_batch(
                     "GT labels: %d unparseable line(s) in %s", malformed, gt_txt.name
                 )
             if measure_shape:
-                for g in gts:
-                    _measure(g, img, um_per_px)
+                _measure(gts, img, um_per_px)
             # Mask IoU when either side carries masks: mask_iou falls back to
             # box IoU per pair, so one failed segmentation cannot disable
             # mask matching for the whole image.
