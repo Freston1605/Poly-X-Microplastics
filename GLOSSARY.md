@@ -4,6 +4,16 @@ The project's domain language. Terms here are the ones code, docs and
 conversation should use; when a term is missing or fuzzy, sharpen it here
 first instead of letting a second meaning into the code.
 
+## The triptych
+
+The three saved views of a detection run over one plate: the
+**predictions** view (class + confidence labels), the **GT** view
+(ground truth in the class colours) and the **combined** view
+(predictions under a GT overlay in the GT colour with GT-prefixed
+labels). One folder per model per run. Owned by the plate annotation
+module; the boxes' thickness scales with the plate and an unknown class
+gets one fallback colour everywhere.
+
 ## User data dir
 
 The per-user writable home of everything Poly-X generates: the models
