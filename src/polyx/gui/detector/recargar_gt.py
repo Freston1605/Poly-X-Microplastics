@@ -16,13 +16,9 @@ from pathlib import Path
 
 import cv2
 
-from polyx.core.detect.protocol import (
-    compute_box_size_um,
-    find_gt_for_image,
-    read_yolo_txt,
-    size_image,
-)
+from polyx.core.detect.protocol import compute_box_size_um, size_image
 from polyx.core.image_io import read_image
+from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.quality.metrics import match_image
 
 from .runner import _color_bgr_for_class, _draw_annotated
@@ -95,7 +91,7 @@ def reload_gt(state, progress=None) -> dict:
             break
         summary["revisadas"] += 1
 
-        gt_txt = find_gt_for_image(path_2, state.gt_folder)
+        gt_txt = find_label_file(path_2, state.gt_folder)
         has_gt = gt_txt is not None
         if not has_gt:
             summary["sin_gt"].append(path_2.name)
@@ -110,7 +106,7 @@ def reload_gt(state, progress=None) -> dict:
 
         gts = []
         if has_gt:
-            gts = read_yolo_txt(gt_txt, W, H, names_2)
+            gts = read_label_file(gt_txt, W, H, names_2)[0]
             for d in gts:
                 # The scale of THIS image -- not the ImageResult left over
                 # from the grouping loop: scales are per photo (31-49 um/px

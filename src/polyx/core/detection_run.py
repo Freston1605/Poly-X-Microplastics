@@ -18,16 +18,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from polyx.core.detect.protocol import (
-    DetectionSource,
-    Instance,
-    compute_box_size_um,
-    find_gt_for_image,
-    read_yolo_txt,
-)
+from polyx.core.detect.protocol import DetectionSource, Instance, compute_box_size_um
 from polyx.core.image_io import read_image
+from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.shape import apply_to_detection
 from polyx.core.platform import device_available
+from polyx.core.provenance.observability import logger_for
 from polyx.core.quality.metrics import match_image
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
@@ -96,12 +92,16 @@ def run_batch(
                 _measure(d, img, um_per_px)
 
         # GT matching
-        gt_txt = find_gt_for_image(img_path, gt_folder) if gt_folder else None
+        gt_txt = find_label_file(img_path, gt_folder) if gt_folder else None
         gts = []
         if gt_txt is not None:
             has_gt_any = True
             names = getattr(model, "names", {}) or {}
-            gts = read_yolo_txt(gt_txt, W, H, names)
+            gts, malformed = read_label_file(gt_txt, W, H, names)
+            if malformed:
+                logger_for("detector").warning(
+                    "GT labels: %d unparseable line(s) in %s", malformed, gt_txt.name
+                )
             if measure_shape:
                 for g in gts:
                     _measure(g, img, um_per_px)

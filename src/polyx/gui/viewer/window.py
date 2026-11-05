@@ -813,63 +813,29 @@ class ViewerWindow(QMainWindow):
 
             return
 
-        txt = img.with_suffix(".txt")
+        from polyx.core.labels import find_label_file, read_labels
 
-        if not txt.exists():
+        txt = find_label_file(img)
+
+        if txt is None:
             QMessageBox.information(
                 self,
                 tr("Sin etiquetas"),
-                f"No hay archivo de etiquetas junto a la imagen:\n{txt.name}",
+                f"No hay archivo de etiquetas junto a la imagen:\n{img.with_suffix('.txt').name}",
             )
 
             return
 
-        from polyx.core.detect.yolo import Detection
-        from polyx.core.image_io import read_image
+        try:
+            # Locate, size (EXIF-safe) and read in one call. The folder
+            # convention is the codec's, so a Labeller dataset (labels/
+            # sibling of images/) loads too, not only a .txt beside the photo.
+            dets, malformed = read_labels(img)
 
-        arr = read_image(img)
-
-        if arr is None:
+        except ValueError:
             QMessageBox.warning(self, tr("Error"), tr("No se pudo leer la imagen."))
 
             return
-
-        height, width_2 = arr.shape[:2]
-
-        names = self._class_names(txt.parent)
-
-        dets, malformed = [], 0
-
-        for line in txt.read_text(encoding="utf-8", errors="ignore").splitlines():
-            parts = line.split()
-
-            if len(parts) < 5:
-                if line.strip():
-                    malformed += 1
-
-                continue
-
-            try:
-                k = int(parts[0])
-
-                cx, cy, w, h = (float(v) for v in parts[1:5])
-
-            except ValueError:
-                malformed += 1
-
-                continue
-
-            dets.append(
-                Detection(
-                    class_id=k,
-                    class_name=names[k] if 0 <= k < len(names) else str(k),
-                    conf=1.0,  # manual annotation: total certainty
-                    x1=(cx - w / 2) * width_2,
-                    y1=(cy - h / 2) * height,
-                    x2=(cx + w / 2) * width_2,
-                    y2=(cy + h / 2) * height,
-                )
-            )
 
         self.state.detections = dets
 

@@ -50,14 +50,20 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.detect.protocol import (
-    find_gt_for_image,
-    read_yolo_txt,
-    size_image,
-)
+from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.i18n import tr
 from polyx.core.image_io import read_image
+from polyx.core.labels import (
+    STUDY_CLASSES,
+    bbox_from,
+    classes_dir_for,
+    find_label_file,
+    label_path_for,
+    read_label_file,
+    write_classes,
+    write_lines,
+)
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -87,8 +93,6 @@ def _qpixmap_de(path: Path) -> QPixmap:
     # freed on exit, and without the copy it would point to dead memory.
     return QPixmap.fromImage(QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
 
-
-DEFAULT_CLASSES = ["PET", "PP", "LDPE"]
 
 # Canvas modes
 MODE_IDLE = 0
@@ -161,7 +165,7 @@ class AnnotCanvas(QGraphicsView):
         self.boxes: list[Box] = []
         self.selected_idx: int = -1
         self.active_class: int = 0
-        self.class_names: list[str] = list(DEFAULT_CLASSES)
+        self.class_names: list[str] = list(STUDY_CLASSES)
 
         # Interaction state
         self._mode = MODE_IDLE
@@ -654,7 +658,7 @@ class GTManualPage(DetectorPage):
 
         top.addWidget(QLabel(tr("Clase:")))
         self.combo_class = QComboBox()
-        self.combo_class.addItems(DEFAULT_CLASSES)
+        self.combo_class.addItems(STUDY_CLASSES)
         self.combo_class.currentIndexChanged.connect(self._on_class_combo)
         self.combo_class.setMinimumWidth(120)
         top.addWidget(self.combo_class)
@@ -688,7 +692,7 @@ class GTManualPage(DetectorPage):
         right_col = QVBoxLayout()
         right_col.setSpacing(6)
         self.canvas = AnnotCanvas()
-        self.canvas.set_class_names(DEFAULT_CLASSES)
+        self.canvas.set_class_names(STUDY_CLASSES)
         self.canvas.setMinimumSize(QSize(560, 420))
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         right_col.addWidget(self.canvas, 1)
@@ -765,7 +769,7 @@ class GTManualPage(DetectorPage):
         for p in self.state.images:
             it = QListWidgetItem(p.name)
             it.setData(Qt.UserRole, str(p))
-            gt = find_gt_for_image(p, self.state.gt_folder)
+            gt = find_label_file(p, self.state.gt_folder)
             if gt:
                 it.setForeground(QColor(T.OK))
                 it.setText(f"✓ {p.name}")
@@ -807,17 +811,17 @@ class GTManualPage(DetectorPage):
         self._current_path = path
         self.lbl_image_name.setText(path.name)
         existing: list[Detection] = []
-        gt_txt = find_gt_for_image(path, self.state.gt_folder)
+        gt_txt = find_label_file(path, self.state.gt_folder)
         if gt_txt:
-            # Same dimensions the detector uses. PIL reads the header without
-            # applying EXIF rotation, like cv2; QImage did apply it.
+            # Same dimensions the detector uses: header-only and EXIF-aware,
+            # so the frame matches the one the boxes were annotated on.
             wh = size_image(path)
             if wh:
-                existing = read_yolo_txt(
+                existing, _malformed = read_label_file(
                     gt_txt,
                     wh[0],
                     wh[1],
-                    {i: n for i, n in enumerate(DEFAULT_CLASSES)},  # noqa: C416
+                    dict(enumerate(STUDY_CLASSES)),
                 )
         self.canvas.load_image(path, existing)
         self._on_boxes_changed()
@@ -841,39 +845,21 @@ class GTManualPage(DetectorPage):
             self.canvas.clear_boxes()
 
     # ── Saving ────────────────────────────────────────────────
-    def _gt_out_path(self, img_path: Path) -> tuple[Path, Path]:
-        """Returns (destination_folder, destination_file) following the YOLO conventions."""
-        if self.state.gt_folder:
-            out_dir = self.state.gt_folder
-        elif img_path.parent.name.lower() == "images":
-            out_dir = img_path.parent.parent / "labels"
-        else:
-            out_dir = img_path.parent
-        out_dir.mkdir(parents=True, exist_ok=True)
-        return out_dir, out_dir / f"{img_path.stem}.txt"
-
     def _save_to_txt(self, img_path: Path, dets: list[Detection]):
-        out_dir, out_path = self._gt_out_path(img_path)
         wh = size_image(img_path)
         if not wh or wh[0] <= 0 or wh[1] <= 0:
             raise ValueError(f"No se pudo leer el tamano de {img_path.name}")
         W, H = wh
-        lines = []
-        for d in dets:
-            cx = (d.x1 + d.x2) / 2 / W
-            cy = (d.y1 + d.y2) / 2 / H
-            w = (d.x2 - d.x1) / W
-            h = (d.y2 - d.y1) / H
-            lines.append(f"{d.class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}")
-        out_path.write_text("\n".join(lines), encoding="utf-8")
+        out_path = write_lines(
+            label_path_for(img_path, self.state.gt_folder),
+            [bbox_from(d, W, H) for d in dets],
+        )
 
-        # classes.txt next to labels or in the folder
-        if out_dir.name.lower() == "labels":
-            cls_path = out_dir.parent / "classes.txt"
-        else:
-            cls_path = out_dir / "classes.txt"
-        if not cls_path.exists():
-            cls_path.write_text("\n".join(DEFAULT_CLASSES), encoding="utf-8")
+        # classes.txt next to the labels — but only when there is none yet:
+        # overwriting would corrupt a dataset that annotates other classes.
+        cls_dir = classes_dir_for(out_path.parent)
+        if not (cls_dir / "classes.txt").exists():
+            write_classes(cls_dir)
         return out_path
 
     def _auto_save(self, path: Path, silent: bool = False):
