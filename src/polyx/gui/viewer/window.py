@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import tr
+from polyx.core.paths import RUNS_DIR
 from polyx.gui import iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge
@@ -706,7 +707,7 @@ class ViewerWindow(QMainWindow):
         folder_2 = QFileDialog.getExistingDirectory(
             self,
             tr("Carpeta de la corrida (runs/detect_...)"),
-            str(Path(__file__).resolve().parents[4] / "runs"),
+            str(RUNS_DIR),
         )
 
         if not folder_2:

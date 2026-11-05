@@ -14,15 +14,12 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import tr
+from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ._base import TrainerPage
-
-
-def _runs_root() -> Path:
-    return Path(__file__).resolve().parents[5] / "runs_train"
 
 
 def _read_results_csv(run_dir: Path) -> dict | None:
@@ -100,7 +97,7 @@ class ComparePage(TrainerPage):
         self.refresh()
 
     def refresh(self):
-        root = _runs_root()
+        root = RUNS_TRAIN_DIR
         if not root.exists():
             self.table.setRowCount(0)
             return
@@ -131,6 +128,6 @@ class ComparePage(TrainerPage):
             open_in_system(path)
 
     def _open_root(self):
-        root = _runs_root()
+        root = RUNS_TRAIN_DIR
         root.mkdir(parents=True, exist_ok=True)
         open_in_system(str(root))

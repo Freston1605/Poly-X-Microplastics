@@ -1,10 +1,17 @@
 """Standard project paths.
 
-Bundled (read-only) assets live next to the package; user-writable data
-(models cache, runs, datasets) live in a per-user directory so the package
-can be installed read-only (wheels, site-packages). The OS-dependent part
-of that directory lives in :mod:`polyx.core.platform`, the single place
-where platform differences are allowed.
+Bundled (read-only) assets live next to the package; ALL user-generated
+data — the models cache, detector runs, training runs and the review
+dialog's correction dataset — lives in a per-user directory (ADR-0001),
+so the package can be installed read-only (wheels, site-packages) and
+the data survives reinstalls. The OS-dependent part of that directory
+lives in :mod:`polyx.core.platform`; the ``POLYX_HOME`` environment
+variable overrides it (portable installs).
+
+``ROOT`` is the source-checkout root: meaningful when the package runs
+from a source tree — the bundled-model fallback, the launcher's manual
+and readme links — and meaningless under an installed package, where
+nothing may write.
 """
 
 from pathlib import Path
@@ -19,8 +26,15 @@ ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 
 USER_DATA_DIR = user_data_dir()
 MODELS_DIR = USER_DATA_DIR / "models"
-RUNS_DIR = USER_DATA_DIR / "runs"
 DATA_DIR = USER_DATA_DIR / "data"
+
+# ADR-0001: every run a user generates lands here — detector batches,
+# training runs and the review dialog's correction dataset alike. The
+# repo-root runs/ and runs_train/ folders of older versions are legacy;
+# nothing is migrated and nothing is written there anymore.
+RUNS_DIR = USER_DATA_DIR / "runs"
+RUNS_TRAIN_DIR = USER_DATA_DIR / "runs_train"
+DATASET_CORRECTIONS_DIR = USER_DATA_DIR / "dataset_correcciones"
 
 DEFAULT_MODEL = MODELS_DIR / "bestdetectormedium.pt"
 
@@ -38,8 +52,3 @@ def discover_default_model() -> Path | None:
     if bundled.is_file():
         return bundled
     return None
-
-
-def ensure_dirs():
-    for d in (MODELS_DIR, RUNS_DIR, DATA_DIR):
-        d.mkdir(parents=True, exist_ok=True)

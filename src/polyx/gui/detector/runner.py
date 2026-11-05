@@ -27,6 +27,7 @@ from polyx.core.labels import (
 )
 from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
 from polyx.core.measure.shape import apply_to_detection
+from polyx.core.paths import RUNS_DIR
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image
@@ -103,9 +104,12 @@ class DetectorRunner(QThread):
     aborted = Signal()
     failed = Signal(str)
 
-    def __init__(self, state: DetectorState, parent=None):
+    def __init__(self, state: DetectorState, parent=None, runs_root: Path | None = None):
         super().__init__(parent)
         self.state = state
+        # Where runs are created: the per-user data dir (ADR-0001), unless
+        # the caller injects a root (the tests point it at tmp_path).
+        self._runs_root = RUNS_DIR if runs_root is None else runs_root
 
     def _load_models(self, slots, _log) -> None:
         """Lazily resolve and load every active model. Raises on the first failure."""
@@ -358,7 +362,7 @@ class DetectorRunner(QThread):
         The stamp is what ``obs.set_run_id`` correlates every event of the
         batch with.
         """
-        run_dir = Path(__file__).resolve().parents[4] / "runs"
+        run_dir = self._runs_root
         run_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         state.run_dir = run_dir / f"detect_{stamp}"

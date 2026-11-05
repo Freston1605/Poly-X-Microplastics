@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from polyx import __version__
 from polyx.core.i18n import language, tr
+from polyx.core.paths import ROOT
 from polyx.core.platform import launch_updater, open_in_system
 from polyx.gui import iconos, marca
 from polyx.gui import theme as T
@@ -86,11 +87,16 @@ def _spawn_module(dotted: str) -> bool:
         if spec is None:
             return False
         env = dict(os.environ)
+        # The PYTHONPATH bootstrap stays hand-derived ON PURPOSE: it exists to
+        # make `import polyx` possible from a source checkout before the
+        # package is importable — paths.ROOT cannot be asked yet (chicken
+        # and egg). Under an installed launcher the directory simply does
+        # not exist and the subprocess falls back to the installed package.
         src_dir = str(Path(__file__).resolve().parents[3] / "src")
         env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
         subprocess.Popen(  # noqa: S603
             [sys.executable, "-m", dotted],
-            cwd=str(Path(__file__).resolve().parents[3]),
+            cwd=str(ROOT),
             env=env,
         )
     except Exception as e:  # noqa: BLE001
@@ -641,7 +647,7 @@ class LauncherWindow(QMainWindow):
             self._toast(fallback or f"No se pudo abrir el módulo {dotted}")
 
     def open_manual(self):
-        manual = Path(__file__).resolve().parents[3] / "docs" / "manual" / "Manual_PolyX.html"
+        manual = ROOT / "docs" / "manual" / "Manual_PolyX.html"
         if manual.exists():
             import webbrowser
 
@@ -650,7 +656,7 @@ class LauncherWindow(QMainWindow):
             self._toast("Manual_PolyX.html no encontrado")
 
     def open_readme(self):
-        readme = Path(__file__).resolve().parents[3] / "LEEME.txt"
+        readme = ROOT / "LEEME.txt"
         if readme.exists():
             open_in_system(str(readme))
         else:

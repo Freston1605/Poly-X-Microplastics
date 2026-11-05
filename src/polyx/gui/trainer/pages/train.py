@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QFrame,
@@ -19,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import tr
+from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -407,7 +406,7 @@ class TrainPage(TrainerPage):
             open_in_system(str(d))
         else:
             # runs_train folder
-            root = Path(__file__).resolve().parents[5] / "runs_train"
+            root = RUNS_TRAIN_DIR
             if root.exists():
                 open_in_system(str(root))
             else:

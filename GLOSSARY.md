@@ -4,6 +4,15 @@ The project's domain language. Terms here are the ones code, docs and
 conversation should use; when a term is missing or fuzzy, sharpen it here
 first instead of letting a second meaning into the code.
 
+## User data dir
+
+The per-user writable home of everything Poly-X generates: the models
+cache, detector runs, training runs and correction datasets
+(`%LOCALAPPDATA%\polyx` on Windows, `~/Library/Application Support/polyx`
+on macOS, `~/.local/share/polyx` elsewhere; `POLYX_HOME` overrides).
+Avoid: the repo-root `runs/` folders — those are legacy locations of
+older versions, not the location. Decided in ADR-0001.
+
 ## YOLO-label codec
 
 The module (`polyx/core/labels.py`) that owns the YOLO `.txt` format and

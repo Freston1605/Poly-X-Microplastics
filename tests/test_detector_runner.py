@@ -93,17 +93,9 @@ def _estado(tmp_path: Path, imagenes: list[Path]) -> DetectorState:
     return st
 
 
-def _runner_con_carpeta(state: DetectorState, tmp_path: Path, monkeypatch) -> DetectorRunner:
-    """Runner whose run folder lands in tmp_path instead of <project>/runs."""
-
-    def _create(_self, st) -> str:
-        stamp = "20260101_000000"
-        st.run_dir = tmp_path / "runs" / f"detect_{stamp}"
-        st.run_dir.mkdir(parents=True, exist_ok=True)
-        return stamp
-
-    monkeypatch.setattr(DetectorRunner, "_create_run_dir", _create)
-    return DetectorRunner(state)
+def _runner_con_carpeta(state: DetectorState, tmp_path: Path) -> DetectorRunner:
+    """Runner whose run folder lands in tmp_path instead of the user data dir."""
+    return DetectorRunner(state, runs_root=tmp_path / "runs")
 
 
 def _ejecutar(runner: DetectorRunner) -> dict:
@@ -118,10 +110,10 @@ def _ejecutar(runner: DetectorRunner) -> dict:
     return eventos
 
 
-def test_run_una_imagen_produce_resultado_archivos_y_progreso(qapp, tmp_path, monkeypatch):
+def test_run_una_imagen_produce_resultado_archivos_y_progreso(qapp, tmp_path):
     ruta = _placa(tmp_path / "fotos" / "placa1.png")
     estado = _estado(tmp_path, [ruta])
-    runner = _runner_con_carpeta(estado, tmp_path, monkeypatch)
+    runner = _runner_con_carpeta(estado, tmp_path)
 
     eventos = _ejecutar(runner)
 
@@ -153,7 +145,7 @@ def test_run_una_imagen_produce_resultado_archivos_y_progreso(qapp, tmp_path, mo
     assert estado.calibrations["placa1.png"].um_por_px == 2.0
 
 
-def test_run_con_ground_truth_cuenta_tp_y_fp(qapp, tmp_path, monkeypatch):
+def test_run_con_ground_truth_cuenta_tp_y_fp(qapp, tmp_path):
     ruta = _placa(tmp_path / "fotos" / "placa2.png")
     # GT only for the upper box: the lower prediction must be a false positive.
     x1, y1, x2, y2 = _CAJA_ARRIBA
@@ -163,7 +155,7 @@ def test_run_con_ground_truth_cuenta_tp_y_fp(qapp, tmp_path, monkeypatch):
         encoding="utf-8",
     )
     estado = _estado(tmp_path, [ruta])
-    runner = _runner_con_carpeta(estado, tmp_path, monkeypatch)
+    runner = _runner_con_carpeta(estado, tmp_path)
 
     eventos = _ejecutar(runner)
 
@@ -175,13 +167,13 @@ def test_run_con_ground_truth_cuenta_tp_y_fp(qapp, tmp_path, monkeypatch):
     assert res.gt_path != res.pred_path
 
 
-def test_run_aborta_en_el_borde_de_la_imagen(qapp, tmp_path, monkeypatch):
+def test_run_aborta_en_el_borde_de_la_imagen(qapp, tmp_path):
     rutas = [
         _placa(tmp_path / "fotos" / "a.png"),
         _placa(tmp_path / "fotos" / "b.png"),
     ]
     estado = _estado(tmp_path, rutas)
-    runner = _runner_con_carpeta(estado, tmp_path, monkeypatch)
+    runner = _runner_con_carpeta(estado, tmp_path)
 
     # Ask to stop as soon as the first image is done: the abort is honoured at
     # the image boundary, never mid-image, so no half-written result remains.
@@ -196,12 +188,12 @@ def test_run_aborta_en_el_borde_de_la_imagen(qapp, tmp_path, monkeypatch):
     assert [r.image_path.name for r in estado.results[0]] == ["a.png"]
 
 
-def test_run_imagen_indescodificable_avanza_el_progreso(qapp, tmp_path, monkeypatch):
+def test_run_imagen_indescodificable_avanza_el_progreso(qapp, tmp_path):
     ruta = tmp_path / "fotos" / "rota.png"
     ruta.parent.mkdir(parents=True, exist_ok=True)
     ruta.write_bytes(b"esto no es un png")
     estado = _estado(tmp_path, [ruta])
-    runner = _runner_con_carpeta(estado, tmp_path, monkeypatch)
+    runner = _runner_con_carpeta(estado, tmp_path)
 
     eventos = _ejecutar(runner)
 
@@ -212,11 +204,11 @@ def test_run_imagen_indescodificable_avanza_el_progreso(qapp, tmp_path, monkeypa
     assert eventos["progress"] == [(1, 1, "rota.png")]
 
 
-def test_run_sin_modelos_falla_sin_carpeta(qapp, tmp_path, monkeypatch):
+def test_run_sin_modelos_falla_sin_carpeta(qapp, tmp_path):
     ruta = _placa(tmp_path / "fotos" / "placa3.png")
     estado = _estado(tmp_path, [ruta])
     estado.model_slots[0].path = None  # nothing active
-    runner = _runner_con_carpeta(estado, tmp_path, monkeypatch)
+    runner = _runner_con_carpeta(estado, tmp_path)
 
     eventos = _ejecutar(runner)
 

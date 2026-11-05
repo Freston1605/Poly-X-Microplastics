@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
+from polyx.core.paths import RUNS_TRAIN_DIR
 
 from .dominio import choose_better_in_real
 from .state import EpochMetrics, TrainerState
@@ -23,9 +24,12 @@ class TrainerRunner(QThread):
     aborted = Signal()
     failed = Signal(str)
 
-    def __init__(self, state: TrainerState, parent=None):
+    def __init__(self, state: TrainerState, parent=None, runs_root: Path | None = None):
         super().__init__(parent)
         self.state = state
+        # Where runs are created: the per-user data dir (ADR-0001), unless
+        # the caller injects a root (the tests point it at tmp_path).
+        self._runs_root = RUNS_TRAIN_DIR if runs_root is None else runs_root
 
     def _report_comparison(self, comparison: list[dict], p) -> None:
         """Summarizes in the log the architectures trained with the same config.
@@ -173,7 +177,7 @@ class TrainerRunner(QThread):
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             base_name = p.run_name.strip() or f"train_{stamp}"
 
-            proj_dir = Path(__file__).resolve().parents[4] / "runs_train"
+            proj_dir = self._runs_root
             proj_dir.mkdir(parents=True, exist_ok=True)
 
             if len(families) > 1:
