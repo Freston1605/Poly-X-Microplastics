@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class Instance:
     method_length: str | None = None
     # How the size fields were obtained: "mask" (measured over the real
     # particle) or "box" (the declared fallback). None = never sized.
-    size_source: str | None = None
+    size_source: Literal["mask", "box"] | None = None
     review: bool = False
     warning_shape: str | None = None
     number: int | None = None
@@ -241,6 +241,17 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def equal_area_diameter(area: float) -> float:
+    """The diameter of the circle with the given area — THE size convention.
+
+    One definition everywhere: the box fallback (``compute_box_size_um``),
+    the mask-measured size (``measure.shape``) and the Viewer's box
+    descriptor all take their diameters from this one function, so a
+    number written anywhere speaks the same language.
+    """
+    return 2.0 * (area / np.pi) ** 0.5
+
+
 def compute_box_size_um(det: Instance, um_per_px: float | None) -> None:
     """Approximate size from the BOX, not the particle.
 
@@ -253,9 +264,7 @@ def compute_box_size_um(det: Instance, um_per_px: float | None) -> None:
         return
     area_px2 = det.w * det.h
     area_um2 = area_px2 * (um_per_px**2)
-    # equivalent diameter (circle with the same area)
-    diam_um = 2.0 * (area_um2 / np.pi) ** 0.5
-    det.diam_um = diam_um
+    det.diam_um = equal_area_diameter(area_um2)
     det.area_um2 = area_um2
     det.size_source = "box"
 

@@ -87,7 +87,13 @@ def run_batch(
         dev = device if device is not None and str(device).strip() != "" else device_available()
         dets = model.predict(str(img_path), conf=conf, iou=iou, imgsz=imgsz, device=dev)
         if measure_shape:
-            _measure(dets, img, um_per_px)
+            _missing = _measure(dets, img, um_per_px)
+            if _missing:
+                logger_for("detector").warning(
+                    "%d particle(s) unmeasured in %s; the box fallback stands for them",
+                    _missing,
+                    img_path.name,
+                )
 
         # GT matching
         gt_txt = find_label_file(img_path, gt_folder) if gt_folder else None
@@ -101,7 +107,13 @@ def run_batch(
                     "GT labels: %d unparseable line(s) in %s", malformed, gt_txt.name
                 )
             if measure_shape:
-                _measure(gts, img, um_per_px)
+                _missing = _measure(gts, img, um_per_px)
+                if _missing:
+                    logger_for("detector").warning(
+                        "%d GT particle(s) unmeasured in %s; the box fallback stands for them",
+                        _missing,
+                        img_path.name,
+                    )
             # Mask IoU when either side carries masks: mask_iou falls back to
             # box IoU per pair, so one failed segmentation cannot disable
             # mask matching for the whole image.

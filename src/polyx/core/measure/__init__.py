@@ -48,6 +48,7 @@ from .shape import (
     extremes_feret,
     measure,
     measure_detection,
+    measure_detections,
 )
 
 __all__ = [
@@ -82,6 +83,7 @@ __all__ = [
     "length_geodesic",
     "measure",
     "measure_detection",
+    "measure_detections",
     "path_geodesic",
     "resolver",
     "search_index",
