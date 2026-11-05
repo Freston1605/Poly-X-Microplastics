@@ -460,7 +460,9 @@ image, with sizes already converted to μm. Useful for reviewing the manual coun
 over the full plate without going back to the Labeller.
 
 **Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
-(one row per particle, with diam_px, diam_um and area_um2) and `resumen.json`.
+(one row per particle: `diam_px` is the box's equal-area diameter — a box
+descriptor; `diam_um`/`area_um2` are the measured values, with
+`talla_origen` declaring `mascara` or `caja`) and `resumen.json`.
 
 > Image reading and writing with `cv2.imdecode`/`imencode` over
 > `np.fromfile`, not `imread`/`imwrite`: on Windows these fail with paths that
