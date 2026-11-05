@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QWidget
 
 from polyx.gui import theme as T
 
+from .export import size_label
 from .state import ViewerState, _circumscribed_center, _circumscribed_radius
 
 _CLASS_COLORS = [
@@ -177,14 +178,7 @@ class ViewerCanvas(QWidget):
             p.drawRect(rect_w)
 
             # Label: class + size when calibration is available
-            w_px = det.x2 - det.x1
-            h_px = det.y2 - det.y1
-            diam_px = math.sqrt(w_px * h_px)
-            um = self.state.px_to_um(diam_px)
-            if um is not None:
-                label = f"{det.class_name}  {um:.1f} μm"
-            else:
-                label = f"{det.class_name}  {diam_px:.0f} px"
+            label = size_label(det, self.state.um_per_px)
 
             tag_w = max(70, len(label) * 7 + 8)
             tag = QRectF(tl.x(), tl.y() - 17, tag_w, 17)

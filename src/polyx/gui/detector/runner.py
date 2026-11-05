@@ -15,7 +15,6 @@ from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
 from polyx.core.detect import make_detector
-from polyx.core.detect.protocol import compute_box_size_um
 from polyx.core.detect.yolo import Detection
 from polyx.core.image_io import read_image
 from polyx.core.labels import (
@@ -26,7 +25,7 @@ from polyx.core.labels import (
     write_lines,
 )
 from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
-from polyx.core.measure.shape import apply_to_detection
+from polyx.core.measure.shape import measure_detections
 from polyx.core.paths import RUNS_DIR
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
@@ -255,12 +254,7 @@ class DetectorRunner(QThread):
         through here too (it does not depend on the model), where the count is
         simply not used.
         """
-        failures = 0
-        for d in dets:
-            compute_box_size_um(d, um_px)
-            if params.measure_shape and not apply_to_detection(d, img_bgr, um_px):
-                failures += 1
-        return failures
+        return measure_detections(dets, img_bgr, um_px, measure_shape=params.measure_shape)
 
     def _score_predictions(self, preds, img_bgr, um_px, params, slot, shapeless):
         """Size, filter, abstain and number one model's predictions for one image.

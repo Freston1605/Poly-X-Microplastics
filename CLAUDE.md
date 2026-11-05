@@ -465,7 +465,12 @@ image, with sizes already converted to μm. Useful for reviewing the manual coun
 over the full plate without going back to the Labeller.
 
 **Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
-(one row per particle, with diam_px, diam_um and area_um2) and `resumen.json`.
+(one row per particle: `diam_px` is the box's equal-area diameter — a box
+descriptor; `diam_um`/`area_um2` are the measured values, with
+`talla_origen` declaring `mascara` or `caja`) and `resumen.json`. The
+labels on the canvas and in the PNG carry a **`≈`** when the µm size came
+from the box fallback, so an approximate number is never shown as a
+measured one.
 
 > Image reading and writing with `cv2.imdecode`/`imencode` over
 > `np.fromfile`, not `imread`/`imwrite`: on Windows these fail with paths that
@@ -485,6 +490,7 @@ class Detection:
     x1, y1, x2, y2: float   # Bbox pixels (absolute)
     diam_um: Optional[float]  # Diameter of the equal-area circle, REAL
     area_um2: Optional[float] # Particle area, not the box
+    size_source: Optional[str]  # "mask" (measured) | "box" (declared fallback); None = never sized
     largo_um: Optional[float] # Larger dimension, following the curve
     ancho_um: Optional[float]
     aspecto: Optional[float]    # real largo/ancho

@@ -121,10 +121,6 @@ class ViewerState(QObject):
         self.calib_pts_changed.emit([])
         self.calib_changed.emit(um_per_px, mode_name)
 
-    # ── Utilities ────────────────────────────────────────────
-    def px_to_um(self, px: float) -> float | None:
-        return px * self.um_per_px if self.um_per_px > 0 else None
-
 
 def _circumscribed_radius(pts: list[QPointF]) -> float:
     """Radius of the circle circumscribed to 3 points (analytic formula)."""

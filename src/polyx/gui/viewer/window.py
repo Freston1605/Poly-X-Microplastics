@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import math
 from datetime import datetime
 from pathlib import Path
 
@@ -38,6 +37,7 @@ from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge
 
 from .canvas import ViewerCanvas
+from .export import csv_rows, size_label
 from .state import ViewerState
 
 
@@ -897,7 +897,7 @@ class ViewerWindow(QMainWindow):
 
         try:
             from polyx.core.measure.calibration import read_image
-            from polyx.core.measure.shape import apply_to_detection
+            from polyx.core.measure.shape import measure_detections
 
             bgr = read_image(path_2)
 
@@ -918,7 +918,10 @@ class ViewerWindow(QMainWindow):
         for i, d in enumerate(sorted(dets, key=lambda z: (round(z.y1 / 40), z.x1)), 1):
             d.number = i
 
-            apply_to_detection(d, bgr, um)
+        # Box size first as the declared fallback, real shape over it — the
+        # same loop the Detector runs, so both modules report the same sizes.
+
+        measure_detections(dets, bgr, um)
 
         fib = sum(1 for d in dets if d.morphotype == "fibra")
 
@@ -1265,19 +1268,7 @@ class ViewerWindow(QMainWindow):
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
-            w_px = det.x2 - det.x1
-
-            h_px = det.y2 - det.y1
-
-            diam_px = math.sqrt(w_px * h_px)
-
-            um = self.state.px_to_um(diam_px)
-
-            label = (
-                f"{det.class_name} {um:.1f}um"
-                if um is not None
-                else f"{det.class_name} {diam_px:.0f}px"
-            )
+            label = size_label(det, self.state.um_per_px)
 
             cv2.putText(
                 frame,
@@ -1303,35 +1294,12 @@ class ViewerWindow(QMainWindow):
 
         out = save_dir / "detecciones.csv"
 
+        rows = csv_rows(self.state.detections, self.state.um_per_px)
+
         with open(out, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
 
-            w.writerow(["clase", "conf", "x1", "y1", "x2", "y2", "diam_px", "diam_um", "area_um2"])
-
-            for det in self.state.detections:
-                wp = det.x2 - det.x1
-
-                hp = det.y2 - det.y1
-
-                diam_px = math.sqrt(wp * hp)
-
-                um = self.state.px_to_um(diam_px)
-
-                area_um2 = self.state.um_per_px**2 * wp * hp if self.state.um_per_px > 0 else ""
-
-                w.writerow(
-                    [
-                        det.class_name,
-                        f"{det.conf:.4f}",
-                        f"{det.x1:.1f}",
-                        f"{det.y1:.1f}",
-                        f"{det.x2:.1f}",
-                        f"{det.y2:.1f}",
-                        f"{diam_px:.2f}",
-                        f"{um:.2f}" if um is not None else "",
-                        f"{area_um2:.2f}" if area_um2 != "" else "",
-                    ]
-                )
+            w.writerows(rows)
 
     def _save_json(self, img: Path, save_dir: Path):
 

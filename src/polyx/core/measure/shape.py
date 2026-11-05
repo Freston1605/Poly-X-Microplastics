@@ -3,6 +3,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+from polyx.core.detect.protocol import compute_box_size_um, equal_area_diameter
+
 from . import morphology_constants as C
 from .geodesic import length_geodesic
 from .segmentation import _cutout, box_margin, feret_maximum, segment
@@ -261,9 +263,9 @@ def apply_to_detection(
     """Measures the particle and writes the result into the ``Detection``.
 
     Returns whether it could be measured. When not, the shape fields stay
-    None and the caller must fall back to the box size: losing the particle
-    from the count is worse than reporting it with an approximate size and
-    saying so.
+    None; the fallback is owned by ``measure_detections``, which has
+    already written the box size (with ``size_source`` declaring it) so
+    the particle never leaves the count.
 
     ``diam_um`` becomes the diameter of the equal-area circle of the **real**
     particle, not of the box. It is the same quantity as always but properly
@@ -289,8 +291,35 @@ def apply_to_detection(
         det.feret_um = m.feret_um
         det.geodesic_um = m.geodesic_um
         det.equivalent_rect_length_um = m.equivalent_rect_length_um
-        det.diam_um = 2.0 * float(np.sqrt(m.area_um2 / np.pi)) if m.area_um2 else None
+        det.diam_um = equal_area_diameter(m.area_um2) if m.area_um2 else None
+        det.size_source = "mask"
     return True
+
+
+def measure_detections(
+    dets,
+    bgr: np.ndarray,
+    um_por_px: float | None,
+    measure_shape: bool = True,
+    masks: list[np.ndarray | None] | None = None,
+) -> int:
+    """Measure a batch: box size first as the declared fallback, real shape over it.
+
+    If segmentation cannot isolate a particle, the box approximation
+    stands -- noted as such in ``size_source`` -- because losing the
+    particle from the count is worse than reporting it with an approximate
+    size and saying so. ``masks``, when given, feeds each detection's
+    segmentation mask (YOLO-seg and friends). Returns how many particles
+    had no measurable shape.
+    """
+    failures = 0
+    for i, d in enumerate(dets):
+        compute_box_size_um(d, um_por_px)
+        if measure_shape and not apply_to_detection(
+            d, bgr, um_por_px, mask=None if masks is None else masks[i]
+        ):
+            failures += 1
+    return failures
 
 
 __all__ = [
@@ -300,4 +329,5 @@ __all__ = [
     "feret_maximum",
     "measure",
     "measure_detection",
+    "measure_detections",
 ]
