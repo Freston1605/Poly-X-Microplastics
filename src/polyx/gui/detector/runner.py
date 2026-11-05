@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from dataclasses import dataclass
@@ -14,9 +15,16 @@ from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
 from polyx.core.detect import make_detector
-from polyx.core.detect.protocol import compute_box_size_um, find_gt_for_image, read_yolo_txt
+from polyx.core.detect.protocol import compute_box_size_um
 from polyx.core.detect.yolo import Detection
 from polyx.core.image_io import read_image
+from polyx.core.labels import (
+    bbox_from,
+    find_label_file,
+    read_label_file,
+    write_classes,
+    write_lines,
+)
 from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
 from polyx.core.measure.shape import apply_to_detection
 from polyx.core.provenance import provenance, sha256_file
@@ -66,30 +74,6 @@ def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarr
                 cv2.LINE_AA,
             )
     return out
-
-
-def _save_labels(dets, path_txt: Path, W: int, H: int) -> None:
-    """Writes the predictions in YOLO format inside the run folder.
-
-    Never next to the photo: that is where the manual-count .txt lives, and
-    dumping the predictions on top would destroy the ground truth
-    irrecoverably.
-
-    The confidence goes as the sixth column. ``read_yolo_txt`` ignores the
-    extra columns, so the file can be reopened in the Annotator as
-    pre-annotation -- counting 500 particles by hand starting from the model's
-    boxes is another task than doing it from zero -- and at the same time the
-    record remains of with what confidence each box came out.
-    """
-    lines = []
-    for d in dets:
-        cx = ((d.x1 + d.x2) / 2) / W
-        cy = ((d.y1 + d.y2) / 2) / H
-        w = (d.x2 - d.x1) / W
-        h = (d.y2 - d.y1) / H
-        lines.append(f"{d.class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f} {d.conf:.4f}")
-    path_txt.parent.mkdir(parents=True, exist_ok=True)
-    path_txt.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _color_bgr_for_class(name: str):
@@ -225,9 +209,19 @@ class DetectorRunner(QThread):
         pred_path = _encode_and_save(pred_img, "_pred")
         gt_path = _encode_and_save(gt_img, "_gt") if has_gt else None
 
-        # The boxes in text, not only drawn: a PNG cannot be
-        # re-analyzed or reopened for correction.
-        _save_labels(preds, sub / "labels" / f"{idx_img:04d}_{img_path.stem}.txt", W, H)
+        # The boxes in text, not only drawn: a PNG cannot be re-analyzed or
+        # reopened for correction. The confidence goes as the sixth column,
+        # so the file reopens in the Labeller as pre-annotation -- counting
+        # 500 particles from the model's boxes is another task than doing it
+        # from zero -- and the record of each box's confidence survives.
+        # NEVER next to the photo: that is where the manual-count .txt
+        # lives, and dumping predictions on top would destroy the ground
+        # truth irrecoverably.
+        write_lines(
+            sub / "labels" / f"{idx_img:04d}_{img_path.stem}.txt",
+            [bbox_from(d, W, H) for d in preds],
+            include_conf=True,
+        )
         return annotated_path, pred_path, gt_path
 
     def _filter_by_size(self, preds, um_px, params):
@@ -340,10 +334,10 @@ class DetectorRunner(QThread):
 
         # Load GT if it exists (uses first-model names when available)
         names_first = slots[0].loaded.names if slots[0].loaded else {}
-        gt_txt = find_gt_for_image(img_path, state.gt_folder)
+        gt_txt = find_label_file(img_path, state.gt_folder)
         gts: list[Detection] = []
         if gt_txt is not None:
-            gts = read_yolo_txt(gt_txt, W, H, names_first)
+            gts, _malformed = read_label_file(gt_txt, W, H, names_first)
             # The GT size does not depend on the model → it is computed once
             self._measure_detections(gts, img_bgr, um_px, params)
 
@@ -656,14 +650,8 @@ class DetectorRunner(QThread):
             # pre-annotation in the Etiquetador without guessing the class order.
             names_2 = getattr(slot.loaded, "names", None) or {}
             if names_2:
-                destination = state.run_dir / slot.alias / "classes.txt"
-                try:
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_text(
-                        "\n".join(names_2[k] for k in sorted(names_2)), encoding="utf-8"
-                    )
-                except OSError:
-                    pass
+                with contextlib.suppress(OSError):
+                    write_classes(state.run_dir / slot.alias, [names_2[k] for k in sorted(names_2)])
         try:  # noqa: SIM105
             (state.run_dir / "resumen.json").write_text(
                 json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"

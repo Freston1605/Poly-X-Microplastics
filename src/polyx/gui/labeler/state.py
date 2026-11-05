@@ -2,34 +2,25 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
-from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-CLASS_NAMES_DEFAULT = ["PET", "PP", "LDPE"]
+# The normalized box lives in the YOLO-label codec: one currency for every
+# module that reads or writes label files. Re-exported so the canvas and
+# the pre-annotation intake keep importing it from here.
+from polyx.core.labels import (
+    STUDY_CLASSES,
+    BBox,
+    label_path_for,
+    read_boxes,
+    write_classes,
+    write_lines,
+)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
-
-
-@dataclass
-class BBox:
-    class_id: int
-    cx: float  # scaled to [0, 1]
-    cy: float
-    w: float
-    h: float
-
-    def to_yolo_line(self) -> str:
-        return f"{self.class_id} {self.cx:.6f} {self.cy:.6f} {self.w:.6f} {self.h:.6f}"
-
-    @classmethod
-    def from_yolo_line(cls, line: str) -> BBox:
-        parts = line.strip().split()
-        return cls(
-            int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
-        )
 
 
 class LabelerState(QObject):
@@ -44,7 +35,7 @@ class LabelerState(QObject):
         super().__init__()
         self.images: list[Path] = []
         self.current_idx: int = -1
-        self.class_names: list[str] = list(CLASS_NAMES_DEFAULT)
+        self.class_names: list[str] = list(STUDY_CLASSES)
         self.active_class: int = 0
         self.root_folder: Path | None = None
 
@@ -119,7 +110,7 @@ class LabelerState(QObject):
         self._redo_stacks.clear()
         # Restores progress from previous sessions: a .txt on disk means
         # that the image was already reviewed, whether or not it has boxes.
-        self._reviewed = {str(p) for p in imgs if self._label_path_for(p).exists()}
+        self._reviewed = {str(p) for p in imgs if label_path_for(p).exists()}
         self.images_loaded.emit(imgs)
         if imgs:
             self.current_idx = -1  # force goto to emit image_changed
@@ -160,7 +151,7 @@ class LabelerState(QObject):
             self._save_labels_for(img, self.current_boxes, force=True)
         else:
             self._reviewed.discard(key)
-            txt = self._label_path_for(img)
+            txt = label_path_for(img)
             if txt.exists() and not self.current_boxes:
                 txt.unlink()
         self.progress_changed.emit()
@@ -183,27 +174,18 @@ class LabelerState(QObject):
         if img:
             self._save_labels_for(img, self.current_boxes)
 
-    def _label_path_for(self, img: Path) -> Path:
-        # If the image is in images/, save to the sibling labels/
-        if img.parent.name.lower() == "images":
-            lbl_dir = img.parent.parent / "labels"
-        else:
-            lbl_dir = img.parent
-        lbl_dir.mkdir(parents=True, exist_ok=True)
-        return lbl_dir / (img.stem + ".txt")
-
     def _save_labels_for(self, img: Path, boxes: list[BBox], force: bool = False):
         """Writes the .txt. With no boxes and not reviewed, it does NOT create the file.
 
         Creating empty .txt files just from passing over an image would
         falsify the census: an image barely glanced at would be recorded as
-        reviewed with zero particles, which is a different datum.
+        reviewed with zero particles, which is a different datum. That
+        policy lives HERE, not in the codec: the codec writes exactly what
+        it is told.
         """
         if not boxes and not force and str(img) not in self._reviewed:
             return
-        txt = self._label_path_for(img)
-        content = "\n".join(b.to_yolo_line() for b in boxes)
-        txt.write_text(content + "\n" if content else "", encoding="utf-8")
+        write_lines(label_path_for(img), boxes)
         if boxes:
             self._reviewed.add(str(img))
 
@@ -211,16 +193,10 @@ class LabelerState(QObject):
         key = str(img)
         if key in self._annotations:
             return
-        txt = self._label_path_for(img)
+        txt = label_path_for(img)
         boxes: list[BBox] = []
         if txt.exists():
-            for line in txt.read_text(encoding="utf-8").splitlines():
-                line = line.strip()  # noqa: PLW2901
-                if line:
-                    try:  # noqa: SIM105
-                        boxes.append(BBox.from_yolo_line(line))
-                    except Exception:  # noqa: BLE001, S110
-                        pass
+            boxes, _malformed = read_boxes(txt)
         self._annotations[key] = boxes
 
     def save_classes_txt(self):
@@ -232,16 +208,12 @@ class LabelerState(QObject):
         """
         if not self.images:
             return
-        content_2 = "\n".join(self.class_names) + "\n"
-        destinations = {self._label_path_for(p).parent for p in self.images}
+        destinations = {label_path_for(p).parent for p in self.images}
         if self.root_folder is not None:
             destinations.add(self.root_folder)
         for d in destinations:
-            try:
-                d.mkdir(parents=True, exist_ok=True)
-                (d / "classes.txt").write_text(content_2, encoding="utf-8")
-            except OSError:
-                pass
+            with contextlib.suppress(OSError):
+                write_classes(d, self.class_names)
 
     # ── Classes ──────────────────────────────────────────────
     def set_active_class(self, cls_id: int):

@@ -14,7 +14,7 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QColor, QImage, QKeySequence, QShortcut
+from PySide6.QtGui import QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -28,12 +28,14 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.i18n import tr
+from polyx.core.labels import STUDY_CLASSES, bbox_from, write_classes, write_lines
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
-from .pages.gt_manual import DEFAULT_CLASSES, AnnotCanvas
+from .pages.gt_manual import AnnotCanvas
 
 
 class ReviewDialog(QDialog):
@@ -62,7 +64,7 @@ class ReviewDialog(QDialog):
 
         top.addWidget(QLabel(tr("Clase (para nuevas cajas):")))
         self.combo_class = QComboBox()
-        self.combo_class.addItems(DEFAULT_CLASSES)
+        self.combo_class.addItems(STUDY_CLASSES)
         self.combo_class.currentIndexChanged.connect(lambda i: self.canvas.set_active_class(i))  # noqa: PLW0108
         top.addWidget(self.combo_class)
 
@@ -97,7 +99,7 @@ class ReviewDialog(QDialog):
         body.addLayout(left)
 
         self.canvas = AnnotCanvas()
-        self.canvas.set_class_names(DEFAULT_CLASSES)
+        self.canvas.set_class_names(STUDY_CLASSES)
         self.canvas.setMinimumSize(QSize(760, 540))
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         body.addWidget(self.canvas, 1)
@@ -269,17 +271,6 @@ class ReviewDialog(QDialog):
         self.canvas.setFocus()
 
     # ── Saving corrections ──
-    @staticmethod
-    def _yolo_lines(dets: list[Detection], W: int, H: int) -> list[str]:
-        lines = []
-        for d in dets:
-            cx = (d.x1 + d.x2) / 2 / W
-            cy = (d.y1 + d.y2) / 2 / H
-            w = (d.x2 - d.x1) / W
-            h = (d.y2 - d.y1) / H
-            lines.append(f"{d.class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}")
-        return lines
-
     def _current_image_and_dets(self):
         """(path, dets, W, H) of the current image, or None if something fails."""
         if not (0 <= self._current_idx < len(self._results)):
@@ -287,12 +278,14 @@ class ReviewDialog(QDialog):
         res = self._results[self._current_idx]
         path = Path(res.image_path)
         dets = self.canvas.detections()
-        img = QImage(str(path))
-        W, H = img.width(), img.height()
-        if W == 0 or H == 0:
+        # Header-only and EXIF-aware, like everywhere else in the program.
+        # QImage applied the EXIF rotation while cv2 did not, so the boxes
+        # were normalized on a different frame than the rest of the run.
+        wh = size_image(path)
+        if wh is None or wh[0] <= 0 or wh[1] <= 0:
             QMessageBox.warning(self, tr("Error"), tr("No se pudo leer la imagen."))
             return None
-        return path, dets, W, H
+        return path, dets, wh[0], wh[1]
 
     def _save_current(self):
         cur = self._current_image_and_dets()
@@ -302,12 +295,14 @@ class ReviewDialog(QDialog):
         # destination: run folder, _corrected suffix
         out_dir = Path(self.state.run_dir) if self.state.run_dir else path.parent
         out_dir.mkdir(parents=True, exist_ok=True)
-        out_path = out_dir / f"{path.stem}_corrected.txt"
-        out_path.write_text("\n".join(self._yolo_lines(dets, W, H)), encoding="utf-8")
+        txt_path = write_lines(
+            out_dir / f"{path.stem}_corrected.txt",
+            [bbox_from(d, W, H) for d in dets],
+        )
         cls_path = out_dir / "classes.txt"
         if not cls_path.exists():
-            cls_path.write_text("\n".join(DEFAULT_CLASSES), encoding="utf-8")
-        self.lbl_status.setText(f"✓ Guardado: {out_path}  ({len(dets)} cajas)")
+            write_classes(out_dir)
+        self.lbl_status.setText(f"✓ Guardado: {txt_path}  ({len(dets)} cajas)")
 
     def _send_to_dataset(self):
         """Active learning: accumulates image + corrected boxes to retrain."""
@@ -326,12 +321,10 @@ class ReviewDialog(QDialog):
         (root / "images").mkdir(parents=True, exist_ok=True)
         (root / "labels").mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, root / "images" / path.name)
-        (root / "labels" / f"{path.stem}.txt").write_text(
-            "\n".join(self._yolo_lines(dets, W, H)), encoding="utf-8"
-        )
+        write_lines(root / "labels" / f"{path.stem}.txt", [bbox_from(d, W, H) for d in dets])
         cls_path = root / "classes.txt"
         if not cls_path.exists():
-            cls_path.write_text("\n".join(DEFAULT_CLASSES), encoding="utf-8")
+            write_classes(root)
         n = len(list((root / "labels").glob("*.txt")))
         self.lbl_status.setText(
             f"Enviada al dataset de reentrenamiento — {n} imagen(es) "
