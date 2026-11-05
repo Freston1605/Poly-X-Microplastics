@@ -487,9 +487,8 @@ class ResultsPage(DetectorPage):
             ax.set_facecolor("#f6f8fa")
             ax.figure.set_facecolor("#ffffff")
 
-            colors = {"PET": "#e3342f", "PP": "#ff8c00", "LDPE": "#ffd700"}
             for cls_name, vals in sizes_by_class.items():
-                color = colors.get(cls_name, "#0969da")
+                color = T.CLASS_COLOR_HEX.get(cls_name, T.FALLBACK_COLOR_HEX)
                 ax.hist(
                     vals,
                     bins=20,

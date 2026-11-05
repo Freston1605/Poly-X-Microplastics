@@ -202,7 +202,7 @@ def _fig_class_distribution(per_class_counts: dict[str, int]) -> str:
     fig, ax = plt.subplots(figsize=(7, 3.2))
     names = list(per_class_counts.keys())
     vals = list(per_class_counts.values())
-    colors = [T.CLASS_COLOR_HEX.get(n, "#888") for n in names]
+    colors = [T.CLASS_COLOR_HEX.get(n, T.FALLBACK_COLOR_HEX) for n in names]
     ax.bar(names, vals, color=colors, edgecolor="black", linewidth=0.5)
     ax.set_ylabel(tr("Detecciones"))
     ax.set_title(tr("Distribución por clase"))
@@ -266,7 +266,7 @@ def _fig_sizes_by_section(lengths_per_class: dict[str, list[float]]) -> str:
             width=widths,
             bottom=bottom_2,
             label=cls,
-            color=T.CLASS_COLOR_HEX.get(cls, "#8b949e"),
+            color=T.CLASS_COLOR_HEX.get(cls, T.FALLBACK_COLOR_HEX),
             edgecolor="white",
             linewidth=0.6,
         )

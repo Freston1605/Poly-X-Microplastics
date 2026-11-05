@@ -92,7 +92,9 @@ def parse_run_view_name(name: str) -> tuple[int, str, str] | None:
     if match is None:
         return None
     index, rest = int(match.group(1)), match.group(2)
-    for suffix in VIEW_SUFFIXES:
+    # Longest first, so a stem that itself ends in a suffix is stripped
+    # unambiguously rather than relying on the tuple's declaration order.
+    for suffix in sorted(VIEW_SUFFIXES, key=len, reverse=True):
         if rest.endswith(suffix):
             return (index, rest[: len(rest) - len(suffix)], suffix)
     return None
@@ -186,8 +188,11 @@ def triptych(
     truth there is no GT view and the combined view IS the predictions
     view, the same array.
 
-    Callers can restyle any view: ``color_for``, ``pred_label_for`` and
-    ``gt_label_for`` (the prefix is only prepended in the combined view).
+    Callers can restyle the predictions view (``color_for``,
+    ``pred_label_for``) and the GT label text (``gt_label_for``); the GT
+    view keeps the class colours and the combined view keeps the GT colour
+    and the ``{gt_prefix} `` prefix regardless of injection, so the run
+    conventions survive restyling.
     """
     pred = draw_detections(
         img_bgr,
@@ -197,17 +202,19 @@ def triptych(
     )
     if not gt:
         return Triptych(pred=pred, gt=None, combined=pred)
+    # The GT view keeps the class colours regardless of any injected colour
+    # mapping: the spec assigns class colours to the ground truth.
+    gt_base_label = gt_label_for or (lambda d: d.class_name)
     gt_view = draw_detections(
         img_bgr,
         gt,
-        color_for=color_for,
-        label_for=gt_label_for or (lambda d: d.class_name),
+        label_for=gt_base_label,
     )
     combined = draw_detections(
         pred,
         gt,
         color_for=lambda d: GT_COLOR_BGR,
-        label_for=gt_label_for or (lambda d: f"{gt_prefix} {d.class_name}"),
+        label_for=lambda d: f"{gt_prefix} {gt_base_label(d)}",
     )
     return Triptych(pred=pred, gt=gt_view, combined=combined)
 
