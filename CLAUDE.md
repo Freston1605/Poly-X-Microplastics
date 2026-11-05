@@ -63,6 +63,7 @@ src/                      # Source code (installable package)
     │   ├── yolo_wrap.py  # YOLO wrapper (Detection, YoloModel)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
+    │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
     │   ├── dataset_audit.py
     │   ├── detection_run.py  # Headless detection engine
     │   ├── training.py       # Headless training engine
@@ -107,7 +108,7 @@ src/                      # Source code (installable package)
         ├── labeler/      # Module 4: Manual YOLO annotation
         └── viewer/       # Module 5: Inspection with μm/px calibration
 
-tests/                    # Pytest (44 modules + fixtures)
+tests/                    # Pytest (43 test modules + fixtures)
 ├── english_scan.py       # Spanish-remnant scanner (no LibCST)
 ├── test_*_ingles.py      # Language-convention gates
 ├── fixtures/             # Shared fixtures and report baselines
@@ -116,12 +117,15 @@ tests/                    # Pytest (44 modules + fixtures)
 tools/                    # Development tooling (not packaged)
 ├── audit/                # Translation audit + report fixture capture
 ├── manual/               # Manual chain (capture, generate, text ES/EN)
-└── packaging/            # PyInstaller (polyx.spec, build.py)
+├── packaging/            # PyInstaller (polyx.spec, build.py)
+└── data/                 # Dataset split tooling (manifest + make_splits)
 
 docs/                     # Documentation
 ├── manual/               # Compiled manual (versioned, offline)
 ├── assets/               # manual_screenshots/ (es, en, web, win)
-├── development/          # Diagnostics, recipes, architecture review
+├── architecture_review_segmentation.md  # architecture review (segmentation)
+├── diagnostico_sigterm.md               # SIGTERM diagnostics + memory telemetry
+├── recetas_jq.md                        # operator runbook: JSONL logs + jq recipes
 └── (LEEME_macOS.md at the root)
 
 install/                  # End-user surface (double click)
@@ -135,9 +139,8 @@ install/                  # End-user surface (double click)
 legacy/                   # Previous versions (reference, not touched)
 
 models/                   # YOLO .pt weights (dev; in installs they go to user data)
-runs/                     # Results of each run (gitignored)
-data_microplastico/       # Labelled YOLO dataset (gitignored)
-data/                     # Other datasets
+runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
+data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
 .github/workflows/        # ci.yml (tests + build smoke), publish.yml (PyPI)
 ```
@@ -380,11 +383,13 @@ update checker (`polyx.gui.updates`), manual/report openers, preferences.
 8. **Compare** → Compare runs (P/R/F1 curves)
 9. **Report** → Self-contained HTML + browser
 
-**Output:**
-- `runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
-- `runs/.../centroids.csv` — class, x, y, conf, diam_um
-- `runs/.../metrics.json` — TP/FP/FN per class
-- `runs/.../report.html` — Paper-quality report (base64)
+**Output** (in the per-user data dir — `%LOCALAPPDATA%\polyx`,
+`~/Library/Application Support/polyx` or `~/.local/share/polyx`; `POLYX_HOME`
+overrides; ADR-0001):
+- `<data dir>/runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
+- `<data dir>/runs/YYYYMMDD_HHMMSS/centroids.csv` — class, x, y, conf, diam_um
+- `<data dir>/runs/YYYYMMDD_HHMMSS/metrics.json` — TP/FP/FN per class
+- `<data dir>/runs/YYYYMMDD_HHMMSS/report.html` — Paper-quality report (base64)
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -400,10 +405,10 @@ update checker (`polyx.gui.updates`), manual/report openers, preferences.
 8. **Export** → PT → ONNX/TensorRT/CoreML
 9. **Report** → Training report
 
-**Output:**
-- `runs/detect/trainN/weights/best.pt` — Best model
-- `runs/detect/trainN/results.csv` — Per-epoch metrics
-- `runs/detect/trainN/confusion_matrix.png` — Confusion matrix
+**Output** (in the user data dir's `runs_train/` — ADR-0001):
+- `<run name>/weights/best.pt` — Best model
+- `<run name>/results.csv` — Per-epoch metrics
+- `<run name>/confusion_matrix.png` — Confusion matrix
 
 ### 🏷 Labeller (Module 4, working)
 Manual YOLO annotation with optional automatic pre-labelling.
@@ -584,7 +589,7 @@ ImageResult
     ↓
 cv2.rectangle() + annotation → PNG
     ↓
-runs/YYYYMMDD_HHMMSS/
+<user data dir>/runs/YYYYMMDD_HHMMSS/
 ```
 
 ### Trainer
@@ -599,7 +604,7 @@ best.pt (best checkpoint)
     ↓
 results.csv + curves
     ↓
-runs/detect/trainN/
+<user data dir>/runs_train/<run name>/
 ```
 
 ---
@@ -724,6 +729,22 @@ set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py 
 - ✅ Viewer: Working, calibration repaired and verified (Aug 2026)
 - 📋 Dataset validation (duplicates, outliers)
 - 🤖 Automatic parameter recommendations
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues on the fork `Freston1605/Poly-X-Microplastics` — always pass `-R Freston1605/Poly-X-Microplastics` to `gh` (bare `gh` resolves to upstream). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels, identity-mapped. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context. See `docs/agents/domain.md`.
 
 ---
 

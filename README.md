@@ -550,7 +550,7 @@ polyx/
 └── visor/               # Module 5: inspection + µm/px calibration
 models/                  # Trained .pt weights
 runs/                    # Results of each run
-data_microplastico/      # YOLO dataset (images/ + labels/)
+data/                    # YOLO dataset (images/ + labels/) — not in git
 tests/                   # Test suite for measurement, calibration and portability
 
 install/                # 🪟/🍎 end-user scripts (SETUP, launchers, updaters, uninstaller)
@@ -570,7 +570,7 @@ install/                # 🪟/🍎 end-user scripts (SETUP, launchers, updaters
 ```
 
 Everything that differs between systems — opening folders, launching the updater,
-picking the compute device — lives in `polyx/model/plataforma.py` rather than being
+picking the compute device — lives in `src/polyx/core/platform.py` rather than being
 scattered across the code.
 
 ---

@@ -676,7 +676,6 @@ vacía:</p>
 ├── polyx\
 ├── <span class="p">models\</span>              <span class="c">← el archivo .pt va aquí</span>
 │   └── bestdetectormedium.pt
-├── runs\
 └── SETUP.bat</code></pre>
 
 <p>No hay que renombrarlo ni configurar nada: el Detector lista todos los
@@ -922,9 +921,9 @@ hiperparametros. Van en secuencia porque comparten GPU, y al terminar el registr
 resume la comparación.</p>
 
 <h3>Dataset</h3>
-[[fig:ui/12_ent_dataset|Pestaña <b>Dataset</b>. Carga del <code>data.yaml</code> con
+[[fig:ui/12_ent_dataset|Pestaña <b>Dataset</b>. Carga del <code>dataset.yaml</code> con
 auto-detección de particiones y vista previa de las cajas.]]
-<p>Carga el <code>data.yaml</code>, detecta las particiones train/val/test y
+<p>Carga el <code>dataset.yaml</code>, detecta las particiones train/val/test y
 valida el dataset con indicadores <b>✓/✗</b>: imágenes presentes, etiquetas
 correspondientes, clases coherentes. Incluye una <b>auditoría previa</b> con la
 distribución de clases y un veredicto de si el dataset es apto para entrenar.</p>
@@ -1108,10 +1107,12 @@ ancho y aspecto. Al seleccionar una fila se ve <b>sobre que se midió</b>:</p>
   <li><b>Cargar etiquetas <code>.txt</code></b> ya existentes y verlas sobre la
       imagen con las tallas convertidas a μm. Sirve para revisar un conteo manual
       sin volver al Etiquetador.</li>
-  <li><b>Cargar las predicciones de una corrida ya cerrada</b> desde
-      <code>runs/detect_.../</code>, sin volver a pasar el modelo. Abre siempre la
-      fotografía original y nunca el PNG anotado, que lleva las cajas pintadas
-      encima.</li>
+  <li><b>Cargar las predicciones de una corrida ya cerrada</b> desde la
+      carpeta de corridas de tu usuario (<code>%LOCALAPPDATA%\polyx\runs\</code>
+      en Windows; en los demás sistemas, ver la
+      <a href="#estructura">tabla por sistema</a>), sin volver a pasar el modelo.
+      Abre siempre la fotografía original y nunca el PNG anotado, que lleva las
+      cajas pintadas encima.</li>
   <li><b>Arrastrar y soltar</b> una imagen o un modelo directamente sobre el
       lienzo.</li>
   <li><b>Exportar</b> la imagen anotada, <code>detecciones.csv</code> y
@@ -1405,8 +1406,11 @@ fotografías que muestra.</p>
 <h3>C · Quieres verificar una medida concreta</h3>
 <ol>
   <li><b>Visor</b> → abre la fotografía.</li>
-  <li><b>Cargar predicciones</b> de la corrida ya cerrada, desde
-      <code>runs/detect_.../</code>. No hace falta volver a pasar el modelo.</li>
+  <li><b>Cargar predicciones</b> de la corrida ya cerrada, desde la carpeta de
+      corridas de tu usuario (<code>%LOCALAPPDATA%\polyx\runs\</code> en Windows;
+      en los demás sistemas, ver
+      <a href="#estructura">Estructura de carpetas</a>). No hace falta volver a
+      pasar el modelo.</li>
   <li>Selecciona la fila de la partícula en la tabla.</li>
   <li>Mira el recorte y la máscara con la medida dibujada encima: ahí se ve si la
       talla salió de una segmentación correcta o de una máscara rota.</li>
@@ -1482,9 +1486,12 @@ fotografías que muestra.</p>
 
 <p>Comprueba si hay un commit nuevo en <code>main</code> y, si lo hay, descarga y
 reemplaza <b>solo los archivos del programa</b>. <b>Conserva</b> tu entorno
-<code>.venv</code>, tus modelos <code>models/*.pt</code>, tus <code>runs/</code> y
-cualquier dato local. No necesita tener Git instalado —descarga por HTTPS—, solo
-conexión a internet.</p>
+<code>.venv</code> y tus modelos <code>models/*.pt</code>; tus corridas ya no
+viven en esta carpeta, sino en la carpeta de datos de tu usuario (en Windows,
+<code>%LOCALAPPDATA%\polyx</code>; en los demás sistemas, ver
+<a href="#estructura">Estructura de carpetas</a>), donde el actualizador no
+llega. No necesita
+tener Git instalado —descarga por HTTPS—, solo conexión a internet.</p>
 
 <div class="aviso">
   <span class="et">Da igual desde qué sistema actualices</span>
@@ -1498,15 +1505,16 @@ solo cuando GitHub va por delante.</p>
 
 <h3>Desinstalar</h3>
 <p>En Windows, <code>DESINSTALAR.bat</code>. Retira el entorno y los archivos del
-programa. Revisa antes que no queden dentro de la carpeta modelos o resultados que
-quieras conservar: <code>models\</code> y <code>runs\</code> son tuyos, no del
-programa.</p>
+programa. Revisa antes que no queden dentro de la carpeta modelos que quieras
+conservar: <code>models\</code> es tuyo, no del programa — y tus corridas viven
+fuera de la carpeta, en <code>%LOCALAPPDATA%\polyx</code>, donde la
+desinstalación no llega.</p>
 
 <div class="aviso warn">
   <span class="et">Antes de desinstalar</span>
-  <p>Saca de la carpeta tus <code>.pt</code> y tus <code>runs/</code>. Un modelo
-  entrenado puede representar días de trabajo y no se recupera de GitHub, porque
-  nunca estuvo ahí.</p>
+  <p>Saca de la carpeta tus <code>.pt</code>. Un modelo entrenado puede representar
+  días de trabajo y no se recupera de GitHub, porque nunca estuvo ahí. Tus corridas
+  ya están a salvo fuera de la carpeta, en la carpeta de datos de tu usuario.</p>
 </div>
 """,
     },
@@ -1593,8 +1601,7 @@ programa.</p>
 │   ├── gui\                  <span class="c">interfaz: detector\, trainer\, labeler\, viewer\…</span>
 │   └── cli\                  <span class="c">comandos sin ventana (polyx-train, polyx-eval…)</span>
 ├── <span class="p">models\</span>                   <span class="c">TUYO — los pesos .pt entrenados</span>
-├── <span class="p">runs\</span>                     <span class="c">TUYO — una carpeta por corrida, con fecha y hora</span>
-├── <span class="p">data_microplastico\</span>       <span class="c">TUYO — dataset YOLO (images/ + labels/)</span>
+├── <span class="p">data\</span>                    <span class="c">TUYO — dataset YOLO (images/ + labels/)</span>
 ├── <span class="p">.venv\</span>                    <span class="c">entorno de Python — se regenera con SETUP.bat</span>
 ├── docs\                     <span class="c">documentación</span>
 │   └── manual\               <span class="c">Manual_PolyX.html — este manual</span>
@@ -1608,13 +1615,28 @@ programa.</p>
 ├── actualizar_macOS.command  <span class="c">[Mac] actualizador</span>
 └── LEEME.txt                 <span class="c">versión corta de la instalación</span></code></pre>
 
+<h3>Dónde viven tus corridas y modelos, según sistema</h3>
+<div class="tabla-env">
+<table>
+  <thead><tr><th>Sistema</th><th>Carpeta de datos</th></tr></thead>
+  <tbody>
+    <tr><td>Windows</td><td><code>%LOCALAPPDATA%\polyx</code></td></tr>
+    <tr><td>macOS</td><td><code>~/Library/Application Support/polyx</code></td></tr>
+    <tr><td>Linux</td><td><code>$XDG_DATA_HOME/polyx</code> (por defecto <code>~/.local/share/polyx</code>)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>La variable de entorno <code>POLYX_HOME</code> tiene prioridad sobre las tres
+(útil en instalaciones portables y en las pruebas).</p>
+
 <div class="aviso err">
-  <span class="et">Las tres carpetas que no se borran</span>
-  <p><code>models\</code>, <code>runs\</code> y <code>data_microplastico\</code>
-  contienen <b>tu trabajo</b>, no el programa. Un modelo entrenado puede ser días
-  de cómputo y ninguna de las tres se recupera de GitHub, porque nunca estuvieron
-  ahí. <code>.venv\</code>, en cambio, se regenera cuando quieras volviendo a
-  ejecutar <code>SETUP.bat</code>.</p>
+  <span class="et">Lo que no se borra</span>
+  <p><code>models\</code> y <code>data\</code> contienen <b>tu trabajo</b>, no el
+  programa, y tus corridas viven en la carpeta de datos de tu usuario (la tabla
+  de arriba). Un modelo entrenado puede ser días de
+  cómputo y nada de esto se recupera de GitHub, porque nunca estuvo ahí.
+  <code>.venv\</code>, en cambio, se regenera cuando quieras volviendo a ejecutar
+  <code>SETUP.bat</code>.</p>
 </div>
 
 <h3>Qué guarda cada corrida</h3>
@@ -1635,7 +1657,7 @@ programa.</p>
   <span class="et">Las diferencias entre sistemas están en un solo archivo</span>
   <p>Abrir carpetas, lanzar el actualizador, elegir el dispositivo de cómputo:
   todo lo que difiere entre Windows y macOS vive en
-  <code>polyx/core/plataforma.py</code>, y no repartido por el código. Es la razón
+  <code>polyx/core/platform.py</code>, y no repartido por el código. Es la razón
   de que el programa funcione igual en ambos sin dos versiones que mantener.</p>
 </div>
 """,
