@@ -112,7 +112,10 @@ def reload_gt(state, progress=None) -> dict:
         if has_gt:
             gts = read_yolo_txt(gt_txt, W, H, names_2)
             for d in gts:
-                compute_box_size_um(d, _um_px_de(state, r.image_path, params))
+                # The scale of THIS image -- not the ImageResult left over
+                # from the grouping loop: scales are per photo (31-49 um/px
+                # in this study) and the wrong one corrupts the reloaded sizes.
+                compute_box_size_um(d, _um_px_de(state, path_2, params))
 
         first = cluster[0][1]
         if has_gt == first.has_gt and _same_boxes(gts, first.gt):
