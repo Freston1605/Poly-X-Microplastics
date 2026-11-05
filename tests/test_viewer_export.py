@@ -76,6 +76,13 @@ def test_size_label_prefers_the_measured_um():
     assert size_label(_medido(), UM) == "PET 50.0 μm"
 
 
+def test_size_label_marks_the_box_fallback():
+    # A box-sourced µm size is an approximation: the ≈ says so, on canvas
+    # and in the exported PNG, so it is never shown as a measured one.
+    det = _en_caja()
+    assert size_label(det, UM) == f"PP ≈{det.diam_um:.1f} μm"
+
+
 def test_size_label_falls_back_to_the_box_px():
     det = Detection(class_id=0, class_name="PET", conf=1.0, x1=10, y1=10, x2=50, y2=50)
     assert size_label(det, 0.0) == f"PET {_CAJA_PX:.0f} px"

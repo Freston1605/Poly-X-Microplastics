@@ -13,7 +13,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
 
 _RAIZ = Path(__file__).resolve().parents[1]
 _SRC = _RAIZ / "src"
@@ -90,3 +89,12 @@ def test_measure_detections_respects_the_shape_switch():
     # Only the box fallback ran: the shape fields stay empty.
     assert det.size_source == "box"
     assert det.morphotype is None
+
+
+def test_measure_detections_without_calibration_invents_nothing():
+    # The contraction pinned end to end: with no um/px, no size and no
+    # origin is written, whatever the segmentation manages.
+    img, det = _placa_con_disco()
+    assert measure_detections([det], img, None) == 0
+    assert det.diam_um is None and det.area_um2 is None
+    assert det.size_source is None

@@ -10,8 +10,7 @@ without um/px there are no micrometers to show.
 
 from __future__ import annotations
 
-import math
-
+from polyx.core.detect.protocol import equal_area_diameter
 from polyx.core.detect.yolo import Detection
 
 HEADER = [
@@ -31,18 +30,24 @@ HEADER = [
 def _box_diam_px(det: Detection) -> float:
     """Equal-area diameter of the BOX in px.
 
-    The same definition the box fallback uses, in px: a descriptor of the
+    Through the one equal-area definition in the core: a descriptor of the
     box, never presented as the particle's size.
     """
-    w = det.x2 - det.x1
-    h = det.y2 - det.y1
-    return 2.0 * math.sqrt(w * h / math.pi)
+    return equal_area_diameter((det.x2 - det.x1) * (det.y2 - det.y1))
 
 
 def size_label(det: Detection, um_per_px: float | None) -> str:
-    """The on-canvas label: measured um when calibration allows, box px otherwise."""
+    """The on-canvas label: measured um when calibration allows, box px otherwise.
+
+    ``≈`` marks an approximation: a size sourced from the box fallback
+    (``size_source == "box"``) is shown with it, on the live canvas and in
+    the exported PNG, so the approximate number is never mistaken for a
+    measured one. Without calibration there are no µm at all and the
+    box's px is shown instead — clearly not a µm figure.
+    """
     if um_per_px and um_per_px > 0 and det.diam_um is not None:
-        return f"{det.class_name} {det.diam_um:.1f} μm"
+        mark = "≈" if det.size_source == "box" else ""
+        return f"{det.class_name} {mark}{det.diam_um:.1f} μm"
     return f"{det.class_name} {_box_diam_px(det):.0f} px"
 
 
