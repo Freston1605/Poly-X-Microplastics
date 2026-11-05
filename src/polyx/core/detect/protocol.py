@@ -8,10 +8,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-import cv2
 import numpy as np
+
+if TYPE_CHECKING:
+    # Legacy names, resolved lazily below (see ``__getattr__``). Declared
+    # here (redundant-alias form = re-export) so type checkers see them as
+    # module attributes.
+    from polyx.core.labels import find_gt_for_image as find_gt_for_image
+    from polyx.core.labels import read_yolo_txt as read_yolo_txt
 
 
 @dataclass
@@ -213,100 +219,23 @@ def policy_tiling(
     }
 
 
-def read_yolo_txt(
-    txt_path: str | Path,
-    img_w: int,
-    img_h: int,
-    class_names: dict[int, str],
-) -> list[Instance]:
-    """Read YOLO-format label file and return Instance list."""
-    instances = []
-    try:
-        with open(txt_path, encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) < 5:
-                    continue
-                cid = int(float(parts[0]))
-                nums = [float(x) for x in parts[1:]]
-                # YOLO-seg polygon: class x1 y1 x2 y2 ... (normalized)
-                if len(nums) >= 6 and len(nums) % 2 == 0:
-                    pts = [(nums[k] * img_w, nums[k + 1] * img_h) for k in range(0, len(nums), 2)]
-                    xs = [p[0] for p in pts]
-                    ys = [p[1] for p in pts]
-                    x1, x2 = min(xs), max(xs)
-                    y1, y2 = min(ys), max(ys)
-                    # fillPoly mutates in place: fill a named uint8 array and
-                    # only then cast to bool. Passing mask.astype(uint8) as
-                    # a throwaway expression silently filled a copy.
-                    mask_u8 = np.zeros((img_h, img_w), dtype=np.uint8)
-                    arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-                    cv2.fillPoly(mask_u8, [arr], (1,))
-                    mask = mask_u8.astype(bool)
-                    instances.append(
-                        Instance(
-                            class_id=cid,
-                            class_name=class_names.get(cid, str(cid)),
-                            conf=1.0,
-                            x1=x1,
-                            y1=y1,
-                            x2=x2,
-                            y2=y2,
-                            mask=mask,
-                            mask_source="gt-polygon",
-                        )
-                    )
-                else:
-                    # YOLO detection: class cx cy w h (normalized)
-                    if len(nums) < 4:
-                        continue
-                    cx_n, cy_n, w_n, h_n = nums[:4]
-                    cx = cx_n * img_w
-                    cy = cy_n * img_h
-                    w = w_n * img_w
-                    h = h_n * img_h
-                    x1 = cx - w / 2
-                    y1 = cy - h / 2
-                    x2 = cx + w / 2
-                    y2 = cy + h / 2
-                    instances.append(
-                        Instance(
-                            class_id=cid,
-                            class_name=class_names.get(cid, str(cid)),
-                            conf=1.0,
-                            x1=x1,
-                            y1=y1,
-                            x2=x2,
-                            y2=y2,
-                        )
-                    )
-    except Exception as exc:  # noqa: BLE001
-        try:
-            from polyx.core.provenance.observability import logger_for
+def __getattr__(name: str):
+    """Legacy re-exports from the YOLO-label codec.
 
-            logger_for("detector").warning("read_yolo_txt failed: %s", exc)
-        except Exception:  # noqa: BLE001, S110
-            pass
-    return instances
+    ``read_yolo_txt`` and ``find_gt_for_image`` moved to
+    :mod:`polyx.core.labels` — this module is contracts, not implementation.
+    Resolved lazily so the import stays one-directional (labels imports
+    ``Instance`` from here).
+    """
+    if name == "read_yolo_txt":
+        from polyx.core.labels import read_yolo_txt
 
+        return read_yolo_txt
+    if name == "find_gt_for_image":
+        from polyx.core.labels import find_gt_for_image
 
-def find_gt_for_image(image_path: Path, gt_folder: Path | None) -> Path | None:
-    """Finds the GT .txt next to the image, in the sibling /labels, or in gt_folder."""
-    stem = image_path.stem
-    candidates = []
-    if gt_folder is not None:
-        candidates.append(gt_folder / f"{stem}.txt")
-    # same directory
-    candidates.append(image_path.parent / f"{stem}.txt")
-    # sibling labels/
-    if image_path.parent.name.lower() == "images":
-        candidates.append(image_path.parent.parent / "labels" / f"{stem}.txt")
-    else:
-        candidates.append(image_path.parent / "labels" / f"{stem}.txt")
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
+        return find_gt_for_image
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def compute_box_size_um(det: Instance, um_per_px: float | None) -> None:

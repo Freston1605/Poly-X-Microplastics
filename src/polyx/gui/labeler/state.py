@@ -3,33 +3,16 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-CLASS_NAMES_DEFAULT = ["PET", "PP", "LDPE"]
+# The normalized box lives in the YOLO-label codec: one currency for every
+# module that reads or writes label files. Re-exported so the canvas and
+# the pre-annotation intake keep importing it from here.
+from polyx.core.labels import STUDY_CLASSES, BBox
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
-
-
-@dataclass
-class BBox:
-    class_id: int
-    cx: float  # scaled to [0, 1]
-    cy: float
-    w: float
-    h: float
-
-    def to_yolo_line(self) -> str:
-        return f"{self.class_id} {self.cx:.6f} {self.cy:.6f} {self.w:.6f} {self.h:.6f}"
-
-    @classmethod
-    def from_yolo_line(cls, line: str) -> BBox:
-        parts = line.strip().split()
-        return cls(
-            int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
-        )
 
 
 class LabelerState(QObject):
@@ -44,7 +27,7 @@ class LabelerState(QObject):
         super().__init__()
         self.images: list[Path] = []
         self.current_idx: int = -1
-        self.class_names: list[str] = list(CLASS_NAMES_DEFAULT)
+        self.class_names: list[str] = list(STUDY_CLASSES)
         self.active_class: int = 0
         self.root_folder: Path | None = None
 
