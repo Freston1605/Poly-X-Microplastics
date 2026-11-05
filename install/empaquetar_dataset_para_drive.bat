@@ -15,8 +15,8 @@ echo     - data.yaml (rutas relativas, portable)
 echo   Excluye los .npy (copias crudas de 1.5 GB que NO se necesitan).
 echo.
 
-if not exist "data_microplastico\images" (
-    echo [ERROR] No encuentro data_microplastico\images
+if not exist "data\images" (
+    echo [ERROR] No encuentro data\images
     echo Ejecuta este .bat desde la carpeta del proyecto Poly-X.
     echo.
     pause
@@ -32,9 +32,9 @@ echo (puede tardar unos segundos)...
 echo.
 
 tar --force-local -a -cf "%ZIP%" --exclude=*.npy --exclude=*.cache ^
-  "data_microplastico/dataset.yaml" ^
-  "data_microplastico/images" ^
-  "data_microplastico/labels"
+  "data/dataset.yaml" ^
+  "data/images" ^
+  "data/labels"
 
 if not exist "%ZIP%" (
     echo [ERROR] No se pudo crear el ZIP. Revisa que 'tar' este disponible
@@ -60,8 +60,8 @@ echo        git clone https://github.com/CrissFerrada/Poly-X-Microplastics
 echo.
 echo   3) Descarga PolyX_dataset.zip del Drive y extraelo DENTRO de la
 echo      carpeta del proyecto, de modo que quede:
-echo        Poly-X-Microplastics\data_microplastico\images
-echo        Poly-X-Microplastics\data_microplastico\labels
+echo        Poly-X-Microplastics\data\images
+echo        Poly-X-Microplastics\data\labels
 echo.
 echo   4) Ejecuta SETUP.bat y luego iniciar_polyx.bat.
 echo      El data.yaml usa rutas relativas, asi que el Entrenador

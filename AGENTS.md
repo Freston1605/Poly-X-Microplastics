@@ -25,6 +25,9 @@ convention. **Do not duplicate content here.**
   on Windows those fail silently with accented paths.
 - Dev env: **`uv sync --extra gui`** — the suite imports Qt; plain
   `uv sync` prunes PySide6 from the `.venv`.
+- **Docs ship with the behaviour** — manual text and CLAUDE.md updates
+  ride in the same PR as the change that makes them true; the worktree
+  never carries uncommitted doc updates across builds.
 - Run the tests with `.venv\Scripts\python.exe -m pytest -q` and wait
   until the **full suite passes with zero failures and zero skips**
   before calling anything done.

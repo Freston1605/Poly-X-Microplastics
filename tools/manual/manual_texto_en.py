@@ -663,7 +663,6 @@ installation. The program creates it during setup, even if it stays empty:</p>
 ├── polyx\
 ├── <span class="p">models\</span>              <span class="c">← the .pt file goes here</span>
 │   └── bestdetectormedium.pt
-├── runs\
 └── SETUP.bat</code></pre>
 
 <p>Nothing has to be renamed or configured: the Detector lists every
@@ -1092,10 +1091,10 @@ width and aspect ratio. Selecting a row shows <b>what was measured</b>:</p>
   <li><b>Load existing <code>.txt</code> labels</b> and see them over the image with
       sizes converted to μm. Useful for reviewing a manual count without going back
       to the Labeller.</li>
-  <li><b>Load the predictions of a finished run</b> from
-      <code>runs/detect_.../</code>, without running the model again. It always
-      opens the original photograph and never the annotated PNG, which has the
-      boxes painted on it.</li>
+  <li><b>Load the predictions of a finished run</b> from your user's runs
+      folder (<code>%LOCALAPPDATA%\polyx\runs\</code>), without running the
+      model again. It always opens the original photograph and never the
+      annotated PNG, which has the boxes painted on it.</li>
   <li><b>Drag and drop</b> an image or a model straight onto the canvas.</li>
   <li><b>Export</b> the annotated image, <code>detecciones.csv</code> and
       <code>resumen.json</code>.</li>
@@ -1387,7 +1386,7 @@ photographs it shows.</p>
 <ol>
   <li><b>Viewer</b> → open the photograph.</li>
   <li><b>Load predictions</b> from the finished run, in
-      <code>runs/detect_.../</code>. No need to run the model again.</li>
+      <code>%LOCALAPPDATA%\polyx\runs\</code>. No need to run the model again.</li>
   <li>Select the particle's row in the table.</li>
   <li>Look at the crop and the mask with the measurement drawn on it: that is where
       you see whether the size came from a correct segmentation or a broken
@@ -1464,9 +1463,11 @@ photographs it shows.</p>
 
 <p>It checks whether there is a new commit on <code>main</code> and, if so,
 downloads and replaces <b>only the program's files</b>. It <b>keeps</b> your
-<code>.venv</code> environment, your <code>models/*.pt</code>, your
-<code>runs/</code> and any local data. It does not need Git installed — it
-downloads over HTTPS — only an internet connection.</p>
+<code>.venv</code> environment and your <code>models/*.pt</code>; your runs no
+longer live in this folder but in your user's data folder
+(<code>%LOCALAPPDATA%\polyx</code>), where the updater never reaches. It does
+not need Git installed — it downloads over HTTPS — only an internet
+connection.</p>
 
 <div class="aviso">
   <span class="et">It does not matter which system you update from</span>
@@ -1480,15 +1481,17 @@ gives notice on its own when GitHub is ahead.</p>
 
 <h3>Uninstalling</h3>
 <p>On Windows, <code>DESINSTALAR.bat</code>. It removes the environment and the
-program's files. Check first that no models or results you want to keep are still
-inside the folder: <code>models\</code> and <code>runs\</code> are yours, not the
-program's.</p>
+program's files. Check first that no models you want to keep are still inside
+the folder: <code>models\</code> is yours, not the program's — and your runs
+live outside the folder, in <code>%LOCALAPPDATA%\polyx</code>, where the
+uninstaller does not reach.</p>
 
 <div class="aviso warn">
   <span class="et">Before uninstalling</span>
-  <p>Move your <code>.pt</code> files and your <code>runs/</code> out of the folder.
-  A trained model can represent days of work and cannot be recovered from GitHub,
-  because it was never there.</p>
+  <p>Move your <code>.pt</code> files out of the folder. A trained model can
+  represent days of work and cannot be recovered from GitHub, because it was
+  never there. Your runs are already safe outside the folder, in your user's
+  data folder.</p>
 </div>
 """,
     },
@@ -1575,8 +1578,7 @@ program's.</p>
 │   ├── gui\                  <span class="c">interface: detector\, trainer\, labeler\, viewer\…</span>
 │   └── cli\                  <span class="c">headless commands (polyx-train, polyx-eval…)</span>
 ├── <span class="p">models\</span>                   <span class="c">YOURS — the trained .pt weights</span>
-├── <span class="p">runs\</span>                     <span class="c">YOURS — one folder per run, with date and time</span>
-├── <span class="p">data_microplastico\</span>       <span class="c">YOURS — YOLO dataset (images/ + labels/)</span>
+├── <span class="p">data\</span>                    <span class="c">YOURS — YOLO dataset (images/ + labels/)</span>
 ├── <span class="p">.venv\</span>                    <span class="c">Python environment — rebuilt by SETUP.bat</span>
 ├── docs\                     <span class="c">documentation</span>
 │   └── manual\               <span class="c">Manual_PolyX.en.html — this manual</span>
@@ -1591,10 +1593,11 @@ program's.</p>
 └── LEEME.txt                 <span class="c">short version of the installation</span></code></pre>
 
 <div class="aviso err">
-  <span class="et">The three folders never to delete</span>
-  <p><code>models\</code>, <code>runs\</code> and <code>data_microplastico\</code>
-  hold <b>your work</b>, not the program. A trained model can be days of compute and
-  none of the three can be recovered from GitHub, because they were never there.
+  <span class="et">What never gets deleted</span>
+  <p><code>models\</code> and <code>data\</code> hold <b>your work</b>, not the
+  program, and your runs live in your user's data folder
+  (<code>%LOCALAPPDATA%\polyx</code>). A trained model can be days of compute and
+  none of this can be recovered from GitHub, because it was never there.
   <code>.venv\</code>, by contrast, can be rebuilt at any time by running
   <code>SETUP.bat</code> again.</p>
 </div>
@@ -1617,7 +1620,7 @@ program's.</p>
   <span class="et">The differences between systems live in a single file</span>
   <p>Opening folders, launching the updater, choosing the compute device:
   everything that differs between Windows and macOS lives in
-  <code>polyx/core/plataforma.py</code>, not scattered through the code. That is why
+  <code>polyx/core/platform.py</code>, not scattered through the code. That is why
   the program behaves the same on both without two versions to maintain.</p>
 </div>
 """,
