@@ -64,6 +64,7 @@ src/                      # Source code (installable package)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
+    │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-view naming
     │   ├── dataset_audit.py
     │   ├── detection_run.py  # Headless detection engine
     │   ├── training.py       # Headless training engine
@@ -300,11 +301,13 @@ VIO = "#6639ba"          # Purple
 
 # Colours used to draw each class's boxes on screen.
 # NOTE: these are interface colours, they do NOT describe Nile Red's real emission.
-CLASS_COLOR_HEX = {
-    "PET": "#e3342f",    # drawn red
-    "PP": "#ff8c00",     # drawn orange
-    "LDPE": "#ffd700",   # drawn yellow
-}
+# The palette lives in polyx/core/annotate.py (theme-independent domain data,
+# next to the drawing that uses it) and the theme re-exports it.
+# CLASS_COLOR_HEX = {
+#     "PET": "#e3342f",    # drawn red
+#     "PP": "#ff8c00",     # drawn orange
+#     "LDPE": "#ffd700",   # drawn yellow
+# }
 ```
 
 **Font:** Segoe UI (Windows-native)

@@ -222,16 +222,15 @@ DEFAULT_THEME = "claro"
 # ════════════════════════════════════════════════════════════════════
 #  Domain colours: the same in every theme
 # ════════════════════════════════════════════════════════════════════
-CLASS_COLOR_HEX = {
-    "PET": "#e3342f",  # drawn red
-    "PP": "#ff8c00",  # drawn orange
-    "LDPE": "#ffd700",  # drawn yellow
-    "PE": "#ffd700",  # alias
-}
+# The palette is theme-independent DOMAIN data, so it lives in core
+# (polyx.core.annotate) with the drawing that uses it; it is re-exported
+# here so every consumer keeps its import path. The fallback is the same
+# one the drawing uses — unknown classes look the same everywhere.
+from polyx.core.annotate import CLASS_COLOR_HEX, FALLBACK_COLOR_HEX  # noqa: E402
 
 
 def class_qcolor(name: str) -> QColor:
-    return QColor(CLASS_COLOR_HEX.get(name, "#888888"))
+    return QColor(CLASS_COLOR_HEX.get(name, FALLBACK_COLOR_HEX))
 
 
 APP_FONT_FAMILY = "Segoe UI"
