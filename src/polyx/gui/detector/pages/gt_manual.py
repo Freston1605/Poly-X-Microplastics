@@ -299,7 +299,7 @@ class AnnotCanvas(QGraphicsView):
 
     def _class_color(self, cid: int) -> QColor:
         name = self.class_names[cid] if cid < len(self.class_names) else ""
-        hex_ = T.CLASS_COLOR_HEX.get(name, "#33aaff")
+        hex_ = T.CLASS_COLOR_HEX.get(name, T.FALLBACK_COLOR_HEX)
         return QColor(hex_)
 
     def _refresh(self):

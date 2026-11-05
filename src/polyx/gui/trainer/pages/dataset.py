@@ -460,7 +460,7 @@ class DatasetPage(TrainerPage):
         names = self.state.dataset.class_names
         for cid, cx, cy, w, h in boxes:
             name = names[cid] if cid < len(names) else str(cid)
-            color = QColor(T.CLASS_COLOR_HEX.get(name, "#33aaff"))
+            color = QColor(T.CLASS_COLOR_HEX.get(name, T.FALLBACK_COLOR_HEX))
             painter.setPen(QPen(color, max(2, img.width() // 300)))
             x = (cx - w / 2) * img.width()
             y = (cy - h / 2) * img.height()

@@ -220,41 +220,41 @@ def test_run_sin_modelos_falla_sin_carpeta(qapp, tmp_path):
 import hashlib  # noqa: E402
 
 
-def test_caracterizacion_dibujo_detector_golden(qapp, tmp_path):
+def test_characterization_detector_drawing_golden(qapp, tmp_path):
     """Characterization golden of the Detector runner's current drawing path.
 
     Pins the three views (predictions, ground truth, combined) and the naming
     convention before the triptych migration (ticket #31). No production code
     is changed.
     """
-    ruta = _placa(tmp_path / "fotos" / "placa_gt.png")
+    plate_path = _placa(tmp_path / "fotos" / "placa_gt.png")
     # GT only for the upper box (same as the other GT test).
     x1, y1, x2, y2 = _CAJA_ARRIBA
     cx, cy = (x1 + x2) / 2 / 160, (y1 + y2) / 2 / 160
-    (ruta.parent / "placa_gt.txt").write_text(
+    (plate_path.parent / "placa_gt.txt").write_text(
         f"0 {cx:.6f} {cy:.6f} {(x2 - x1) / 160:.6f} {(y2 - y1) / 160:.6f}\n",
         encoding="utf-8",
     )
-    estado = _estado(tmp_path, [ruta])
-    runner = _runner_con_carpeta(estado, tmp_path)
-    eventos = _ejecutar(runner)
+    state = _estado(tmp_path, [plate_path])
+    runner = _runner_con_carpeta(state, tmp_path)
+    events = _ejecutar(runner)
 
-    assert eventos["failed"] == []
-    res = estado.results[0][0]
-    assert res.has_gt is True
+    assert events["failed"] == []
+    result = state.results[0][0]
+    assert result.has_gt is True
 
     # Naming convention: {index:04d}_{stem}{suffix}.png
-    assert res.pred_path is not None and res.pred_path.name == "0000_placa_gt_pred.png"
-    assert res.gt_path is not None and res.gt_path.name == "0000_placa_gt_gt.png"
-    assert res.annotated_path is not None and res.annotated_path.name == "0000_placa_gt_annot.png"
-    assert res.pred_path.parent == res.gt_path.parent == res.annotated_path.parent
+    assert result.pred_path is not None and result.pred_path.name == "0000_placa_gt_pred.png"
+    assert result.gt_path is not None and result.gt_path.name == "0000_placa_gt_gt.png"
+    assert result.annotated_path is not None and result.annotated_path.name == "0000_placa_gt_annot.png"
+    assert result.pred_path.parent == result.gt_path.parent == result.annotated_path.parent
 
-    def _sha(p: Path) -> str:
-        return hashlib.sha256(p.read_bytes()).hexdigest()
+    def _sha(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
 
     # Golden pixel-hashes of the three views produced by the runner's current
     # drawing path (_draw_annotated / _color_bgr_for_class / _annotate_images).
     # Captured before the triptych migration.
-    assert _sha(res.pred_path) == "cd2d41b0ada491fa3da76995c438cf615edf80d3222eb9036aa3c27c5d84cba9"
-    assert _sha(res.gt_path) == "9260e807bdcf18b92057ace6a6ec8f79655fba31bf782e2cd3c2cf72fd48bcf8"
-    assert _sha(res.annotated_path) == "3be19e6adb0800e204a3e5856569e60aa7124758c7a1117b82bc3372cd39e3f7"
+    assert _sha(result.pred_path) == "cd2d41b0ada491fa3da76995c438cf615edf80d3222eb9036aa3c27c5d84cba9"
+    assert _sha(result.gt_path) == "9260e807bdcf18b92057ace6a6ec8f79655fba31bf782e2cd3c2cf72fd48bcf8"
+    assert _sha(result.annotated_path) == "3be19e6adb0800e204a3e5856569e60aa7124758c7a1117b82bc3372cd39e3f7"
