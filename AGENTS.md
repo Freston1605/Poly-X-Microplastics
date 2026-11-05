@@ -20,9 +20,11 @@ convention. **Do not duplicate content here.**
   only survives inside the `tr()` layer and the UI strings it wraps.
 - **Paths always with `pathlib.Path`**, never bare strings.
 - **Colors from `polyx/gui/theme.py`** (`T.ACCENT`, `T.OK`…), never by hand.
-- **Nothing OS-specific outside `polyx/model/plataforma.py`.**
+- **Nothing OS-specific outside `polyx/core/platform.py`.**
 - Images with `cv2.imdecode`/`imencode` over `np.fromfile`, not `imread`/`imwrite`:
   on Windows those fail silently with accented paths.
+- Dev env: **`uv sync --extra gui`** — the suite imports Qt; plain
+  `uv sync` prunes PySide6 from the `.venv`.
 - Run the tests with `.venv\Scripts\python.exe -m pytest -q` and wait
   until the **full suite passes with zero failures and zero skips**
   before calling anything done.

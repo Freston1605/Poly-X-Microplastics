@@ -1,9 +1,6 @@
 # Lint-de-test masa minima: instalar las versiones exactas del proyecto
 # (el pin numpy==1.26.4 es fragil: sube numpy o ultralytics y hay que saberlo
 # aqui, no en la maquina del estudio), correr el pytest completo sin ventanas.
-#
-# No hay lint ni build a proposito: no hay linter configurado y la app es
-# de escritorio; anadir etapas huecas solo gasta minutos del runner.
 name: CI
 
 on:
