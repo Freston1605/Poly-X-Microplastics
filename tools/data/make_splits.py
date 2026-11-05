@@ -334,8 +334,7 @@ def _rollback(
             destination.rename(source)
         except OSError as exc:
             failures += 1
-            print(f"warning: could not restore {destination} -> {source}: {exc}",
-                  file=sys.stderr)
+            print(f"warning: could not restore {destination} -> {source}: {exc}", file=sys.stderr)
     if yaml_backed_up:
         try:
             shutil.copy2(backup / "dataset.yaml", root / "dataset.yaml")
@@ -489,9 +488,7 @@ def _main(argv: list[str] | None = None) -> int:
         _patch_dataset_yaml(root, names)
         _verify_after_apply(root, before, before_labels)
     except (DatasetError, OSError) as exc:
-        failures = _rollback(
-            completed_moves, staged, yaml_backed_up, backup, root, created_dirs
-        )
+        failures = _rollback(completed_moves, staged, yaml_backed_up, backup, root, created_dirs)
         if failures:
             print(
                 f"apply failed and {failures} restore operation(s) did not complete; "

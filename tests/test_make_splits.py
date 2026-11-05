@@ -175,11 +175,7 @@ def test_unexpected_file_blocks_changes(tmp_path: Path) -> None:
 
 
 def _snapshot(root: Path) -> dict[str, bytes]:
-    return {
-        p.relative_to(root).as_posix(): p.read_bytes()
-        for p in root.rglob("*")
-        if p.is_file()
-    }
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
 
 
 def test_swapped_class_names_abort_before_changes(tmp_path: Path) -> None:

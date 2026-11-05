@@ -14,8 +14,17 @@ on every push to `main`:
    (the suite opens no windows; PySide6 is the only thing that asks for a
    platform).
 
-There is no lint stage (no linter is configured) and no build stage (the app is
-desktop and the installers are the repo's own scripts).
+Beyond the suite, the job runs `ruff check` (lint), `ruff format --check`
+(formatting; line length 100 in `pyproject.toml`) and `ty` — type checking is
+blocking on `src/polyx/core` + `src/polyx/cli` and advisory on the GUI. A
+follow-up `build` job builds the wheel and smoke-imports it. Before pushing,
+run the same checks locally:
+
+```bash
+uv run ruff check src/ tests/ tools/ install/
+uv run ruff format --check src/ tests/ tools/ install/
+uv run ty check src/polyx/core src/polyx/cli
+```
 
 ## Running the same tests locally
 
@@ -54,7 +63,8 @@ python -m pytest -q          # inside the project .venv
 
 ## Before opening a PR
 
-- The full suite passes locally (`pytest -q`, zero failures).
+- The full suite passes locally (`pytest -q`, zero failures), and
+  `ruff check` / `ruff format --check` are clean (see above).
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).

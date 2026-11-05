@@ -162,6 +162,4 @@ DUPLICATE_PAIRS: tuple[tuple[str, str], ...] = (
     ("LDPE 12", "LDPE 9"),
 )
 
-REMOVED_DUPLICATES: tuple[str, ...] = tuple(
-    duplicate for duplicate, _ in DUPLICATE_PAIRS
-)
+REMOVED_DUPLICATES: tuple[str, ...] = tuple(duplicate for duplicate, _ in DUPLICATE_PAIRS)
