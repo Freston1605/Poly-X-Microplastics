@@ -246,7 +246,10 @@ def test_characterization_detector_drawing_golden(qapp, tmp_path):
     # Naming convention: {index:04d}_{stem}{suffix}.png
     assert result.pred_path is not None and result.pred_path.name == "0000_placa_gt_pred.png"
     assert result.gt_path is not None and result.gt_path.name == "0000_placa_gt_gt.png"
-    assert result.annotated_path is not None and result.annotated_path.name == "0000_placa_gt_annot.png"
+    assert (
+        result.annotated_path is not None
+        and result.annotated_path.name == "0000_placa_gt_annot.png"
+    )
     assert result.pred_path.parent == result.gt_path.parent == result.annotated_path.parent
 
     def _sha(path: Path) -> str:
@@ -255,6 +258,13 @@ def test_characterization_detector_drawing_golden(qapp, tmp_path):
     # Golden pixel-hashes of the three views produced by the runner's current
     # drawing path (_draw_annotated / _color_bgr_for_class / _annotate_images).
     # Captured before the triptych migration.
-    assert _sha(result.pred_path) == "cd2d41b0ada491fa3da76995c438cf615edf80d3222eb9036aa3c27c5d84cba9"
-    assert _sha(result.gt_path) == "9260e807bdcf18b92057ace6a6ec8f79655fba31bf782e2cd3c2cf72fd48bcf8"
-    assert _sha(result.annotated_path) == "3be19e6adb0800e204a3e5856569e60aa7124758c7a1117b82bc3372cd39e3f7"
+    assert (
+        _sha(result.pred_path) == "cd2d41b0ada491fa3da76995c438cf615edf80d3222eb9036aa3c27c5d84cba9"
+    )
+    assert (
+        _sha(result.gt_path) == "9260e807bdcf18b92057ace6a6ec8f79655fba31bf782e2cd3c2cf72fd48bcf8"
+    )
+    assert (
+        _sha(result.annotated_path)
+        == "3be19e6adb0800e204a3e5856569e60aa7124758c7a1117b82bc3372cd39e3f7"
+    )
