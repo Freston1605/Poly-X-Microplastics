@@ -9,7 +9,7 @@ All captures of the same plate (the ``(4)``, ``(4.1)``, ``(4.2)`` suffixes of
 the Sedcalci series, and the ``(6)``/``(6.1)`` or ``(7)``/``(7.1)`` pairs of
 the marine sediment series) are kept together.
 
-Two files are removed by ``make_splits.py``:
+Two files are removed by ``make_splits.py`` (see ``DUPLICATE_PAIRS``):
 
 - ``LDPE 10``: a byte-identical copy of ``LDPE 8`` with a partial,
   differently-aligned re-annotation (698 boxes against LDPE 8's 1052).
@@ -149,8 +149,6 @@ SPLIT_GROUPS: dict[str, list[str]] = {
     ],
 }
 
-PENDING_ANNOTATION: tuple[str, ...] = ("ldpe_11",)
-
 SPLIT_IMAGES: dict[str, list[str]] = {
     split: [image for group in groups for image in PLATE_GROUPS[group]]
     for split, groups in SPLIT_GROUPS.items()
@@ -158,5 +156,9 @@ SPLIT_IMAGES: dict[str, list[str]] = {
 
 REMOVED_DUPLICATES: tuple[str, ...] = ("LDPE 10", "LDPE 12")
 
-EXPECTED_COUNTS: dict[str, int] = {split: len(images) for split, images in SPLIT_IMAGES.items()}
-EXPECTED_TOTAL_IMAGES: int = sum(EXPECTED_COUNTS.values())
+# (duplicate, retained): byte-identical pairs. The dataset card and
+# make_splits.py both rely on this being the single source of truth.
+DUPLICATE_PAIRS: tuple[tuple[str, str], ...] = (
+    ("LDPE 10", "LDPE 8"),
+    ("LDPE 12", "LDPE 9"),
+)

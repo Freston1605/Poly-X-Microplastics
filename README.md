@@ -570,7 +570,7 @@ install/                # 🪟/🍎 end-user scripts (SETUP, launchers, updaters
 ```
 
 Everything that differs between systems — opening folders, launching the updater,
-picking the compute device — lives in `polyx/model/plataforma.py` rather than being
+picking the compute device — lives in `src/polyx/core/platform.py` rather than being
 scattered across the code.
 
 ---

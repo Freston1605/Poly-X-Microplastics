@@ -905,9 +905,9 @@ the hyperparameters. They run in sequence because they share the GPU, and when
 they finish the log summarises the comparison.</p>
 
 <h3>Dataset</h3>
-[[fig:ui/12_ent_dataset|The <b>Dataset</b> tab. Loading <code>data.yaml</code> with automatic split
+[[fig:ui/12_ent_dataset|The <b>Dataset</b> tab. Loading <code>dataset.yaml</code> with automatic split
 detection and a box preview.]]
-<p>It loads <code>data.yaml</code>, detects the train/val/test splits and validates
+<p>It loads <code>dataset.yaml</code>, detects the train/val/test splits and validates
 the dataset with <b>✓/✗</b> indicators: images present, matching labels, coherent
 classes. It includes a <b>pre-training audit</b> with the class distribution and a
 verdict on whether the dataset is fit to train on.</p>
@@ -1591,6 +1591,20 @@ uninstaller does not reach.</p>
 ├── Lanzar_macOS.command      <span class="c">[Mac] installer + launcher</span>
 ├── actualizar_macOS.command  <span class="c">[Mac] updater</span>
 └── LEEME.txt                 <span class="c">short version of the installation</span></code></pre>
+
+<h3>Where your runs and models live, per OS</h3>
+<div class="tabla-env">
+<table>
+  <thead><tr><th>OS</th><th>Data folder</th></tr></thead>
+  <tbody>
+    <tr><td>Windows</td><td><code>%LOCALAPPDATA%\polyx</code></td></tr>
+    <tr><td>macOS</td><td><code>~/Library/Application Support/polyx</code></td></tr>
+    <tr><td>Linux</td><td><code>$XDG_DATA_HOME/polyx</code> (default <code>~/.local/share/polyx</code>)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The <code>POLYX_HOME</code> environment variable overrides all three
+(useful for portable installs and for the tests).</p>
 
 <div class="aviso err">
   <span class="et">What never gets deleted</span>

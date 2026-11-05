@@ -12,6 +12,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "tools" / "data" / "make_splits.py"
 MANIFEST = ROOT / "tools" / "data" / "split_manifest.py"
@@ -170,3 +172,67 @@ def test_unexpected_file_blocks_changes(tmp_path: Path) -> None:
     assert _load_make_splits()._main(["--root", str(root), "--apply"]) == 1
     after = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
     assert before == after
+
+
+def _snapshot(root: Path) -> dict[str, bytes]:
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in root.rglob("*")
+        if p.is_file()
+    }
+
+
+def test_swapped_class_names_abort_before_changes(tmp_path: Path) -> None:
+    root = _make_dataset(tmp_path)
+    yaml_path = root / "dataset.yaml"
+    text = yaml_path.read_text(encoding="utf-8")
+    swapped = text.replace(
+        "0: PET\n  1: PP\n  2: LDPE\n",
+        "0: PP\n  1: PET\n  2: LDPE\n",
+    )
+    assert swapped != text
+    yaml_path.write_text(swapped, encoding="utf-8")
+    before = _snapshot(root)
+
+    assert _load_make_splits()._main(["--root", str(root), "--apply"]) == 1
+    assert _snapshot(root) == before
+
+
+def test_nested_file_aborts_before_changes(tmp_path: Path) -> None:
+    root = _make_dataset(tmp_path)
+    nested = root / "images" / "val" / "nested"
+    nested.mkdir()
+    (root / "images" / "val" / "Mezc 5.jpg").rename(nested / "Mezc 5.jpg")
+    before = _snapshot(root)
+
+    assert _load_make_splits()._main(["--root", str(root), "--apply"]) == 1
+    assert _snapshot(root) == before
+
+
+def test_unknown_class_id_aborts_before_changes(tmp_path: Path) -> None:
+    root = _make_dataset(tmp_path)
+    label = root / "labels" / "train" / "Mezc 1.txt"
+    label.write_text(
+        label.read_text(encoding="utf-8") + "9 0.5 0.5 0.05 0.05\n",
+        encoding="utf-8",
+    )
+    before = _snapshot(root)
+
+    assert _load_make_splits()._main(["--root", str(root), "--apply"]) == 1
+    assert _snapshot(root) == before
+
+
+def test_failed_apply_rolls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = _make_dataset(tmp_path)
+    before = _snapshot(root)
+    script = _load_make_splits()
+    real_rename = Path.rename
+
+    def fail_first_rename_into_test_split(self: Path, target: Path) -> Path:
+        if Path(target).parent == root / "images" / "test":
+            raise OSError("simulated mid-apply failure")
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", fail_first_rename_into_test_split)
+    assert script._main(["--root", str(root), "--apply"]) != 0
+    assert _snapshot(root) == before

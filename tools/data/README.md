@@ -8,10 +8,12 @@ through the project owner’s storage (institutional/author download).
 `train` / `val` / `test` split. It:
 
 1. verifies every image has a corresponding label (and vice-versa),
+   plus the exact `names:` mapping in `dataset.yaml`,
 2. mechanically moves files instead of copying them,
 3. drops the two byte-identical duplicates (`LDPE 10`, `LDPE 12`),
 4. rewrites `data/dataset.yaml` with `test: images/test`,
-5. refuses to do anything if anything is missing or unexpected.
+5. refuses to do anything if anything is missing or unexpected —
+   and if the apply itself fails midway, moves everything back.
 
 ## Usage
 

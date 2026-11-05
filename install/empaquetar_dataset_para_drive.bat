@@ -11,7 +11,7 @@ echo.
 echo   Crea un ZIP liviano con SOLO lo necesario para entrenar:
 echo     - imagenes .jpg          (~53 MB)
 echo     - etiquetas .txt (labels)
-echo     - data.yaml (rutas relativas, portable)
+echo     - dataset.yaml (rutas relativas, portable)
 echo   Excluye los .npy (copias crudas de 1.5 GB que NO se necesitan).
 echo.
 
@@ -64,7 +64,7 @@ echo        Poly-X-Microplastics\data\images
 echo        Poly-X-Microplastics\data\labels
 echo.
 echo   4) Ejecuta SETUP.bat y luego iniciar_polyx.bat.
-echo      El data.yaml usa rutas relativas, asi que el Entrenador
+echo      El dataset.yaml usa rutas relativas, asi que el Entrenador
 echo      encuentra el dataset solo, sin editar nada.
 echo.
 pause

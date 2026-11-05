@@ -108,7 +108,7 @@ src/                      # Source code (installable package)
         ├── labeler/      # Module 4: Manual YOLO annotation
         └── viewer/       # Module 5: Inspection with μm/px calibration
 
-tests/                    # Pytest (44 modules + fixtures)
+tests/                    # Pytest (43 test modules + fixtures)
 ├── english_scan.py       # Spanish-remnant scanner (no LibCST)
 ├── test_*_ingles.py      # Language-convention gates
 ├── fixtures/             # Shared fixtures and report baselines
@@ -117,7 +117,8 @@ tests/                    # Pytest (44 modules + fixtures)
 tools/                    # Development tooling (not packaged)
 ├── audit/                # Translation audit + report fixture capture
 ├── manual/               # Manual chain (capture, generate, text ES/EN)
-└── packaging/            # PyInstaller (polyx.spec, build.py)
+├── packaging/            # PyInstaller (polyx.spec, build.py)
+└── data/                 # Dataset split tooling (manifest + make_splits)
 
 docs/                     # Documentation
 ├── manual/               # Compiled manual (versioned, offline)
@@ -385,10 +386,10 @@ update checker (`polyx.gui.updates`), manual/report openers, preferences.
 **Output** (in the per-user data dir — `%LOCALAPPDATA%\polyx`,
 `~/Library/Application Support/polyx` or `~/.local/share/polyx`; `POLYX_HOME`
 overrides; ADR-0001):
-- `runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
-- `runs/.../centroids.csv` — class, x, y, conf, diam_um
-- `runs/.../metrics.json` — TP/FP/FN per class
-- `runs/.../report.html` — Paper-quality report (base64)
+- `<data dir>/runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
+- `<data dir>/runs/YYYYMMDD_HHMMSS/centroids.csv` — class, x, y, conf, diam_um
+- `<data dir>/runs/YYYYMMDD_HHMMSS/metrics.json` — TP/FP/FN per class
+- `<data dir>/runs/YYYYMMDD_HHMMSS/report.html` — Paper-quality report (base64)
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -731,15 +732,6 @@ set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py 
 
 ---
 
-## 📞 Contact
-
-**Cristofher Ferrada**  
-PhD (c) in Chemistry — Pontificia Universidad Católica de Valparaíso  
-2026
-
-**Repo:** https://github.com/CrissFerrada/Poly-X-Microplastics
----
-
 ## Agent skills
 
 ### Issue tracker
@@ -753,3 +745,13 @@ The five default labels, identity-mapped. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Single-context. See `docs/agents/domain.md`.
+
+---
+
+## 📞 Contact
+
+**Cristofher Ferrada**  
+PhD (c) in Chemistry — Pontificia Universidad Católica de Valparaíso  
+2026
+
+**Repo:** https://github.com/CrissFerrada/Poly-X-Microplastics

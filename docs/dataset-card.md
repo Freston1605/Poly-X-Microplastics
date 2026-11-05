@@ -52,16 +52,20 @@ currently unannotated):
 
 ## Known limitations
 
-- **PP and LDPE are not fully separable by colour alone.** PP is measured at
-  (B=133, G=135, R=29), LDPE at (B=162, G=151, R=62), and about 18.6% of PP
-  sampling points sit nearer LDPE's centroid. This is why the assignment rule
-  exists and why recall for PP/LDPE is far below PET.
+- **PP and LDPE are not fully separable by colour alone.** Measured as the
+  mean of **all in-box pixels across the retained data** (B/G/R order):
+  PP at (B=133, G=135, R=29), LDPE at (B=162, G=151, R=62), and about 18.6% of
+  PP samples sit nearer LDPE's centroid. This is why the assignment rule
+  exists and why recall for PP/LDPE is far below PET. (This differs from the
+  August 2026 box-interior mean in CLAUDE.md — PP (122,125,32), LDPE
+  (181,162,57), n=30, R/G/B order — which weights plates very differently.
+  Both are kept; they are labelled by method.)
 - **PET is larger** (median 49 px side) than PP (26 px) and LDPE (27 px), so
   PET performance partially reflects image size, not only chemistry.
 - **Manual annotation noise** matters. Two annotations of a byte-identical
   LDPE image had 1052 vs 698 boxes (~34% disagreement). Duplicates were
-  resolved: LDPE 10 is kept as a lower-quality duplicate of LDPE 8 and LDPE
-  12 as an unlabelled copy of LDPE 9; both were removed from the dataset.
+  resolved: LDPE 10 was identified as a lower-quality duplicate of LDPE 8, and
+  LDPE 12 as an unlabelled copy of LDPE 9; both were removed from the dataset.
 - **`LDPE 11`** is excluded from `train`, `val` and `test` and lives in
   `data/pending/`. It will be moved back into the tree and added to one of the
   splits only after a human has annotated it. Do not fabricate boxes for it.
@@ -73,8 +77,9 @@ currently unannotated):
 
 ## Split method
 
-Plate groups are kept intact to avoid leakage. `tools/data/make_splits.py`
-contains the exact group assignment and verifies it before moving files. The
+Plate groups are kept intact to avoid leakage. The exact group assignment lives
+in `tools/data/split_manifest.py` (the single source of truth);
+`tools/data/make_splits.py` verifies it and moves the files accordingly. The
 assignment was also chosen to keep per-class box counts roughly proportional
 across train/val/test (see `tools/data/README.md`).
 

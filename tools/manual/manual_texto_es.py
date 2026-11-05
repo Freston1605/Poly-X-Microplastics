@@ -921,9 +921,9 @@ hiperparametros. Van en secuencia porque comparten GPU, y al terminar el registr
 resume la comparación.</p>
 
 <h3>Dataset</h3>
-[[fig:ui/12_ent_dataset|Pestaña <b>Dataset</b>. Carga del <code>data.yaml</code> con
+[[fig:ui/12_ent_dataset|Pestaña <b>Dataset</b>. Carga del <code>dataset.yaml</code> con
 auto-detección de particiones y vista previa de las cajas.]]
-<p>Carga el <code>data.yaml</code>, detecta las particiones train/val/test y
+<p>Carga el <code>dataset.yaml</code>, detecta las particiones train/val/test y
 valida el dataset con indicadores <b>✓/✗</b>: imágenes presentes, etiquetas
 correspondientes, clases coherentes. Incluye una <b>auditoría previa</b> con la
 distribución de clases y un veredicto de si el dataset es apto para entrenar.</p>
@@ -1609,6 +1609,20 @@ desinstalación no llega.</p>
 ├── Lanzar_macOS.command      <span class="c">[Mac] instalador + lanzador</span>
 ├── actualizar_macOS.command  <span class="c">[Mac] actualizador</span>
 └── LEEME.txt                 <span class="c">versión corta de la instalación</span></code></pre>
+
+<h3>Dónde viven tus corridas y modelos, según sistema</h3>
+<div class="tabla-env">
+<table>
+  <thead><tr><th>Sistema</th><th>Carpeta de datos</th></tr></thead>
+  <tbody>
+    <tr><td>Windows</td><td><code>%LOCALAPPDATA%\polyx</code></td></tr>
+    <tr><td>macOS</td><td><code>~/Library/Application Support/polyx</code></td></tr>
+    <tr><td>Linux</td><td><code>$XDG_DATA_HOME/polyx</code> (por defecto <code>~/.local/share/polyx</code>)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>La variable de entorno <code>POLYX_HOME</code> tiene prioridad sobre las tres
+(útil en instalaciones portables y en las pruebas).</p>
 
 <div class="aviso err">
   <span class="et">Lo que no se borra</span>

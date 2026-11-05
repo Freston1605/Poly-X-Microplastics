@@ -6,7 +6,8 @@ Ultralytics layout ``images/{train,val,test}`` and ``labels/{train,val,test}``,
 using the tracked membership in ``split_manifest.py``.
 
 Two byte-identical images are removed (``LDPE 10`` and ``LDPE 12``); all other
-files are moved, never copied, and their bytes are verified before and after.
+files are moved, never copied, and their bytes are verified before and after
+(images and labels alike).
 
 Usage:
 
@@ -14,14 +15,20 @@ Usage:
     .venv/bin/python tools/data/make_splits.py --root data --apply
 
 ``--dry-run`` is the default and writes nothing. The script exits non-zero
-and changes nothing when any check fails: it never guesses.
+and changes nothing when any check fails: it never guesses. If the apply
+phase itself fails midway, everything is moved back, so the dataset is left
+exactly as it was.
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
+import dataclasses
 import hashlib
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 try:
@@ -46,6 +53,16 @@ class DatasetError(RuntimeError):
     """A precondition failed; no changes may be applied."""
 
 
+@dataclasses.dataclass
+class _Report:
+    """The collected state of the dataset tree."""
+
+    images: dict[str, Path] = dataclasses.field(default_factory=dict)
+    labels: dict[str, Path] = dataclasses.field(default_factory=dict)
+    unexpected: list[str] = dataclasses.field(default_factory=list)
+    duplicates: list[str] = dataclasses.field(default_factory=list)
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -54,62 +71,63 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _collect_tree(root: Path) -> dict:
+def _collect_tree(root: Path) -> _Report:
     """Collect images and labels, or fail with a complete list of problems."""
-    report = {
-        "images": {},
-        "labels": {},
-        "unexpected": [],
-        "duplicates": [],
-    }
+    report = _Report()
     for split in SPLIT_DIRS:
         image_dir = root / "images" / split
         label_dir = root / "labels" / split
         if not image_dir.exists() and not label_dir.exists():
             continue
         if image_dir.exists() != label_dir.exists():
-            report["unexpected"].append(f"half-created split '{split}'")
+            report.unexpected.append(f"half-created split '{split}'")
             continue
         if not image_dir.is_dir() or not label_dir.is_dir():
-            report["unexpected"].append(f"'{split}' is not a directory")
+            report.unexpected.append(f"'{split}' is not a directory")
             continue
         _collect_split(image_dir, "images", report)
         _collect_split(label_dir, "labels", report)
 
-    if report["unexpected"]:
+    if report.unexpected:
         return report
 
     _verify_duplicate_copies(report)
     _verify_expected_sets(report)
+    _verify_class_ids(report)
     return report
 
 
-def _collect_split(directory: Path, kind: str, report: dict) -> None:
+def _collect_split(directory: Path, kind: str, report: _Report) -> None:
     for path in sorted(directory.rglob("*")):
         if path.is_dir():
             continue
+        if path.parent != directory:
+            # The Ultralytics layout is flat; a nested file would break the
+            # destination computation and confuse every consumer of the set.
+            report.unexpected.append(f"nested file: {path} (the YOLO layout is flat)")
+            continue
         if kind == "images" and path.suffix.lower() in IMAGE_EXTS:
-            _remember(report["images"], path, report)
+            _remember(report.images, path, report)
         elif kind == "labels" and path.suffix.lower() == LABEL_EXT:
-            _remember(report["labels"], path, report)
+            _remember(report.labels, path, report)
         else:
-            report["unexpected"].append(str(path))
+            report.unexpected.append(str(path))
 
 
-def _remember(inventory: dict[str, Path], path: Path, report: dict) -> None:
+def _remember(inventory: dict[str, Path], path: Path, report: _Report) -> None:
     stem = path.stem
     other = inventory.get(stem)
     if other is not None:
-        report["duplicates"].append(f"duplicate {stem} in {other.parent} and {path.parent}")
+        report.duplicates.append(f"duplicate {stem} in {other.parent} and {path.parent}")
         return
     inventory[stem] = path
 
 
-def _verify_duplicate_copies(report: dict) -> None:
-    # LDPE 10 must be byte-identical to LDPE 8; LDPE 12 must be identical to LDPE 9.
-    for duplicate, retained in (("LDPE 10", "LDPE 8"), ("LDPE 12", "LDPE 9")):
-        dup = report["images"].get(duplicate)
-        keep = report["images"].get(retained)
+def _verify_duplicate_copies(report: _Report) -> None:
+    # The dataset ships two byte-identical plates; both must match their retained twin.
+    for duplicate, retained in manifest.DUPLICATE_PAIRS:
+        dup = report.images.get(duplicate)
+        keep = report.images.get(retained)
         if dup is not None and keep is None:
             raise DatasetError(
                 f"{duplicate} exists but the retained duplicate {retained} is missing."
@@ -120,15 +138,15 @@ def _verify_duplicate_copies(report: dict) -> None:
             )
 
 
-def _verify_expected_sets(report: dict) -> None:
+def _verify_expected_sets(report: _Report) -> None:
     images = {
         stem: path
-        for stem, path in report["images"].items()
+        for stem, path in report.images.items()
         if stem not in manifest.REMOVED_DUPLICATES
     }
     labels = {
         stem: path
-        for stem, path in report["labels"].items()
+        for stem, path in report.labels.items()
         if stem not in manifest.REMOVED_DUPLICATES
     }
 
@@ -152,6 +170,17 @@ def _verify_expected_sets(report: dict) -> None:
         raise DatasetError("\n".join(problems))
 
 
+def _verify_class_ids(report: _Report) -> None:
+    problems = [
+        f"{path}: unknown class id {class_id}"
+        for path in sorted(report.labels.values())
+        for class_id in _label_stats(path)
+        if str(class_id) not in EXPECTED_NAMES
+    ]
+    if problems:
+        raise DatasetError("\n".join(problems))
+
+
 def _label_stats(path: Path) -> dict[int, int]:
     counts: dict[int, int] = {}
     for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
@@ -166,17 +195,15 @@ def _label_stats(path: Path) -> dict[int, int]:
     return counts
 
 
-def _class_counts(report: dict) -> dict[str, dict[str, int]]:
+def _class_counts(report: _Report) -> dict[str, dict[str, int]]:
     names = list(EXPECTED_NAMES.values())
-    names_by_id = list(names)
     per_split: dict[str, dict[str, int]] = {}
     for split, stems in manifest.SPLIT_IMAGES.items():
         rows = dict.fromkeys(names, 0)
         for stem in stems:
-            label = report["labels"][stem]
+            label = report.labels[stem]
             for class_id, count in _label_stats(label).items():
-                if 0 <= class_id < len(names_by_id):
-                    rows[names_by_id[class_id]] += count
+                rows[names[class_id]] += count
         per_split[split] = rows
     return per_split
 
@@ -190,18 +217,20 @@ def _expected_names(root: Path) -> dict[str, str]:
     if not raw_names:
         return dict(EXPECTED_NAMES)
     names = {str(k): str(v) for k, v in dict(raw_names).items()}
-    if set(names.values()) != set(EXPECTED_NAMES.values()):
-        raise DatasetError(f"unexpected class names in {yaml_path}: {names}")
+    if names != EXPECTED_NAMES:
+        raise DatasetError(
+            f"unexpected class names in {yaml_path}: {names} (expected {EXPECTED_NAMES})"
+        )
     return names
 
 
-def _moves_from_report(report: dict) -> list[tuple[Path, Path]]:
+def _moves_from_report(report: _Report) -> list[tuple[Path, Path]]:
     moves: list[tuple[Path, Path]] = []
-    for inventory in (report["images"], report["labels"]):
+    for inventory in (report.images, report.labels):
         for split, stems in manifest.SPLIT_IMAGES.items():
             for stem in stems:
                 path = inventory[stem]
-                destination_dir = path.parents[1] / split
+                destination_dir = path.parents[1] / split  # flat layout, checked at collect
                 if path.parent != destination_dir:
                     moves.append((path, destination_dir / path.name))
     return moves
@@ -229,35 +258,92 @@ def _patch_dataset_yaml(root: Path, names: dict[str, str]) -> None:
     (root / "dataset.yaml").write_text(text, encoding="utf-8")
 
 
-def _remove_ultralytics_caches(root: Path) -> list[Path]:
-    removed: list[Path] = []
+def _ensure_split_dirs(root: Path) -> list[Path]:
+    """Create the split directories; returns the ones this call created."""
+    created: list[Path] = []
+    for split in SPLIT_DIRS:
+        for kind in ("images", "labels"):
+            directory = root / kind / split
+            if not directory.exists():
+                directory.mkdir(parents=True)
+                created.append(directory)
+    return created
+
+
+def _stage_file(path: Path, backup: Path, root: Path, bucket: str) -> tuple[Path, Path]:
+    target = backup / bucket / path.relative_to(root)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    path.rename(target)
+    return path, target
+
+
+def _stage_caches(root: Path, backup: Path) -> list[tuple[Path, Path]]:
     labels_dir = root / "labels"
-    for cache in sorted(labels_dir.rglob("*.cache")):
-        if cache.is_file():
-            cache.unlink()
-            removed.append(cache)
-    return removed
+    if not labels_dir.is_dir():
+        return []
+    return [
+        _stage_file(cache, backup, root, "caches")
+        for cache in sorted(labels_dir.rglob("*.cache"))
+        if cache.is_file()
+    ]
 
 
-def _remove_duplicates(root: Path) -> list[Path]:
-    removed: list[Path] = []
+def _stage_duplicates(root: Path, backup: Path) -> list[tuple[Path, Path]]:
+    staged = []
     for stem in manifest.REMOVED_DUPLICATES:
         for split in SPLIT_DIRS:
             label = root / "labels" / split / f"{stem}{LABEL_EXT}"
             if label.exists():
-                label.unlink()
-                removed.append(label)
+                staged.append(_stage_file(label, backup, root, "duplicates"))
             for ext in IMAGE_EXTS:
                 image = root / "images" / split / f"{stem}{ext}"
                 if image.exists():
-                    image.unlink()
-                    removed.append(image)
-    return removed
+                    staged.append(_stage_file(image, backup, root, "duplicates"))
+    return staged
 
 
-def _summary_lines(report: dict) -> list[str]:
+def _backup_dataset_yaml(root: Path, backup: Path) -> bool:
+    yaml_path = root / "dataset.yaml"
+    if not yaml_path.exists():
+        return False
+    shutil.copy2(yaml_path, backup / "dataset.yaml")
+    return True
+
+
+def _rollback(
+    completed_moves: list[tuple[Path, Path]],
+    staged: list[tuple[Path, Path]],
+    yaml_backed_up: bool,
+    backup: Path,
+    root: Path,
+    created_dirs: list[Path],
+) -> None:
+    """Undo every mutation this apply performed, best effort."""
+    for source, destination in reversed(completed_moves):
+        try:
+            destination.rename(source)
+        except OSError as exc:
+            print(f"warning: could not restore {destination} -> {source}: {exc}",
+                  file=sys.stderr)
+    if yaml_backed_up:
+        try:
+            shutil.copy2(backup / "dataset.yaml", root / "dataset.yaml")
+        except OSError as exc:
+            print(f"warning: could not restore dataset.yaml: {exc}", file=sys.stderr)
+    for original, backup_path in reversed(staged):
+        try:
+            original.parent.mkdir(parents=True, exist_ok=True)
+            backup_path.rename(original)
+        except OSError as exc:
+            print(f"warning: could not restore {original}: {exc}", file=sys.stderr)
+    for directory in reversed(created_dirs):
+        with contextlib.suppress(OSError):  # only removes it if the rollback left it empty
+            directory.rmdir()
+
+
+def _summary_lines(report: _Report) -> list[str]:
     lines = [
-        f"found {len(report['images'])} image files",
+        f"found {len(report.images)} image files",
         (
             f"  target: {len(manifest.SPLIT_IMAGES['train'])} train / "
             f"{len(manifest.SPLIT_IMAGES['val'])} val / "
@@ -268,22 +354,34 @@ def _summary_lines(report: dict) -> list[str]:
     return lines
 
 
-def _verify_after_apply(root: Path, before: dict[str, str]) -> None:
-    found: dict[str, Path] = {}
+def _verify_after_apply(root: Path, before: dict[str, str], before_labels: dict[str, str]) -> None:
+    found_images: dict[str, Path] = {}
+    found_labels: dict[str, Path] = {}
     for split in SPLIT_DIRS:
         image_dir = root / "images" / split
+        label_dir = root / "labels" / split
         if image_dir.is_dir():
-            for path in sorted(image_dir.glob("*")):
-                if path.is_file():
-                    found[path.stem] = path
+            for path in sorted(image_dir.rglob("*")):
+                if path.is_file() and path.suffix.lower() in IMAGE_EXTS:
+                    found_images[path.stem] = path
+        if label_dir.is_dir():
+            for path in sorted(label_dir.rglob("*")):
+                if path.is_file() and path.suffix.lower() == LABEL_EXT:
+                    found_labels[path.stem] = path
 
     problems = []
     for stem, expected_hash in before.items():
-        path = found.get(stem)
+        path = found_images.get(stem)
         if path is None:
             problems.append(f"{stem}: missing after apply")
         elif _sha256_file(path) != expected_hash:
-            problems.append(f"{stem}: bytes changed during apply")
+            problems.append(f"{stem}: image bytes changed during apply")
+    for stem, expected_hash in before_labels.items():
+        path = found_labels.get(stem)
+        if path is None:
+            problems.append(f"{stem}: label missing after apply")
+        elif _sha256_file(path) != expected_hash:
+            problems.append(f"{stem}: label bytes changed during apply")
     if problems:
         raise DatasetError("post-apply verification failed:\n" + "\n".join(problems))
 
@@ -310,14 +408,14 @@ def _main(argv: list[str] | None = None) -> int:
         print(f"dataset preflight failed; NO changes made:\n{exc}", file=sys.stderr)
         return 1
 
-    if report["unexpected"]:
+    if report.unexpected:
         print("dataset preflight failed; NO changes made:", file=sys.stderr)
-        for item in report["unexpected"]:
+        for item in report.unexpected:
             print(f"  - {item}", file=sys.stderr)
         return 1
-    if report["duplicates"]:
+    if report.duplicates:
         print("duplicate basenames found; NO changes made:", file=sys.stderr)
-        for item in report["duplicates"]:
+        for item in report.duplicates:
             print(f"  - {item}", file=sys.stderr)
         return 1
 
@@ -332,9 +430,9 @@ def _main(argv: list[str] | None = None) -> int:
     else:
         print("\nthe tree is already in the requested layout; no moves needed")
 
-    total_bytes = sum(path.stat().st_size for path in report["images"].values())
+    total_bytes = sum(path.stat().st_size for path in report.images.values())
     print(
-        f"\n{len(report['images'])} images / {len(report['labels'])} labels, "
+        f"\n{len(report.images)} images / {len(report.labels)} labels, "
         f"{total_bytes / 1e6:.1f} MB payload"
     )
 
@@ -348,35 +446,46 @@ def _main(argv: list[str] | None = None) -> int:
         return 0
 
     retained = {stem for images in manifest.SPLIT_IMAGES.values() for stem in images}
-    before = {stem: _sha256_file(report["images"][stem]) for stem in retained}
-    caches = _remove_ultralytics_caches(root)
+    before = {stem: _sha256_file(report.images[stem]) for stem in retained}
+    before_labels = {stem: _sha256_file(report.labels[stem]) for stem in retained}
 
-    for split in SPLIT_DIRS:
-        (root / "images" / split).mkdir(parents=True, exist_ok=True)
-        (root / "labels" / split).mkdir(parents=True, exist_ok=True)
-
-    for source, destination in moves:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        if destination.exists():
-            print(f"error: refusing to overwrite {destination}", file=sys.stderr)
-            return 1
-        source.rename(destination)
-
-    removed = _remove_duplicates(root)
-    _patch_dataset_yaml(root, names)
-
+    backup = Path(tempfile.mkdtemp(prefix=".make_splits_backup_", dir=root.parent))
+    staged: list[tuple[Path, Path]] = []
+    completed_moves: list[tuple[Path, Path]] = []
+    created_dirs = _ensure_split_dirs(root)
+    yaml_backed_up = False
     try:
-        _verify_after_apply(root, before)
-    except DatasetError as exc:
-        print(str(exc), file=sys.stderr)
+        caches = _stage_caches(root, backup)
+        duplicates = _stage_duplicates(root, backup)
+        staged += caches
+        staged += duplicates
+        yaml_backed_up = _backup_dataset_yaml(root, backup)
+
+        for source, destination in moves:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.exists():
+                raise DatasetError(f"refusing to overwrite {destination}")
+            source.rename(destination)
+            completed_moves.append((source, destination))
+
+        _patch_dataset_yaml(root, names)
+        _verify_after_apply(root, before, before_labels)
+    except (DatasetError, OSError) as exc:
+        _rollback(completed_moves, staged, yaml_backed_up, backup, root, created_dirs)
+        shutil.rmtree(backup, ignore_errors=True)
+        print(
+            f"apply failed; the dataset was restored to its previous state:\n{exc}",
+            file=sys.stderr,
+        )
         return 1
+    shutil.rmtree(backup, ignore_errors=True)
 
     print("\napplied:")
-    print(f"  {len(moves)} file(s) moved")
-    print(f"  {len(removed)} duplicate file(s) removed (LDPE 10/12)")
+    print(f"  {len(completed_moves)} file(s) moved")
+    print(f"  {len(duplicates)} duplicate file(s) removed (LDPE 10/12)")
     print(f"  {len(caches)} ultralytics cache(s) removed")
     print("  dataset.yaml rewritten: test added, header comment fixed")
-    print("  all retained image bytes verified after apply")
+    print("  all retained image and label bytes verified after apply")
     return 0
 
 
