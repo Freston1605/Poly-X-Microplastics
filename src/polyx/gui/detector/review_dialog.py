@@ -32,6 +32,7 @@ from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.i18n import tr
 from polyx.core.labels import STUDY_CLASSES, bbox_from, write_classes, write_lines
+from polyx.core.paths import DATASET_CORRECTIONS_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -317,7 +318,7 @@ class ReviewDialog(QDialog):
                 tr("No hay cajas en esta imagen. Corrige o dibuja antes de enviarla."),
             )
             return
-        root = Path(__file__).resolve().parents[4] / "dataset_correcciones"
+        root = DATASET_CORRECTIONS_DIR
         (root / "images").mkdir(parents=True, exist_ok=True)
         (root / "labels").mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, root / "images" / path.name)

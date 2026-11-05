@@ -25,14 +25,11 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import tr
+from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ._base import TrainerPage
-
-
-def _runs_root() -> Path:
-    return Path(__file__).resolve().parents[5] / "runs_train"
 
 
 def _b64_image(path: Path) -> str:
@@ -260,7 +257,7 @@ class ReportPage(TrainerPage):
 
     def _refresh(self):
         self.combo.clear()
-        root = _runs_root()
+        root = RUNS_TRAIN_DIR
         if not root.exists():
             return
         runs = sorted(
