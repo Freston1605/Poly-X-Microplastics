@@ -1092,7 +1092,8 @@ width and aspect ratio. Selecting a row shows <b>what was measured</b>:</p>
       sizes converted to μm. Useful for reviewing a manual count without going back
       to the Labeller.</li>
   <li><b>Load the predictions of a finished run</b> from your user's runs
-      folder (<code>%LOCALAPPDATA%\polyx\runs\</code>), without running the
+      folder (<code>%LOCALAPPDATA%\polyx\runs\</code> on Windows; elsewhere see
+      <a href="#estructura">Folder structure</a>), without running the
       model again. It always opens the original photograph and never the
       annotated PNG, which has the boxes painted on it.</li>
   <li><b>Drag and drop</b> an image or a model straight onto the canvas.</li>
@@ -1385,8 +1386,9 @@ photographs it shows.</p>
 <h3>C · You want to verify one particular measurement</h3>
 <ol>
   <li><b>Viewer</b> → open the photograph.</li>
-  <li><b>Load predictions</b> from the finished run, in
-      <code>%LOCALAPPDATA%\polyx\runs\</code>. No need to run the model again.</li>
+  <li><b>Load predictions</b> from the finished run, in your user's runs folder
+      (<code>%LOCALAPPDATA%\polyx\runs\</code> on Windows; elsewhere see
+      <a href="#estructura">Folder structure</a>). No need to run the model again.</li>
   <li>Select the particle's row in the table.</li>
   <li>Look at the crop and the mask with the measurement drawn on it: that is where
       you see whether the size came from a correct segmentation or a broken
@@ -1464,8 +1466,9 @@ photographs it shows.</p>
 <p>It checks whether there is a new commit on <code>main</code> and, if so,
 downloads and replaces <b>only the program's files</b>. It <b>keeps</b> your
 <code>.venv</code> environment and your <code>models/*.pt</code>; your runs no
-longer live in this folder but in your user's data folder
-(<code>%LOCALAPPDATA%\polyx</code>), where the updater never reaches. It does
+longer live in this folder but in your user's data folder (on Windows,
+<code>%LOCALAPPDATA%\polyx</code>; elsewhere see <a href="#estructura">Folder
+structure</a>), where the updater never reaches. It does
 not need Git installed — it downloads over HTTPS — only an internet
 connection.</p>
 
@@ -1609,8 +1612,8 @@ uninstaller does not reach.</p>
 <div class="aviso err">
   <span class="et">What never gets deleted</span>
   <p><code>models\</code> and <code>data\</code> hold <b>your work</b>, not the
-  program, and your runs live in your user's data folder
-  (<code>%LOCALAPPDATA%\polyx</code>). A trained model can be days of compute and
+  program, and your runs live in your user's data folder (the table above). A
+  trained model can be days of compute and
   none of this can be recovered from GitHub, because it was never there.
   <code>.venv\</code>, by contrast, can be rebuilt at any time by running
   <code>SETUP.bat</code> again.</p>

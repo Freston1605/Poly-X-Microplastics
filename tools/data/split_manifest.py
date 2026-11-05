@@ -154,11 +154,14 @@ SPLIT_IMAGES: dict[str, list[str]] = {
     for split, groups in SPLIT_GROUPS.items()
 }
 
-REMOVED_DUPLICATES: tuple[str, ...] = ("LDPE 10", "LDPE 12")
-
-# (duplicate, retained): byte-identical pairs. The dataset card and
-# make_splits.py both rely on this being the single source of truth.
+# (duplicate, retained): byte-identical pairs — the single source of truth for
+# what make_splits.py removes. The dataset card documents the same two pairs in
+# prose; keep the two in sync by hand.
 DUPLICATE_PAIRS: tuple[tuple[str, str], ...] = (
     ("LDPE 10", "LDPE 8"),
     ("LDPE 12", "LDPE 9"),
+)
+
+REMOVED_DUPLICATES: tuple[str, ...] = tuple(
+    duplicate for duplicate, _ in DUPLICATE_PAIRS
 )

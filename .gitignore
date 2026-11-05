@@ -26,6 +26,7 @@ dist/
 # Datasets y runs
 runs/
 runs_*/
+/.make_splits_backup_*
 Imagenes Microplasticos.rar
 Fotos de peces y camarones/
 # Fotos de trabajo para resolver que borde de la placa son los 100 mm

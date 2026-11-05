@@ -1108,8 +1108,9 @@ ancho y aspecto. Al seleccionar una fila se ve <b>sobre que se midió</b>:</p>
       imagen con las tallas convertidas a μm. Sirve para revisar un conteo manual
       sin volver al Etiquetador.</li>
   <li><b>Cargar las predicciones de una corrida ya cerrada</b> desde la
-      carpeta de corridas de tu usuario
-      (<code>%LOCALAPPDATA%\polyx\runs\</code>), sin volver a pasar el modelo.
+      carpeta de corridas de tu usuario (<code>%LOCALAPPDATA%\polyx\runs\</code>
+      en Windows; en los demás sistemas, ver la
+      <a href="#estructura">tabla por sistema</a>), sin volver a pasar el modelo.
       Abre siempre la fotografía original y nunca el PNG anotado, que lleva las
       cajas pintadas encima.</li>
   <li><b>Arrastrar y soltar</b> una imagen o un modelo directamente sobre el
@@ -1405,9 +1406,11 @@ fotografías que muestra.</p>
 <h3>C · Quieres verificar una medida concreta</h3>
 <ol>
   <li><b>Visor</b> → abre la fotografía.</li>
-  <li><b>Cargar predicciones</b> de la corrida ya cerrada, desde
-      <code>%LOCALAPPDATA%\polyx\runs\</code>. No hace falta volver a pasar el
-      modelo.</li>
+  <li><b>Cargar predicciones</b> de la corrida ya cerrada, desde la carpeta de
+      corridas de tu usuario (<code>%LOCALAPPDATA%\polyx\runs\</code> en Windows;
+      en los demás sistemas, ver
+      <a href="#estructura">Estructura de carpetas</a>). No hace falta volver a
+      pasar el modelo.</li>
   <li>Selecciona la fila de la partícula en la tabla.</li>
   <li>Mira el recorte y la máscara con la medida dibujada encima: ahí se ve si la
       talla salió de una segmentación correcta o de una máscara rota.</li>
@@ -1484,8 +1487,10 @@ fotografías que muestra.</p>
 <p>Comprueba si hay un commit nuevo en <code>main</code> y, si lo hay, descarga y
 reemplaza <b>solo los archivos del programa</b>. <b>Conserva</b> tu entorno
 <code>.venv</code> y tus modelos <code>models/*.pt</code>; tus corridas ya no
-viven en esta carpeta, sino en la carpeta de datos de tu usuario
-(<code>%LOCALAPPDATA%\polyx</code>), donde el actualizador no llega. No necesita
+viven en esta carpeta, sino en la carpeta de datos de tu usuario (en Windows,
+<code>%LOCALAPPDATA%\polyx</code>; en los demás sistemas, ver
+<a href="#estructura">Estructura de carpetas</a>), donde el actualizador no
+llega. No necesita
 tener Git instalado —descarga por HTTPS—, solo conexión a internet.</p>
 
 <div class="aviso">
@@ -1627,8 +1632,8 @@ desinstalación no llega.</p>
 <div class="aviso err">
   <span class="et">Lo que no se borra</span>
   <p><code>models\</code> y <code>data\</code> contienen <b>tu trabajo</b>, no el
-  programa, y tus corridas viven en la carpeta de datos de tu usuario
-  (<code>%LOCALAPPDATA%\polyx</code>). Un modelo entrenado puede ser días de
+  programa, y tus corridas viven en la carpeta de datos de tu usuario (la tabla
+  de arriba). Un modelo entrenado puede ser días de
   cómputo y nada de esto se recupera de GitHub, porque nunca estuvo ahí.
   <code>.venv\</code>, en cambio, se regenera cuando quieras volviendo a ejecutar
   <code>SETUP.bat</code>.</p>

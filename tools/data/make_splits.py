@@ -17,13 +17,13 @@ Usage:
 ``--dry-run`` is the default and writes nothing. The script exits non-zero
 and changes nothing when any check fails: it never guesses. If the apply
 phase itself fails midway, everything is moved back, so the dataset is left
-exactly as it was.
+exactly as it was. Should a restore itself fail, the recovery files are
+kept and their location printed instead of being silently discarded.
 """
 
 from __future__ import annotations
 
 import argparse
-import contextlib
 import dataclasses
 import hashlib
 import shutil
@@ -128,11 +128,13 @@ def _verify_duplicate_copies(report: _Report) -> None:
     for duplicate, retained in manifest.DUPLICATE_PAIRS:
         dup = report.images.get(duplicate)
         keep = report.images.get(retained)
-        if dup is not None and keep is None:
+        if dup is None:
+            continue
+        if keep is None:
             raise DatasetError(
                 f"{duplicate} exists but the retained duplicate {retained} is missing."
             )
-        if dup is not None and _sha256_file(dup) != _sha256_file(keep):
+        if _sha256_file(dup) != _sha256_file(keep):
             raise DatasetError(
                 f"{duplicate} is not identical to {retained}; refusing to remove it."
             )
@@ -258,16 +260,18 @@ def _patch_dataset_yaml(root: Path, names: dict[str, str]) -> None:
     (root / "dataset.yaml").write_text(text, encoding="utf-8")
 
 
-def _ensure_split_dirs(root: Path) -> list[Path]:
-    """Create the split directories; returns the ones this call created."""
-    created: list[Path] = []
+def _ensure_split_dirs(root: Path, created: list[Path]) -> None:
+    """Create the split directories, appending each one to ``created`` as made.
+
+    The caller owns the list so that a failure part-way through can still be
+    rolled back: whatever this call managed to create is removed again.
+    """
     for split in SPLIT_DIRS:
         for kind in ("images", "labels"):
             directory = root / kind / split
             if not directory.exists():
                 directory.mkdir(parents=True)
                 created.append(directory)
-    return created
 
 
 def _stage_file(path: Path, backup: Path, root: Path, bucket: str) -> tuple[Path, Path]:
@@ -317,28 +321,41 @@ def _rollback(
     backup: Path,
     root: Path,
     created_dirs: list[Path],
-) -> None:
-    """Undo every mutation this apply performed, best effort."""
+) -> int:
+    """Undo every mutation this apply performed, best effort.
+
+    Returns the number of restore operations that failed; the caller must
+    keep the backup directory when that is non-zero, because it still holds
+    the only copy of whatever could not be put back.
+    """
+    failures = 0
     for source, destination in reversed(completed_moves):
         try:
             destination.rename(source)
         except OSError as exc:
+            failures += 1
             print(f"warning: could not restore {destination} -> {source}: {exc}",
                   file=sys.stderr)
     if yaml_backed_up:
         try:
             shutil.copy2(backup / "dataset.yaml", root / "dataset.yaml")
         except OSError as exc:
+            failures += 1
             print(f"warning: could not restore dataset.yaml: {exc}", file=sys.stderr)
     for original, backup_path in reversed(staged):
         try:
             original.parent.mkdir(parents=True, exist_ok=True)
             backup_path.rename(original)
         except OSError as exc:
+            failures += 1
             print(f"warning: could not restore {original}: {exc}", file=sys.stderr)
     for directory in reversed(created_dirs):
-        with contextlib.suppress(OSError):  # only removes it if the rollback left it empty
-            directory.rmdir()
+        try:
+            directory.rmdir()  # only removes it if the rollback left it empty
+        except OSError as exc:
+            failures += 1
+            print(f"warning: could not remove {directory}: {exc}", file=sys.stderr)
+    return failures
 
 
 def _summary_lines(report: _Report) -> list[str]:
@@ -452,9 +469,10 @@ def _main(argv: list[str] | None = None) -> int:
     backup = Path(tempfile.mkdtemp(prefix=".make_splits_backup_", dir=root.parent))
     staged: list[tuple[Path, Path]] = []
     completed_moves: list[tuple[Path, Path]] = []
-    created_dirs = _ensure_split_dirs(root)
+    created_dirs: list[Path] = []
     yaml_backed_up = False
     try:
+        _ensure_split_dirs(root, created_dirs)
         caches = _stage_caches(root, backup)
         duplicates = _stage_duplicates(root, backup)
         staged += caches
@@ -471,12 +489,21 @@ def _main(argv: list[str] | None = None) -> int:
         _patch_dataset_yaml(root, names)
         _verify_after_apply(root, before, before_labels)
     except (DatasetError, OSError) as exc:
-        _rollback(completed_moves, staged, yaml_backed_up, backup, root, created_dirs)
-        shutil.rmtree(backup, ignore_errors=True)
-        print(
-            f"apply failed; the dataset was restored to its previous state:\n{exc}",
-            file=sys.stderr,
+        failures = _rollback(
+            completed_moves, staged, yaml_backed_up, backup, root, created_dirs
         )
+        if failures:
+            print(
+                f"apply failed and {failures} restore operation(s) did not complete; "
+                f"the recovery files are kept at {backup}:\n{exc}",
+                file=sys.stderr,
+            )
+        else:
+            shutil.rmtree(backup, ignore_errors=True)
+            print(
+                f"apply failed; the dataset was restored to its previous state:\n{exc}",
+                file=sys.stderr,
+            )
         return 1
     shutil.rmtree(backup, ignore_errors=True)
 
