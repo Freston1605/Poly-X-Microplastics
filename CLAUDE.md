@@ -624,6 +624,8 @@ results.csv + curves
 
 ## 📝 Conventions
 
+The review checklist lives in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
+
 - **English:** Comments, docstrings and identifiers in English. Spanish
   survives only inside the `tr()` layer and the UI strings it wraps.
 - **Spanish:** Runtime UI strings and `tr()` dictionary keys remain Spanish;
