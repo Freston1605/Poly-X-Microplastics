@@ -209,7 +209,7 @@ class ViewerWindow(QMainWindow):
 
         rv = self._rv
 
-        rv.addWidget(LogoBadge("POLY-X", "Visor"))
+        rv.addWidget(LogoBadge("POLY-X", _("Viewer")))
 
         rv.addSpacing(4)
 

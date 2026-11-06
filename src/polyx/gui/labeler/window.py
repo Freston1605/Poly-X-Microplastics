@@ -133,7 +133,7 @@ class LabelerWindow(QMainWindow):
         lv.setContentsMargins(12, 14, 12, 12)
         lv.setSpacing(8)
 
-        lv.addWidget(LogoBadge("POLY-X", "Etiquetador"))
+        lv.addWidget(LogoBadge("POLY-X", _("Labeler")))
         lv.addSpacing(6)
 
         btn_open = QPushButton(_("Open folder…"))

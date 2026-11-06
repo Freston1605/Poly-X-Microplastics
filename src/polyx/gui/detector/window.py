@@ -146,7 +146,7 @@ class DetectorWindow(QMainWindow):
         sb.setSpacing(4)
 
         # Logo at the top with subtitle "Detector v2"
-        sb.addWidget(LogoBadge("POLY-X", "Detector v2"))
+        sb.addWidget(LogoBadge("POLY-X", _("Detector v2")))
         sb.addSpacing(12)
         sep = QFrame()
         sep.setFixedHeight(1)

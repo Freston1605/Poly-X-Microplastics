@@ -144,7 +144,7 @@ class TrainerWindow(QMainWindow):
         sb.setContentsMargins(14, 16, 14, 16)
         sb.setSpacing(4)
 
-        sb.addWidget(LogoBadge("POLY-X", "YOLO Trainer"))
+        sb.addWidget(LogoBadge("POLY-X", _("YOLO Trainer")))
         sb.addSpacing(12)
         sep = QFrame()
         sep.setFixedHeight(1)

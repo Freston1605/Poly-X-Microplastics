@@ -360,7 +360,7 @@ class LauncherWindow(QMainWindow):
         tb = QHBoxLayout(topbar)
         tb.setContentsMargins(24, 0, 24, 0)
         tb.setSpacing(12)
-        tb.addWidget(LogoBadge("POLY-X", "Microplastics analytics suite"))
+        tb.addWidget(LogoBadge("POLY-X", _("Microplastics analytics suite")))
         tb.addStretch(1)
 
         # Preferences. The language used to live here as a loose dropdown; now

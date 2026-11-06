@@ -972,6 +972,10 @@ msgstr "Detecciones por imagen"
 msgid "Detector"
 msgstr "Detector"
 
+#: src/polyx/gui/detector/window.py:160
+msgid "Detector v2"
+msgstr "Detector v2"
+
 #: src/polyx/gui/report/sections.py:863
 msgid "Device"
 msgstr "Dispositivo"
@@ -1591,6 +1595,10 @@ msgstr "Métodos"
 #: src/polyx/gui/report/registry.py:118
 msgid "Microplastics detection report"
 msgstr "Informe de detección de microplásticos"
+
+#: src/polyx/gui/launcher.py:352
+msgid "Microplastics analytics suite"
+msgstr "Suite de análisis de microplásticos"
 
 #: src/polyx/gui/report/registry.py:131
 msgid "Microplastics detection suite by Nile Red fluorescence (254 nm) and AI (YOLO v8/v11)."
@@ -3143,3 +3151,7 @@ msgstr "✗ Falló la generación."
 #: src/polyx/gui/detector/pages/report.py:647
 msgid "✗ PDF generation failed."
 msgstr "✗ Falló la generación de PDF."
+
+#: src/polyx/gui/trainer/window.py:108
+msgid "YOLO Trainer"
+msgstr "Entrenador YOLO"
