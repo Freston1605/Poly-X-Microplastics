@@ -110,7 +110,7 @@ def test_el_idioma_del_documento_es_el_pedido(tmp_path, lang):
     assert f"<html lang='{lang}'" in html
 
 
-def test_en_ingles_no_salen_los_rotulos_en_español(tmp_path):
+def test_en_english_no_salen_los_rotulos_en_español(tmp_path):
     """Si una clave del diccionario deja de coincidir con la del codigo, tr()
     devuelve el español sin avisar y el informe queda mezclado."""
     html = _informe(tmp_path, "en")
@@ -151,7 +151,7 @@ def _texto_visible(html: str) -> list[str]:
     return [l.strip() for l in h.split("\n") if l.strip()]  # noqa: E741
 
 
-def test_el_informe_en_ingles_no_arrastra_frases_en_español(tmp_path):
+def test_el_informe_en_english_no_arrastra_frases_en_español(tmp_path):
     """Barrido ancho, no por sondas sueltas.
 
     Se generan los dos documentos y se comparan sus textos: una linea que

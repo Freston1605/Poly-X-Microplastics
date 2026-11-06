@@ -1,7 +1,7 @@
 # Fixtures geodesia: mascaras reales para el harness de equivalencia
 
 Este directorio alberga mascaras **reales** (uint8, un canal, 0/255) serializadas
-desde corridas del detector, para que `tests/test_geodesia.py` las recubra a
+desde corridas del detector, para que `tests/test_geodesy.py` las recubra a
 todas automaticamente y compare la propagacion geodesica pre/post reescritura
 bit a bit sobre ellas.
 
@@ -36,18 +36,18 @@ ramificadas:
   necesidad de versionar imágenes crudas de placas completas (~MBs).
 
 ### Procedencia y reproducibilidad
-Generados mediante `tests/generar_fixtures_geodesia.py`:
+Generados mediante `tests/generate_geodesy_fixtures.py`:
 1. Crea partículas con morfologías controladas sobre lienzos sintéticos.
 2. Emite la estructura mock esperada por `polyx/detector/runner.py` (`runs/y11n/labels/` con cajas YOLO normalizadas).
-3. Invoca la función canónica de producción `capturar_fixtures_geodesia.capturar()`, la cual ejecuta `morfologia.segment()`, recorta al rectángulo envolvente y serializa con `np.save(..., allow_pickle=False)`.
+3. Invoca la función canónica de producción `capture_geodesy_fixtures.capturar()`, la cual ejecuta `morfologia.segment()`, recorta al rectángulo envolvente y serializa con `np.save(..., allow_pickle=False)`.
 
 Para regenerar el corpus canónico en cualquier momento:
 ```
-python tests/generar_fixtures_geodesia.py
+python tests/generate_geodesy_fixtures.py
 ```
 
 ### Cobertura de pruebas
-Con estos fixtures presentes, `tests/test_geodesia.py::test_identidad_sobre_fixtures_reales`
+Con estos fixtures presentes, `tests/test_geodesy.py::test_identidad_sobre_fixtures_reales`
 descubre automáticamente cada `.npy`, verifica que cumpla el contrato de tipo/valores,
 y prueba la equivalencia bit a bit contra `_propagar_geodesico_referencia` con 0 skips.
 
@@ -56,7 +56,7 @@ y prueba la equivalencia bit a bit contra `_propagar_geodesico_referencia` con 0
 En el equipo que tenga los datos `runs/` (esta copia de trabajo no los tiene):
 
 ```
-python tests/capturar_fixtures_geodesia.py \
+python tests/capture_geodesy_fixtures.py \
     --runs runs/detect_20260812_1030 \
     --fotos F:/Poly-X/fotos_origen \
     [--destino tests/fixtures/geodesia] \
@@ -75,12 +75,12 @@ el resumen final (no se interrumpe el lote por una caja mala).
 
 Sin `--reforzar` nunca sobreescribe un fixture existente cuyo contenido difiera
 (si coincide, la pasada es un no-op); con `--reforzar` si lo pisa. La logica de
-captura esta probada en `tests/test_captura_geodesia.py` contra un layout de
+captura esta probada en `tests/test_geodesy_capture.py` contra un layout de
 `runs/detect_*` en miniatura, sin depender de datos reales.
 
 ## TIMING.md
 
-El benchmark de referencia-vs-actual (`tests/bench_geodesia.py`) mide el corpus
+El benchmark de referencia-vs-actual (`tests/bench_geodesy.py`) mide el corpus
 completo bajo la clase `fixture real` junto con las categorías procedimentales,
 de formas conocidas y escalas, publicando tiempos individuales, medianas y
 ratios en `TIMING.md`.

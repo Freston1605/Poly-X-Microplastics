@@ -3,14 +3,14 @@
 Mide ``_propagar_geodesico`` en dos versiones sobre EL MISMO corpus de
 mascaras y el mismo hardware:
 
-  * la referencia pre-rewrite congelada en ``tests/test_geodesia.py``
+  * la referencia pre-rewrite congelada en ``tests/test_geodesy.py``
     (``_propagar_geodesico_referencia``),
   * la implementacion viva de ``polyx.core.measure``.
 
 NO es un test de pytest: el nombre no empieza por ``test_`` a proposito,
 y ningun test lo importa. Se ejecuta a mano::
 
-    /usr/bin/python3 tests/bench_geodesia.py
+    /usr/bin/python3 tests/bench_geodesy.py
 
 Escribe ``tests/fixtures/geodesia/TIMING.md`` con la comparacion. Cada mascara
 se mide replicando EXACTAMENTE el patron de ``largo_geodesico``: las DOS
@@ -36,8 +36,8 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))
 
 import polyx.core.measure as M  # noqa: E402
-from tests import test_geodesia as G  # noqa: E402
-from tests.formas import CASOS  # noqa: E402
+from tests import test_geodesy as G  # noqa: E402
+from tests.shapes import CASOS  # noqa: E402
 
 FIXTURES = AQUI / "fixtures" / "geodesia"
 TIMING_MD = FIXTURES / "TIMING.md"
@@ -161,7 +161,7 @@ def correr_bench(repeticiones: int = 5):
     lineas = [
         "# TIMING de _propagar_geodesico: referencia vs reescrita",
         "",
-        "Generado por `tests/bench_geodesia.py` (correrlo a mano: no es un "  # noqa: ISC004
+        "Generado por `tests/bench_geodesy.py` (correrlo a mano: no es un "  # noqa: ISC004
         "test). Numeros reales medidos en esta maquina, no placeholders.",
         "",
         "## Contexto de la maquina",

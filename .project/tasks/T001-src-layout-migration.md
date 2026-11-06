@@ -15,13 +15,13 @@ files:
   - src/polyx/launcher.py
   - lanzar_polyx.py
   - Poly-X.vbs
-  - tests/test_arranque_instrumentado.py
+  - tests/test_instrumented_startup.py
   - tests/test_launcher_trainer.py
   - tests/test_trainer_runner.py
-  - tests/test_comments_ingles.py
-  - tests/test_docstrings_ingles.py
-  - tests/test_identifiers_ingles.py
-  - tests/test_report_headings_ingles.py
+  - tests/test_comments_english.py
+  - tests/test_docstrings_english.py
+  - tests/test_identifiers_english.py
+  - tests/test_report_headings_english.py
   - tests/test_translate_identifiers.py
   - tests/test_model_discovery.py
 ---
@@ -62,7 +62,7 @@ Poly-X has no installable package: `polyx/` sits at repo root and `paths.ROOT` u
 ## Verify
 
 ```bash
-python -m pytest tests/test_model_discovery.py tests/test_arranque_instrumentado.py tests/test_launcher_trainer.py -q
+python -m pytest tests/test_model_discovery.py tests/test_instrumented_startup.py tests/test_launcher_trainer.py -q
 ```
 
 Heavy: no

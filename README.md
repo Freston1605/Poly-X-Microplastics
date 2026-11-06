@@ -233,7 +233,7 @@ defect this was meant to remove.
 Against synthetic shapes of known size — straight bars, rotated bars, arcs of
 60°, 120° and 180°, a circle, a bar with a jagged edge and a blob with a notch —
 the length measured this way gives a **median error of 0.6 % and 4.7 % in the
-worst case**. This is pinned down in `tests/test_morfologia.py`.
+worst case**. This is pinned down in `tests/test_morphology.py`.
 
 > **The equivalent rectangle is not a size.** The formula
 > *L* = (*P* + √(*P*²−16*A*))/4 gives the length of a rectangle with the same
@@ -277,7 +277,7 @@ when the particle is elongated, nor passed through the touching-particle splitte
 both of those cut real fibres short. On the one that exposed it, 53 % of the
 length was lost — 369 px of connected component came out as 174 — and an
 underestimated size does not show in the figures, only in the image. It is pinned
-down in `tests/test_fibra_no_se_trunca.py`.
+down in `tests/test_fiber_is_not_truncated.py`.
 
 **Stated limitations.** Two particles overlapping by more than 40 % of their
 diameter are still measured as one: past that point there is no neck left to cut
@@ -640,16 +640,16 @@ To regenerate it against the current interface:
 
 ```bash
 # 1. interface screenshots, one pass per language
-.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
 
 # 2. the manual, both languages and their PDFs
-.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
 ```
 
-The text lives in `tools/manual/manual_texto_es.py` and
-`tools/manual/manual_texto_en.py`; the engine — template, stylesheet and
-figure numbering — in `tools/manual/generar_manual.py`.
+The text lives in `tools/manual/manual_text_es.py` and
+`tools/manual/manual_text_en.py`; the engine — template, stylesheet and
+figure numbering — in `tools/manual/generate_manual.py`.
 
 ---
 

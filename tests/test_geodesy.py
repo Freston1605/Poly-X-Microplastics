@@ -10,7 +10,7 @@ Este archivo existe para que la reescritura de ``_propagar_geodesico``
     diferencia de un ulp de float32, o el signo de un cero, hace fallar.
   * Cubre mascaras reales capturadas (``tests/fixtures/geodesia/*.npy``),
     clases proceduralizadas de lo que el pipeline ve en recortes de placa, y
-    las figuras sinteticas de talla conocida de ``tests/formas.py``.
+    las figuras sinteticas de talla conocida de ``tests/shapes.py``.
 
 El copy de abajo es el negocio serio del archivo: SOLO se edita para dejar
 constancia del contrato congelado (p. ej. si cambia una decision de semantica),
@@ -18,7 +18,7 @@ NUNCA para "modernizarlo". Si ``_propagar_geodesico_referencia`` y la funcion
 viva divergen sin que lo pida un cambio de contrato, la suite grita.
 
 Sobre el flujo: los fixtures reales se serializan con
-``tests/capturar_fixtures_geodesia.py`` desde una carpeta ``runs/detect_*``
+``tests/capture_geodesy_fixtures.py`` desde una carpeta ``runs/detect_*``
 que exista real (esta copia de trabajo no tiene datos ``runs/``); sin fixtures,
 el test de auto-descubrimiento se salta honestamente explicando como
 capturarlos, y la cobertura recae en generadores + formas conocidas.
@@ -38,7 +38,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import polyx.core.measure as M
-from tests.formas import CASOS
+from tests.shapes import CASOS
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "geodesia"
 
@@ -311,7 +311,7 @@ def test_identidad_sobre_fixtures_reales():
         pytest.skip(
             "Sin mascaras capturadas en tests/fixtures/geodesia (esta copia "
             "de trabajo no tiene datos runs/). Capturalas con "
-            "tests/capturar_fixtures_geodesia.py desde una carpeta "
+            "tests/capture_geodesy_fixtures.py desde una carpeta "
             "runs/detect_* del equipo que tenga las fotos origen."
         )
     for f in fijos:
@@ -332,7 +332,7 @@ def test_identidad_sobre_generadores(nombre, mascara):
 
 @pytest.mark.parametrize("nombre,fabrica,tol", CASOS, ids=[c[0] for c in CASOS])
 def test_identidad_sobre_formas_conocidas(nombre, fabrica, tol):
-    """Idem sobre las figuras sinteticas de talla conocida (formas.py)."""
+    """Idem sobre las figuras sinteticas de talla conocida (shapes.py)."""
     mascara, _real = fabrica()
     _comparar_mascara(mascara, nombre)
 

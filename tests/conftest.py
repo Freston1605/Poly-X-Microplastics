@@ -2,17 +2,17 @@
 
 El idioma del programa se resuelve una vez a partir del entorno (ver
 ``polyx.core.i18n``) y se cachea en el modulo, asi que varios tests que no
-fuercen idioma propio --p. ej. ``test_asignacion`` lee texto del informe--
+fuercen idioma propio --p. ej. ``test_assignment`` lee texto del informe--
 acaban dependiendo del locale de la maquina donde corra pytest. Con un
 locale en ingles el informe sale en ingles y la prueba falla; en CI el
 locale suele estar vacio y pasa por casualidad.
 
 The suite pins Spanish explicitly and reproducibly. Tests that exercise the
-language itself -- ``test_informe_bilingue`` -- set theirs through
+language itself -- ``test_bilingual_report`` -- set theirs through
 ``POLYX_LOCALE`` directly, and ``setdefault`` leaves an explicit choice alone.
 
 Aislamiento de observabilidad y logs (Decision D007):
-Varios modulos de prueba (como ``test_asignacion`` o ``test_informe_bilingue``)
+Varios modulos de prueba (como ``test_assignment`` o ``test_bilingual_report``)
 invocan el pipeline real de generacion de reportes (``report_html.generate_report``),
 el cual instrumenta eventos a traves de ``logger_para("detector")``. Sin una variable
 de entorno ``POLYX_LOG_DIR`` explicita, estos loggers escriben en el directorio

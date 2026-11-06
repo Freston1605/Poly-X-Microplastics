@@ -1,6 +1,6 @@
 """Canonical ``RunResult`` fixtures shared by the report tests.
 
-La captura del baseline pre-fix (tools/audit/capturar_fixtures_informe.py, T03) y
+La captura del baseline pre-fix (tools/audit/capture_report_fixtures.py, T03) y
 los tests de identidad de bytes e inyeccion muerta (T04-T07) necesitan todos
 el MISMO par de estados de entrada: uno benigno y otro con inyeccion HTML en
 los nombres de archivo y alias de modelo. Una receta repetida a mano en cada
@@ -109,7 +109,7 @@ def _construir_estado(
 ):
     """Build the canonical RunResult shared by every fixture variant.
 
-    Identical recipe to test_informe_bilingue._estado_minimo: one synthetic
+    Identical recipe to test_bilingual_report._estado_minimo: one synthetic
     frame written to directorio/nombre, one predicted Detection measured by
     morfologia at 30.0 um/px, and one ImageResult published under each dense
     model index. Multiple versions only differ in the injected strings.

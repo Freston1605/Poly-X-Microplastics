@@ -113,7 +113,7 @@ src/                      # Source code (installable package)
 
 tests/                    # Pytest (43 test modules + fixtures)
 ├── english_scan.py       # Spanish-remnant scanner (no LibCST)
-├── test_*_ingles.py      # Language-convention gates
+├── test_*_english.py      # Language-convention gates
 ├── fixtures/             # Shared fixtures and report baselines
 └── formas/               # Geometric test cases
 
@@ -564,7 +564,7 @@ comes from an observed failure:
 | **Non-convex**, `solidity < 0.90` | `SOLIDITY_CONVEX` | on a convex shape geodesic and Feret coincide by definition; a rotated bar measured 200 px at 0° and 45° but **208 at 15°, 30° and 60°** |
 
 Against synthetic shapes of known size: **median error 0.6 %, worst case
-4.7 %**. Pinned in `tests/test_morfologia.py`.
+4.7 %**. Pinned in `tests/test_morphology.py`.
 
 **The equivalent rectangle `L = (P + √(P²−16A))/4` is NOT a size** and must not
 be used as one. It depends on the perimeter, so a jagged edge inflates it
@@ -797,19 +797,19 @@ lr0: float = 0.01
 ## 📚 Automatically generated files
 
 - **docs/manual/Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) —
-  built from scratch by `tools/manual/generar_manual.py`: text, figures,
+  built from scratch by `tools/manual/generate_manual.py`: text, figures,
   index and stylesheet. Versioned: a fresh ZIP download opens it offline.
-- **tools/manual/manual_texto_es.py / manual_texto_en.py** — the manual's
-  text. Content only; the engine is in `tools/manual/generar_manual.py`.
+- **tools/manual/manual_text_es.py / manual_text_en.py** — the manual's
+  text. Content only; the engine is in `tools/manual/generate_manual.py`.
 - **docs/assets/manual_screenshots/** — screenshots the manual embeds, one
   folder per source: `es/` and `en/` (interface, one language each), plus
   `web/` and `win/`.
 
 To regenerate (screenshots first, manual after):
 ```bash
-.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
-.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
 ```
 
 > The previous generator replaced figures *by position* inside an already written
