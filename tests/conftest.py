@@ -66,10 +66,15 @@ def _isolate_theme_saves(tmp_path, monkeypatch):
     """Keep theme changes out of the developer's home directory.
 
     ``theme.set_theme`` persists the choice to ``~/.polyx_tema.json``. Point
-    that file at the test's ``tmp_path`` for every test and restore the active
-    palette afterwards, so the suite is hermetic.
+    that file at the test's ``tmp_path`` and restore the active palette
+    afterwards, so the suite is hermetic. The patch is lazy: a test module
+    that never imported the theme does not acquire a PySide6 dependency, so
+    headless suites such as the install smoke tests stay headless.
     """
-    from polyx.gui import theme
+    theme = sys.modules.get("polyx.gui.theme")
+    if theme is None:
+        yield
+        return
 
     original = theme.theme()
     monkeypatch.setattr(theme, "_FILE", tmp_path / "polyx_tema.json")
