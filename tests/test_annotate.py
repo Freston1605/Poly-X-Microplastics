@@ -166,6 +166,50 @@ def test_triptych_infers_has_gt_from_the_boxes_by_default():
     assert A.triptych(_plate(), [_pet()], [_gt_below()]).gt is not None
 
 
+def test_triptych_gt_style_survives_injected_restyling():
+    """User story #19: the GT view keeps class colours and the combined
+    view keeps the GT colour and the ``GT `` prefix regardless of the
+    ``color_for`` / ``gt_label_for`` a caller injects."""
+    img = _plate()
+    gt = [_gt_below()]
+
+    def custom_colour(det):
+        # Deliberately not any class colour: if the GT views took it, the
+        # assertions below would see this green instead of the palette.
+        return (0, 255, 0)
+
+    def custom_label(det):
+        return f"CUSTOM {det.class_name}"
+
+    views = A.triptych(
+        img,
+        [_pet()],
+        gt,
+        color_for=custom_colour,
+        gt_label_for=custom_label,
+    )
+
+    # The predictions view follows the injection, so the injection is live.
+    assert tuple(int(v) for v in views.pred[20, 20]) == custom_colour(_pet())
+
+    # The GT view ignores the injected colour: class colours stay, while the
+    # injected GT label text is honoured.
+    assert tuple(int(v) for v in views.gt[100, 100]) == A.bgr_for_class("PET")
+    assert np.array_equal(views.gt, A.draw_detections(img, gt, label_for=custom_label))
+
+    # The combined view keeps the GT colour and prefixes the GT label.
+    assert tuple(int(v) for v in views.combined[100, 100]) == A.GT_COLOR_BGR
+    assert np.array_equal(
+        views.combined,
+        A.draw_detections(
+            views.pred,
+            gt,
+            color_for=lambda det: A.GT_COLOR_BGR,
+            label_for=lambda det: f"GT {custom_label(det)}",
+        ),
+    )
+
+
 # ── Goldens: the style pinned, so any change is deliberate ────────────────
 
 import hashlib  # noqa: E402
