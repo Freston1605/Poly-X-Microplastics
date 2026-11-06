@@ -1,8 +1,9 @@
-"""The English pre-commit hook reports only the lines a commit adds.
+"""The English pre-commit hook reports staged lines and whole ``src/`` files.
 
 It runs as a command in a throwaway repository, so the contract exercised is
 the one pre-commit sees: repo-relative staged files, no Unix shell, git found
-through normal executable lookup.
+through normal executable lookup. Without a staged diff, a ``src/`` file is
+scanned in full while a ``tests/`` file keeps the added-lines-only rule.
 """
 
 from __future__ import annotations
@@ -13,9 +14,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.english_scan import scan_python_source
+
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "tools" / "check_english_ids.py"
 GIT = shutil.which("git")
+
+SPANISH_SOURCE = (
+    '"""Módulo de cálculo de partículas."""\n'
+    "\n"
+    "# Esta función calcula la ruta\n"
+    "def calcular_ruta():\n"
+    "    return 1\n"
+)
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -133,3 +144,46 @@ def test_only_newly_added_lines_are_reported(tmp_path):
     assert dirty.returncode != 0, dirty.stdout + dirty.stderr
     assert "sample.py:3:" in dirty.stdout
     assert "sample.py:1:" not in dirty.stdout
+
+
+def test_committed_spanish_source_file_fails_without_staged_diff(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "src/sample.py", "def calcular_ruta():\n    return 1\n")
+    _stage(repo, "src/sample.py")
+    _git(repo, "commit", "-q", "-m", "seed")
+
+    result = _run_hook(repo, "src/sample.py")
+
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "src/sample.py:1:" in result.stdout
+    assert "spanish-identifier:" in result.stdout
+
+
+def test_committed_spanish_test_file_passes_without_staged_diff(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, "tests/sample.py", "def calcular_ruta():\n    return 1\n")
+    _stage(repo, "tests/sample.py")
+    _git(repo, "commit", "-q", "-m", "seed")
+
+    result = _run_hook(repo, "tests/sample.py")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == ""
+
+
+def test_scan_python_source_full_scan_reports_every_matcher():
+    found = scan_python_source(SPANISH_SOURCE)
+
+    assert {1, 3, 4} <= {line for line, _finding in found}
+    findings = [finding for _line, finding in found]
+    assert any(finding.startswith("spanish-word:") for finding in findings)
+    assert any(finding.startswith("comment-word:") for finding in findings)
+    assert any(finding.startswith("spanish-identifier:") for finding in findings)
+
+
+def test_scan_python_source_only_lines_restricts_findings():
+    found = scan_python_source(SPANISH_SOURCE, only_lines={4})
+
+    assert found
+    assert {line for line, _finding in found} == {4}
+    assert all(finding.startswith("spanish-identifier:") for _line, finding in found)

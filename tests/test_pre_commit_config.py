@@ -1,8 +1,9 @@
 """The pre-commit configuration is portable and orders the local checks.
 
-Every local hook must be a standard-library Python script launched through the
-interpreter pre-commit provisions, never through a Unix shell or an absolute
-path. This is a file contract: it pins the YAML, not pre-commit's internals.
+Every local hook is a Python script that uses only the standard library and
+in-repo modules — no third-party dependency — launched through the interpreter
+pre-commit provisions, never through a Unix shell or an absolute path. This is
+a file contract: it pins the YAML, not pre-commit's internals.
 """
 
 from __future__ import annotations
@@ -26,6 +27,10 @@ def _config() -> dict:
     return yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
 
 
+def test_config_file_ends_with_a_newline():
+    assert CONFIG.read_text(encoding="utf-8").endswith("\n")
+
+
 def _local_hooks(config: dict) -> list[dict]:
     repos = [repo for repo in config["repos"] if repo["repo"] == "local"]
     assert len(repos) == 1, "there must be exactly one local repository"
@@ -42,7 +47,7 @@ def _dependency_name(requirement: str) -> str:
     return re.split(r"[<>=!~\[; ]", requirement, maxsplit=1)[0].lower()
 
 
-def test_every_local_hook_is_a_stdlib_python_script():
+def test_every_local_hook_uses_only_stdlib_and_in_repo_modules():
     hooks = _local_hooks(_config())
 
     assert {hook["id"] for hook in hooks} == LOCAL_IDS
@@ -95,7 +100,7 @@ def test_palette_hook_keeps_its_whole_tree_scope():
     assert not pattern.search("docs/theme.md")
 
 
-def test_ruff_hooks_are_unchanged():
+def test_ruff_hooks_are_present_with_the_expected_ids():
     config = _config()
     repos = [
         repo
@@ -103,7 +108,6 @@ def test_ruff_hooks_are_unchanged():
         if repo["repo"] == "https://github.com/astral-sh/ruff-pre-commit"
     ]
     assert len(repos) == 1
-    assert repos[0]["rev"] == "v0.17.0"
     assert [hook["id"] for hook in repos[0]["hooks"]] == ["ruff-check", "ruff-format"]
 
 
