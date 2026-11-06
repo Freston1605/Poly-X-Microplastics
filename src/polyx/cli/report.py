@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-    print(f"COMPACT REPORT: {path}")
+    print(f"WROTE: {path}")
     return 0
 
 
