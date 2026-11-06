@@ -28,6 +28,10 @@ convention. **Do not duplicate content here.**
 - **Docs ship with the behaviour** — manual text and CLAUDE.md updates
   ride in the same PR as the change that makes them true; the worktree
   never carries uncommitted doc updates across builds.
-- Run the tests with `.venv\Scripts\python.exe -m pytest -q` and wait
-  until the **full suite passes with zero failures and zero skips**
-  before calling anything done.
+- **Run the gate with `python tools/check.py`** — suite, ruff and the ty
+  engine check, from any checkout or worktree. Wait until the **full
+  suite passes with zero failures and zero skips** before calling
+  anything done.
+- **Branch from `origin/main`**, never from a merged feature-branch tip:
+  this repo squash-merges, so old tips are not ancestors and produce
+  phantom PR conflicts.
