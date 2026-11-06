@@ -1,7 +1,7 @@
 """End-to-end tests for the headless detection CLI on the canonical engine.
 
-Ticket #59: ``polyx-detect`` runs ``run_detection`` instead of the legacy
-``run_batch``, accepts repeatable models and model types, writes the exact
+Ticket #59: ``polyx-detect`` runs ``run_detection`` (not the removed headless
+batch writer), accepts repeatable models and model types, writes the exact
 ``--out`` folder, refuses to overwrite it without ``--force``, and keeps both
 the compact and the full report paths working. The models are stubbed so the
 suite never needs weights, a GPU or Ultralytics.

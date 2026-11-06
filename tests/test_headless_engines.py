@@ -1,16 +1,14 @@
-"""Fixture tests for the headless engines (no Ultralytics, no Qt).
+"""Fixture tests for the Qt-free headless helpers (no Ultralytics, no Qt).
 
-Covers the new core engines: polygon GT parsing, mask IoU and mask-aware
-matching, ``run_batch`` on a stub detector, the compact report generator,
-and the pure metric extraction of the evaluation module. These modules
-previously had only translation-walker coverage, which let a silent
-zero-mask bug through — see the fillPoly note in
+Covers polygon GT parsing, mask IoU and mask-aware matching, mask-aware
+measurement, the pure metric extraction of the evaluation module, and the GT
+lookup helper. These modules previously had only translation-walker coverage,
+which let a silent zero-mask bug through — see the fillPoly note in
 ``core/detect/protocol.py``.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 from types import SimpleNamespace
 
@@ -18,11 +16,8 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core import annotate as A
 from polyx.core.detect.protocol import Instance, find_gt_for_image, read_yolo_txt
-from polyx.core.detection_run import run_batch
 from polyx.core.quality.metrics import mask_iou, match_image
-from polyx.core.report_simple import generate as generate_report
 
 # A cross-shaped polygon: its bounding box is the whole (200x150) frame,
 # while the mask itself is the two bars. Any box-vs-box comparison of a
@@ -62,54 +57,6 @@ def _write_image(path, w: int = 200, h: int = 150) -> None:
     ok, buf = cv2.imencode(".png", img)
     assert ok
     buf.tofile(str(path))
-
-
-class _FakeDetector:
-    """Minimal DetectionSource: returns fixed boxes, owns names."""
-
-    def __init__(self, boxes, masks: list[np.ndarray] | None = None):
-        self._boxes = boxes
-        self._masks = masks or [None] * len(boxes)
-        self._names = {0: "particle", 1: "fiber"}
-
-    def load(self):
-        return self
-
-    @property
-    def names(self):
-        return self._names
-
-    @property
-    def last_imgsz(self) -> int:
-        return 1280
-
-    def predict(
-        self, image_path, conf=0.25, iou=0.45, imgsz=1280, device=None, **kwargs
-    ) -> list[Instance]:
-        out = []
-        for i, (cid, x1, y1, x2, y2) in enumerate(self._boxes):
-            out.append(
-                Instance(
-                    class_id=cid,
-                    class_name=self._names.get(cid, str(cid)),
-                    conf=0.9,
-                    x1=float(x1),
-                    y1=float(y1),
-                    x2=float(x2),
-                    y2=float(y2),
-                    mask=self._masks[i],
-                    mask_source="stub" if self._masks[i] is not None else None,
-                )
-            )
-        return out
-
-
-def _run_dir(tmp_path):
-    image_dir = tmp_path / "photos"
-    image_dir.mkdir()
-    _write_image(image_dir / "img1.png")
-    out = tmp_path / "run"
-    return image_dir, out
 
 
 # ── Polygon GT parsing ──────────────────────────────────────────────────
@@ -191,75 +138,6 @@ def test_matching_switches_tp_only_through_masks():
     assert masked.tp == 1  # identical masks -> IoU 1.0
 
 
-# ── run_batch on a stub detector ────────────────────────────────────────
-
-
-def test_run_batch_counts_and_outputs(tmp_path):
-    image_dir, out = _run_dir(tmp_path)
-    # prediction matches the dark square; GT declares the same box
-    model = _FakeDetector([(0, 50, 40, 90, 80)])
-    gt = image_dir / "img1.txt"
-    cx, cy, w, h = (70 / 200), (60 / 150), (40 / 200), (40 / 150)
-    gt.write_text(f"0 {cx:.4f} {cy:.4f} {w:.4f} {h:.4f}\n", encoding="utf-8")
-
-    summary = run_batch(
-        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
-    )
-    assert summary["images"] == 1 and summary["detections"] == 1
-    assert summary["has_gt"] is True
-    assert summary["metrics"]["tp"] == 1 and summary["metrics"]["fp"] == 0
-    assert summary["metrics"]["fn"] == 0
-
-    csv_text = (out / "centroids.csv").read_text(encoding="utf-8")
-    assert "class_id" in csv_text and "img1.png" in csv_text
-    metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
-    assert metrics["tp"] == 1
-    out_png = out / "images" / "img1.png"
-    assert out_png.is_file()
-    # The batch now draws through the annotation primitive: class colours
-    # replace the old uniform green, with the scale-aware thickness.
-    decoded = cv2.imdecode(np.fromfile(out_png, dtype=np.uint8), cv2.IMREAD_COLOR)
-    assert tuple(int(v) for v in decoded[40, 50]) == A.bgr_for_class("particle")
-    # Deliberate appearance change, pinned so it stays a review.
-    assert hashlib.sha256(out_png.read_bytes()).hexdigest() == (
-        "70bddba445ddaa3bedc932762698e1569e1884e8d9be1fecb3699f3a7ecb21c9"
-    )
-
-
-def test_run_batch_uses_mask_iou_when_both_sides_have_masks(tmp_path):
-    image_dir, out = _run_dir(tmp_path)
-    gt = image_dir / "img1.txt"
-    gt.write_text(_cross_polygon_txt(), encoding="utf-8")
-    # Prediction: small box + the same cross mask. Box IoU vs the
-    # whole-frame GT bbox is ~0.13, so box matching would call it FP;
-    # identical masks must make it a TP through the mask path.
-    model = _FakeDetector([(0, 0, 90, 200, 110)], masks=[_cross_mask()])
-    summary = run_batch(
-        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
-    )
-    assert summary["metrics"]["tp"] == 1, summary
-
-
-def test_run_batch_without_masks_keeps_box_matching(tmp_path):
-    image_dir, out = _run_dir(tmp_path)
-    gt = image_dir / "img1.txt"
-    gt.write_text(_cross_polygon_txt(), encoding="utf-8")
-    # Neither side carries masks: matching must degrade to box IoU silently.
-    model = _FakeDetector([(0, 0, 90, 200, 110)])
-    summary = run_batch(
-        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
-    )
-    assert summary["metrics"]["fp"] == 1
-
-
-def test_run_batch_empty_inputs_still_write_csv(tmp_path):
-    image_dir, out = _run_dir(tmp_path)
-    model = _FakeDetector([])
-    summary = run_batch(model, image_dir, out, device="cpu", measure_shape=False)
-    assert summary["detections"] == 0
-    assert (out / "centroids.csv").read_text(encoding="utf-8").startswith("image")
-
-
 # ── Mask-aware measurement ─────────────────────────────────────────────
 
 
@@ -286,69 +164,6 @@ def test_measurement_prefers_attached_mask_over_otsu():
     det2 = Instance(class_id=0, class_name="p", conf=0.9, x1=50, y1=40, x2=90, y2=80, mask=full)
     assert apply_to_detection(det2, img, 1.0) is True
     assert det2.area_um2 == pytest.approx(3600.0, rel=0.01)
-
-
-def test_run_batch_records_per_image_metrics_and_params(tmp_path):
-    """Per-image counts must sum to the aggregate, never repeat it."""
-    image_dir, out = _run_dir(tmp_path)
-    _write_image(image_dir / "img2.png")
-    # img1: prediction matches GT -> TP. img2: GT sits elsewhere -> FP + FN.
-    (image_dir / "img1.txt").write_text("0 0.35 0.4 0.2 0.2667\n", encoding="utf-8")
-    (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
-    model = _FakeDetector([(0, 50, 40, 90, 80)])
-
-    summary = run_batch(
-        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
-    )
-    assert summary["per_image"]["img1.png"] == {"tp": 1, "fp": 0, "fn": 0, "miscls": 0}
-    assert summary["per_image"]["img2.png"] == {"tp": 0, "fp": 1, "fn": 1, "miscls": 0}
-    assert sum(v["tp"] for v in summary["per_image"].values()) == summary["metrics"]["tp"]
-
-    assert summary["params"]["imgsz"] == 1280
-    assert summary["params"]["conf"] == 0.25
-    assert summary["params"]["measure_shape"] is False
-    assert summary["params"]["device"] == "cpu"
-
-
-def test_run_state_rebuild_does_not_multiply_metrics(tmp_path):
-    """The report sums per image: rebuilt state must carry per-image counts."""
-    image_dir, out = _run_dir(tmp_path)
-    _write_image(image_dir / "img2.png")
-    (image_dir / "img1.txt").write_text("0 0.35 0.4 0.2 0.2667\n", encoding="utf-8")
-    (image_dir / "img2.txt").write_text("0 0.95 0.95 0.05 0.05\n", encoding="utf-8")
-    model = _FakeDetector([(0, 50, 40, 90, 80)])
-    summary = run_batch(
-        model, image_dir, out, device="cpu", measure_shape=False, gt_folder=image_dir
-    )
-
-    from polyx.gui.detector.run_state import build_state_from_run
-
-    state = build_state_from_run(out, image_dir)
-    rs = state.results[0]
-    by_name = {r.image_path.name: r for r in rs}
-    assert by_name["img1.png"].tp == 1
-    assert by_name["img2.png"].tp == 0 and by_name["img2.png"].fn == 1
-    # The invariant the report relies on: the per-image sum is the aggregate.
-    assert sum(r.tp for r in rs) == summary["metrics"]["tp"]
-    assert all(r.has_gt for r in rs)
-    assert all(r.annotated_path.is_file() for r in rs)
-    # Run parameters travel with the run instead of defaulting to 1280/0.25.
-    assert state.params.imgsz == summary["params"]["imgsz"]
-
-
-# ── Compact report ──────────────────────────────────────────────────────
-
-
-def test_report_simple_generates_html(tmp_path):
-    image_dir, out = _run_dir(tmp_path)
-    run_batch(
-        _FakeDetector([(0, 50, 40, 90, 80)]), image_dir, out, device="cpu", measure_shape=False
-    )
-    report = generate_report(out)
-    assert report.is_file()
-    text = report.read_text(encoding="utf-8")
-    assert "Poly-X run report" in text
-    assert "particle" in text
 
 
 # ── Evaluation metric extraction (no Ultralytics needed) ────────────────
