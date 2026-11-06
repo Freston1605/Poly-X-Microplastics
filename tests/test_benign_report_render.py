@@ -3,7 +3,7 @@
 El render del informe escapa los sumideros de valor con html.escape SIN
 alterar el documento para entradas benignas. La forma honesta de probarlo es
 un test de identidad contra el baseline benigno capturado por
-tools/audit/capturar_fixtures_informe.py: el render por el pipeline real debe
+tools/audit/capture_report_fixtures.py: el render por el pipeline real debe
 reproducirlo byte a byte, y si un cambio toca algo mas que lo previsto, este
 test lo dice con la desviacion de hash y de tamano.
 
@@ -12,7 +12,7 @@ es determinista (planning: 41 corridas repiten el mismo hash); los tiempos del
 cronometro y la fecha de generacion nunca entran al HTML.
 
 NOTA DE IDIOMA (contrato desde M006/S05): el baseline es el render en INGLES.
-La recaptura de M006/S05 corre tools/audit/capturar_fixtures_informe.py, que fija
+La recaptura de M006/S05 corre tools/audit/capture_report_fixtures.py, que fija
 POLYX_LOCALE=en before importing any module, and this test pins the same
 value: the byte comparison depends neither on the machine's locale nor on
 ~/.polyx_preferences.json. The M004 snapshots were superseded by the M006/S05
@@ -118,7 +118,7 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     importlib.reload(rh)
 
     # Pin the machine-equipment table to the same canonical rows the
-    # baseline was captured with (tools/audit/capturar_fixtures_informe.py sets
+    # baseline was captured with (tools/audit/capture_report_fixtures.py sets
     # the identical lambda): the report's _team() reads live OS/RAM/GPU/
     # torch values that differ per runner, and a byte gate cannot depend on
     # them. Production keeps the live rows; only this fixture and the
@@ -179,7 +179,7 @@ def test_render_benigno_es_byte_identico_al_baseline(tmp_path):
     """El render por el pipeline real, con TODAS las secciones, reproduce el
     baseline benigno byte a byte."""
     import polyx.gui.report_html as rh
-    from tests.fixtures_informe import estado_benigno
+    from tests.report_fixtures import estado_benigno
 
     st = estado_benigno(directorio=tmp_path / "fotos")
     salida = tmp_path / "informe.html"
@@ -199,7 +199,7 @@ def test_sha256_del_render_benigno_coincide_con_el_registrado(tmp_path):
     """El digest persistido en informe.sha256 delimita que parte muto: si el
     compare de bytes falla, este segundo arbol da el valor exacto a buscar."""
     import polyx.gui.report_html as rh
-    from tests.fixtures_informe import estado_benigno
+    from tests.report_fixtures import estado_benigno
 
     st = estado_benigno(directorio=tmp_path / "fotos")
     salida = tmp_path / "informe.html"

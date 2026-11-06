@@ -1,13 +1,13 @@
 """Captura las ventanas de Poly-X a PNG para el manual.
 
-A diferencia de generar_manual.py, no parchea un HTML existente: vuelca las
+A diferencia de generate_manual.py, no parchea un HTML existente: vuelca las
 capturas a una carpeta para que el manual se arme desde cero. Cubre las 21
 pantallas (incluye la pestana 2 del Detector, "GT manual", que el generador
 antiguo se saltaba).
 
 Uso (desde la raiz del proyecto):
-    .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-    POLYX_LOCALE=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+    .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+    POLYX_LOCALE=en .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
 """
 
 from __future__ import annotations

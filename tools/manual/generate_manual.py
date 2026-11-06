@@ -1,22 +1,22 @@
 """Construye Manual_PolyX.html y Manual_PolyX.en.html desde cero.
 
-A diferencia de generar_manual.py —que solo reemplazaba las capturas dentro de
+A diferencia de generate_manual.py —que solo reemplazaba las capturas dentro de
 un HTML ya escrito— este script arma el manual completo: texto, figuras
-numeradas, indice y hoja de estilo. El texto vive en manual_texto_es.py y
-manual_texto_en.py (esta misma carpeta); aqui solo esta el motor.
+numeradas, indice y hoja de estilo. El texto vive en manual_text_es.py y
+manual_text_en.py (esta misma carpeta); aqui solo esta el motor.
 
 Las imagenes se empotran en base64, de modo que el archivo resultante se abre
 con doble clic y sin conexion. Antes de empotrarlas se reescalan, porque las
 capturas web van a 2x y sin reducir el manual pasaria de 25 MB.
 
 Uso (desde la raiz del proyecto):
-    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py            # ambos idiomas
-    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py --idioma es
-    .venv\\Scripts\\python.exe tools\\manual\\generar_manual.py --pdf      # ademas el PDF
+    .venv\\Scripts\\python.exe tools\\manual\\generate_manual.py            # ambos idiomas
+    .venv\\Scripts\\python.exe tools\\manual\\generate_manual.py --idioma es
+    .venv\\Scripts\\python.exe tools\\manual\\generate_manual.py --pdf      # ademas el PDF
 
 Para regenerar las capturas de la interfaz antes de armar el manual:
-    .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/es
-    POLYX_LOCALE=en .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/en
+    .venv\\Scripts\\python.exe tools\\manual\\capture_manual.py --salida docs/assets/manual_screenshots/es
+    POLYX_LOCALE=en .venv\\Scripts\\python.exe tools\\manual\\capture_manual.py --salida docs/assets/manual_screenshots/en
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ try:
 except Exception:  # noqa: BLE001, S110
     pass
 
-RAIZ = Path(__file__).resolve().parent  # tools/manual: home of manual_texto_*.{es,en}
+RAIZ = Path(__file__).resolve().parent  # tools/manual: home of manual_text_*.{es,en}
 PROYECTO = RAIZ.parents[1]  # project root, inputs and outputs of the manual
 CAPTURAS = PROYECTO / "docs" / "assets" / "manual_screenshots"
 DESTINO_HTML = PROYECTO / "docs" / "manual"
@@ -483,7 +483,7 @@ PLACA_SVG = """
 #  Montaje
 # ────────────────────────────────────────────────────────────────────
 def construir(idioma: str) -> tuple[str, list[str]]:
-    modulo = f"manual_texto_{idioma}"
+    modulo = f"manual_text_{idioma}"
     if str(RAIZ) not in sys.path:
         sys.path.insert(0, str(RAIZ))
     txt = __import__(modulo)

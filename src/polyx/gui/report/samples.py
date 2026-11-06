@@ -158,7 +158,7 @@ def _batch_metrics(run, solo_images):
     inline in ``_generate_report_impl``: same empty-set filter semantics,
     same computation order, same ``Counter`` loops. Returns a plain tuple —
     no :class:`~typing.NamedTuple` and no new imports, so the lazy-import
-    gate (``test_importes_diferidos_informe.py``) sees nothing new and no
+    gate (``test_report_deferred_imports.py``) sees nothing new and no
     heavy module (``ultralytics``/``cv2``/``morfologia``/``calibracion``)
     gets touched at module level.
     """

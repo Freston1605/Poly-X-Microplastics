@@ -12,7 +12,7 @@ Estas pruebas fijan la frontera de forma ejecutable, en tres frentes:
 1. Un interprete LIMPIO importa ``polyx.core`` y comprueba que no quedo
    ningun modulo ``PySide6*`` en ``sys.modules``. Se usa un subproceso a
    proposito: el proceso de pytest puede traer PySide6 ya cargado por
-   ``test_temas``, asi que comprobarlo en proceso no probaria nada.
+   ``test_themes``, asi que comprobarlo en proceso no probaria nada.
 2. Un escaneo AST de ``polyx/model/*.py`` rechaza cualquier import de Qt o de
    ``polyx.gui`` y cualquier import relativo que se salga del motor.
 3. El paquete de re-export del ``core`` tiene que haber DESAPARECIDO: mientras
@@ -173,7 +173,7 @@ def test_importar_el_motor_no_carga_ningun_modulo_qt():
     """Un interprete nuevo importa polyx.core sin que entre ningun PySide6.
 
     Se lanza en subproceso porque el pytest que corre esta prueba puede tener
-    PySide6 ya en sys.modules (``test_temas`` construye widgets): comprobar la
+    PySide6 ya en sys.modules (``test_themes`` construye widgets): comprobar la
     pureza dentro del mismo proceso daria un falso positivo.
     """
     guion = (

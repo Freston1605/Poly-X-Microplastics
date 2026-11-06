@@ -1,7 +1,7 @@
 """Self-contained Spanish-remnant scanner for the English-convention gates.
 
 This is the durable half of the retired translation tooling: the four
-``*_ingles`` guards still need to recognise Spanish prose and identifiers, but
+``*_english`` guards still need to recognise Spanish prose and identifiers, but
 they no longer need a codemod to do it. Everything here is standard-library
 ``ast``/``tokenize`` plus the curated vocabulary that was already proven
 against the package; nothing imports LibCST.
@@ -791,6 +791,8 @@ SPANISH_SUBWORDS = frozenset(
     cubo delgadez distancia donde empate envolvente flecha fuga identificar lapiz leeme
     mapa matraz mej metr mezclar minuscula mitad morfologia ojo otra para paralaje
     publicar realce recorte resumir segmentar talla
+    benigno captura capturar capturadas capturado capturados geodesia ingles
+    plataforma recetas sumideros trunca
     """.split()
 )
 
@@ -1074,7 +1076,7 @@ def _selected_runs(lines: Iterable[int], selected: set[int]) -> list[list[int]]:
 def scan_python_source(text: str, only_lines: set[int] | None = None) -> list[tuple[int, str]]:
     """Return ``(line, finding)`` for every Spanish finding in a Python source.
 
-    This is the single entry point over the ``*_ingles`` matchers: comments,
+    This is the single entry point over the ``*_english`` matchers: comments,
     docstrings and identifiers are judged with the same vocabulary and the same
     heuristics as the pytest gates. When ``only_lines`` is given, findings are
     restricted to those lines; a multi-line comment block is judged only when

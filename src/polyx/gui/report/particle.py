@@ -4,7 +4,7 @@
 green on a side-by-side view, and appends the pixel→µm accounting with
 Feret/geodesic for comparison. It uses the SAME ``box_margin`` as
 ``segment`` (must not drift: see the comment in the body and
-``tests/test_mascara_alineada.py``), keeps heavy imports lazy (cv2,
+``tests/test_aligned_mask.py``), keeps heavy imports lazy (cv2,
 ``polyx.core.measure.*``) and returns ``""`` on any failure so the
 report never crashes over a bad crop.
 

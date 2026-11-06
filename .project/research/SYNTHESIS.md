@@ -26,7 +26,7 @@
 
 ### Layout (src/ migration)
 
-- **Decision**: Move `polyx/` → `src/polyx/` and make `paths.ROOT` point at the repository/project root (not `src/`) by changing the parent count from `parents[2]` to `parents[3]`, so `MODELS_DIR`, `RUNS_DIR`, `DATA_DIR`, `ASSETS_DIR`, `DEFAULT_MODEL` and the `.venv` lookup in `platform.environment_python()` keep resolving to the project root. Update `launcher._spawn_module`'s `cwd` the same way. Update the i18n audit scripts (`tests/test_comments_ingles.py`, `test_identifiers_ingles.py`, `test_docstrings_ingles.py`) to use `REPO_ROOT / "src" / "polyx"`.
+- **Decision**: Move `polyx/` → `src/polyx/` and make `paths.ROOT` point at the repository/project root (not `src/`) by changing the parent count from `parents[2]` to `parents[3]`, so `MODELS_DIR`, `RUNS_DIR`, `DATA_DIR`, `ASSETS_DIR`, `DEFAULT_MODEL` and the `.venv` lookup in `platform.environment_python()` keep resolving to the project root. Update `launcher._spawn_module`'s `cwd` the same way. Update the i18n audit scripts (`tests/test_comments_english.py`, `test_identifiers_english.py`, `test_docstrings_english.py`) to use `REPO_ROOT / "src" / "polyx"`.
 - **Runner-up**: Letting `ROOT` follow `src/` (relocating models/runs/assets under `src/`) — rejected because it breaks the documented data layout and the `.venv` discovery contract (evidence-pitfalls.md § Finding: paths.ROOT drives models/, runs/, data/, assets/ and the .venv lookup).
 - **Evidence**: evidence-pitfalls.md § "src/ layout breaks all three current entry surfaces unless paths are re-derived"; evidence-pitfalls.md § "paths.ROOT drives models/, runs/, data/, assets/ and the .venv lookup"; evidence-stack.md § "src/ layout does not inherently break PyInstaller if the package is installed or pathex is set".
 - **Confidence**: high
@@ -61,7 +61,7 @@
 
 ### i18n audit approach
 
-- **Decision**: Keep the existing audit scripts (`auditar_traduccion.py` + `tests/test_*_ingles.py`) as the CI gate but retarget their root from `REPO_ROOT / "polyx"` to `REPO_ROOT / "src" / "polyx"` after the move; scan all `.py` outside `tr()` for non-ASCII identifiers and non-English comments/docstrings; fail CI on any untranslated source string. Do not touch user-facing Spanish GUI strings (N5).
+- **Decision**: Keep the existing audit scripts (`auditar_traduccion.py` + `tests/test_*_english.py`) as the CI gate but retarget their root from `REPO_ROOT / "polyx"` to `REPO_ROOT / "src" / "polyx"` after the move; scan all `.py` outside `tr()` for non-ASCII identifiers and non-English comments/docstrings; fail CI on any untranslated source string. Do not touch user-facing Spanish GUI strings (N5).
 - **Runner-up**: Rewriting the audit as a new tool — unnecessary; the existing scripts already encode the rule and only need their path root updated (evidence-pitfalls.md § "Existing failure modes already present in the codebase").
 - **Evidence**: evidence-pitfalls.md § "Existing failure modes already present in the codebase"; INTENT.md Success criteria 8; INTENT.md Prohibition N5.
 - **Confidence**: high

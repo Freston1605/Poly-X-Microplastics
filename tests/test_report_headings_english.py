@@ -98,7 +98,7 @@ def _visible_lines(document: str) -> list[str]:
 def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
     """Render a state through the real pipeline in the requested language.
 
-    Mirrors the isolation of ``tests/test_render_reporte_benigno.py``: the
+    Mirrors the isolation of ``tests/test_benign_report_render.py``: the
     language is pinned through ``POLYX_LOCALE`` because i18n caches it at
     import time, ``POLYX_LOG_DIR`` keeps the rotating detector handler inside
     ``tmp_path``, and the detector logger is silenced with a ``NullHandler``
@@ -141,13 +141,13 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
 
 
 def _benigno(directory: Path):
-    from tests.fixtures_informe import estado_benigno
+    from tests.report_fixtures import estado_benigno
 
     return estado_benigno(directorio=directory)
 
 
 def _completo(directory: Path):
-    from tests.test_informe_bilingue import _estado_completo
+    from tests.test_bilingual_report import _estado_completo
 
     return _estado_completo(directory)
 
@@ -167,28 +167,28 @@ def _assert_english_forms(lines: set[str], expected: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_el_render_benigno_en_ingles_no_muestra_rotulos_en_espanol(tmp_path):
+def test_el_render_benigno_en_english_no_muestra_rotulos_en_espanol(tmp_path):
     lines = set(_visible_lines(_render(tmp_path, _benigno, "en", "benigno")))
     spanish = sorted(lines & ROTULOS_ES)
     assert not spanish, "Spanish headings in the English benign render: " + ", ".join(spanish)
     _assert_english_forms(lines, ROTULOS_EN_BENIGN)
 
 
-def test_el_render_completo_en_ingles_no_muestra_rotulos_en_espanol(tmp_path):
+def test_el_render_completo_en_english_no_muestra_rotulos_en_espanol(tmp_path):
     lines = set(_visible_lines(_render(tmp_path, _completo, "en", "completo")))
     spanish = sorted(lines & ROTULOS_ES)
     assert not spanish, "Spanish headings in the English complete render: " + ", ".join(spanish)
     _assert_english_forms(lines, ROTULOS_EN_COMPLETE)
 
 
-def test_el_render_benigno_en_espanol_conserva_los_rotulos_en_ingles(tmp_path):
+def test_el_render_benigno_en_espanol_conserva_los_rotulos_en_english(tmp_path):
     # The raw literals must not follow the UI language: in the Spanish render
     # the tr() prose stays Spanish, but these headings stay English.
     lines = set(_visible_lines(_render(tmp_path, _benigno, "es", "benigno")))
     _assert_english_forms(lines, ROTULOS_EN_BENIGN)
 
 
-def test_el_render_completo_en_espanol_conserva_los_rotulos_en_ingles(tmp_path):
+def test_el_render_completo_en_espanol_conserva_los_rotulos_en_english(tmp_path):
     lines = set(_visible_lines(_render(tmp_path, _completo, "es", "completo")))
     _assert_english_forms(lines, ROTULOS_EN_COMPLETE)
 
@@ -305,14 +305,14 @@ def _baseline_lines(name: str) -> set[str]:
     return set(_visible_lines(path.read_text(encoding="utf-8")))
 
 
-def test_el_baseline_benigno_esta_en_ingles():
+def test_el_baseline_benigno_esta_en_english():
     lines = _baseline_lines("benigna")
     spanish = sorted(lines & ROTULOS_ES)
     assert not spanish, "Spanish headings in the benign baseline: " + ", ".join(spanish)
     _assert_english_forms(lines, ROTULOS_EN_BENIGN)
 
 
-def test_el_baseline_hostil_esta_en_ingles():
+def test_el_baseline_hostil_esta_en_english():
     lines = _baseline_lines("hostil")
     spanish = sorted(lines & ROTULOS_ES)
     assert not spanish, "Spanish headings in the hostile baseline: " + ", ".join(spanish)

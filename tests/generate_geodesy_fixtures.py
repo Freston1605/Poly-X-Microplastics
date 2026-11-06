@@ -16,13 +16,13 @@ Construye una estructura de corrida mock compatible con ``polyx/gui/detector/run
 sinteticas BGR con fondo oscuro y particula brillante con contraste superior a
 ``CONTRASTE_MINIMO``.
 
-Invoca ``tests/capturar_fixtures_geodesia.capturar()`` para que cada particula pase
+Invoca ``tests/capture_geodesy_fixtures.capturar()`` para que cada particula pase
 por ``morfologia.segmentar()`` y se recorte al rectangulo envolvente como mascara
 uint8 (0/255) canonica en ``tests/fixtures/geodesia/y11n__<stem>__000.npy``.
 
 Uso::
 
-    python tests/generar_fixtures_geodesia.py [--destino tests/fixtures/geodesia]
+    python tests/generate_geodesy_fixtures.py [--destino tests/fixtures/geodesia]
 
 Docstrings en ingles, comentarios en espanol (convencion del repo).
 """
@@ -40,7 +40,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import capturar_fixtures_geodesia as CFG
+import capture_geodesy_fixtures as CFG
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "geodesia"
 
@@ -185,7 +185,7 @@ def generar_fixtures(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Genera fixtures canonicos .npy para tests/fixtures/geodesia "
-        "a traves de capturar_fixtures_geodesia.capturar()."
+        "a traves de capture_geodesy_fixtures.capturar()."
     )
     parser.add_argument(
         "--destino",

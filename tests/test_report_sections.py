@@ -9,7 +9,7 @@ salida para el estado benigno coincide con lo que el baseline benigno
 (tests/fixtures/baseline_informe/benigna/informe.html) realmente contiene.
 Ese baseline es el gate actual, recapturado en M006/S05 en ingles.
 
-The language contract is the one in tests/test_render_reporte_benigno.py
+The language contract is the one in tests/test_benign_report_render.py
 (POLYX_LOCALE=en): the baseline was captured in English and any assertion about
 body text needs the same language, pinned and reloaded in the autouse fixture --
 see the language note in that module for the full provenance.
@@ -32,7 +32,7 @@ from types import SimpleNamespace
 import pytest
 
 # Baseline benigno de M006/S05: solo lectura en la suite; se recaptura con
-# tools/audit/capturar_fixtures_informe.py solo ante un cambio consciente del
+# tools/audit/capture_report_fixtures.py solo ante un cambio consciente del
 # informe, actualizando sha256, pin y README juntos.
 BASELINE_HTML = (
     Path(__file__).resolve().parent / "fixtures" / "baseline_informe" / "benigna" / "informe.html"
@@ -45,7 +45,7 @@ BASELINE_HTML = (
 # renumera su marcador ordinal desde 1 pero el baseline los numera desde su
 # posicion global, asi que un marcador ordinal no casa entre ambos. La
 # posicion de cada figura dentro del informe completo la cubre el gate de
-# tests/test_render_reporte_benigno.py (renders de TODAS las secciones
+# tests/test_benign_report_render.py (renders de TODAS las secciones
 # juntas, mismos ordinales en ambos lados); aqui solo se fija estructura.
 import re as _re  # noqa: E402
 
@@ -57,7 +57,7 @@ def _sin_payload_figuras(html: str) -> str:
     return _PNG_URI_RE_SECTION.sub("data:image/png;base64,<FIG>", html)
 
 
-from tests.test_render_reporte_benigno import _normalizar_figuras  # noqa: E402,F401
+from tests.test_benign_report_render import _normalizar_figuras  # noqa: E402,F401
 
 # El baseline ya normalizado con marcador constante (solo separa estructura):
 # unico lugar que lee el archivo. Los cuerpos de seccion se comparan contra
@@ -87,7 +87,7 @@ CONSTRUCTORES = (
 def _idioma_del_baseline(tmp_path):
     """Fuerza el idioma del baseline (en) y recarga i18n/report_html.
 
-    Misma receta que el fixture de tests/test_render_reporte_benigno.py:
+    Misma receta que el fixture de tests/test_benign_report_render.py:
     polyx.core.i18n cachea el idioma al importar, y los cuerpos que aqui se
     comparan con texto del baseline (en ingles) saldrian en otro idioma sin
     esta recarga. Se restaura el entorno al salir para no contaminar a otros
@@ -158,7 +158,7 @@ def _precomputados(st) -> SimpleNamespace:
 
 def _estado_benigno(tmp_path) -> tuple:
     """Estado benigno + sus precomputos, con la receta del render del baseline."""
-    from tests.fixtures_informe import estado_benigno
+    from tests.report_fixtures import estado_benigno
 
     st = estado_benigno(directorio=tmp_path / "fotos")
     return st, _precomputados(st)
@@ -211,7 +211,7 @@ def test_modelos_nombra_al_alias(tmp_path):
     cuerpo = rh._section_models(st, pre.resultados, pre.all_results, pre.any_gt)
     assert isinstance(cuerpo, str) and cuerpo
     assert "<h2" not in cuerpo
-    assert "m1" in cuerpo  # alias de tests/fixtures_informe.ALIAS_BENIGNO
+    assert "m1" in cuerpo  # alias de tests/report_fixtures.ALIAS_BENIGNO
     assert _sin_payload_figuras(cuerpo) in BASELINE_TXT
 
 
@@ -292,7 +292,7 @@ def test_referencias_con_y_sin_bandera(tmp_path):
     assert rh._section_references(include_refs=False) == ""
 
 
-def test_calibracion_vacia_sin_calibraciones(tmp_path):
+def test_calibration_vacia_sin_calibraciones(tmp_path):
     """Calibracion: el estado benigno no lleva calibraciones -> ''.
 
     Caso frontera declarado en el plan: la seccion se omite cuando no hay
