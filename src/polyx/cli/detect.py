@@ -5,11 +5,19 @@ folder to the exact ``--out`` path. ``--model`` and ``--model-type`` are
 repeatable: one type applies to every model, one per model must match, and no
 type means YOLO. A non-empty ``--out`` is refused unless ``--force`` is given.
 
+Calibration defaults to ``auto``: an explicit ``--index-calibration`` CSV,
+then the index files searched from the image root, then the plate measured on
+each photo, then ``--um-per-px``. ``--um-per-px`` alone selects ``manual``;
+``--calibrate none`` refuses every scale.
+
 Usage:
     polyx-detect --model best.pt --images ./photos --out ./run
     polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \\
         --images ./photos --out ./run
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
+    polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
+        --index-calibration ./indice.csv
+    polyx-detect --model best.pt --images ./photos --out ./run --calibrate none
     polyx-detect --model best.pt --images ./photos --out ./run --tiling auto \\
         --tiling-tile 1024 --size-min-um 10 --conf-assignment 0.5
     polyx-detect --model best.pt --images ./photos --out ./run --full-report
@@ -23,6 +31,7 @@ from pathlib import Path
 
 from polyx.core.detect import make_detector
 from polyx.core.detection_run import (
+    CALIBRATION_MODES,
     IMAGE_EXTS,
     CalibrationPolicy,
     ModelSpec,
@@ -40,6 +49,19 @@ EXIT_ERROR = 1
 EXIT_USAGE = 2
 EXIT_OUTPUT_EXISTS = 3
 EXIT_ABORTED = 4
+
+
+class _CalibrationAction(argparse.Action):
+    """Store ``--calibrate`` and remember that it was given explicitly.
+
+    ``--um-per-px`` implies ``manual`` only while nobody chose a mode: an
+    explicit ``--calibrate auto`` keeps the typed value as its last fallback,
+    and ``--calibrate none`` must not be overridden by it.
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+        namespace.calibrate_given = True
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -67,7 +89,25 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
     )
-    parser.add_argument("--um-per-px", type=float, default=0.0)
+    parser.add_argument(
+        "--calibrate",
+        choices=CALIBRATION_MODES,
+        default="auto",
+        action=_CalibrationAction,
+        help="per-photo calibration policy (default: auto)",
+    )
+    parser.add_argument(
+        "--um-per-px",
+        type=float,
+        default=0.0,
+        help="manual µm/px; used alone it selects --calibrate manual",
+    )
+    parser.add_argument(
+        "--index-calibration",
+        default=None,
+        metavar="CSV",
+        help="explicit index CSV mapping image names to µm/px",
+    )
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
     parser.add_argument(
@@ -144,6 +184,15 @@ def _load_models(weights: list[str], model_types: list[str]) -> list[ModelSpec]:
     return specs
 
 
+def _calibration_mode(args) -> str:
+    """Resolve the mode: an explicit ``--calibrate`` wins over the implication."""
+    if getattr(args, "calibrate_given", False):
+        return str(args.calibrate)
+    if args.um_per_px > 0:
+        return "manual"
+    return str(args.calibrate)
+
+
 def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     params = RunParams(
         conf=args.conf,
@@ -161,11 +210,10 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     )
     if args.device is not None and str(args.device).strip():
         params.device = str(args.device)
-    # #60 adds the explicit --calibrate surface. Until then the CLI exposes
-    # exactly the legacy behaviour: a positive scale is manual, no scale is none.
     calibration = CalibrationPolicy(
-        mode="manual" if args.um_per_px > 0 else "none",
+        mode=_calibration_mode(args),
         um_per_px=args.um_per_px,
+        index_path=Path(args.index_calibration) if args.index_calibration else None,
     )
     return RunConfig(
         images=_find_images(Path(args.images)),

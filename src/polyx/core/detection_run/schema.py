@@ -88,7 +88,9 @@ def params_from_dict(data: dict | None) -> RunParams:
 
 def calibration_to_dict(calibration: Calibration) -> dict:
     data = asdict(calibration)
-    data["valid"] = calibration.valid
+    # When the plate was measured, ``Calibration.valid`` tests a numpy float
+    # and yields ``numpy.bool_``, which is not JSON serialisable.
+    data["valid"] = bool(calibration.valid)
     return data
 
 
@@ -338,6 +340,7 @@ def build_run_payload(result: RunResult, provenance_data: dict | None = None) ->
         "models": [_model_payload(result, index, metrics) for index in range(len(result.models))],
         "metrics": {str(index): values for index, values in metrics.items()},
         "calibrations": calibrations,
+        "calibration_summary": result.calibration_summary,
         "images": _image_payloads(result),
         "error": result.error,
         "skipped_images": [str(path) for path in result.skipped_images],

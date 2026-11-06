@@ -13,7 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from polyx.core.detect.yolo import Detection
-from polyx.core.measure.calibration import Calibration
+from polyx.core.measure.calibration import Calibration, summary_batch
 from polyx.core.platform import device_available
 
 
@@ -218,6 +218,16 @@ class RunResult:
     def calibrations_by_name(self) -> dict[str, Calibration]:
         """Filename-keyed view for callers that already worked that way."""
         return {path.name: calibration for path, calibration in self.calibrations.items()}
+
+    @property
+    def calibration_summary(self) -> dict:
+        """Batch statistics over the valid calibrations.
+
+        The report states the measurement standard from this: how many photos
+        were calibrated, where each scale came from and which warnings were
+        raised.
+        """
+        return summary_batch(list(self.calibrations.values()))
 
 
 __all__ = [
