@@ -30,8 +30,11 @@ from .detection_run import (
     RunConfig,
     RunDirNotEmpty,
     RunFailed,
+    RunOutputError,
+    RunOutputNotADirectory,
     RunParams,
     RunResult,
+    RunStatus,
     load_run,
     run_detection,
 )
@@ -100,6 +103,9 @@ __all__ = [  # noqa: RUF022
     "CalibrationPolicy",
     "RunFailed",
     "RunDirNotEmpty",
+    "RunOutputError",
+    "RunOutputNotADirectory",
+    "RunStatus",
     "generate_simple_report",
     # provenance
     "logger_for",

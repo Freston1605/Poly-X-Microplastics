@@ -594,7 +594,8 @@ Global state of the Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Up to 3 models
 state.images: List[Path]                # Images to analyse
-state.params: RunParams                 # conf, IoU, um_per_px (core shape)
+state.params: RunParams                 # conf, IoU, imgsz, filters (core shape)
+state.calibration: CalibrationPolicy    # per-photo scale policy (one owner)
 state.run_result: RunResult | None      # Current canonical run record
 state.results: Dict[int, List[ImageResult]]  # Per real model slot
 state.verdicts: Dict[Tuple[int, Path], str]  # Review verdicts (GUI only)
@@ -625,7 +626,7 @@ models: List[ModelInfo]              # dense active-model order
 params: RunParams
 calibrations: Dict[Path, Calibration]
 results: Dict[int, List[ImageResult]]
-status: str                          # completed | aborted | failed
+status: RunStatus                    # running | completed | aborted | failed
 error: Optional[str]
 skipped_images: List[Path]
 ```
@@ -709,22 +710,41 @@ The review checklist lives in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
 ## ⚙️ Common parameters
 
-### Inference (DetectorState.params)
+### Inference (`RunParams`, `DetectorState.params`)
 ```python
 conf: float = 0.25          # Confidence threshold
 iou_nms: float = 0.45       # IoU for NMS
 iou_tp: float = 0.50        # IoU for error analysis
-imgsz: int = 640            # Network input size
-device: str = "0"           # "0" (GPU), "cpu"
-um_per_px: float = 0.0      # Calibration (0 = uncalibrated)
+imgsz: int = 1280           # Network input size (320–8192; 1280 is the Fast profile)
+device: str = auto          # CUDA, then MPS, then CPU; "0"/"cpu" override
 size_min_um: float = 0.0    # Lower filter (0 = no filter)
 size_max_um: float = 0.0    # Upper filter (0 = no filter)
-conf_asignacion: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
+conf_assignment: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
+measure_shape: bool = True  # Mask-aware area/length/width instead of the box
+tiling: str = "auto"        # "auto" | "siempre" | "nunca" (backend values)
+tiling_threshold_px: int = 2000
+tiling_tile: int = 0        # 0 = derive from min(threshold, imgsz)
+tiling_overlap: float = 0.25
+```
+
+### Calibration (`CalibrationPolicy`, `DetectorState.calibration`)
+Calibration is **not** an inference parameter: it has one owner, the run
+policy. The effective per-photo scale lives in `RunResult.calibrations` and
+`run.json.calibrations` / `calibration_summary`; `run.json.params` never
+claims a scale.
+```python
+mode: str = "auto"              # "auto" | "manual" | "index" | "none"
+um_per_px: float = 0.0          # manual fallback / manual-only value
+index_path: Path | None = None  # explicit index CSV (auto merges it with the searched one)
+measure_plate: bool = True      # auto only: measure the Petri dish per photo
+diameter_plate_mm: float = 100.0
+height_plate_mm: float = 0.0    # parallax correction, 0 = off
+distance_camera_mm: float = 0.0
 ```
 
 ### Abstention: detecting ≠ identifying
 
-`src/polyx/core/quality/assignment.py`. Below `conf_asignacion` the particle **still
+`src/polyx/core/quality/assignment.py`. Below `conf_assignment` the particle **still
 counts** as a detected particle, but it is reported as **"unassignable"** instead
 of attributing a polymer to it. The report declares in Methods what percentage of
 the batch went unassigned.

@@ -426,7 +426,7 @@ def test_cli_exposes_tiling_and_detection_semantics_flags(tmp_path, monkeypatch)
             "--out",
             str(output),
             "--tiling",
-            "siempre",
+            "always",
             "--tiling-threshold-px",
             "1234",
             "--tiling-tile",

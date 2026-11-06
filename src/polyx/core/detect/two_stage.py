@@ -12,10 +12,11 @@ from .protocol import (
     Instance,
     SegmentationPrompts,
     SegmentationSource,
+    SinglePassDetectionSource,
 )
 
 
-class TwoStageDetector(DetectionSource):
+class TwoStageDetector(SinglePassDetectionSource, DetectionSource):
     """Compose a detector (stage 1) with a segmenter (stage 2)."""
 
     def __init__(
@@ -91,23 +92,6 @@ class TwoStageDetector(DetectionSource):
         return self.detector.predict_sliced(
             image_path, conf=conf, iou=iou, tile=tile, overlap=overlap, device=device, **kwargs
         )
-
-    def predict_auto(
-        self,
-        image_path,
-        conf=0.25,
-        iou=0.45,
-        imgsz=1280,
-        device="0",
-        tiling="auto",
-        threshold_px=2000,
-        tile=0,
-        overlap=0.25,
-        record=None,
-        **kwargs,
-    ):
-        """Run the composed detector; tiling is delegated to its own policy."""
-        return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
 
     @property
     def names(self):

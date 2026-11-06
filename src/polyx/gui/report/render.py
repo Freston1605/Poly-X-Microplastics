@@ -12,11 +12,13 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from polyx.core.detection_run import RunStatus
 from polyx.core.i18n import tr
 
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
 from .samples import _batch_metrics, _lot_forms
 from .sections import (
+    _run_status_note,
     _section_calibration,
     _section_comparison,
     _section_count,
@@ -76,6 +78,7 @@ def _generate_report_impl(
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: F841
     active = list(run.models)
+    status_note = _run_status_note(run)
 
     # ── Batch metrics ──
     # The precomputation block now lives in _metricas_de_lote; the impl only
@@ -97,7 +100,7 @@ def _generate_report_impl(
     ) = _batch_metrics(run, solo_images)
 
     # ── Error analysis: matrix + per-class metrics (main model) ──
-    err_section = _section_errors(run, results_2, active, any_gt)
+    err_section = _section_errors(run, results_2, any_gt)
 
     # ── Verdict and confidence sweep ──
     verdict_html = _section_verdict(results_2, run)
@@ -118,7 +121,7 @@ def _generate_report_impl(
         run, active, all_results, total_imgs, total_dets, any_gt
     )
 
-    count_html = _section_count(results_2, run, active, classes_batch)
+    count_html = _section_count(results_2, run, classes_batch)
 
     refs_html = _section_references(include_refs)
 
@@ -175,7 +178,7 @@ def _generate_report_impl(
 
     # Cover, table of contents, section numbering and footer live in _documento_html:
     # the impl remains the ordered list of calls that feeds cuerpos.
-    html = _document_html(alive, active)
+    html = _document_html(alive, active, status_note)
     out_path.write_text(html, encoding="utf-8")
     return out_path
 
@@ -192,16 +195,20 @@ def generate_report(
 ) -> Path:
     """Generates the HTML report from a canonical ``RunResult``.
 
-    Only a completed or aborted run is reportable: a failed run has no full
-    batch to describe, and a running one has not finished writing its results.
+    A completed, aborted or failed run is reportable: a partial batch is real
+    data, and the document carries a visible status banner so it is never
+    mistaken for a finished one. A run still in progress is refused because it
+    has not finished writing its results.
+
     Generates the HTML report, measuring it and recording report.generate /
     report.finish / report.error in the detector JSONL. Re-throws failures:
     the caller decides what to do, the log keeps the diagnosis.
     """
     from polyx.core.provenance import logger_for, timer
 
-    if run.status not in ("completed", "aborted"):
-        raise ValueError(f"report requires a completed or aborted run, not {run.status!r}")
+    status = RunStatus.parse(run.status)
+    if status is RunStatus.RUNNING:
+        raise ValueError(f"report requires a finished run, not {status.value!r}")
     n_results = sum(len(rs) for rs in (run.results or {}).values())
     with timer(
         logger_for("detector"),

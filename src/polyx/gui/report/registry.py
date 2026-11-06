@@ -82,7 +82,7 @@ def anchor(sid: str) -> str:
     return _ANCHORS.get(sid, sid)
 
 
-def _document_html(alive, active) -> str:
+def _document_html(alive, active, status_note: str = "") -> str:
     """Assemble the final document: cover header, TOC, numbered sections, footer.
 
     ``vivas`` arrives as (id, translated title, body) tuples in SECCIONES
@@ -91,12 +91,19 @@ def _document_html(alive, active) -> str:
     ``{NUM}`` placeholder substitution all live here because this helper is
     the only place that knows the final order; moving or reordering them is
     byte-visible in the frozen render (MEM090).
+
+    ``status_note`` is the visible failed/aborted banner. It lives in the
+    document shell and not in a section so a partial run cannot be presented
+    as complete just because the user unchecked the section carrying it.
     """
     toc_html = "".join(f"<li><a href='#{anchor(sid)}'>{title}</a></li>" for sid, title, _ in alive)
     sections_html = "".join(
         f"<h2 id='{anchor(sid)}'>{i}. {title}</h2>\n{body.replace(NUM, str(i))}\n"
         for i, (sid, title, body) in enumerate(alive, start=1)
     )
+    # Keep the finished-run render byte-identical to the frozen baseline: an
+    # absent banner must not leave an empty line behind.
+    status_block = f"{status_note}\n\n" if status_note else ""
 
     return f"""<!doctype html>
 <html lang='{language()}'><head><meta charset='utf-8'>
@@ -111,7 +118,7 @@ def _document_html(alive, active) -> str:
     <strong>{tr("Modelos:")}</strong> {_esc(", ".join(s.alias for s in active)) or "—"}</p>
 </header>
 
-<div class='toc'>
+{status_block}<div class='toc'>
   <h3>📑 {tr("Índice")}</h3>
   <ol>{toc_html}</ol>
 </div>

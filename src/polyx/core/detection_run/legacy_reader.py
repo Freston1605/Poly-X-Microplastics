@@ -14,28 +14,22 @@ the old GUI loader could offer the report.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-from polyx.core.paths import IMAGE_EXTS
+from polyx.core.measure.calibration import ORIGIN_MANUAL, Calibration
+from polyx.core.paths import find_images
 
-from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult
-from .schema import aggregate_metrics, detection_from_row, read_detections_csv
+from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
+from .schema import (
+    aggregate_metrics,
+    detection_from_row,
+    read_detections_csv,
+    read_json_object,
+)
 
 LEGACY_SUMMARY = "summary.json"
 LEGACY_CENTROIDS = "centroids.csv"
 LEGACY_IMAGES = "images"
-
-
-def _read_summary(run_dir: Path) -> dict:
-    path = run_dir / LEGACY_SUMMARY
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
 
 
 def _legacy_params(raw: dict) -> RunParams:
@@ -50,11 +44,26 @@ def _legacy_params(raw: dict) -> RunParams:
         params.imgsz = int(raw["imgsz"])
     if raw.get("device"):
         params.device = str(raw["device"])
-    if raw.get("um_per_px") is not None:
-        params.um_per_px = float(raw["um_per_px"] or 0.0)
     if raw.get("measure_shape") is not None:
         params.measure_shape = bool(raw["measure_shape"])
     return params
+
+
+def _legacy_calibrations(images: list[Path], raw: dict) -> dict[Path, Calibration]:
+    """Turn the old batch-wide manual scale into the effective per-image record.
+
+    The old writer had one ``um_per_px`` for the whole batch, which is exactly
+    the manual policy. The report reads effective calibrations, so keeping it
+    here (and out of ``RunParams``) preserves the old numbers without letting
+    the parameters claim a scale the run did not apply per photo.
+    """
+    try:
+        um_per_px = float(raw.get("um_per_px") or 0.0)
+    except (TypeError, ValueError):
+        return {}
+    if um_per_px <= 0:
+        return {}
+    return {image: Calibration(um_por_px=um_per_px, origin=ORIGIN_MANUAL) for image in images}
 
 
 def _class_names(rows: list[dict]) -> dict[int, str]:
@@ -73,8 +82,7 @@ def _class_names(rows: list[dict]) -> dict[int, str]:
 def _image_paths(run_dir: Path, image_dir: Path | None, names: list[str]) -> list[Path]:
     """Original photos when the caller still has them, otherwise their names."""
     if image_dir is not None:
-        root = Path(image_dir)
-        return sorted(path for path in root.rglob("*") if path.suffix.lower() in IMAGE_EXTS)
+        return find_images(Path(image_dir))
     return [run_dir / LEGACY_IMAGES / name for name in names]
 
 
@@ -91,7 +99,7 @@ def load_legacy_run(run_dir: Path, image_dir: Path | None = None) -> RunResult:
     if not summary_path.is_file() and not centroids_path.is_file():
         raise FileNotFoundError(f"not a legacy headless run folder: {run_dir}")
 
-    summary = _read_summary(run_dir)
+    summary = read_json_object(run_dir / LEGACY_SUMMARY)
     params_raw = summary.get("params") or {}
     per_image = summary.get("per_image") or {}
     rows = read_detections_csv(centroids_path)
@@ -141,8 +149,9 @@ def load_legacy_run(run_dir: Path, image_dir: Path | None = None) -> RunResult:
         images=images,
         models=[model],
         params=_legacy_params(params_raw),
+        calibrations=_legacy_calibrations(images, params_raw),
         results=results,
-        status="completed",
+        status=RunStatus.COMPLETED,
         execution={
             0: ModelExecution(
                 images=len(images),

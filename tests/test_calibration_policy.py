@@ -289,6 +289,25 @@ def test_auto_prefers_the_explicit_index_over_the_searched_one_and_the_plate(tmp
     assert calibration.um_por_px == pytest.approx(31.0)
 
 
+def test_auto_with_an_incomplete_explicit_index_still_uses_the_searched_one(tmp_path):
+    """An explicit CSV that lacks an image must not suppress the searched index."""
+    image = write_plain(tmp_path / "photos" / "plate.png")
+    write_index(tmp_path / "photos" / "indice.csv", {"plate.png": 42.0})
+    explicit = write_index(tmp_path / "calibration.csv", {"some_other.png": 31.0})
+
+    result = run_detection(
+        make_config(
+            [image],
+            tmp_path / "run",
+            CalibrationPolicy(mode="auto", um_per_px=2.5, index_path=explicit),
+        )
+    )
+
+    calibration = result.calibrations[image]
+    assert calibration.origin == ORIGIN_INDEX
+    assert calibration.um_por_px == pytest.approx(42.0)
+
+
 def test_auto_without_any_source_is_invalid(tmp_path):
     image = write_plain(tmp_path / "photos" / "plate.png")
 
@@ -426,6 +445,8 @@ def test_cli_calibrate_none_overrides_the_manual_value(tmp_path, monkeypatch):
     assert calibration.origin == ORIGIN_NONE
     assert not calibration.valid
     assert all(det.diam_um is None for det in run.results[0][0].predictions)
+    # The unused manual value must not survive in the run parameters.
+    assert "um_per_px" not in calibration_payload(run.run_dir)["params"]
 
 
 def test_cli_index_calibration_uses_the_given_csv(tmp_path, monkeypatch):
@@ -448,6 +469,40 @@ def test_cli_index_calibration_uses_the_given_csv(tmp_path, monkeypatch):
     calibration = load_run(tmp_path / "run").calibrations[image]
     assert calibration.origin == ORIGIN_INDEX
     assert calibration.um_por_px == pytest.approx(31.25)
+
+
+def test_cli_index_scale_wins_in_the_report_over_the_unused_manual_value(tmp_path, monkeypatch):
+    """The report must quote the scale the run applied, not a typed fallback."""
+    from polyx.gui.report_html import generate_report
+
+    image = write_plain(tmp_path / "photos" / "plate.png")
+    explicit = write_index(tmp_path / "calibration.csv", {"plate.png": 31.25})
+    install_factory(monkeypatch, FakeDetector())
+
+    assert (
+        run_cli(
+            tmp_path,
+            image,
+            "--calibrate",
+            "index",
+            "--index-calibration",
+            str(explicit),
+            "--um-per-px",
+            "2.5",
+        )
+        == 0
+    )
+
+    run = load_run(tmp_path / "run")
+    calibration = run.calibrations[image]
+    assert calibration.origin == ORIGIN_INDEX
+    assert calibration.um_por_px == pytest.approx(31.25)
+    assert "um_per_px" not in calibration_payload(run.run_dir)["params"]
+    html = generate_report(run, tmp_path / "report.html", sections=["metodos"]).read_text(
+        encoding="utf-8"
+    )
+    assert "31.2500" in html
+    assert "2.5000" not in html
 
 
 def test_cli_index_mode_searches_the_image_root(tmp_path, monkeypatch):

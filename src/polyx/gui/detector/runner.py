@@ -18,12 +18,12 @@ from PySide6.QtCore import QThread, Signal
 from polyx.core import observability as obs
 from polyx.core.detect import make_detector
 from polyx.core.detection_run import (
-    CalibrationPolicy,
     ImageResult,
     ModelSpec,
     RunConfig,
     RunFailed,
     RunResult,
+    RunStatus,
     run_detection,
 )
 from polyx.core.paths import RUNS_DIR
@@ -93,23 +93,13 @@ class DetectorRunner(QThread):
                     sha256=slot.sha256,
                 )
             )
-        index_path = Path(params.index_calibration) if params.index_calibration else None
-        calibration = CalibrationPolicy(
-            mode="auto",
-            um_per_px=params.um_per_px,
-            index_path=index_path,
-            measure_plate=params.measure_plate,
-            diameter_plate_mm=params.diameter_plate_mm,
-            height_plate_mm=params.height_plate_mm,
-            distance_camera_mm=params.distance_camera_mm,
-        )
         return RunConfig(
             images=list(state.images),
             models=models,
             output_dir=output_dir,
             params=params,
             gt_folder=state.gt_folder,
-            calibration=calibration,
+            calibration=state.calibration,
         )
 
     def _on_progress(self, done: int, total: int, image_path: Path) -> None:
@@ -185,7 +175,7 @@ class DetectorRunner(QThread):
                 imgsz=params.imgsz,
                 device=params.device,
                 medir_forma=params.measure_shape,
-                um_por_px=params.um_per_px,
+                um_por_px=state.calibration.um_per_px,
             )
             if not slots:
                 self.failed.emit("No hay modelos cargados.")
@@ -220,7 +210,7 @@ class DetectorRunner(QThread):
             self.failed.emit(f"{type(exc).__name__}: {exc}")
         else:
             self._publish(result)
-            if result.status == "aborted":
+            if result.status is RunStatus.ABORTED:
                 self.aborted.emit()
                 return
             self._log_finish(result, started, _log)

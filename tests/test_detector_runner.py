@@ -102,8 +102,8 @@ def _state(tmp_path: Path, images: list[Path]) -> DetectorState:
     slot.path = tmp_path / "best.pt"
     slot.loaded = _FakeModel()
     state.images = images
-    state.params.measure_plate = False
-    state.params.um_per_px = 2.0  # manual scale, so the sizes come out in um
+    state.calibration.measure_plate = False
+    state.calibration.um_per_px = 2.0  # manual scale, so the sizes come out in um
     state.params.tiling = "nunca"
     return state
 
@@ -238,8 +238,8 @@ def test_dense_engine_indices_map_to_real_slots(qapp, tmp_path):
     state.model_slots[2].path = tmp_path / "c.pt"
     state.model_slots[2].loaded = _FakeModel()
     state.images = [path]
-    state.params.measure_plate = False
-    state.params.um_per_px = 2.0
+    state.calibration.measure_plate = False
+    state.calibration.um_per_px = 2.0
     state.params.tiling = "nunca"
     runner = _runner_with_folder(state, tmp_path)
 

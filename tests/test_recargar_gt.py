@@ -72,7 +72,7 @@ def _state(
     st.gt_folder.mkdir(parents=True)
     st.run_dir = tmp_path / "run"
     st.run_dir.mkdir(parents=True)
-    st.params.um_per_px = 0.0  # only the per-photo calibration may provide a scale
+    st.calibration.um_per_px = 0.0  # only the per-photo calibration may provide a scale
 
     results: dict[str, ImageResult] = {}
     images: list[Path] = []
@@ -128,8 +128,9 @@ def _reload_state(tmp_path: Path, gt_text: str | None) -> tuple[DetectorState, I
     st.run_dir = tmp_path / "run"
     st.run_dir.mkdir()
     st.images = [plate]
-    # The scale is per photo; {} falls back to params.um_per_px (0 -> None),
-    # which leaves the reloaded sizes uncalibrated but does not stop the redraw.
+    # The scale is per photo; {} falls back to the policy's manual value
+    # (0 -> None), which leaves the reloaded sizes uncalibrated but does not
+    # stop the redraw.
     st.calibrations = {}
 
     prediction = Detection(class_id=0, class_name="PET", conf=0.9, x1=20, y1=20, x2=80, y2=80)

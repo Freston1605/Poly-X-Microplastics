@@ -48,6 +48,7 @@ class FakeDetector:
         self.predict_calls = 0
         self.last_imgsz = 1280
         self.last_fallback = False
+        self.call_kwargs: list[dict] = []
 
     def load(self):
         self.load_calls += 1
@@ -55,6 +56,7 @@ class FakeDetector:
 
     def predict_auto(self, image_path, **kwargs) -> list[Instance]:
         self.predict_calls += 1
+        self.call_kwargs.append(dict(kwargs))
         return [
             Instance(
                 class_id=index % 2,
@@ -265,6 +267,32 @@ def test_non_empty_output_is_refused_unless_forced(tmp_path, monkeypatch, capsys
     assert load_run(out).status == "completed"
 
 
+def test_an_output_path_that_is_a_file_is_rejected_with_its_own_message(
+    tmp_path, monkeypatch, capsys
+):
+    weights = weights_file(tmp_path, "best")
+    install_factory(monkeypatch, [FakeDetector()])
+    out = tmp_path / "already-a-file.txt"
+    out.write_text("keep me", encoding="utf-8")
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(weights),
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(out),
+        ]
+    )
+
+    assert code == cli_detect.EXIT_OUTPUT_EXISTS
+    error = capsys.readouterr().err
+    assert "not a directory" in error
+    assert "folder path" in error
+    assert out.read_text(encoding="utf-8") == "keep me"
+
+
 def test_a_failed_run_reports_the_partial_folder(tmp_path, monkeypatch, capsys):
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [ExplodingDetector()])
@@ -334,7 +362,8 @@ def test_existing_flags_keep_their_meaning(tmp_path, monkeypatch):
     assert run.params.iou_nms == pytest.approx(0.22)
     assert run.params.imgsz == 640
     assert run.params.device == "cpu"
-    assert run.params.um_per_px == pytest.approx(2.5)
+    # The manual scale is calibration policy, not an inference parameter.
+    assert "um_per_px" not in json.loads((run.run_dir / "run.json").read_text("utf-8"))["params"]
     assert run.params.measure_shape is False
     assert run.has_gt
     assert run.metrics[0]["tp"] == 1
@@ -342,6 +371,36 @@ def test_existing_flags_keep_their_meaning(tmp_path, monkeypatch):
     assert run.calibrations[images / "plate1.png"].um_por_px == pytest.approx(2.5)
     # Without --um-per-px the run is explicitly uncalibrated, not "manual 0".
     assert all(det.size_source == "box" for det in run.results[0][0].predictions)
+
+
+@pytest.mark.parametrize(
+    ("choice", "backend"),
+    [("auto", "auto"), ("always", "siempre"), ("never", "nunca")],
+)
+def test_tiling_cli_choices_are_english_and_reach_the_backend_values(
+    tmp_path, monkeypatch, choice, backend
+):
+    """The developer-facing flag speaks English; the detector keeps its contract."""
+    weights = weights_file(tmp_path, "best")
+    detector = FakeDetector()
+    install_factory(monkeypatch, detector)
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(weights),
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(tmp_path / "run"),
+            "--tiling",
+            choice,
+        ]
+    )
+
+    assert code == 0
+    assert load_run(tmp_path / "run").params.tiling == backend
+    assert detector.call_kwargs[0]["tiling"] == backend
 
 
 def test_without_a_manual_scale_the_run_is_uncalibrated(tmp_path, monkeypatch):

@@ -872,4 +872,10 @@ EN: dict[str, str] = {
     "and differ only in brightness, which depends on exposure and focus. "
     "Abstaining is more honest than inventing the class, and the report states "
     "what percentage was left unassigned.",
+    # -- Report: incomplete/partial run banner --
+    "Lote incompleto (ejecución fallida).": "Incomplete batch (failed run).",
+    "El informe describe solo los resultados escritos antes del error: {error}": "The report describes only the results written before the error: {error}",
+    "Lote parcial (ejecución interrumpida).": "Partial batch (aborted run).",
+    "El informe describe solo las imágenes procesadas antes de la interrupción.": "The report describes only the images processed before the interruption.",
+    "La detección aún está en curso; espera a que termine antes de generar el informe.": "Detection is still running; wait for it to finish before generating the report.",
 }

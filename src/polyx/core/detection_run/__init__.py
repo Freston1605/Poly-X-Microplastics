@@ -10,9 +10,15 @@ folder, both without Qt.
 from polyx.core.paths import IMAGE_EXTS
 
 from .config import CALIBRATION_MODES, CalibrationPolicy, ModelSpec, RunConfig
-from .engine import RunDirNotEmpty, RunFailed, run_detection
+from .engine import (
+    RunDirNotEmpty,
+    RunFailed,
+    RunOutputError,
+    RunOutputNotADirectory,
+    run_detection,
+)
 from .legacy_reader import load_legacy_run
-from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult
+from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import DETECTION_COLUMNS, SCHEMA_VERSION, load_run
 
 __all__ = [
@@ -28,8 +34,11 @@ __all__ = [
     "RunConfig",
     "RunDirNotEmpty",
     "RunFailed",
+    "RunOutputError",
+    "RunOutputNotADirectory",
     "RunParams",
     "RunResult",
+    "RunStatus",
     "load_legacy_run",
     "load_run",
     "run_detection",

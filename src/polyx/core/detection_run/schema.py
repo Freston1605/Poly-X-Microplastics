@@ -18,7 +18,7 @@ from polyx.core.annotate import run_view_path
 from polyx.core.detect.protocol import Instance
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration
 
-from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult
+from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 
 SCHEMA_VERSION = 1
 
@@ -50,6 +50,7 @@ DETECTION_COLUMNS = (
     "morphotype",
     "size_source",
     "has_mask",
+    "assignable",
 )
 
 
@@ -159,6 +160,18 @@ def _int(value: object) -> int | None:
         return None
 
 
+def _bool(value: object, *, default: bool = True) -> bool:
+    """Read a persisted boolean, keeping ``default`` when the cell is empty.
+
+    Runs written before abstention existed have no ``assignable`` column; those
+    detections were all assignable, so the missing value must not turn into a
+    silent abstention.
+    """
+    if value is None or value == "":
+        return default
+    return str(value).strip().lower() in ("1", "true", "yes", "y", "si", "sí")
+
+
 def detection_row(
     model_alias: str,
     image_path: Path,
@@ -192,6 +205,7 @@ def detection_row(
         "morphotype": det.morphotype,
         "size_source": det.size_source,
         "has_mask": bool(det.mask is not None),
+        "assignable": bool(getattr(det, "assignable", True)),
     }
 
 
@@ -219,15 +233,36 @@ def detection_from_row(row: dict) -> Instance:
         method_length=row.get("method_length") or None,
         size_source=size_source if size_source in ("mask", "box") else None,
         number=_int(row.get("number")),
+        assignable=_bool(row.get("assignable")),
     )
 
 
-def read_detections_csv(path: Path) -> list[dict]:
-    """Read the prediction rows, tolerating a missing or header-only file."""
+def read_json_object(path: Path) -> dict:
+    """Read a JSON object, returning ``{}`` for a missing or malformed file.
+
+    Both the canonical reader and the compact/legacy report paths need the same
+    forgiving read; keeping one helper stops their error handling drifting.
+    """
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def read_csv_rows(path: Path) -> list[dict]:
+    """Read a CSV into dict rows, tolerating a missing or header-only file."""
     if not path.is_file():
         return []
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def read_detections_csv(path: Path) -> list[dict]:
+    """Read the prediction rows, tolerating a missing or header-only file."""
+    return read_csv_rows(path)
 
 
 # ── Aggregates and the run record ───────────────────────────────────────
@@ -331,7 +366,7 @@ def build_run_payload(result: RunResult, provenance_data: dict | None = None) ->
     ]
     return {
         "schema_version": SCHEMA_VERSION,
-        "status": result.status,
+        "status": result.status.value,
         "started_at": isoformat(result.started_at),
         "finished_at": isoformat(finished_at),
         "duration_s": round(duration, 3),
@@ -485,7 +520,7 @@ def load_run(run_dir: Path) -> RunResult:
         params=params_from_dict(data.get("params")),
         calibrations=calibrations,
         results=results,
-        status=str(data.get("status") or "completed"),
+        status=RunStatus.parse(data.get("status")),
         error=data.get("error"),
         skipped_images=skipped,
         started_at=parse_datetime(data.get("started_at")),
@@ -511,6 +546,8 @@ __all__ = [
     "params_from_dict",
     "params_to_dict",
     "parse_datetime",
+    "read_csv_rows",
     "read_detections_csv",
+    "read_json_object",
     "utcnow",
 ]

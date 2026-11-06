@@ -14,13 +14,14 @@ from pathlib import Path
 import pytest
 
 from polyx.core.detect.protocol import Instance
-from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
+from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult, RunStatus
+from polyx.core.measure.calibration import ORIGIN_MANUAL, Calibration
 
 
 def make_run(
     tmp_path: Path,
     *,
-    status: str = "completed",
+    status: RunStatus | str = RunStatus.COMPLETED,
     alias: str = "best",
 ) -> RunResult:
     """One image, one active model, no ground truth: the smallest real run."""
@@ -46,7 +47,8 @@ def make_run(
                 names={0: "PET"},
             )
         ],
-        params=RunParams(conf=0.3, um_per_px=2.0),
+        params=RunParams(conf=0.3),
+        calibrations={image: Calibration(um_por_px=2.0, origin=ORIGIN_MANUAL)},
         results={
             0: [
                 ImageResult(
@@ -72,7 +74,7 @@ def test_generate_report_accepts_a_run_result(tmp_path):
     assert "PET" in html
 
 
-@pytest.mark.parametrize("status", ["completed", "aborted"])
+@pytest.mark.parametrize("status", [RunStatus.COMPLETED, RunStatus.ABORTED])
 def test_completed_and_aborted_runs_are_reportable(tmp_path, status):
     """A partial aborted run is still a real run with results to report."""
     from polyx.gui.report_html import generate_report
@@ -81,13 +83,66 @@ def test_completed_and_aborted_runs_are_reportable(tmp_path, status):
     assert generate_report(run, tmp_path / "report.html", sections=["resumen"]).is_file()
 
 
-def test_failed_runs_are_not_reportable(tmp_path):
-    """A failed run has no complete batch to describe; the caller decides."""
+def test_failed_runs_are_reportable_but_visibly_marked_as_partial(tmp_path):
+    """Restore the old ability to report a failed batch without hiding the failure."""
     from polyx.gui.report_html import generate_report
 
-    run = make_run(tmp_path, status="failed")
-    with pytest.raises(ValueError, match="completed or aborted"):
-        generate_report(run, tmp_path / "report.html", sections=["resumen"])
+    run = make_run(tmp_path, status=RunStatus.FAILED)
+    run.error = "RuntimeError: inference exploded"
+    output = generate_report(run, tmp_path / "report.html", sections=["resumen"])
+
+    html = output.read_text(encoding="utf-8")
+    assert "failed" in html
+    assert "inference exploded" in html
+    assert "Incomplete batch" in html or "Lote incompleto" in html
+
+
+def test_assignable_round_trips_through_detections_csv_and_the_report(tmp_path):
+    """Abstention must survive load_run: the report's percentage cannot change."""
+    import cv2
+    import numpy as np
+
+    from polyx.core.detection_run import (
+        CalibrationPolicy,
+        ModelSpec,
+        RunConfig,
+        load_run,
+        run_detection,
+    )
+    from polyx.gui.report_html import generate_report
+
+    image = tmp_path / "photos" / "plate.png"
+    image.parent.mkdir(parents=True)
+    ok, buffer = cv2.imencode(".png", np.full((160, 160, 3), 18, np.uint8))
+    assert ok
+    image.write_bytes(buffer.tobytes())
+
+    class LowConfidenceDetector:
+        names = {0: "PET"}
+        last_imgsz = 640
+        last_fallback = False
+
+        def predict_auto(self, image_path, **kwargs):
+            return [Instance(class_id=0, class_name="PET", conf=0.2, x1=20, y1=20, x2=60, y2=60)]
+
+    run = run_detection(
+        RunConfig(
+            images=[image],
+            models=[ModelSpec(detector=LowConfidenceDetector(), alias="best")],
+            output_dir=tmp_path / "run",
+            params=RunParams(measure_shape=False, conf_assignment=0.5),
+            calibration=CalibrationPolicy(mode="none"),
+        )
+    )
+    live = generate_report(run, tmp_path / "live.html", sections=["metodos"]).read_text("utf-8")
+    loaded = load_run(run.run_dir)
+    rebuilt = generate_report(loaded, tmp_path / "loaded.html", sections=["metodos"]).read_text(
+        "utf-8"
+    )
+
+    assert "1 / 1 (100.0 %)" in live
+    assert "1 / 1 (100.0 %)" in rebuilt
+    assert loaded.results[0][0].predictions[0].assignable is False
 
 
 def test_report_page_forwards_its_current_run_result(qapp, tmp_path, monkeypatch):
@@ -121,12 +176,15 @@ def test_report_page_forwards_its_current_run_result(qapp, tmp_path, monkeypatch
 
 @pytest.mark.parametrize(
     ("status", "expected"),
-    [("completed", True), ("aborted", True), ("failed", False)],
+    [
+        (RunStatus.COMPLETED, True),
+        (RunStatus.ABORTED, True),
+        (RunStatus.FAILED, True),
+        (RunStatus.RUNNING, False),
+    ],
 )
-def test_report_page_requires_a_completed_or_aborted_run(
-    qapp, tmp_path, monkeypatch, status, expected
-):
-    """No run, a running one or a failed one must not produce a report."""
+def test_report_page_accepts_every_finished_run(qapp, tmp_path, monkeypatch, status, expected):
+    """Completed, aborted and failed batches are reportable; a running one is not."""
     pytest.importorskip("PySide6")
     from polyx.gui.detector.pages import report as report_page
     from polyx.gui.detector.state import DetectorState
