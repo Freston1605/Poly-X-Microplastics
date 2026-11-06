@@ -79,12 +79,15 @@ def _blocks(report: str) -> list[list[str]]:
 def _same_file(reported: str, target: Path) -> bool:
     """Whether a report frame points at the test file we were given."""
     candidate = Path(reported)
-    if candidate.is_absolute():
-        return candidate.resolve() == target.resolve()
     resolved_target = target.resolve()
-    return resolved_target == (Path.cwd() / candidate).resolve() or (
-        resolved_target.as_posix().endswith("/" + candidate.as_posix())
-    )
+    if candidate.is_absolute():
+        return candidate.resolve() == resolved_target
+    if resolved_target == (Path.cwd() / candidate).resolve():
+        return True
+    # A report frame is often relative to pytest's rootdir, not our cwd, so
+    # match its path components against the tail of the resolved target.
+    parts = candidate.parts
+    return bool(parts) and resolved_target.parts[-len(parts) :] == parts
 
 
 def _failures(report: str, target: Path) -> list[Failure]:
@@ -104,17 +107,25 @@ def _failures(report: str, target: Path) -> list[Failure]:
         matching = [frame for frame in frames if _same_file(frame[0], target)]
         if not matching:
             continue
-        first = matching[0]
+        # The outermost frame identifies the test; the innermost one is the
+        # assertion that raised, so report its location when mapping refuses.
+        outermost = matching[0]
+        innermost = matching[-1]
         failures.append(
             Failure(
-                test=first[2],
-                path=first[0],
-                line=first[1],
+                test=outermost[2],
+                path=innermost[0],
+                line=innermost[1],
                 hashes=hashes,
                 frames=matching,
             )
         )
     return failures
+
+
+def _report_has_failures(report: str) -> bool:
+    """Whether a pytest report contains at least one failure frame."""
+    return any(_FRAME.match(line) is not None for block in _blocks(report) for line in block)
 
 
 def _module_constants(tree: ast.Module) -> dict[str, ast.Constant]:
@@ -175,6 +186,12 @@ def _span(source: bytes, node: ast.Constant) -> tuple[int, int]:
     return start, end
 
 
+def _replace_literal(segment: bytes, new: str) -> bytes | None:
+    """Replace the single golden literal in ``segment``, or return ``None``."""
+    replaced, count = _HEX_BYTES.subn(new.encode(), segment, count=1)
+    return replaced if count == 1 else None
+
+
 def _map_failure(
     failure: Failure,
     source: bytes,
@@ -206,8 +223,7 @@ def _map_failure(
     label, literal = next(iter(refs.values()))
     start, end = _span(source, literal)
     segment = source[start:end]
-    _, count = _HEX_BYTES.subn(failure.hashes[0].encode(), segment, count=1)
-    if count != 1:
+    if _replace_literal(segment, failure.hashes[0]) is None:
         return None, f"could not locate the literal for {label} on line {literal.lineno}"
     return (
         Replacement(
@@ -256,11 +272,9 @@ def _rewrite(source: bytes, replacements: list[Replacement]) -> bytes:
     updated = source
     for replacement in sorted(replacements, key=lambda item: item.span[0], reverse=True):
         start, end = replacement.span
-        updated = (
-            updated[:start]
-            + _HEX_BYTES.sub(replacement.new.encode(), updated[start:end], count=1)
-            + updated[end:]
-        )
+        segment = updated[start:end]
+        replaced = _replace_literal(segment, replacement.new)
+        updated = updated[:start] + (segment if replaced is None else replaced) + updated[end:]
     return updated
 
 
@@ -318,10 +332,19 @@ def main(argv: list[str] | None = None) -> int:
     if not failures:
         if pytest_code not in (None, 0):
             print(
-                "pytest failed but no failure block could be parsed; refusing.",
+                f"Refusing to update {test_file}: pytest exited with {pytest_code} "
+                "and none of its failures point at this file. No bytes were written.",
                 file=sys.stderr,
             )
             return pytest_code or 1
+        if _report_has_failures(report):
+            print(
+                f"Refusing to update {test_file}: the report contains failures but "
+                "none of their frames belong to this file, so no golden can be "
+                "mapped. No bytes were written.",
+                file=sys.stderr,
+            )
+            return 1
         print("No hash mismatches found — goldens are up to date.")
         return 0
 
