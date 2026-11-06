@@ -58,6 +58,16 @@ def get(key: str, default: Any = None) -> Any:
     return read().get(key, default)
 
 
+def peek(key: str, default: Any = None) -> Any:
+    """Read one saved value without migrating or writing the file.
+
+    A process that watches the file for another process's language change
+    must not turn its own read into a write: that is how a watcher ends up
+    feeding itself.
+    """
+    return _read_raw().get(key, default)
+
+
 def write(**values: Any) -> None:
     """Merge ``values`` into the file; other keys are preserved."""
     data = read()

@@ -290,24 +290,33 @@ def available_languages() -> dict[str, str]:
     return {tag: _display_name(tag) for tag in sorted(_available()) if tag != PSEUDO_TAG}
 
 
-def set_language(tag: str) -> bool:
+def set_language(tag: str, *, persist: bool = True) -> bool:
     """Switch the active language immediately.
 
     Returns ``False`` when no catalog exists for the requested tag; the
     current language is kept and the failure is logged, never silently
     rendered as English.
+
+    Asking for the language that is already active is a successful no-op:
+    it does not rewrite the preference file or notify subscribers, so a
+    process applying a value it watched cannot start a change/write/change
+    loop. ``persist=False`` applies a choice that came from another process,
+    whose file already holds it.
     """
     global _language, _catalog  # noqa: PLW0603
     resolved = resolve(tag)
     if resolved is None:
         _log.error("no catalog for %r; keeping %r", tag, _language)
         return False
+    if resolved == _language:
+        return True
     catalog = _load(resolved)
     if catalog is None:
         return False
     _language = resolved
     _catalog = catalog
-    preferences.write(locale=resolved)
+    if persist:
+        preferences.write(locale=resolved)
     for function in _subscribers:
         try:
             function(resolved)
