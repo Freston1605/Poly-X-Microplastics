@@ -6,6 +6,10 @@ running pytest or ty from a git worktree would otherwise import the wrong
 worktree it is run from, and runs the same gate as CI: the suite, ruff and the
 ty engine check.
 
+A worktree's own ``.venv`` is used only when it can import pytest and PySide6.
+A partial environment created by ``uv run`` without the GUI extra is skipped in
+favour of the main checkout's interpreter, with a warning.
+
 Usage:
     python tools/check.py [--parallel[=N]] [pytest args...]
 
@@ -21,6 +25,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,11 +48,39 @@ def _main_worktree() -> Path | None:
     return None
 
 
+def _can_run_suite(python: Path) -> bool:
+    """Whether this interpreter has the suite's runtime dependencies."""
+    result = subprocess.run(
+        [str(python), "-c", "import pytest, PySide6"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _select_interpreter(
+    candidates: list[Path], usable: Callable[[Path], bool]
+) -> tuple[Path | None, list[Path]]:
+    """The first usable interpreter, plus the existing ones that were skipped."""
+    skipped: list[Path] = []
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        if usable(candidate):
+            return candidate, skipped
+        skipped.append(candidate)
+    return None, skipped
+
+
 def _python() -> Path:
     """The project interpreter, or ``POLYX_PYTHON`` when injected."""
     override = os.environ.get("POLYX_PYTHON")
     if override:
-        return Path(override).expanduser()
+        python = Path(override).expanduser()
+        if not python.is_file() or not _can_run_suite(python):
+            raise SystemExit(f"POLYX_PYTHON={python} cannot import pytest and PySide6.")
+        return python
 
     candidates = [
         ROOT / ".venv" / "bin" / "python",
@@ -59,12 +92,19 @@ def _python() -> Path:
             main / ".venv" / "bin" / "python",
             main / ".venv" / "Scripts" / "python.exe",
         ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
+
+    chosen, skipped = _select_interpreter(candidates, _can_run_suite)
+    for candidate in skipped:
+        print(
+            f"Ignoring {candidate}: cannot import pytest and PySide6. "
+            "Run `uv sync --extra gui` in this checkout, or remove its .venv.",
+            file=sys.stderr,
+        )
+    if chosen is not None:
+        return chosen
     raise SystemExit(
-        "No project interpreter found: create the dev env with "
-        "`uv sync --extra gui`, or set POLYX_PYTHON."
+        "No project interpreter with pytest and PySide6 found: create the dev "
+        "env with `uv sync --extra gui`, or set POLYX_PYTHON."
     )
 
 

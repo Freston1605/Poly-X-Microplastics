@@ -7,6 +7,7 @@ tests need a reproducible reference; parallelism must never be implicit.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -88,3 +89,27 @@ def test_parallel_accepts_an_explicit_worker_count(tmp_path):
     _assert_only_selection_ran(result, expected=2)
     assert "-n 1" in result.stdout
     assert "-n auto" not in result.stdout
+
+
+def _gate_module():
+    spec = importlib.util.spec_from_file_location("polyx_check_gate", _GATE)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_incomplete_worktree_interpreter_is_skipped(tmp_path):
+    gate = _gate_module()
+    missing = tmp_path / "missing-python"
+    incomplete = tmp_path / "incomplete-python"
+    complete = tmp_path / "complete-python"
+    incomplete.write_text("", encoding="utf-8")
+    complete.write_text("", encoding="utf-8")
+
+    chosen, skipped = gate._select_interpreter(
+        [missing, incomplete, complete], lambda path: path == complete
+    )
+
+    assert chosen == complete
+    assert skipped == [incomplete]

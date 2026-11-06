@@ -4,6 +4,13 @@
 touching anything: architecture, modules, data flow, key classes,
 palette, parameters, and the decisions already made and why.
 
+Quick pointers (avoid re-reading the whole file):
+- Coding conventions (English identifiers, pathlib, theme colours, …): `CLAUDE.md` § "Conventions" (~line 621).
+- Palette / theme tokens and what does NOT follow the theme: `CLAUDE.md` § "Themes and palette" (~line 190).
+- Issue tracker, PRs, triage labels: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`.
+- Coding standards / contribution checks: `CODING_STANDARDS.md`, `CONTRIBUTING.md`.
+- Architecture decisions: `docs/adr/`.
+
 This file exists only because some tools look for `AGENTS.md` by
 convention. **Do not duplicate content here.**
 

@@ -8,6 +8,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 # Un empujon nuevo a la misma ref cancela la corrida anterior: los
 # resultados viejos ya no dicen nada.
 concurrency:
@@ -15,6 +18,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # uv manages the environment from uv.lock. Check the lock before any
+      # sync so a stale lock fails loudly instead of being repaired in place.
+      - name: Lockfile is current
+        run: uv lock --check
+
+      # Headless install path: run before the gui extra is installed, so this
+      # step proves the installer tests do not need PySide6.
+      - name: Install script smoke checks
+        run: |
+          bash -n install/*.sh install/*.command
+          python -m py_compile install/bootstrap.py install/gpu.py install/update.py install/versions.py
+          uv run --locked pytest -q tests/test_install.py
+
+      # requirements.txt se mantiene como manifiesto de usuario final (SETUP.bat).
+      - name: Sync dependencies
+        run: uv sync --locked --python 3.11 --extra gui
+
+      - name: Lint
+        run: uv run --locked --extra gui ruff check src/ tests/ tools/ install/
+
+      # Mechanical palette rule: the hook catches it locally, CI catches it
+      # when the hook was never installed.
+      - name: Palette fallback guardrail
+        run: python tools/check_palette_fallbacks.py
+
+      - name: Check formatting
+        run: uv run --locked --extra gui ruff format --check src/ tests/ tools/ install/
+
+      # Type check: blocking on the engine (core + cli), advisory on the GUI
+      # until its dynamic theme/Qt surface is typed. ty is Astral's checker
+      # (same family as ruff/uv); config lives in [tool.ty] in pyproject.toml.
+      - name: Type check (engine)
+        run: uv run --locked --extra gui ty check src/polyx/core src/polyx/cli
+
+      - name: Type check (GUI, advisory)
+        run: uv run --locked --extra gui ty check src/polyx/gui
+        continue-on-error: true
+
   test:
     runs-on: ubuntu-24.04
     strategy:
@@ -39,37 +93,8 @@ jobs:
         with:
           enable-cache: true
 
-      # uv gestiona el entorno y las dependencias desde uv.lock (reproducible).
-      # requirements.txt se mantiene como manifiesto de usuario final (SETUP.bat).
       - name: Sync dependencies
-        run: uv sync --python ${{ matrix.python-version }} --extra gui
-
-      - name: Lint
-        run: uv run ruff check src/ tests/ tools/ install/
-
-      # Mechanical palette rule: the hook catches it locally, CI catches it
-      # when the hook was never installed.
-      - name: Palette fallback guardrail
-        run: python tools/check_palette_fallbacks.py
-
-      - name: Install script smoke checks
-        run: |
-          bash -n install/*.sh install/*.command
-          python -m py_compile install/bootstrap.py install/gpu.py install/update.py install/versions.py
-          uv run pytest -q tests/test_install.py
-
-      - name: Check formatting
-        run: uv run ruff format --check src/ tests/ tools/ install/
-
-      # Type check: blocking on the engine (core + cli), advisory on the GUI
-      # until its dynamic theme/Qt surface is typed. ty is Astral's checker
-      # (same family as ruff/uv); config lives in [tool.ty] in pyproject.toml.
-      - name: Type check (engine)
-        run: uv run ty check src/polyx/core src/polyx/cli
-
-      - name: Type check (GUI, advisory)
-        run: uv run ty check src/polyx/gui
-        continue-on-error: true
+        run: uv sync --locked --python ${{ matrix.python-version }} --extra gui
 
       # offscreen: la suite no abre ventanas pero PySide6 pide una
       # plataforma. MPLCONFIGDIR: matplotlib quiere un config dir
@@ -78,11 +103,11 @@ jobs:
         run: >-
           QT_QPA_PLATFORM=offscreen
           MPLCONFIGDIR=/tmp/mplconfig
-          uv run --extra gui pytest -q
+          uv run --locked --extra gui pytest -q
 
   build:
     runs-on: ubuntu-24.04
-    needs: test
+    needs: [quality, test]
     steps:
       - uses: actions/checkout@v4
 

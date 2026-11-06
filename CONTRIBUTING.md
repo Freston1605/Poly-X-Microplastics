@@ -26,6 +26,10 @@ uv run ruff format --check src/ tests/ tools/ install/
 uv run ty check src/polyx/core src/polyx/cli
 ```
 
+After editing dependencies, run `uv lock` and commit the lock: CI runs
+`uv lock --check`, and the suite asserts every declared package is present in
+`uv.lock`.
+
 The whole gate — suite, ruff and ty — in one command, from any checkout or
 git worktree:
 
@@ -35,6 +39,12 @@ python tools/check.py tests/test_annotate.py -q    # one file, serial
 python tools/check.py --parallel                   # full suite, one worker per core
 python tools/check.py tests/test_annotate.py --parallel=4 -q
 ```
+
+In a worktree, `tools/check.py` uses that worktree's `.venv` only when it can
+import PySide6. A partial environment created by `uv run` without the GUI
+extra is skipped in favour of the main checkout's interpreter, with a warning.
+If you want the worktree to own its environment, run `uv sync --extra gui`
+there first.
 
 Tests run **serially by default**. CI always runs serially and remains the
 reproducibility reference. `--parallel` (bare: `-n auto`) or `--parallel=N`
@@ -114,6 +124,9 @@ The same checks are listed in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).
+- The PR body names its originating spec on its own line: `Spec: #N` (or
+  `Spec: none` when there is no spec). Review tooling resolves the spec
+  source from that line before falling back to commit-message references.
 
 ---
 
