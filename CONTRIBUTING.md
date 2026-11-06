@@ -73,6 +73,8 @@ python -m pytest -q          # inside the project .venv
 
 - The full suite passes locally (`pytest -q`, zero failures), and
   `ruff check` / `ruff format --check` are clean (see above).
+- The PR body follows `.github/PULL_REQUEST_TEMPLATE.md`; that file is the
+  single owner of the required fields.
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).
