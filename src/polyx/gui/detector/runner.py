@@ -77,7 +77,7 @@ def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarr
 
 
 def _color_bgr_for_class(name: str):
-    hex_ = T.CLASS_COLOR_HEX.get(name, "#33aaff").lstrip("#")
+    hex_ = T.CLASS_COLOR_HEX.get(name, T.FALLBACK_COLOR_HEX).lstrip("#")
     r, g, b = int(hex_[0:2], 16), int(hex_[2:4], 16), int(hex_[4:6], 16)
     return (b, g, r)
 

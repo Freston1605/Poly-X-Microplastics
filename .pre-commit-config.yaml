@@ -1,0 +1,30 @@
+# Pre-commit hooks for Poly-X.
+# Install: uv run pre-commit install
+# Run manually: uv run pre-commit run --all-files
+exclude: ^agent/|^legacy/
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: \.py$
+      - id: ruff-format
+        files: \.py$
+
+  - repo: local
+    hooks:
+      - id: no-hardcoded-fallback
+        name: No hardcoded fallback colours
+        entry: bash -c 'if grep -rn "CLASS_COLOR_HEX.get" src/ | grep -v "T.FALLBACK_COLOR_HEX\|FALLBACK_COLOR_HEX" | grep -qE "get\([a-zA-Z_][a-zA-Z0-9_]*,"; then echo "Hardcoded fallback colour in CLASS_COLOR_HEX.get(var, ...) — use T.FALLBACK_COLOR_HEX"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        files: \.py$
+
+      - id: english-identifiers
+        name: English identifiers in new code
+        entry: python tools/check_english_ids.py
+        language: system
+        pass_filenames: false
+        files: ^src/|^tests/
