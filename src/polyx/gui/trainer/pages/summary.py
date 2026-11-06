@@ -288,7 +288,10 @@ class ReportPage(TrainerPage):
             QMessageBox.warning(self, _("No run"), _("No runs available."))
             return
         f, _unused = QFileDialog.getSaveFileName(
-            self, "Guardar reporte", str(run / "reporte_entrenamiento.html"), "HTML (*.html)"
+            self,
+            _("Save report"),
+            str(run / "reporte_entrenamiento.html"),
+            _("HTML (*.html)"),
         )
         if f:
             self._run_worker(run, Path(f))
@@ -301,7 +304,7 @@ class ReportPage(TrainerPage):
         self.worker.start()
 
     def _on_ok(self, p: str):
-        self.lbl_status.setText(f"✓ Generado: {p}")
+        self.lbl_status.setText(_("✓ Generated: %(path)s") % {"path": p})
         try:  # noqa: SIM105
             webbrowser.open(Path(p).as_uri())
         except Exception:  # noqa: BLE001, S110

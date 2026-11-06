@@ -525,7 +525,7 @@ class LauncherWindow(QMainWindow):
         st.setStyleSheet(f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;")
         foot.addWidget(st)
         foot.addSpacing(20)
-        copyr = QLabel("© Cristofher Ferrada · Poly-X v" + __version__)
+        copyr = QLabel(_("© Cristofher Ferrada · Poly-X v%(version)s") % {"version": __version__})
         copyr.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
         foot.addWidget(copyr)
         foot.addStretch(1)

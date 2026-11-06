@@ -144,10 +144,10 @@ class TrainerWindow(QMainWindow):
         self.stack.setCurrentIndex(0)
 
         # Status according to training state
-        self.state.train_started.connect(lambda: self._set_status("● Entrenando…", T.ACCENT))
-        self.state.train_finished.connect(lambda _unused: self._set_status("● Finalizado", T.OK))
-        self.state.train_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
-        self.state.train_failed.connect(lambda _unused: self._set_status("● Error", T.ERR))
+        self.state.train_started.connect(lambda: self._set_status(_("● Training…"), T.ACCENT))
+        self.state.train_finished.connect(lambda _unused: self._set_status(_("● Finished"), T.OK))
+        self.state.train_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
+        self.state.train_failed.connect(lambda _unused: self._set_status(_("● Error"), T.ERR))
 
     def _build_pages(self):
         from .pages.augmentation import AugmentationPage

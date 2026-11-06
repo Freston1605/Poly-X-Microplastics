@@ -5,10 +5,15 @@ Run via:  python tools/packaging/build.py
 Or:       pyinstaller tools/packaging/polyx.spec
 """
 from pathlib import Path
+import sys
 
 # Project root (two levels up from this spec file).
 ROOT = Path(SPECPATH).resolve().parents[2]
 SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.i18n.packaging import frozen_locale_datas  # noqa: E402
 
 block_cipher = None
 
@@ -19,8 +24,9 @@ a = Analysis(
     datas=[
         # Bundled (read-only) assets only. Weights live in USER_DATA_DIR.
         (str(ROOT / "assets"), "assets"),
-        # Translation sources; the compiled catalogs are generated on first use.
-        (str(SRC / "polyx" / "locales"), "polyx/locales"),
+        # Translation sources plus the compiled catalogs. The helper compiles
+        # the .mo files and leaves the development pseudo-locale out.
+        *frozen_locale_datas(ROOT),
     ],
     hiddenimports=[
         "polyx.core",

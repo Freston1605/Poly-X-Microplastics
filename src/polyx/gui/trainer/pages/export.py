@@ -127,7 +127,7 @@ class ExportPage(TrainerPage):
         l2.addWidget(btn, 0, Qt.AlignLeft)
         self.body.addWidget(c2)
 
-        c3, l3 = self.card("Log", "registro")
+        c3, l3 = self.card(_("Log"), "registro")
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setStyleSheet(
@@ -141,7 +141,7 @@ class ExportPage(TrainerPage):
         self._update_desc()
 
     def _browse(self):
-        f, _unused = QFileDialog.getOpenFileName(self, "Seleccionar .pt", "", "Pesos (*.pt)")
+        f, _unused = QFileDialog.getOpenFileName(self, _("Select .pt"), "", _("Weights (*.pt)"))
         if f:
             self.ed_w.setText(f)
 
@@ -167,8 +167,12 @@ class ExportPage(TrainerPage):
         self.worker.log_line.connect(self.log.appendPlainText)
         self.worker.finished_ok.connect(
             lambda p: (
-                self.log.appendPlainText(f"[OK] Exportado: {p}"),
-                QMessageBox.information(self, _("Export finished"), f"Archivo generado:\n{p}"),
+                self.log.appendPlainText(_("[OK] Exported: %(path)s") % {"path": p}),
+                QMessageBox.information(
+                    self,
+                    _("Export finished"),
+                    _("File generated:\n%(path)s") % {"path": p},
+                ),
             )
         )
         self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
