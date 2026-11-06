@@ -22,7 +22,19 @@ from .detect import (
     list_detectors,
     make_detector,
 )
-from .detection_run import run_batch
+from .detection_run import (
+    CalibrationPolicy,
+    ImageResult,
+    ModelInfo,
+    ModelSpec,
+    RunConfig,
+    RunDirNotEmpty,
+    RunFailed,
+    RunParams,
+    RunResult,
+    load_run,
+    run_detection,
+)
 from .evaluation import EvalConfig
 from .evaluation import evaluate as eval_model
 from .evaluation import write_report as write_eval_report
@@ -77,7 +89,17 @@ __all__ = [  # noqa: RUF022
     "eval_model",
     "EvalConfig",
     "write_eval_report",
-    "run_batch",
+    "run_detection",
+    "load_run",
+    "RunConfig",
+    "RunParams",
+    "RunResult",
+    "ImageResult",
+    "ModelInfo",
+    "ModelSpec",
+    "CalibrationPolicy",
+    "RunFailed",
+    "RunDirNotEmpty",
     "generate_simple_report",
     # provenance
     "logger_for",

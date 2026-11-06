@@ -110,6 +110,26 @@ def parse_run_label_name(name: str) -> tuple[int, str] | None:
     return (int(match.group(1)), match.group(2))
 
 
+def find_run_labels(run_dir: Path, stem: str) -> list[Path]:
+    """Prediction labels of ``stem`` across the model folders of a run.
+
+    Old GUI runs and canonical runs share the same layout: one folder per
+    model, each with ``labels/{index:04d}_{stem}.txt``. The Viewer uses this
+    to offer every model that analysed the photo; the naming rule itself
+    stays in this module.
+    """
+    root = Path(run_dir)
+    matches = [
+        path
+        for path in root.rglob("*.txt")
+        if path.is_file()
+        and path.parent.name == "labels"
+        and (parsed := parse_run_label_name(path.name)) is not None
+        and parsed[1] == stem
+    ]
+    return sorted(matches)
+
+
 def parse_run_view_name(name: str) -> tuple[int, str, str] | None:
     """Parse a run view's file name back into (index, stem, suffix).
 
@@ -281,6 +301,7 @@ __all__ = [
     "Triptych",
     "bgr_for_class",
     "draw_detections",
+    "find_run_labels",
     "line_width",
     "parse_run_label_name",
     "parse_run_view_name",

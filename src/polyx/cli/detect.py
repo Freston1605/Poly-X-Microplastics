@@ -32,7 +32,6 @@ from pathlib import Path
 from polyx.core.detect import make_detector
 from polyx.core.detection_run import (
     CALIBRATION_MODES,
-    IMAGE_EXTS,
     CalibrationPolicy,
     ModelSpec,
     RunConfig,
@@ -42,6 +41,7 @@ from polyx.core.detection_run import (
     RunResult,
     run_detection,
 )
+from polyx.core.paths import IMAGE_EXTS
 
 # Exit codes: one for a failed run, one for bad usage, one for refusing to
 # overwrite, one for an aborted run. The compact report path never touches Qt.

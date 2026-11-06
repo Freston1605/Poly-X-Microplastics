@@ -68,7 +68,7 @@ src/                      # Source code (installable package)
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
-    │   ├── detection_run/  # Headless detection engine + Qt-free run data
+    │   ├── detection_run/  # Canonical detection-run engine, folder and result
     │   ├── training.py       # Headless training engine
     │   ├── evaluation.py     # Headless evaluation engine
     │   ├── report_simple.py  # HTML report without Qt
@@ -392,11 +392,48 @@ update checker (`polyx.gui.updates`), manual/report openers, preferences.
 
 **Output** (in the per-user data dir — `%LOCALAPPDATA%\polyx`,
 `~/Library/Application Support/polyx` or `~/.local/share/polyx`; `POLYX_HOME`
-overrides; ADR-0001):
-- `<data dir>/runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
-- `<data dir>/runs/YYYYMMDD_HHMMSS/centroids.csv` — class, x, y, conf, diam_um
-- `<data dir>/runs/YYYYMMDD_HHMMSS/metrics.json` — TP/FP/FN per class
-- `<data dir>/runs/YYYYMMDD_HHMMSS/report.html` — Paper-quality report (base64)
+overrides; ADR-0001). The folder is the canonical run folder (ADR-0002):
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/run.json` — schema version, status,
+  parameters, models, calibrations, aggregate metrics and per-image records
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/detections.csv` — one row per
+  prediction: model, class, confidence, box, calibration and measured sizes
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/<alias>/` — the triptych PNGs
+  (`_annot`, `_pred`, `_gt`), `labels/{index:04d}_{stem}.txt` and `classes.txt`
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/report.html` — Paper-quality report
+
+New runs never write `summary.json`, `metrics.json`, `resumen.json` or the
+old flat `images/` folder. Old GUI folders still open in the Viewer through
+their per-model `labels/*.txt`; old headless folders still load through the
+legacy reader. Neither is migrated or rewritten.
+
+**Headless CLI.** `polyx-detect` runs the same engine synchronously:
+
+```bash
+polyx-detect --model best.pt --images ./photos --out ./run
+polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
+    --images ./photos --out ./run --force
+polyx-detect --model best.pt --images ./photos --out ./run \
+    --calibrate auto --index-calibration ./indice.csv --gt-folder ./labels
+```
+
+- `--model` and `--model-type` repeat: aliases default to the weights stem,
+  one type applies to every model, and no type means `yolo`.
+- `--out` is the exact run folder. A non-empty folder is refused unless
+  `--force` is given.
+- `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
+  alone implies `manual`, and `--index-calibration` supplies the explicit CSV.
+- Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
+  `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
+  `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
+  `--conf-assignment`.
+- `--full-report` renders the paper-quality report from the engine's
+  `RunResult`; without it the run gets the compact HTML report.
+
+`polyx-report --run DIR [--output FILE] [--full-report] [--images DIR]`
+regenerates a report. It uses `load_run` for a canonical folder and
+`load_legacy_run` for an old `summary.json`/`centroids.csv` folder
+(`--images` supplies the original photographs); without `--full-report` it
+writes the compact report.
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -578,6 +615,21 @@ tp, fp, fn, miscls: int
 annotated_png: Optional[bytes]  # Annotated PNG, read from disk on demand
 ```
 
+### `RunResult` (src/polyx/core/detection_run/result.py)
+The Qt-free record of one run. `load_run` rebuilds it from a canonical
+folder; `load_legacy_run` rebuilds what an old headless folder recorded.
+```python
+run_dir: Path
+images: List[Path]
+models: List[ModelInfo]              # dense active-model order
+params: RunParams
+calibrations: Dict[Path, Calibration]
+results: Dict[int, List[ImageResult]]
+status: str                          # completed | aborted | failed
+error: Optional[str]
+skipped_images: List[Path]
+```
+
 ### `MatchResult` (src/polyx/core/quality/metrics.py)
 Prediction vs GT matching (IoU ≥ 0.5):
 ```python
@@ -601,9 +653,15 @@ run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
 RunResult  (dense active-model indices, partial on abort/failure)
     ├→ DetectorRunner: map indices onto model_slots → Qt signals
     ├→ generate_report(RunResult) (GUI report page and polyx-detect --full-report)
+    ├→ polyx-report: load_run (canonical) or load_legacy_run (old headless)
     └→ <user data dir>/runs/detect_YYYYMMDD_HHMMSS/
          run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
+
+Legacy inputs are read, never rewritten: the Viewer opens old GUI folders
+through their per-model `labels/*.txt`, `load_legacy_run` rebuilds a
+`RunResult` from old `summary.json` + `centroids.csv`, and the compact report
+keeps that same old fallback. New runs are the canonical folder only.
 
 ### Trainer
 ```
