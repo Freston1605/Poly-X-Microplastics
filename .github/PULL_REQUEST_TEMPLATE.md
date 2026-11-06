@@ -13,7 +13,10 @@ is not the same as `Spec: none`.
 
 ## Summary
 
-<!-- The smallest view that makes the change clear: a file tree, a diff sketch, a call flow. -->
+<!--
+The smallest view that makes the change clear: a file tree, a diff sketch, or
+a call flow.
+-->
 
 ## Evidence
 
