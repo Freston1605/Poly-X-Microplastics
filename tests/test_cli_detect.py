@@ -131,7 +131,8 @@ def test_single_model_defaults_to_yolo_and_the_weights_stem(tmp_path, monkeypatc
     assert run.status == "completed"
     # The engine never loads a model: the CLI did it before the run.
     assert (tmp_path / "run" / "best" / "0000_plate1_annot.png").is_file()
-    assert "COMPACT REPORT:" in capsys.readouterr().out
+    # conftest pins POLYX_LOCALE=es; #73 rewrites these against the selection.
+    assert "INFORME COMPACTO:" in capsys.readouterr().out
 
 
 def test_repeatable_models_and_aliases_come_from_the_stems(tmp_path, monkeypatch):
@@ -289,7 +290,7 @@ def test_an_output_path_that_is_a_file_is_rejected_with_its_own_message(
     assert code == cli_detect.EXIT_OUTPUT_EXISTS
     error = capsys.readouterr().err
     assert "not a directory" in error
-    assert "folder path" in error
+    assert "ruta de carpeta" in error
     assert out.read_text(encoding="utf-8") == "keep me"
 
 
@@ -311,7 +312,7 @@ def test_a_failed_run_reports_the_partial_folder(tmp_path, monkeypatch, capsys):
     assert code == cli_detect.EXIT_ERROR
     error = capsys.readouterr().err
     assert "inference exploded" in error
-    assert "PARTIAL RUN" in error
+    assert "EJECUCIÓN PARCIAL" in error
     partial = load_run(tmp_path / "run")
     assert partial.status == "failed"
 
@@ -449,11 +450,11 @@ def test_compact_report_reads_the_canonical_folder_first(tmp_path, monkeypatch):
 
     report = generate_compact(out)
     text = report.read_text(encoding="utf-8")
-    assert "Poly-X run report" in text
+    assert "Informe de ejecución de Poly-X" in text
     assert "PET" in text
     assert "OLD-CLASS" not in text
-    assert "Images: 2" in text
-    assert "Detections: 4" in text
+    assert "Imágenes: 2" in text
+    assert "Detecciones: 4" in text
 
 
 def test_full_report_renders_the_engine_result_directly(tmp_path, monkeypatch, capsys):
@@ -475,7 +476,7 @@ def test_full_report_renders_the_engine_result_directly(tmp_path, monkeypatch, c
 
     captured = capsys.readouterr()
     assert code == 0
-    assert "FULL REPORT:" in captured.out
+    assert "INFORME COMPLETO:" in captured.out
     assert "Full report unavailable" not in captured.out
     report = (out / "report.html").read_text(encoding="utf-8")
     assert "Informe de detección" in report

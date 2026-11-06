@@ -13,6 +13,7 @@ import html
 from pathlib import Path
 
 from polyx.core.detection_run.schema import read_csv_rows, read_json_object
+from polyx.core.i18n import _, language, ngettext
 
 
 def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
@@ -49,33 +50,37 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
 
     out = output or (run_dir / "report.html")
     parts = [
-        "<!DOCTYPE html><html><head><meta charset='utf-8'>",
-        "<title>Poly-X run report</title>",
+        f"<!DOCTYPE html><html lang='{language()}'><head><meta charset='utf-8'>",
+        f"<title>{_('Poly-X run report')}</title>",
         "<style>body{font-family:sans-serif;margin:2rem;} table{border-collapse:collapse;} "  # noqa: ISC004
         "td,th{border:1px solid #ccc;padding:4px 8px;} img{max-width:320px;}</style>",
         "</head><body>",
     ]
-    parts.append("<h1>Poly-X run report</h1>")
-    parts.append(f"<p><b>Run dir:</b> {html.escape(str(run_dir))}</p>")
+    parts.append(f"<h1>{_('Poly-X run report')}</h1>")
+    parts.append(f"<p><b>{_('Run dir:')}</b> {html.escape(str(run_dir))}</p>")
     if canonical:
         parts.append(
-            f"<p><b>Status:</b> {html.escape(str(canonical.get('status') or '?'))}"
-            f" &nbsp; <b>Schema:</b> {html.escape(str(canonical.get('schema_version', '?')))}</p>"
+            f"<p><b>{_('Status:')}</b> {html.escape(str(canonical.get('status') or '?'))}"
+            f" &nbsp; <b>{_('Schema:')}</b> "
+            f"{html.escape(str(canonical.get('schema_version', '?')))}</p>"
         )
         aliases = [str(model.get("alias", "")) for model in canonical.get("models") or []]
         if aliases:
-            parts.append(f"<p><b>Models:</b> {html.escape(', '.join(aliases))}</p>")
+            parts.append(f"<p><b>{_('Models:')}</b> {html.escape(', '.join(aliases))}</p>")
         skipped = canonical.get("skipped_images") or []
         if skipped:
-            parts.append(f"<p><b>Skipped images:</b> {len(skipped)}</p>")
-    parts.append(f"<p>Images: {images} &nbsp; Detections: {detections}</p>")
+            skipped_count = len(skipped)
+            parts.append(
+                f"<p><b>{ngettext('%(count)d skipped image', '%(count)d skipped images', skipped_count) % {'count': skipped_count}}</b></p>"
+            )
+    parts.append(f"<p>{_('Images:')} {images} &nbsp; {_('Detections:')} {detections}</p>")
     if metrics:
         parts.append(
             f"<p>TP={metrics.get('tp')} FP={metrics.get('fp')} "
             f"FN={metrics.get('fn')} miscls={metrics.get('miscls')}</p>"
         )
     parts.append(
-        "<h2>Detections</h2><table><tr>"
+        f"<h2>{_('Detections')}</h2><table><tr>"
         + "".join(f"<th>{html.escape(k)}</th>" for k in (rows[0].keys() if rows else []))
         + "</tr>"
     )
@@ -85,7 +90,10 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
         )
     parts.append("</table>")
     if len(rows) > 500:
-        parts.append(f"<p>... {len(rows) - 500} more rows omitted</p>")
+        omitted = len(rows) - 500
+        parts.append(
+            f"<p>{ngettext('... %(count)d more row omitted', '... %(count)d more rows omitted', omitted) % {'count': omitted}}</p>"
+        )
     parts.append("</body></html>")
     out.write_text("".join(parts), encoding="utf-8")
     return out
