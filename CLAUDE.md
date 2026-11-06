@@ -68,7 +68,7 @@ src/                      # Source code (installable package)
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
-    │   ├── detection_run.py  # Headless detection engine
+    │   ├── detection_run/  # Headless detection engine + Qt-free run data
     │   ├── training.py       # Headless training engine
     │   ├── evaluation.py     # Headless evaluation engine
     │   ├── report_simple.py  # HTML report without Qt
@@ -557,18 +557,20 @@ Global state of the Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Up to 3 models
 state.images: List[Path]                # Images to analyse
-state.params: InferenceParams           # conf, IoU, um_per_px
+state.params: RunParams                 # conf, IoU, um_per_px (core shape)
 state.results: Dict[int, List[ImageResult]]  # Results per model
 ```
 
-### `ImageResult` (src/polyx/gui/detector/state.py)
-Result of one image:
+### `ImageResult` (src/polyx/core/detection_run/result.py)
+Result of one image, Qt-free. The GUI subclass in
+`src/polyx/gui/detector/state.py` adds the review verdict; it is not part of
+the core shape.
 ```python
 image_path: Path
 predictions: List[Detection]
 gt: List[Detection]             # Ground truth (if present)
 tp, fp, fn, miscls: int
-annotated_png: Optional[bytes]  # Annotated PNG as base64
+annotated_png: Optional[bytes]  # Annotated PNG, read from disk on demand
 ```
 
 ### `MatchResult` (src/polyx/core/quality/metrics.py)

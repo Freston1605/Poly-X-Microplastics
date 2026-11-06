@@ -84,8 +84,10 @@ class Instance:
 class DetectionSource(Protocol):
     """Protocol for any detection backend.
 
-    Implementations must provide a `predict` method that takes an image path
-    and returns a list of Instance objects.
+    Implementations must provide ``predict_auto`` —the single entry point the
+    run engine calls— and a ``predict`` method that takes an image path and
+    returns a list of Instance objects. Backends that do not tile delegate
+    ``predict_auto`` to ``predict``.
     """
 
     def load(self) -> DetectionSource:
@@ -115,6 +117,28 @@ class DetectionSource(Protocol):
         **kwargs,
     ) -> list[Instance]:
         """Run sliced inference on a large image."""
+        ...
+
+    def predict_auto(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        """Run inference, tiling the image when the policy decides to.
+
+        This is the single entry point the run engine calls. Backends that
+        cannot tile delegate to their existing single-pass ``predict``.
+        ``record``, when given, is filled with the tiling decision taken.
+        """
         ...
 
     @property
