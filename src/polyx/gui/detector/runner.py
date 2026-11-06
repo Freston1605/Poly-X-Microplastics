@@ -203,6 +203,7 @@ class DetectorRunner(QThread):
             state.results = {i: [] for i in range(len(state.model_slots))}
             state.calibrations = {}
             state.run_result = None
+            state.verdicts = {}
             config = self._build_config(state, slots, state.run_dir)
             result = run_detection(
                 config,

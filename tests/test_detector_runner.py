@@ -278,6 +278,19 @@ def test_verdicts_live_in_state_and_not_in_result(qapp, tmp_path):
     assert state.verdict_for(0, path) is None
 
 
+def test_a_new_run_clears_previous_verdicts(qapp, tmp_path):
+    path = _plate(tmp_path / "photos" / "plate.png")
+    state = _state(tmp_path, [path])
+    _execute(_runner_with_folder(state, tmp_path))
+    state.set_verdict(0, path, "buena")
+
+    second = DetectorRunner(state, runs_root=tmp_path / "runs_second")
+    events = _execute(second)
+
+    assert events["failed"] == []
+    assert state.verdicts == {}, "a new run starts unreviewed"
+
+
 def test_review_dialog_reads_and_writes_state_verdicts(qapp, tmp_path):
     from polyx.gui.detector.review_dialog import ReviewDialog
 
