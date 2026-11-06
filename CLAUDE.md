@@ -68,7 +68,7 @@ src/                      # Source code (installable package)
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
-    │   ├── detection_run.py  # Headless detection engine
+    │   ├── detection_run/  # Canonical detection-run engine, folder and result
     │   ├── training.py       # Headless training engine
     │   ├── evaluation.py     # Headless evaluation engine
     │   ├── report_simple.py  # HTML report without Qt
@@ -392,11 +392,48 @@ update checker (`polyx.gui.updates`), manual/report openers, preferences.
 
 **Output** (in the per-user data dir — `%LOCALAPPDATA%\polyx`,
 `~/Library/Application Support/polyx` or `~/.local/share/polyx`; `POLYX_HOME`
-overrides; ADR-0001):
-- `<data dir>/runs/YYYYMMDD_HHMMSS/images/*.png` — Annotated images
-- `<data dir>/runs/YYYYMMDD_HHMMSS/centroids.csv` — class, x, y, conf, diam_um
-- `<data dir>/runs/YYYYMMDD_HHMMSS/metrics.json` — TP/FP/FN per class
-- `<data dir>/runs/YYYYMMDD_HHMMSS/report.html` — Paper-quality report (base64)
+overrides; ADR-0001). The folder is the canonical run folder (ADR-0002):
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/run.json` — schema version, status,
+  parameters, models, calibrations, aggregate metrics and per-image records
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/detections.csv` — one row per
+  prediction: model, class, confidence, box, calibration and measured sizes
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/<alias>/` — the triptych PNGs
+  (`_annot`, `_pred`, `_gt`), `labels/{index:04d}_{stem}.txt` and `classes.txt`
+- `<data dir>/runs/detect_YYYYMMDD_HHMMSS/report.html` — Paper-quality report
+
+New runs never write `summary.json`, `metrics.json`, `resumen.json` or the
+old flat `images/` folder. Old GUI folders still open in the Viewer through
+their per-model `labels/*.txt`; old headless folders still load through the
+legacy reader. Neither is migrated or rewritten.
+
+**Headless CLI.** `polyx-detect` runs the same engine synchronously:
+
+```bash
+polyx-detect --model best.pt --images ./photos --out ./run
+polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
+    --images ./photos --out ./run --force
+polyx-detect --model best.pt --images ./photos --out ./run \
+    --calibrate auto --index-calibration ./indice.csv --gt-folder ./labels
+```
+
+- `--model` and `--model-type` repeat: aliases default to the weights stem,
+  one type applies to every model, and no type means `yolo`.
+- `--out` is the exact run folder. A non-empty folder is refused unless
+  `--force` is given.
+- `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
+  alone implies `manual`, and `--index-calibration` supplies the explicit CSV.
+- Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
+  `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
+  `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
+  `--conf-assignment`.
+- `--full-report` renders the paper-quality report from the engine's
+  `RunResult`; without it the run gets the compact HTML report.
+
+`polyx-report --run DIR [--output FILE] [--full-report] [--images DIR]`
+regenerates a report. It uses `load_run` for a canonical folder and
+`load_legacy_run` for an old `summary.json`/`centroids.csv` folder
+(`--images` supplies the original photographs); without `--full-report` it
+writes the compact report.
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -557,18 +594,45 @@ Global state of the Detector (Qt signals):
 ```python
 state.model_slots: List[ModelSlot]      # Up to 3 models
 state.images: List[Path]                # Images to analyse
-state.params: InferenceParams           # conf, IoU, um_per_px
-state.results: Dict[int, List[ImageResult]]  # Results per model
+state.params: RunParams                 # conf, IoU, imgsz, filters (core shape)
+state.calibration: CalibrationPolicy    # per-photo scale policy (one owner)
+state.run_result: RunResult | None      # Current canonical run record
+state.results: Dict[int, List[ImageResult]]  # Per real model slot
+state.verdicts: Dict[Tuple[int, Path], str]  # Review verdicts (GUI only)
 ```
+The engine numbers active models densely (`0..N-1`); `DetectorRunner` maps those
+indices onto the real `model_slots` before filling `results` or emitting
+`image_done`.
 
-### `ImageResult` (src/polyx/gui/detector/state.py)
-Result of one image:
+### `ImageResult` (src/polyx/core/detection_run/result.py)
+Result of one image, Qt-free. The GUI re-exports it unchanged. The review
+verdict is not part of this shape: it lives in `DetectorState.verdicts`, keyed
+by real model slot and image path.
 ```python
 image_path: Path
 predictions: List[Detection]
 gt: List[Detection]             # Ground truth (if present)
 tp, fp, fn, miscls: int
-annotated_png: Optional[bytes]  # Annotated PNG as base64
+annotated_png: Optional[bytes]  # Annotated PNG, read from disk on demand
+```
+
+### `RunResult` (src/polyx/core/detection_run/result.py)
+The Qt-free record of one run. `load_run` rebuilds it from a canonical
+folder; `load_legacy_run` rebuilds what an old headless folder recorded.
+```python
+run_dir: Path
+images: List[Path]
+models: List[ModelInfo]              # dense active-model order
+params: RunParams
+calibrations: Dict[Path, Calibration]
+results: Dict[int, List[ImageResult]]
+status: RunStatus                    # running | completed | aborted | failed
+error: Optional[str]
+skipped_images: List[Path]
+started_at, finished_at: Optional[datetime]
+execution: Dict[int, ModelExecution] # per-model images/detections/tiling/imgsz
+metrics: Dict[int, Dict[str, int]]   # per-model tp/fp/fn/miscls/totals
+legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
 ### `MatchResult` (src/polyx/core/quality/metrics.py)
@@ -586,24 +650,23 @@ miscls: int      # Correctly located but wrong class
 
 ### Detector
 ```
-Images (folder)
+Images + loaded models + RunParams + CalibrationPolicy
     ↓
-YoloModel.predict() × N models
+run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
+                  measure, match, draw, persist)
     ↓
-Detection[] (bbox + class + conf)
-    ↓
-read_yolo_txt() → Ground truth (if present)
-    ↓
-match_image() → TP/FP/FN (IoU ≥ 0.5)
-    ↓
-compute_box_size_um() → diam_um (if um_per_px calibrated)
-    ↓
-ImageResult
-    ↓
-polyx.core.annotate (triptych + run-view naming) → PNG
-    ↓
-<user data dir>/runs/YYYYMMDD_HHMMSS/
+RunResult  (dense active-model indices, partial on abort/failure)
+    ├→ DetectorRunner: map indices onto model_slots → Qt signals
+    ├→ generate_report(RunResult) (GUI report page and polyx-detect --full-report)
+    ├→ polyx-report: load_run (canonical) or load_legacy_run (old headless)
+    └→ <user data dir>/runs/detect_YYYYMMDD_HHMMSS/
+         run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
+
+Legacy inputs are read, never rewritten: the Viewer opens old GUI folders
+through their per-model `labels/*.txt`, `load_legacy_run` rebuilds a
+`RunResult` from old `summary.json` + `centroids.csv`, and the compact report
+keeps that same old fallback. New runs are the canonical folder only.
 
 ### Trainer
 ```
@@ -651,22 +714,41 @@ The review checklist lives in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
 ## ⚙️ Common parameters
 
-### Inference (DetectorState.params)
+### Inference (`RunParams`, `DetectorState.params`)
 ```python
 conf: float = 0.25          # Confidence threshold
 iou_nms: float = 0.45       # IoU for NMS
 iou_tp: float = 0.50        # IoU for error analysis
-imgsz: int = 640            # Network input size
-device: str = "0"           # "0" (GPU), "cpu"
-um_per_px: float = 0.0      # Calibration (0 = uncalibrated)
+imgsz: int = 1280           # Network input size (320–8192; 1280 is the Fast profile)
+device: str = auto          # CUDA, then MPS, then CPU; "0"/"cpu" override
 size_min_um: float = 0.0    # Lower filter (0 = no filter)
 size_max_um: float = 0.0    # Upper filter (0 = no filter)
-conf_asignacion: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
+conf_assignment: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
+measure_shape: bool = True  # Mask-aware area/length/width instead of the box
+tiling: str = "auto"        # "auto" | "siempre" | "nunca" (backend values)
+tiling_threshold_px: int = 2000
+tiling_tile: int = 0        # 0 = derive from min(threshold, imgsz)
+tiling_overlap: float = 0.25
+```
+
+### Calibration (`CalibrationPolicy`, `DetectorState.calibration`)
+Calibration is **not** an inference parameter: it has one owner, the run
+policy. The effective per-photo scale lives in `RunResult.calibrations` and
+`run.json.calibrations` / `calibration_summary`; `run.json.params` never
+claims a scale.
+```python
+mode: str = "auto"              # "auto" | "manual" | "index" | "none"
+um_per_px: float = 0.0          # manual fallback / manual-only value
+index_path: Path | None = None  # explicit index CSV (auto merges it with the searched one)
+measure_plate: bool = True      # auto only: measure the Petri dish per photo
+diameter_plate_mm: float = 100.0
+height_plate_mm: float = 0.0    # parallax correction, 0 = off
+distance_camera_mm: float = 0.0
 ```
 
 ### Abstention: detecting ≠ identifying
 
-`src/polyx/core/quality/assignment.py`. Below `conf_asignacion` the particle **still
+`src/polyx/core/quality/assignment.py`. Below `conf_assignment` the particle **still
 counts** as a detected particle, but it is reported as **"unassignable"** instead
 of attributing a polymer to it. The report declares in Methods what percentage of
 the batch went unassigned.

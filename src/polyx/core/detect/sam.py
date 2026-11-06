@@ -6,10 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
-from .protocol import DetectionSource, Instance
+from .protocol import DetectionSource, Instance, SinglePassDetectionSource
 
 
-class Sam2Segmenter(DetectionSource):
+class Sam2Segmenter(SinglePassDetectionSource, DetectionSource):
     """SAM2-based segmenter.
 
     This wraps the SAM2 model for generating masks from boxes or points.

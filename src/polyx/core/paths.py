@@ -41,6 +41,16 @@ DEFAULT_MODEL = MODELS_DIR / "bestdetectormedium.pt"
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
 
+def find_images(root: Path) -> list[Path]:
+    """Every supported image under ``root``, recursively and in stable order.
+
+    The CLI and the legacy run reader must select the same files; sharing this
+    helper keeps their recursive walk and extension filter from drifting.
+    """
+    root = Path(root)
+    return sorted(path for path in root.rglob("*") if path.suffix.lower() in IMAGE_EXTS)
+
+
 def discover_default_model() -> Path | None:
     """Return DEFAULT_MODEL if it exists on disk, else None.
 

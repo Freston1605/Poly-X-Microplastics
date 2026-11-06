@@ -12,10 +12,11 @@ from .protocol import (
     Instance,
     SegmentationPrompts,
     SegmentationSource,
+    SinglePassDetectionSource,
 )
 
 
-class TwoStageDetector(DetectionSource):
+class TwoStageDetector(SinglePassDetectionSource, DetectionSource):
     """Compose a detector (stage 1) with a segmenter (stage 2)."""
 
     def __init__(

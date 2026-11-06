@@ -352,25 +352,36 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
     import numpy as np
 
     from polyx.core.detect.protocol import Instance as Detection
+    from polyx.core.detection_run import ImageResult, ModelInfo, RunResult
     from polyx.gui import report_html
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 20, (60, 210, 240), -1)
     is_ok, buf = cv2.imencode(".png", img)
     assert is_ok
-    ruta = tmp_path / "foto.png"
-    ruta.write_bytes(buf.tobytes())
+    image_path = tmp_path / "foto.png"
+    image_path.write_bytes(buf.tobytes())
 
     d = Detection(class_id=0, class_name="PET", conf=0.90, x1=140, y1=110, x2=180, y2=150)
-    st = DetectorState()
-    st.model_slots[0] = ModelSlot(alias="m1", path=tmp_path / "fake.pt")
-    st.results = {
-        0: [ImageResult(image_path=ruta, model_idx=0, predictions=[d], gt=[], has_gt=False)]
-    }
+    st = RunResult(
+        run_dir=tmp_path / "run",
+        images=[image_path],
+        models=[ModelInfo(alias="m1", path=tmp_path / "fake.pt")],
+        results={
+            0: [
+                ImageResult(
+                    image_path=image_path,
+                    model_idx=0,
+                    predictions=[d],
+                    gt=[],
+                    has_gt=False,
+                )
+            ]
+        },
+    )
 
-    salida = tmp_path / "out.html"
-    report_html.generate_report(st, salida, sections=["resumen"])
+    output = tmp_path / "out.html"
+    report_html.generate_report(st, output, sections=["resumen"])
 
     log_file = tmp_path / "_polyx_logs" / "detector.jsonl"
     assert log_file.is_file()

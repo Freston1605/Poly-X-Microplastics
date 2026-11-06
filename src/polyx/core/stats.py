@@ -270,11 +270,13 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
     return name_2.lower() if lowercase else name_2
 
 
-def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
+def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
     """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
 
-    The saved predictions already passed the threshold the run used, so
-    raising it is just filtering and re-pairing. Lowering it is NOT
+    ``models`` is the run's active model list in dense engine order (the
+    canonical ``RunResult.models``); ``results_2`` is keyed by those same
+    indices. The saved predictions already passed the threshold the run used,
+    so raising it is just filtering and re-pairing. Lowering it is NOT
     possible: those detections were never computed. That is why the sweep
     starts at the threshold used and states that limitation.
 
@@ -282,9 +284,7 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
     """
     thresholds = [round(u, 2) for u in np.arange(conf_current, 0.96, 0.05)]
     output_2 = {}
-    for mi, slot in enumerate(state.model_slots):
-        if slot.path is None:
-            continue
+    for mi, model in enumerate(models):
         rs = [r for r in results_2.get(mi, []) if r.has_gt]
         if not rs:
             continue
@@ -304,5 +304,5 @@ def _sweep_confidence(results_2, state, iou_thr: float, conf_current: float):
             rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
             f1 = 2 * p * rec / (p + rec) if (p + rec) else 0.0
             rows_2.append((u, p, rec, f1, nd))
-        output_2[slot.alias] = rows_2
+        output_2[model.alias] = rows_2
     return output_2

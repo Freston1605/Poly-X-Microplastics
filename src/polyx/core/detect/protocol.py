@@ -84,8 +84,10 @@ class Instance:
 class DetectionSource(Protocol):
     """Protocol for any detection backend.
 
-    Implementations must provide a `predict` method that takes an image path
-    and returns a list of Instance objects.
+    Implementations must provide ``predict_auto`` —the single entry point the
+    run engine calls— and a ``predict`` method that takes an image path and
+    returns a list of Instance objects. Backends that do not tile delegate
+    ``predict_auto`` to ``predict``.
     """
 
     def load(self) -> DetectionSource:
@@ -117,6 +119,28 @@ class DetectionSource(Protocol):
         """Run sliced inference on a large image."""
         ...
 
+    def predict_auto(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        """Run inference, tiling the image when the policy decides to.
+
+        This is the single entry point the run engine calls. Backends that
+        cannot tile delegate to their existing single-pass ``predict``.
+        ``record``, when given, is filled with the tiling decision taken.
+        """
+        ...
+
     @property
     def names(self) -> dict[int, str]:
         """Class id → name mapping."""
@@ -126,6 +150,32 @@ class DetectionSource(Protocol):
     def last_imgsz(self) -> int:
         """Image size actually used in the last inference."""
         ...
+
+
+class SinglePassDetectionSource:
+    """Mixin for backends that only run a single pass over the full image.
+
+    The engine always calls ``predict_auto``; a backend without a tiling
+    policy must not copy the same delegation three times. The shared
+    implementation drops the tiling arguments and forwards the inference
+    parameters to ``predict``.
+    """
+
+    def predict_auto(
+        self: DetectionSource,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
 
 
 # Convenience type alias

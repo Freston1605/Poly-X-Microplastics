@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.annotate import parse_run_label_name
+from polyx.core.annotate import find_run_labels
 from polyx.core.i18n import tr
 from polyx.core.paths import RUNS_DIR
 from polyx.gui import iconos, marca
@@ -722,13 +722,7 @@ class ViewerWindow(QMainWindow):
 
         # collide. The naming owner parses it back, so the Viewer cannot desync.
 
-        candidates = sorted(
-            c
-            for c in root_2.rglob("*.txt")
-            if c.parent.name == "labels"
-            and (parsed := parse_run_label_name(c.name)) is not None
-            and parsed[1] == img.stem
-        )
+        candidates = find_run_labels(root_2, img.stem)
 
         if not candidates:
             QMessageBox.information(

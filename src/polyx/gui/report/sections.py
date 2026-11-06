@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from polyx.core.detection_run import RunStatus
 from polyx.core.i18n import tr
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
@@ -91,7 +92,33 @@ def _section_team(active) -> str:
     return html
 
 
-def _section_count(results_2: dict[int, list], state, active, classes: list[str]) -> str:
+def _run_status_note(run) -> str:
+    """A visible banner for a run that did not finish, or empty when it did.
+
+    A failed or aborted batch is still reportable -- its partial results are
+    real data -- but the document must never present it as a complete run.
+    """
+    status = RunStatus.parse(run.status)
+    if status is RunStatus.FAILED:
+        title = tr("Lote incompleto (ejecución fallida).")
+        detail = tr(
+            "El informe describe solo los resultados escritos antes del error: {error}"
+        ).format(error=_esc(run.error or "—"))
+        colour = T.DOC.ERR
+    elif status is RunStatus.ABORTED:
+        title = tr("Lote parcial (ejecución interrumpida).")
+        detail = tr("El informe describe solo las imágenes procesadas antes de la interrupción.")
+        colour = T.DOC.WARN
+    else:
+        return ""
+    return (
+        f"<p class='run-status' style='border-left:4px solid {colour};"
+        "padding:6px 12px;background:var(--bg_soft)'>"
+        f"<strong>{title}</strong> {detail} <code>{status.value}</code></p>"
+    )
+
+
+def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
     It is the table requested for the manuscript: count by plastic type
@@ -100,14 +127,13 @@ def _section_count(results_2: dict[int, list], state, active, classes: list[str]
     of its detections, without discounting false positives. That reading
     lives in the error section.
 
-    With several models loaded the first active one is used. Putting two
-    models in the same cell would make the table illegible, and the
-    report already compares models in its own section.
+    With several models loaded the first one is used. Putting two models in
+    the same cell would make the table illegible, and the report already
+    compares models in its own section.
     """
-    if not active:
+    if not run.models:
         return ""
-    main_mi = state.model_slots.index(active[0])
-    rs = results_2.get(main_mi, [])
+    rs = results_2.get(0, [])
     if not rs:
         return ""
 
@@ -208,14 +234,14 @@ def _section_count(results_2: dict[int, list], state, active, classes: list[str]
                 + "</p>"
             )
 
-    tagline = tr(", el primer modelo activo.") if len(active) > 1 else "."
+    tagline = tr(", el primer modelo activo.") if len(run.models) > 1 else "."
     intro = (
         tr(
             "<p>Partículas contadas en cada muestra, desglosadas por polímero. "
             "La columna <em>manual</em> es la anotación humana (Ground Truth) y la "
             "columna <em>modelo</em> son todas las detecciones de "
             "<strong>{alias}</strong>{coletilla}</p>"
-        ).format(alias=_esc(active[0].alias), coletilla=tagline)
+        ).format(alias=_esc(run.models[0].alias), coletilla=tagline)
         + tr(
             "<p><strong>Léase como conteo, no como evaluación.</strong> La "
             "columna del modelo no descuenta falsos positivos ni empareja caja a caja: "
@@ -276,17 +302,45 @@ def _section_summary(
 </p>"""
 
 
-def _section_errors(state, results_2, active, any_gt: bool) -> str:
+def _section_errors(run, results_2, any_gt: bool) -> str:
     """Body of the 'errores' section: confusion matrix plus per-class metrics.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when there is no
-    ground truth or no active model: the assembler omits a section with no
-    content rather than inventing data.
+    ground truth or no model: the assembler omits a section with no content
+    rather than inventing data.
     """
-    if not (any_gt and active):
+    if not (any_gt and run.models):
         return ""
-    main_mi = state.model_slots.index(active[0])
-    rs = results_2.get(main_mi, [])
+    active = run.models
+    rs = results_2.get(0, [])
+    if run.legacy:
+        # Old headless folders kept per-image TP/FP/FN counts but not the GT
+        # boxes. Rebuilding the confusion matrix from the predictions alone
+        # would turn every legacy detection into a false positive, so report
+        # the counts the old run actually recorded instead.
+        rows_legacy = ""
+        for index, model in enumerate(active):
+            counts = run.metrics.get(index, {})
+            if not counts:
+                model_rows = rs if index == 0 else []
+                counts = {
+                    "tp": sum(row.tp for row in model_rows),
+                    "fp": sum(row.fp for row in model_rows),
+                    "fn": sum(row.fn for row in model_rows),
+                    "miscls": sum(row.miscls for row in model_rows),
+                }
+            rows_legacy += (
+                f"<tr><td>{_esc(model.alias)}</td>"
+                f"<td class='r'>{int(counts.get('tp', 0))}</td>"
+                f"<td class='r'>{int(counts.get('fp', 0))}</td>"
+                f"<td class='r'>{int(counts.get('fn', 0))}</td>"
+                f"<td class='r'>{int(counts.get('miscls', 0))}</td></tr>"
+            )
+        return f"""
+        <p>{tr("Este informe viene de una carpeta anterior al formato canónico. Esa carpeta guardó los recuentos por imagen, pero no las cajas de la anotación manual, así que no se puede reconstruir la matriz de confusión ni las métricas por clase. Estos son los recuentos que la corrida sí registró:")}</p>
+        <table class='data'><tr>{tr("<th>Modelo</th>")}<th>TP</th><th>FP</th><th>FN</th><th>MISCLS</th></tr>{rows_legacy}</table>
+        """
+
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]
     cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
@@ -297,9 +351,9 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
             str(cid),
         )
         cls_names.append(name)
-    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
+    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp)
     per_class_metrics = aggregate_per_class(
-        preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp
+        preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp
     )
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
@@ -317,7 +371,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     # to compute. They are declared anyway: a report that announces PET/PP/LDPE and
     # then shows two rows looks broken, and the reader cannot distinguish
     # `absent from the batch` from `lost along the way`.
-    known = dict(getattr(getattr(active[0], "loaded", None), "names", {}) or {})
+    known = dict(active[0].names or {})
     missing = [n for cid, n in sorted(known.items()) if cid not in set(cls_ids)]
     note_missing = ""
     if missing:
@@ -335,7 +389,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
         
         <h3>@@N@@.1 {tr("Matriz de confusión")}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{tr("Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).").format(modelo=_esc(active[0].alias), iou=state.params.iou_tp)}</div></div>
+            <div class='caption'>{tr("Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).").format(modelo=_esc(active[0].alias), iou=run.params.iou_tp)}</div></div>
         <h3>@@N@@.2 {tr("Precisión / Recall / F1 por clase")}</h3>
         <table class='data'><tr>{tr("<th>Clase</th>")}<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
         {tr("<th>Precisión</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
@@ -343,7 +397,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
         """
 
 
-def _section_models(state, results_2, all_results, any_gt: bool) -> str:
+def _section_models(run, results_2, all_results, any_gt: bool) -> str:
     """Body of the 'modelos' section: per-model comparison table plus F1 note.
 
     Returns the HTML body WITHOUT its ``<h2>`` title (header table included:
@@ -361,9 +415,7 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
     # per-class table, which does penalize confusion. Both are declared.
     rows_models = ""
     total_mc = 0
-    for mi, slot in enumerate(state.model_slots):
-        if slot.path is None:
-            continue
+    for mi, slot in enumerate(run.models):
         rs = results_2.get(mi, [])
         n_img = len({r.image_path for r in rs})
         n_det = sum(len(r.predictions) for r in rs)
@@ -425,13 +477,13 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
 {note_miscls}"""
 
 
-def _section_verdict(results_2, state) -> str:
+def _section_verdict(results_2, run) -> str:
     """Body of the 'veredicto' section: best model by F1-with-class, from the
     confidence sweep. Arguments are the precomputed locals the inline block
     consumed before extraction."""
     text_2 = ""
     if any(r.has_gt for rs in results_2.values() for r in rs):
-        sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
+        sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
         if sweep:
             summary = []
             for alias, rows_2 in sweep.items():
@@ -467,7 +519,7 @@ def _section_verdict(results_2, state) -> str:
     return text_2
 
 
-def _section_comparison(state, results_2) -> str:
+def _section_comparison(run, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
     precomputed locals the inline block consumed before extraction."""
@@ -477,7 +529,7 @@ def _section_comparison(state, results_2) -> str:
     # concentrates most of the particles, the total is decided by that stretch and
     # can hide that in the rest the other model does better.
     compare_html = ""
-    active_2 = [mi for mi, s in enumerate(state.model_slots) if s.path is not None]
+    active_2 = list(range(len(run.models)))
     if len(active_2) > 1:
         by_photo = {}
         for mi in active_2:
@@ -487,7 +539,7 @@ def _section_comparison(state, results_2) -> str:
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
         header_line = "<tr><th>Image</th>"
         for mi in active_2:
-            alias = state.model_slots[mi].alias
+            alias = run.models[mi].alias
             header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
             if there_is_gt:
                 header_line += (
@@ -524,9 +576,7 @@ def _section_comparison(state, results_2) -> str:
                 fn = sum(r.fn for r in rs)
                 pr = tp / (tp + fp) if (tp + fp) else 0
                 rc = tp / (tp + fn) if (tp + fn) else 0
-                marker_2.append(
-                    (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
-                )
+                marker_2.append((2 * pr * rc / (pr + rc) if (pr + rc) else 0, run.models[mi].alias))
             marker_2.sort(reverse=True)
             best_f1, best = marker_2[0]
             # This F1 is the permissive one (localization). It used to say only `F1 global` and
@@ -555,7 +605,7 @@ def _section_comparison(state, results_2) -> str:
             data_bars = []
             by_model_class: dict[str, dict[str, tuple]] = {}
             for mi in active_2:
-                alias = state.model_slots[mi].alias
+                alias = run.models[mi].alias
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
                 tp = sum(r.tp for r in rs)
                 fp = sum(r.fp for r in rs)
@@ -569,7 +619,7 @@ def _section_comparison(state, results_2) -> str:
                 preds_m = [r.predictions for r in rs]
                 ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
                 if ids:
-                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
+                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=run.params.iou_tp)
                     names_cls = {
                         cid: next(
                             (
@@ -600,7 +650,7 @@ def _section_comparison(state, results_2) -> str:
                         "Figura. Precisión, Recall y F1 de cada modelo al umbral "
                         "{umbral}, en los dos criterios. La distancia entre paneles es "
                         "la confusión entre polímeros."
-                    ).format(umbral=f"{state.params.conf:g}")
+                    ).format(umbral=f"{run.params.conf:g}")
                     + "</div></div>"
                 )
 
@@ -625,7 +675,7 @@ def _section_comparison(state, results_2) -> str:
                     if ra is not None and rb is not None:
                         pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
                 f_agreement = _fig_agreement_by_image(
-                    state.model_slots[a].alias, state.model_slots[b].alias, pares
+                    run.models[a].alias, run.models[b].alias, pares
                 )
                 if f_agreement:
                     figures_cmp += (
@@ -642,7 +692,7 @@ def _section_comparison(state, results_2) -> str:
 
             # F1 curve against the threshold: it supports the choice of the operating
             # point with evidence, instead of asserting it.
-            sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
+            sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
             f_sweep = _fig_sweep(sweep)
             if f_sweep:
                 figures_cmp += (
@@ -653,7 +703,7 @@ def _section_comparison(state, results_2) -> str:
                         "estrella marca el máximo de cada modelo. La curva arranca en "
                         "{umbral}, el umbral con que se ejecutó: por debajo las "
                         "detecciones no se calcularon."
-                    ).format(umbral=f"{state.params.conf:g}")
+                    ).format(umbral=f"{run.params.conf:g}")
                     + "</div></div>"
                 )
 
@@ -682,7 +732,7 @@ def _section_comparison(state, results_2) -> str:
 
 def _section_gallery(
     results_2: dict[int, list],
-    state,
+    run,
     classes_batch,
     max_gallery: int = 60,
     include_gallery: bool = True,
@@ -718,7 +768,7 @@ def _section_gallery(
             candidates.extend(per_image[path_2])
         omitted = max(0, len(per_image) - max_gallery)
         for mi, r in candidates:
-            slot = state.model_slots[mi]
+            slot = run.models[mi]
             if True:
                 # Prediction image (we prefer pred_png; otherwise the combined one)
                 pred_bytes = getattr(r, "pred_png", None) or r.annotated_png
@@ -831,7 +881,7 @@ def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[
 
 
 def _section_methods(
-    state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
+    run, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
 ) -> tuple:
     """Body of the 'metodos' section: parameters table, team and redacted paragraph.
 
@@ -841,30 +891,21 @@ def _section_methods(
     at module import time (S01 laziness gate).
     """
     # ── Methods ──
-    p = state.params
-    # When calibration is per photo (medir_placa) there is no SINGLE um_per_px
-    # value to report here -- p.um_per_px stays at 0 on purpose.
-    # Instead of an `—` that says nothing, the batch mean is given with its
-    # 95% confidence interval: a number that can be cited in a
-    # method even if the real calibration is photo by photo (that is explained in
-    # detail in the `Calibracion de escala` section, with the minimum and
-    # maximum that show how much it varies).
-    if p.um_per_px > 0:
-        um_px_txt = f"{p.um_per_px:g}"
+    p = run.params
+    # Calibration is per photo: there is no single run parameter to quote.
+    # The effective scales live in ``run.calibrations``, so the batch mean is
+    # given with its 95% confidence interval -- a number that can be cited in
+    # a method even when every photo has its own factor (the calibration
+    # section expands the minimum, median and maximum).
+    _ums_methods = [c.um_por_px for c in run.calibrations.values() if getattr(c, "valid", False)]
+    _mic = _average_ic95(_ums_methods)
+    if _mic:
+        _average_m, _margin_m, _n_m = _mic
+        um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
+    elif _ums_methods:
+        um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
     else:
-        _ums_methods = [
-            c.um_por_px
-            for c in (getattr(state, "calibrations", None) or {}).values()
-            if getattr(c, "valid", False)
-        ]
-        _mic = _average_ic95(_ums_methods)
-        if _mic:
-            _average_m, _margin_m, _n_m = _mic
-            um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
-        elif _ums_methods:
-            um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
-        else:
-            um_px_txt = "—"
+        um_px_txt = "—"
     methods_rows = [
         (tr("Modelos cargados"), _esc(", ".join(s.alias for s in active)) or "—"),
         (tr("Confianza mínima"), f"{p.conf:g}"),
@@ -935,8 +976,8 @@ def _section_methods(
             else ""
         )
         + (
-            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=f"{p.um_per_px:g}")
-            if p.um_per_px > 0
+            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=um_px_txt)
+            if _ums_methods
             else ""
         )
         + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones.").format(
@@ -973,22 +1014,20 @@ def _section_references(include_refs: bool = True) -> str:
     return refs_html
 
 
-def _section_calibration(state) -> str:
+def _section_calibration(run) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
-    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the state has
-    no calibraciones and no manual scale, so the assembler drops the section
-    like it does today. The ``polyx.core.calibration`` import stays lazy
-    inside this body: it must not load at module import time (S01 laziness
-    gate).
+    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the run has
+    no effective calibrations, so the assembler drops the section like it does
+    today. The ``polyx.core.calibration`` import stays lazy inside this body:
+    it must not load at module import time (S01 laziness gate).
     """
     # ── Scale calibration ──
     # The provenance is reported, not only the number: a size in µm without saying
     # against which standard it was measured is not verifiable. If there is no calibration the
     # section is not emitted, instead of showing an `—` that looks like data.
-    p = state.params
     calib_html = ""
-    cals = getattr(state, "calibrations", None) or {}
+    cals = run.calibrations
     if cals:
         from polyx.core.measure.calibration import (
             BIAS_MAXIMUM_WALL_PCT,
@@ -1026,6 +1065,29 @@ def _section_calibration(state) -> str:
                     f"<tr>{tr('<td>media ± IC 95%</td>')}"
                     f"<td>{_average_c:.4f} ± {_margin_c:.4f} (n={_n_c})</td></tr>"
                 )
+            # Each provenance gets only the caveat that applies to it: a run
+            # calibrated by hand must not claim the scale was fitted to the
+            # dish ring, and an index run must not claim it was measured here.
+            scale_notes = ""
+            if "placa" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.</p>"
+                )
+                scale_notes += (
+                    f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>"
+                    + tr(
+                        "<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles."
+                    ).format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)
+                    + "</p>"
+                )
+            if "manual" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>La escala se introdujo a mano en Parámetros. No está trazada a un patrón de longitud, de modo que cualquier variación en la distancia de disparo entre fotos queda sin corregir.</p>"
+                )
+            if "indice" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>La escala se hereda del índice de calibración, que la asocia a cada recorte o placa. Es un valor declarado, no medido sobre la foto.</p>"
+                )
             calib_html = f"""
 <table class='data'><tr>{tr("<th>Procedencia de la escala</th><th>Imágenes</th>")}</tr>{rows_2}</table>
 <table class='data'>
@@ -1036,29 +1098,18 @@ def _section_calibration(state) -> str:
 {_row_average}
 </table>
 {warning}
-<p>{tr("El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.")}</p>
-
-<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>
-{tr("<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles.").format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)}</p>
-{_figure_calibration(state)}"""
+{scale_notes}
+{_figure_calibration(run)}"""
             if res["avisos"]:
                 items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
                 if items:
                     calib_html += (
                         f"<p>{tr('Incidencias durante la calibración:')}</p><ul>{items}</ul>"
                     )
-    elif p.um_per_px > 0:
-        calib_html = tr(
-            "<p>Escala única para todo el lote, introducida a mano: "
-            "<strong>{um} µm/píxel</strong>. No se midió ninguna placa, "
-            "de modo que este factor no está trazado a un patrón de longitud y "
-            "cualquier variación en la distancia de disparo entre fotos queda sin "
-            "corregir.</p>"
-        ).format(um=f"{p.um_per_px:g}")
     return calib_html
 
 
-def _section_shape(state, shapes, n_en_el_aro, n_formless):
+def _section_shape(run, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
     Returns ``(forma_html, por_carpeta_html)``, both WITHOUT their ``<h2>``
@@ -1220,7 +1271,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             # The example card is drawn further below, AFTER explaining the
             # method: showing the crop with a yellow line on top before
             # saying that this line is the Feret diameter explains nothing.
-            cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
+            cal_elderly = run.calibration_for(Path(path_elderly))
             um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
             record_elderly = (elderly, path_elderly, um_elderly)
 
@@ -1228,7 +1279,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             # without a photo cannot be distinguished from noise, or the shape card
             # and a reader has no way to check that there really is a
             # particle there and not a background speck that was badly segmented.
-            cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
+            cal_minor = run.calibration_for(Path(path_minor))
             um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
             record_minor = (minor_2, path_minor, um_minor)
             by_html_folder = _size_per_folder(with_size)
@@ -1358,7 +1409,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
     return shape_html, by_html_folder
 
 
-def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
+def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
     """Body of the 'fichas' section: one annotated card per sampled particle.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
@@ -1393,7 +1444,7 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
                 bgr = None
             if bgr is None:
                 continue
-            cal = (getattr(state, "calibrations", {}) or {}).get(Path(path_2).name)
+            cal = run.calibration_for(Path(path_2))
             um = cal.um_por_px if cal and cal.valid else None
             cards = ""
             for d in sorted(por_img_f[path_2], key=lambda z: z.number or 0):

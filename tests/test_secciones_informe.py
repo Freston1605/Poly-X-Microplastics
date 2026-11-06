@@ -126,7 +126,7 @@ def _precomputados(st) -> SimpleNamespace:
     import polyx.gui.report_html as rh
 
     resultados = dict(st.results)
-    active = st.active_models()
+    active = list(st.models)
     all_results = [r for rs in resultados.values() for r in rs]
     total_imgs = len({r.image_path for r in all_results})
     total_dets = sum(len(r.predictions) for r in all_results)
@@ -196,8 +196,9 @@ def test_errores_queda_vacio_sin_ground_truth(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    cuerpo = rh._section_errors(st, pre.resultados, pre.active, pre.any_gt)
-    assert cuerpo == ""
+    pre_data = vars(pre)
+    body = rh._section_errors(st, pre_data["resultados"], pre.any_gt)
+    assert body == ""
     # Y el baseline lo confirma: la seccion no aparece en el documento.
     assert "<h2 id='errors'>" not in BASELINE_TXT
 
@@ -309,10 +310,11 @@ def test_conteo_por_muestra_con_placeholder_num(tmp_path):
     import polyx.gui.report_html as rh
 
     st, pre = _estado_benigno(tmp_path)
-    cuerpo = rh._section_count(pre.resultados, st, pre.active, pre.clases_lote)
-    assert isinstance(cuerpo, str) and cuerpo
-    assert "<h2" not in cuerpo
-    assert rh.NUM in cuerpo
+    pre_data = vars(pre)
+    body = rh._section_count(pre_data["resultados"], st, pre_data["clases_lote"])
+    assert isinstance(body, str) and body
+    assert "<h2" not in body
+    assert rh.NUM in body
 
 
 def test_profundidad_vacia_sin_tramo_en_los_nombres(tmp_path):

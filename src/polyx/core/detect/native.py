@@ -9,10 +9,11 @@ import cv2
 from .protocol import (
     DetectionSource,
     Instance,
+    SinglePassDetectionSource,
 )
 
 
-class NativeDetector(DetectionSource):
+class NativeDetector(SinglePassDetectionSource, DetectionSource):
     """Threshold + connected-component detector.
 
     This is a fallback detector that uses classical computer vision
