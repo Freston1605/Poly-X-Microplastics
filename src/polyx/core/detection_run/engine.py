@@ -113,7 +113,7 @@ def _build_models(config: RunConfig) -> list[ModelInfo]:
     return infos
 
 
-def _calibration_mode(policy: CalibrationPolicy) -> str:
+def _validated_calibration_mode(policy: CalibrationPolicy) -> str:
     mode = str(policy.mode or "auto").strip().lower()
     if mode not in CALIBRATION_MODES:
         raise ValueError(
@@ -147,6 +147,13 @@ def _calibration_index(
     return {**searched, **explicit}
 
 
+def _missing_calibration_warning(calibration: Calibration, warning: str) -> Calibration:
+    """Attach a mode-specific warning when the resolver did not provide one."""
+    if calibration.valid or calibration.warning:
+        return calibration
+    return replace(calibration, warning=warning)
+
+
 def _resolve_calibration(
     image_path: Path,
     bgr: np.ndarray,
@@ -167,9 +174,8 @@ def _resolve_calibration(
             measure_plate=False,
         )
         if not calibration.valid and not calibration.warning:
-            return replace(
-                calibration,
-                warning="manual calibration needs a positive um_per_px",
+            return _missing_calibration_warning(
+                calibration, "manual calibration needs a positive um_per_px"
             )
         return calibration
 
@@ -181,9 +187,8 @@ def _resolve_calibration(
             measure_plate=False,
         )
         if not calibration.valid and not calibration.warning:
-            return replace(
-                calibration,
-                warning="image is not listed in the calibration index",
+            return _missing_calibration_warning(
+                calibration, "image is not listed in the calibration index"
             )
         return calibration
 
@@ -252,7 +257,12 @@ def _number_detections(detections: list[Instance]) -> None:
 
 
 def _tiling_description(record: dict) -> str:
-    """Human-readable tiling decision for one image; empty when it stayed whole."""
+    """Human-readable tiling decision for one image; empty when it stayed whole.
+
+    The record keys are the detector backend's existing contract, not new
+    identifiers: they predate the English-identifier rule and changing them
+    here would break every backend's ``predict_auto``.
+    """
     if not record.get("troceado"):
         return ""
     plan = record.get("plan") or {}
@@ -273,7 +283,7 @@ def _predict(
     """Run the shared tiling entry point and record what it decided."""
     record: dict = {}
     predictions = detector.predict_auto(
-        str(image_path),
+        image_path,
         conf=params.conf,
         iou=params.iou_nms,
         imgsz=params.imgsz,
@@ -297,6 +307,19 @@ def _predict(
     return list(predictions), _tiling_description(record)
 
 
+def _write_failed_run(
+    output_dir: Path,
+    result: RunResult,
+    provenance_data: dict,
+    log,
+) -> None:
+    """Best-effort partial ``run.json`` for a run that failed during setup."""
+    try:
+        RunWriter(output_dir, result, provenance_data).finish()
+    except Exception:
+        log.exception("run.finish_failed")
+
+
 def run_detection(
     config: RunConfig,
     *,
@@ -313,13 +336,11 @@ def run_detection(
     """
     if not config.models:
         raise ValueError("a detection run needs at least one model")
-    mode = _calibration_mode(config.calibration)
+    mode = _validated_calibration_mode(config.calibration)
 
     images = [Path(path) for path in config.images]
     index = _calibration_index(config.calibration, mode, images)
     output_dir = Path(config.output_dir)
-    models = _build_models(config)
-    _prepare_output_dir(output_dir, config.force)
 
     try:
         provenance_data = provenance()
@@ -328,6 +349,29 @@ def run_detection(
         provenance_data = {}
 
     started_at = utcnow()
+    log = logger_for("detector")
+
+    # The output folder guard is an expected refusal, not a failed run: it
+    # must not touch the folder the caller chose. Everything after it can
+    # leave a partial run.json and a domain failure carrying the result.
+    try:
+        _prepare_output_dir(output_dir, config.force)
+        models = _build_models(config)
+    except RunOutputError:
+        raise
+    except Exception as exc:
+        result = RunResult(
+            run_dir=output_dir,
+            images=images,
+            params=config.params,
+            status=RunStatus.FAILED,
+            error=f"{type(exc).__name__}: {exc}",
+            started_at=started_at,
+            finished_at=utcnow(),
+        )
+        _write_failed_run(output_dir, result, provenance_data, log)
+        raise RunFailed(result, result.error) from exc
+
     result = RunResult(
         run_dir=output_dir,
         images=images,
@@ -338,8 +382,16 @@ def run_detection(
         results={index: [] for index in range(len(models))},
         execution={index: ModelExecution() for index in range(len(models))},
     )
-    writer = RunWriter(output_dir, result, provenance_data)
-    log = logger_for("detector")
+    try:
+        writer = RunWriter(output_dir, result, provenance_data)
+    except Exception as exc:
+        result.status = RunStatus.FAILED
+        result.error = f"{type(exc).__name__}: {exc}"
+        result.finished_at = utcnow()
+        result.metrics = aggregate_metrics(result)
+        _write_failed_run(output_dir, result, provenance_data, log)
+        raise RunFailed(result, result.error) from exc
+
     total = len(images) * len(models)
     done = 0
     first_names = models[0].names if models else {}

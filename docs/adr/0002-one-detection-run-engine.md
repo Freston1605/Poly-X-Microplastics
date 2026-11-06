@@ -42,8 +42,9 @@ The run folder is canonical and self-describing:
 ```
 
 `load_run` reopens that folder as a `RunResult` without Qt. The GUI is a thin
-QThread adapter around the engine and keeps only presentation state (loaded
-model slots, signals and review verdicts). `polyx-detect`,
+QThread adapter around the engine: it maps the engine's progress/results onto
+the state the existing pages already read (model slots, previews and
+calibrations) and keeps review verdicts GUI-side. `polyx-detect`,
 `polyx-report --full-report` and `generate_report` all consume the same
 `RunResult`; none of them rebuilds a GUI state.
 
@@ -92,6 +93,10 @@ module keeps the `build_state_from_run` name and delegates to
   the per-image TP/FP/FN counts but an empty GT box list. Reports from those
   folders cannot redraw the GT; they describe the counts the old run
   recorded.
+- Segmentation masks are measurement inputs, not report artifacts: the
+  canonical folder records their effect in the size fields, `size_source` and
+  `has_mask`, but not the mask arrays. `load_run` rebuilds the report-facing
+  `RunResult`, not a re-runnable inference state.
 - ADR-0001 still governs where runs live. This ADR only decides what a run is
   and how it is written.
 - The architecture is pinned by `tests/test_detection_engine.py`,

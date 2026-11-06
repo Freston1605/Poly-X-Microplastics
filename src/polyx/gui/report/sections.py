@@ -313,6 +313,34 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         return ""
     active = run.models
     rs = results_2.get(0, [])
+    if run.legacy:
+        # Old headless folders kept per-image TP/FP/FN counts but not the GT
+        # boxes. Rebuilding the confusion matrix from the predictions alone
+        # would turn every legacy detection into a false positive, so report
+        # the counts the old run actually recorded instead.
+        rows_legacy = ""
+        for index, model in enumerate(active):
+            counts = run.metrics.get(index, {})
+            if not counts:
+                model_rows = rs if index == 0 else []
+                counts = {
+                    "tp": sum(row.tp for row in model_rows),
+                    "fp": sum(row.fp for row in model_rows),
+                    "fn": sum(row.fn for row in model_rows),
+                    "miscls": sum(row.miscls for row in model_rows),
+                }
+            rows_legacy += (
+                f"<tr><td>{_esc(model.alias)}</td>"
+                f"<td class='r'>{int(counts.get('tp', 0))}</td>"
+                f"<td class='r'>{int(counts.get('fp', 0))}</td>"
+                f"<td class='r'>{int(counts.get('fn', 0))}</td>"
+                f"<td class='r'>{int(counts.get('miscls', 0))}</td></tr>"
+            )
+        return f"""
+        <p>{tr("Este informe viene de una carpeta anterior al formato canónico. Esa carpeta guardó los recuentos por imagen, pero no las cajas de la anotación manual, así que no se puede reconstruir la matriz de confusión ni las métricas por clase. Estos son los recuentos que la corrida sí registró:")}</p>
+        <table class='data'><tr>{tr("<th>Modelo</th>")}<th>TP</th><th>FP</th><th>FN</th><th>MISCLS</th></tr>{rows_legacy}</table>
+        """
+
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]
     cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
@@ -869,9 +897,7 @@ def _section_methods(
     # given with its 95% confidence interval -- a number that can be cited in
     # a method even when every photo has its own factor (the calibration
     # section expands the minimum, median and maximum).
-    _ums_methods = [
-        c.um_por_px for c in run.calibrations_by_name.values() if getattr(c, "valid", False)
-    ]
+    _ums_methods = [c.um_por_px for c in run.calibrations.values() if getattr(c, "valid", False)]
     _mic = _average_ic95(_ums_methods)
     if _mic:
         _average_m, _margin_m, _n_m = _mic
@@ -1001,7 +1027,7 @@ def _section_calibration(run) -> str:
     # against which standard it was measured is not verifiable. If there is no calibration the
     # section is not emitted, instead of showing an `—` that looks like data.
     calib_html = ""
-    cals = run.calibrations_by_name
+    cals = run.calibrations
     if cals:
         from polyx.core.measure.calibration import (
             BIAS_MAXIMUM_WALL_PCT,
@@ -1039,6 +1065,29 @@ def _section_calibration(run) -> str:
                     f"<tr>{tr('<td>media ± IC 95%</td>')}"
                     f"<td>{_average_c:.4f} ± {_margin_c:.4f} (n={_n_c})</td></tr>"
                 )
+            # Each provenance gets only the caveat that applies to it: a run
+            # calibrated by hand must not claim the scale was fitted to the
+            # dish ring, and an index run must not claim it was measured here.
+            scale_notes = ""
+            if "placa" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.</p>"
+                )
+                scale_notes += (
+                    f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>"
+                    + tr(
+                        "<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles."
+                    ).format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)
+                    + "</p>"
+                )
+            if "manual" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>La escala se introdujo a mano en Parámetros. No está trazada a un patrón de longitud, de modo que cualquier variación en la distancia de disparo entre fotos queda sin corregir.</p>"
+                )
+            if "indice" in res["origenes"]:
+                scale_notes += tr(
+                    "<p>La escala se hereda del índice de calibración, que la asocia a cada recorte o placa. Es un valor declarado, no medido sobre la foto.</p>"
+                )
             calib_html = f"""
 <table class='data'><tr>{tr("<th>Procedencia de la escala</th><th>Imágenes</th>")}</tr>{rows_2}</table>
 <table class='data'>
@@ -1049,10 +1098,7 @@ def _section_calibration(run) -> str:
 {_row_average}
 </table>
 {warning}
-<p>{tr("El patrón de longitud es el diámetro externo nominal de la placa Petri. El radio en píxeles se obtiene ajustando un círculo por mínimos cuadrados al borde del anillo muestreado en 720 direcciones, con rechazo de atípicos; la transformada de Hough solo aporta el centro aproximado, porque su radio llega a errar un 12&nbsp;% y ese error entraría entero en todos los tamaños reportados.")}</p>
-
-<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>
-{tr("<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles.").format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)}</p>
+{scale_notes}
 {_figure_calibration(run)}"""
             if res["avisos"]:
                 items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
@@ -1225,7 +1271,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
             # The example card is drawn further below, AFTER explaining the
             # method: showing the crop with a yellow line on top before
             # saying that this line is the Feret diameter explains nothing.
-            cal_elderly = run.calibrations_by_name.get(Path(path_elderly).name)
+            cal_elderly = run.calibration_for(Path(path_elderly))
             um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
             record_elderly = (elderly, path_elderly, um_elderly)
 
@@ -1233,7 +1279,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
             # without a photo cannot be distinguished from noise, or the shape card
             # and a reader has no way to check that there really is a
             # particle there and not a background speck that was badly segmented.
-            cal_minor = run.calibrations_by_name.get(Path(path_minor).name)
+            cal_minor = run.calibration_for(Path(path_minor))
             um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
             record_minor = (minor_2, path_minor, um_minor)
             by_html_folder = _size_per_folder(with_size)
@@ -1398,7 +1444,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                 bgr = None
             if bgr is None:
                 continue
-            cal = run.calibrations_by_name.get(Path(path_2).name)
+            cal = run.calibration_for(Path(path_2))
             um = cal.um_por_px if cal and cal.valid else None
             cards = ""
             for d in sorted(por_img_f[path_2], key=lambda z: z.number or 0):

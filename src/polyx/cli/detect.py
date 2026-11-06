@@ -181,7 +181,7 @@ def _load_models(weights: list[str], model_types: list[str]) -> list[ModelSpec]:
     return specs
 
 
-def _calibration_mode(args) -> str:
+def _resolve_calibration_mode(args) -> str:
     """Resolve the mode: an explicit ``--calibrate`` wins over the implication."""
     if getattr(args, "calibrate_given", False):
         return str(args.calibrate)
@@ -217,7 +217,7 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     if args.device is not None and str(args.device).strip():
         params.device = str(args.device)
     calibration = CalibrationPolicy(
-        mode=_calibration_mode(args),
+        mode=_resolve_calibration_mode(args),
         um_per_px=args.um_per_px,
         index_path=Path(args.index_calibration) if args.index_calibration else None,
     )

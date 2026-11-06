@@ -158,6 +158,7 @@ def load_legacy_run(run_dir: Path, image_dir: Path | None = None) -> RunResult:
                 detections=sum(len(rows) for rows in by_image.values()),
             )
         },
+        legacy=True,
     )
     metrics = aggregate_metrics(result)
     legacy_metrics = summary.get("metrics") or {}

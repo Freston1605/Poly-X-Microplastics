@@ -125,6 +125,25 @@ def test_run_status_is_an_enum_that_json_writes_as_a_string():
     assert RunResult(run_dir=Path("run"), status="failed").status is RunStatus.FAILED
 
 
+def test_calibration_for_does_not_guess_between_same_named_photos(tmp_path):
+    """Two folders can hold a ``plate.png``; the report must not borrow a scale."""
+    from polyx.core.measure.calibration import ORIGIN_MANUAL, Calibration
+
+    first = tmp_path / "tramo_a" / "plate.png"
+    second = tmp_path / "tramo_b" / "plate.png"
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        calibrations={
+            first: Calibration(um_por_px=2.0, origin=ORIGIN_MANUAL),
+            second: Calibration(um_por_px=3.0, origin=ORIGIN_MANUAL),
+        },
+    )
+
+    assert run.calibration_for(first).um_por_px == pytest.approx(2.0)
+    assert run.calibration_for(second).um_por_px == pytest.approx(3.0)
+    assert run.calibration_for(tmp_path / "tramo_c" / "plate.png") is None
+
+
 def test_core_image_result_has_no_review_verdict():
     """Review verdicts stay GUI state; the core shape cannot carry one."""
     names = {field.name for field in dataclasses.fields(ImageResult)}

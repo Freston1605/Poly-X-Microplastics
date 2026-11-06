@@ -629,6 +629,10 @@ results: Dict[int, List[ImageResult]]
 status: RunStatus                    # running | completed | aborted | failed
 error: Optional[str]
 skipped_images: List[Path]
+started_at, finished_at: Optional[datetime]
+execution: Dict[int, ModelExecution] # per-model images/detections/tiling/imgsz
+metrics: Dict[int, Dict[str, int]]   # per-model tp/fp/fn/miscls/totals
+legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
 ### `MatchResult` (src/polyx/core/quality/metrics.py)

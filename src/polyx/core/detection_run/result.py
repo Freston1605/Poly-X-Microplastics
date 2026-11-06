@@ -207,6 +207,9 @@ class RunResult:
     finished_at: datetime | None = None
     execution: dict[int, ModelExecution] = field(default_factory=dict)
     metrics: dict[int, dict[str, int]] = field(default_factory=dict)
+    # True for a result rebuilt from a pre-canonical headless folder: those
+    # folders stored per-image counts but not the GT boxes.
+    legacy: bool = False
 
     def __post_init__(self) -> None:
         # Callers written before the enum may still pass the plain JSON string.
@@ -218,14 +221,29 @@ class RunResult:
         return any(result.has_gt for results in self.results.values() for result in results)
 
     @property
-    def shapeless(self) -> dict[int, int]:
-        """Particles that kept the box fallback, per active model index."""
-        return {index: execution.shapeless for index, execution in self.execution.items()}
-
-    @property
     def calibrations_by_name(self) -> dict[str, Calibration]:
-        """Filename-keyed view for callers that already worked that way."""
+        """Filename-keyed view for callers that already worked that way.
+
+        This is a convenience for the GUI state, which keys previews by file
+        name. Callers that need an unambiguous lookup must use
+        :meth:`calibration_for`: two folders in one batch can hold photos with
+        the same basename.
+        """
         return {path.name: calibration for path, calibration in self.calibrations.items()}
+
+    def calibration_for(self, image: Path | str) -> Calibration | None:
+        """Return the calibration of ``image`` without guessing across names.
+
+        Exact paths win. A basename match is accepted only when it is unique;
+        with two same-named photos the caller gets ``None`` instead of another
+        image's scale.
+        """
+        path = Path(image)
+        calibration = self.calibrations.get(path)
+        if calibration is not None:
+            return calibration
+        matches = [value for key, value in self.calibrations.items() if key.name == path.name]
+        return matches[0] if len(matches) == 1 else None
 
     @property
     def calibration_summary(self) -> dict:

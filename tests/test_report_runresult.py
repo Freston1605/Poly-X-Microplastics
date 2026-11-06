@@ -74,6 +74,19 @@ def test_generate_report_accepts_a_run_result(tmp_path):
     assert "PET" in html
 
 
+def test_manual_calibration_report_does_not_claim_the_dish_was_measured(tmp_path):
+    """A hand-entered scale must not be described as a Petri-dish fit."""
+    from polyx.gui.report_html import generate_report
+
+    run = make_run(tmp_path)
+    html = generate_report(run, tmp_path / "report.html", sections=["calibracion"]).read_text(
+        encoding="utf-8"
+    )
+
+    assert "introdujo a mano" in html
+    assert "diámetro externo nominal de la placa Petri" not in html
+
+
 @pytest.mark.parametrize("status", [RunStatus.COMPLETED, RunStatus.ABORTED])
 def test_completed_and_aborted_runs_are_reportable(tmp_path, status):
     """A partial aborted run is still a real run with results to report."""

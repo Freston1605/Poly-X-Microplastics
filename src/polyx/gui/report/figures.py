@@ -2,7 +2,6 @@
 
 import base64
 import io
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -435,10 +434,10 @@ def _figure_calibration(run) -> str:
     """
     from polyx.core.measure.calibration import DIAMETER_PLATE_MM, ORIGIN_PLATE
 
-    cals = run.calibrations_by_name
+    cals = run.calibrations
     measurements = [
-        (name_2, c)
-        for name_2, c in cals.items()
+        (path_2, c)
+        for path_2, c in cals.items()
         if getattr(c, "valid", False)
         and getattr(c, "origin", "") == ORIGIN_PLATE
         and getattr(c, "radius_px", 0) > 0
@@ -448,15 +447,7 @@ def _figure_calibration(run) -> str:
 
     # The median-scale one represents the batch; the first one by name does not.
     measurements.sort(key=lambda t: t[1].um_por_px)
-    name_2, cal = measurements[len(measurements) // 2]
-
-    # It is necessary to go back to the original photo: the calibration stores cx/cy/radius but
-    # not the pixels. It is searched among the analysed images by name.
-    path_2 = None
-    for r in [x for rs in run.results.values() for x in rs]:
-        if Path(r.image_path).name == name_2:
-            path_2 = Path(r.image_path)
-            break
+    path_2, cal = measurements[len(measurements) // 2]
     if path_2 is None or not path_2.exists():
         return ""
 
@@ -506,7 +497,7 @@ def _figure_calibration(run) -> str:
 <img src='data:image/jpeg;base64,{img64}' style='max-width:100%'>
 <p style='font-family:monospace;font-size:10pt'>
 {diam_mm:g} mm ÷ {diam_px:.1f} px = <strong>{cal.um_por_px:.4f} µm/px</strong>
-&nbsp;&nbsp;<span style='font-family:inherit;color:#656d76'>({_esc(name_2)},
+&nbsp;&nbsp;<span style='font-family:inherit;color:#656d76'>({_esc(path_2.name)},
 {tr("{n} puntos de borde").format(n=cal.n_points)})</span></p>
 <p>{tr("Conviene mirar si el círculo verde sigue el borde del anillo y no otra cosa —la sombra de la placa, un reflejo, o el borde del filtro de dentro—. Si cayera mal, <strong>todas</strong> las tallas de esa foto saldrían escaladas por el mismo factor equivocado, y ninguna otra cifra del informe lo delataría.")}</p>"""
 

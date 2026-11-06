@@ -448,6 +448,30 @@ def test_unexpected_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
     assert [item.image_path for item in loaded.results[0]] == [images[0]]
 
 
+def test_setup_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
+    """An alias/config error before the loop still leaves a partial record."""
+    image = write_plate(tmp_path / "photos" / "plate.png")
+    config = RunConfig(
+        images=[image],
+        models=[
+            ModelSpec(detector=FakeDetector(), alias="same"),
+            ModelSpec(detector=FakeDetector(), alias="same"),
+        ],
+        output_dir=tmp_path / "run",
+        params=RunParams(),
+        calibration=CalibrationPolicy(mode="none"),
+    )
+
+    with pytest.raises(RunFailed) as error:
+        run_detection(config)
+
+    assert error.value.result.status is RunStatus.FAILED
+    assert "duplicate model alias" in (error.value.result.error or "")
+    payload = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+    assert payload["models"] == []
+
+
 def test_none_calibration_invents_no_micrometre_sizes(tmp_path):
     image = write_plate(tmp_path / "photos" / "plate.png")
     result = run_detection(

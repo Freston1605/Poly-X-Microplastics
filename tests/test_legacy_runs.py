@@ -89,6 +89,11 @@ def test_legacy_headless_folder_renders_the_full_report(tmp_path):
     assert "Informe de detección" in html
     assert "model" in html
     assert "PET" in html
+    # The old folder stored counts, not GT boxes: the report must say so
+    # instead of rebuilding a confusion matrix that turns every legacy
+    # prediction into a false positive.
+    assert "no se puede reconstruir la matriz de confusión" in html
+    assert "Matriz de confusión" not in html
 
 
 def test_compact_report_keeps_reading_old_headless_folders(tmp_path):
@@ -124,6 +129,30 @@ def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys)
     assert code == 0
     assert "FULL REPORT:" in capsys.readouterr().out
     assert "Informe de detección" in output.read_text(encoding="utf-8")
+
+
+def test_report_cli_renders_the_compact_report_from_a_legacy_folder(tmp_path, capsys):
+    """`polyx-report` without --full-report also reads old headless folders."""
+    from polyx.cli.report import main
+
+    output = tmp_path / "compact.html"
+    code = main(
+        [
+            "--run",
+            str(HEADLESS_RUN),
+            "--images",
+            str(HEADLESS_PHOTOS),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert code == 0
+    assert "WROTE:" in capsys.readouterr().out
+    html = output.read_text(encoding="utf-8")
+    assert "Poly-X run report" in html
+    assert "Images: 2" in html
+    assert "Detections: 3" in html
 
 
 # ── Old GUI run folders ────────────────────────────────────────────────

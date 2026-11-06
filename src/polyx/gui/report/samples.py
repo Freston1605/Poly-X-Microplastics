@@ -133,10 +133,8 @@ def _lot_forms(run, all_results):
     # report generator's. What is done is to declare how many were set apart.
     from polyx.core.measure.calibration import about_the_ring
 
-    _cals = run.calibrations_by_name
-
     def _en_el_aro(det, path_2) -> bool:
-        return about_the_ring(_cals.get(Path(path_2).name), det.x1, det.y1, det.x2, det.y2)
+        return about_the_ring(run.calibration_for(Path(path_2)), det.x1, det.y1, det.x2, det.y2)
 
     # Each particle with its source image, so it can be found later.
     _shaped = [
