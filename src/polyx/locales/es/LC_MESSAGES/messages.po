@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 19:50-0300\n"
+"POT-Creation-Date: 2026-11-06 19:55-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -136,7 +136,7 @@ msgid "MODULES"
 msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:169 src/polyx/gui/labeler/window.py:332
-#: src/polyx/gui/labeler/window.py:361 src/polyx/gui/labeler/window.py:681
+#: src/polyx/gui/labeler/window.py:361 src/polyx/gui/labeler/window.py:683
 #: src/polyx/gui/launcher.py:552 src/polyx/gui/trainer/window.py:165
 #: src/polyx/gui/viewer/window.py:566
 msgid "● Ready"
@@ -767,7 +767,7 @@ msgstr "   ⚠ Vuelve a Ejecutar la detección: el informe usa el GT leído en l
 msgid "Class:"
 msgstr "Clase:"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:836
+#: src/polyx/gui/detector/pages/gt_manual.py:836 src/polyx/gui/labeler/window.py:659
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
@@ -1932,7 +1932,7 @@ msgstr "Pre-anotando"
 msgid "● Pre-annotation complete"
 msgstr "● Pre-anotación completa"
 
-#: src/polyx/gui/labeler/window.py:680
+#: src/polyx/gui/labeler/window.py:682
 msgid "● Autosaved"
 msgstr "● Autoguardado"
 
@@ -1996,7 +1996,7 @@ msgstr "Conteo completo"
 msgid "There are no unreviewed images left."
 msgstr "No quedan imágenes sin revisar."
 
-#: src/polyx/gui/labeler/window.py:662
+#: src/polyx/gui/labeler/window.py:664
 msgid "No annotations"
 msgstr "Sin anotaciones"
 

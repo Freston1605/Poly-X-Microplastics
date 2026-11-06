@@ -656,7 +656,9 @@ class LabelerWindow(QMainWindow):
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:
-            lines = [f"{n} caja(s)"] + [f"  {k}: {v}" for k, v in cls_counts.items()]
+            lines = [ngettext("%(count)d box", "%(count)d boxes", n) % {"count": n}] + [
+                f"  {k}: {v}" for k, v in cls_counts.items()
+            ]
             self.lbl_box_info.setText("\n".join(lines))
         else:
             self.lbl_box_info.setText(_("No annotations"))
