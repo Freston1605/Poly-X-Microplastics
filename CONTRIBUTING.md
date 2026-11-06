@@ -30,9 +30,19 @@ The whole gate — suite, ruff and ty — in one command, from any checkout or
 git worktree:
 
 ```bash
-python tools/check.py            # full suite
-python tools/check.py tests/test_annotate.py -q
+python tools/check.py                              # full suite, serial
+python tools/check.py tests/test_annotate.py -q    # one file, serial
+python tools/check.py --parallel                   # full suite, one worker per core
+python tools/check.py tests/test_annotate.py --parallel=4 -q
 ```
+
+Tests run **serially by default**. CI always runs serially and remains the
+reproducibility reference. `--parallel` (bare: `-n auto`) or `--parallel=N`
+(`-n N`) is an explicit local convenience; the gate never enables it on its
+own. A failure under `--parallel` must be re-run without the flag before it is
+treated as real: xdist can surface ordering or shared-state problems that a
+serial run does not. Every other argument (`tests/...`, `-k`, `-q`, …) is
+forwarded to pytest untouched.
 
 ## Running the same tests locally
 
@@ -73,6 +83,8 @@ python -m pytest -q          # inside the project .venv
 
 - The full suite passes locally (`pytest -q`, zero failures), and
   `ruff check` / `ruff format --check` are clean (see above).
+- The PR body follows `.github/PULL_REQUEST_TEMPLATE.md`; that file is the
+  single owner of the required fields.
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).

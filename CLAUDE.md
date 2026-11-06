@@ -39,9 +39,11 @@ The root deliberately mixes two surfaces with different audiences:
   the cross-references between the scripts themselves.
 - **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
   `tools/audit` (UI-translation audit and report fixtures), `tools/manual`
-  (the manual chain), `tools/packaging` (PyInstaller). The compiled manual
-  lives in `docs/manual/` and IS versioned: a fresh ZIP download opens it
-  offline. The PDFs stay ignored (regenerable from `tools/manual`).
+  (the manual chain), `tools/packaging` (PyInstaller), `tools/check.py` (the
+  local gate: suite, ruff and ty) and `tools/update_goldens.py`
+  (characterization goldens). The compiled manual lives in `docs/manual/` and
+  IS versioned: a fresh ZIP download opens it offline. The PDFs stay ignored
+  (regenerable from `tools/manual`).
 - **Local research work**: `manuscript-workspace/` is not versioned — it is
   a draft-testing workspace, material of the paper that the README keeps
   out of the repository on purpose.

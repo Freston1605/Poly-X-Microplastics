@@ -7,7 +7,12 @@ worktree it is run from, and runs the same gate as CI: the suite, ruff and the
 ty engine check.
 
 Usage:
-    python tools/check.py [pytest args...]
+    python tools/check.py [--parallel[=N]] [pytest args...]
+
+``--parallel`` is an explicit opt-in: it runs the tests under pytest-xdist
+with ``-n auto``, or ``-n N`` when given as ``--parallel=N``. Omit it and the
+suite runs serially, as CI does. Re-run a parallel failure serially before
+treating it as real. Every other argument is forwarded to pytest untouched.
 """
 
 from __future__ import annotations
@@ -68,7 +73,22 @@ def _run(command: list[str], env: dict[str, str]) -> int:
     return subprocess.run(command, cwd=ROOT, env=env, check=False).returncode
 
 
+def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
+    """Separate the opt-in ``--parallel`` flag from the args pytest receives."""
+    forwarded: list[str] = []
+    worker_args: list[str] = []
+    for argument in argv:
+        if argument == "--parallel":
+            worker_args = ["-n", "auto"]
+        elif argument.startswith("--parallel="):
+            worker_args = ["-n", argument.partition("=")[2] or "auto"]
+        else:
+            forwarded.append(argument)
+    return forwarded, worker_args
+
+
 def main(argv: list[str]) -> int:
+    pytest_args, xdist_args = _split_parallel(argv)
     python = _python()
     env = os.environ.copy()
     source = str(ROOT / "src")
@@ -79,7 +99,7 @@ def main(argv: list[str]) -> int:
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
     commands = [
-        [str(python), "-m", "pytest", "-q", *argv],
+        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
         [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
