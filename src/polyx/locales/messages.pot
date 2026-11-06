@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 20:01-0300\n"
+"POT-Creation-Date: 2026-11-06 20:08-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -150,8 +150,8 @@ msgstr ""
 msgid "MODULES"
 msgstr ""
 
-#: src/polyx/gui/detector/window.py:169 src/polyx/gui/labeler/window.py:332
-#: src/polyx/gui/labeler/window.py:361 src/polyx/gui/labeler/window.py:683
+#: src/polyx/gui/detector/window.py:169 src/polyx/gui/labeler/window.py:335
+#: src/polyx/gui/labeler/window.py:364 src/polyx/gui/labeler/window.py:686
 #: src/polyx/gui/launcher.py:552 src/polyx/gui/trainer/window.py:165
 #: src/polyx/gui/viewer/window.py:568
 msgid "● Ready"
@@ -657,7 +657,7 @@ msgstr ""
 msgid "Load at least one .pt model in the Models tab."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:460
+#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:461
 #: src/polyx/gui/labeler/window.py:146
 msgid "No images"
 msgstr ""
@@ -778,7 +778,7 @@ msgstr ""
 msgid "Class:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:836 src/polyx/gui/labeler/window.py:659
+#: src/polyx/gui/detector/pages/gt_manual.py:836 src/polyx/gui/labeler/window.py:662
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
@@ -874,7 +874,7 @@ msgstr ""
 msgid "Folder"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:561
+#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:564
 #, python-format
 msgid "%(count)d image"
 msgid_plural "%(count)d images"
@@ -965,48 +965,48 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:141 src/polyx/gui/detector/pages/parameters.py:482
-#: src/polyx/gui/detector/pages/parameters.py:500
+#: src/polyx/gui/detector/pages/parameters.py:142 src/polyx/gui/detector/pages/parameters.py:483
+#: src/polyx/gui/detector/pages/parameters.py:501
 msgid "Detect maximum (GPU)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:173
+#: src/polyx/gui/detector/pages/parameters.py:174
 msgid "'0' = first GPU. 'cpu' = CPU. '0,1' = GPU 0 and 1."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:180
+#: src/polyx/gui/detector/pages/parameters.py:181
 msgid "Automatic tiling (large photos)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:271
+#: src/polyx/gui/detector/pages/parameters.py:272
 msgid "Error analysis (when GT is available)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:295
+#: src/polyx/gui/detector/pages/parameters.py:296
 msgid "Optical calibration (particle size)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:319
+#: src/polyx/gui/detector/pages/parameters.py:320
 msgid "Measure the dish in every photo and use its scale (recommended)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:387
+#: src/polyx/gui/detector/pages/parameters.py:388
 msgid "Size filter (optional)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:411
+#: src/polyx/gui/detector/pages/parameters.py:412
 msgid "Polymer assignment (optional)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:471
+#: src/polyx/gui/detector/pages/parameters.py:472
 msgid "Testing…"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:496
+#: src/polyx/gui/detector/pages/parameters.py:497
 msgid "maximum imgsz"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:501
+#: src/polyx/gui/detector/pages/parameters.py:502
 msgid "Could not measure"
 msgstr ""
 
@@ -1014,48 +1014,48 @@ msgstr ""
 msgid "Profile:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:95
+#: src/polyx/gui/detector/pages/parameters.py:96
 msgid ""
 "Pick a profile and you are done. «Maximum detection» is recommended for small microplastics in "
 "high-resolution microscopy photos."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:108
+#: src/polyx/gui/detector/pages/parameters.py:109
 msgid "Min. confidence (conf):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:117
+#: src/polyx/gui/detector/pages/parameters.py:118
 msgid "0.05–0.95. Higher = fewer detections (and fewer false positives)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:121
+#: src/polyx/gui/detector/pages/parameters.py:122
 msgid "IoU NMS:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:129
+#: src/polyx/gui/detector/pages/parameters.py:130
 msgid "0.30–0.70. Suppresses overlapping boxes."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:132 src/polyx/gui/trainer/pages/parameters.py:73
+#: src/polyx/gui/detector/pages/parameters.py:133 src/polyx/gui/trainer/pages/parameters.py:73
 msgid "Image size (imgsz):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:150
+#: src/polyx/gui/detector/pages/parameters.py:151
 msgid ""
 "Larger = detects smaller particles (key for microplastics), but slower and heavier on GPU "
 "memory. For high-resolution photos go up to 4096+. The button probes the maximum your GPU can "
 "take with the loaded model."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:168
+#: src/polyx/gui/detector/pages/parameters.py:169
 msgid "'mps' = the Mac's built-in GPU (Apple Silicon). 'cpu' = processor."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:170
+#: src/polyx/gui/detector/pages/parameters.py:171
 msgid "This is an Intel Mac: 'cpu' only. MPS requires Apple Silicon."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:183
+#: src/polyx/gui/detector/pages/parameters.py:184
 msgid ""
 "A full-plate photo enters the network rescaled to imgsz: at 4096 px reduced to 2080, every "
 "particle shrinks by half and disappears below the network stride. With tiling, each tile enters "
@@ -1063,104 +1063,104 @@ msgid ""
 "nothing has to be cut by hand nor the counts added up afterwards."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:192
+#: src/polyx/gui/detector/pages/parameters.py:193
 msgid "When to tile:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:198
+#: src/polyx/gui/detector/pages/parameters.py:199
 msgid "automatic"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:199
+#: src/polyx/gui/detector/pages/parameters.py:200
 msgid "always"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:200
+#: src/polyx/gui/detector/pages/parameters.py:201
 msgid "never"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:207
+#: src/polyx/gui/detector/pages/parameters.py:208
 msgid "«auto» decides on its own from the longest side of each photo."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:210
+#: src/polyx/gui/detector/pages/parameters.py:211
 msgid "Threshold (longest side, px):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:219
+#: src/polyx/gui/detector/pages/parameters.py:220
 msgid ""
 "Above this, tiling kicks in. 2000 lets the study crops (1630 px) through whole and tiles the "
 "full plates (~4096 px)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:227
+#: src/polyx/gui/detector/pages/parameters.py:228
 msgid "Tile side (px):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:236
+#: src/polyx/gui/detector/pages/parameters.py:237
 msgid ""
 "0 = automatic, min(threshold, imgsz). It should match the size of the crops the model was "
 "trained on: if the model saw particles at one scale and the tile presents them at another, "
 "recall drops."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:244
+#: src/polyx/gui/detector/pages/parameters.py:245
 msgid "Overlap between tiles:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:254
+#: src/polyx/gui/detector/pages/parameters.py:255
 msgid ""
 "0.25 = each tile overlaps a quarter of its neighbour. The overlap is what avoids losing or "
 "duplicating a particle that falls right on the seam."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:275
+#: src/polyx/gui/detector/pages/parameters.py:276
 msgid "IoU for matching True Positives:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:283
+#: src/polyx/gui/detector/pages/parameters.py:284
 msgid "COCO standard: 0.50. Stricter: 0.75."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:287
+#: src/polyx/gui/detector/pages/parameters.py:288
 msgid ""
 "True Positives: correct class + IoU ≥ threshold.  False Positives: prediction with no nearby GT."
 "  False Negatives: GT not detected.  Misclassified: high IoU but wrong class."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:299
+#: src/polyx/gui/detector/pages/parameters.py:300
 msgid "µm per pixel:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:311
+#: src/polyx/gui/detector/pages/parameters.py:312
 msgid "Fallback: used only when the dish cannot be measured. 0 = no calibration."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:329
+#: src/polyx/gui/detector/pages/parameters.py:330
 msgid "Actual dish diameter (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:337
+#: src/polyx/gui/detector/pages/parameters.py:338
 msgid "Nominal outer diameter. The Petri dish used in this study is 100 mm."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:340
+#: src/polyx/gui/detector/pages/parameters.py:341
 msgid "Dish height (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:348
+#: src/polyx/gui/detector/pages/parameters.py:349
 msgid "0 = no correction. A 100 mm Petri dish is usually 15 mm tall."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:351
+#: src/polyx/gui/detector/pages/parameters.py:352
 msgid "Camera-to-base distance (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:359
+#: src/polyx/gui/detector/pages/parameters.py:360
 msgid "0 = no correction. Measure to the BOTTOM of the dish, not to its rim."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:365
+#: src/polyx/gui/detector/pages/parameters.py:366
 msgid ""
 "Nothing has to be marked: the dish rim is found automatically. The radius comes from fitting a "
 "circle to the rim sampled along 720 directions, with outlier rejection; the Hough transform only"
@@ -1169,7 +1169,7 @@ msgid ""
 "when the crop was made."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:372
+#: src/polyx/gui/detector/pages/parameters.py:373
 msgid ""
 "The dish rim sits closer to the camera than the base where the particles lie, so it projects "
 "larger and the resulting scale is too small: left uncorrected, ALL sizes are underestimated. "
@@ -1177,29 +1177,29 @@ msgid ""
 " 3 %. Fill in both fields above to correct it."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:379
+#: src/polyx/gui/detector/pages/parameters.py:380
 msgid ""
 "The detector computes the area and equivalent diameter (of a circle with the same area) for "
 "every detected particle. With calibration, also in μm and μm²."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:391
+#: src/polyx/gui/detector/pages/parameters.py:392
 msgid "Min size (µm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:399
+#: src/polyx/gui/detector/pages/parameters.py:400
 msgid "Max size (µm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:406
+#: src/polyx/gui/detector/pages/parameters.py:407
 msgid "0 = no filter. Applies to the equivalent diameter."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:415
+#: src/polyx/gui/detector/pages/parameters.py:416
 msgid "Minimum confidence to assign:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:425
+#: src/polyx/gui/detector/pages/parameters.py:426
 msgid ""
 "0 = off. Below this value the particle is still counted, but reported as \"unassignable\" "
 "instead of being given a polymer. Nile Red responds to the polarity of its environment, not to "
@@ -1209,39 +1209,39 @@ msgid ""
 "unassigned."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:454 src/polyx/gui/labeler/window.py:259
-#: src/polyx/gui/labeler/window.py:443 src/polyx/gui/labeler/window.py:474
+#: src/polyx/gui/detector/pages/parameters.py:455 src/polyx/gui/labeler/window.py:262
+#: src/polyx/gui/labeler/window.py:446 src/polyx/gui/labeler/window.py:477
 #: src/polyx/gui/viewer/window.py:298 src/polyx/gui/viewer/window.py:675
 msgid "No model"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:454
+#: src/polyx/gui/detector/pages/parameters.py:455
 msgid "Load at least one model in the Models tab."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:461
+#: src/polyx/gui/detector/pages/parameters.py:462
 msgid "Select images in the Images tab (one of them is used to measure)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:541
+#: src/polyx/gui/detector/pages/parameters.py:542
 msgid "Select images to see what would be tiled."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:545
+#: src/polyx/gui/detector/pages/parameters.py:546
 msgid "Could not read the size of the first image."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:549
+#: src/polyx/gui/detector/pages/parameters.py:550
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d (tiling off)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:566
+#: src/polyx/gui/detector/pages/parameters.py:567
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass: below the %(threshold)d px threshold."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:575
+#: src/polyx/gui/detector/pages/parameters.py:576
 #, python-format
 msgid ""
 "First image %(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px with %(overlap)d%% overlap,"
@@ -1249,7 +1249,7 @@ msgid ""
 "than a single pass."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:474
+#: src/polyx/gui/detector/pages/parameters.py:475
 #, python-format
 msgid "⏳ Testing %(size)d px…"
 msgstr ""
@@ -1656,7 +1656,7 @@ msgstr ""
 msgid "Re-reading ground truth…"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:272 src/polyx/gui/labeler/window.py:480
+#: src/polyx/gui/detector/pages/results.py:272 src/polyx/gui/labeler/window.py:483
 msgid "Cancel"
 msgstr ""
 
@@ -1738,98 +1738,98 @@ msgstr ""
 msgid "Jumps to the next image you have not reviewed yet (Tab)"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:231
+#: src/polyx/gui/labeler/window.py:234
 msgid "+ Add class"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:243
+#: src/polyx/gui/labeler/window.py:246
 msgid "Annotations (current image):"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:254
+#: src/polyx/gui/labeler/window.py:257
 msgid "Automatic pre-annotation"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:267 src/polyx/gui/viewer/window.py:309
+#: src/polyx/gui/labeler/window.py:270 src/polyx/gui/viewer/window.py:309
 msgid "Load model…"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:287
+#: src/polyx/gui/labeler/window.py:290
 msgid ""
 "Inference resolution. With tiny particles in large photographs,\n"
 "a low value proposes nothing at all."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:294
+#: src/polyx/gui/labeler/window.py:297
 msgid "Pre-annotate current image"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:298
+#: src/polyx/gui/labeler/window.py:301
 msgid "Pre-annotate ALL"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:305
+#: src/polyx/gui/labeler/window.py:308
 msgid "Keep zoom between images"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:308
+#: src/polyx/gui/labeler/window.py:311
 msgid ""
 "Keeps the zoom level when moving between crops.\n"
 "With hundreds of crops, reframing every time costs a lot of time.\n"
 "F reframes manually."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:317
+#: src/polyx/gui/labeler/window.py:320
 msgid "✓  Reviewed, next   (Space)"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:319
+#: src/polyx/gui/labeler/window.py:322
 msgid ""
 "Records that you looked at this image even if it has no particles.\n"
 "Without this, a reviewed empty plate is indistinguishable from one never looked at."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:326
+#: src/polyx/gui/labeler/window.py:329
 msgid "Save (.txt)"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:407
+#: src/polyx/gui/labeler/window.py:410
 msgid "New class"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:407
+#: src/polyx/gui/labeler/window.py:410
 msgid "Class name:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:413
+#: src/polyx/gui/labeler/window.py:416
 msgid "Select an image folder"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:422
+#: src/polyx/gui/labeler/window.py:425
 msgid "● Saved"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:652
+#: src/polyx/gui/labeler/window.py:430 src/polyx/gui/viewer/window.py:652
 msgid "Load YOLO model"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:652
+#: src/polyx/gui/labeler/window.py:430 src/polyx/gui/viewer/window.py:652
 msgid "YOLO model (*.pt)"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:480
+#: src/polyx/gui/labeler/window.py:483
 msgid "Pre-annotating images…"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:481
+#: src/polyx/gui/labeler/window.py:484
 msgid "Pre-annotating"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:505
+#: src/polyx/gui/labeler/window.py:508
 msgid "● Pre-annotation complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:682
+#: src/polyx/gui/labeler/window.py:685
 msgid "● Autosaved"
 msgstr ""
 
@@ -1837,78 +1837,78 @@ msgstr ""
 msgid "Class preset:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:221
+#: src/polyx/gui/labeler/window.py:224
 msgid "Active classes:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:258 src/polyx/gui/trainer/pages/evaluate.py:74
+#: src/polyx/gui/labeler/window.py:261 src/polyx/gui/trainer/pages/evaluate.py:74
 msgid "Model .pt:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:274
+#: src/polyx/gui/labeler/window.py:277
 msgid "conf:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:281 src/polyx/gui/trainer/pages/evaluate.py:98
+#: src/polyx/gui/labeler/window.py:284 src/polyx/gui/trainer/pages/evaluate.py:98
 #: src/polyx/gui/trainer/pages/export.py:105
 msgid "imgsz:"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:357
+#: src/polyx/gui/labeler/window.py:360
 #, python-format
 msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:417
+#: src/polyx/gui/labeler/window.py:420
 msgid "● Folder loaded"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:437 src/polyx/gui/viewer/window.py:1448
+#: src/polyx/gui/labeler/window.py:440 src/polyx/gui/viewer/window.py:1448
 msgid "● Model loaded"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:443 src/polyx/gui/labeler/window.py:474
+#: src/polyx/gui/labeler/window.py:446 src/polyx/gui/labeler/window.py:477
 #: src/polyx/gui/viewer/window.py:675
 msgid "Load a .pt model first."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:451
+#: src/polyx/gui/labeler/window.py:454
 msgid "Overwrite"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:452
+#: src/polyx/gui/labeler/window.py:455
 msgid "This image already has annotations. Overwrite them with the model?"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:616
+#: src/polyx/gui/labeler/window.py:619
 #, python-format
 msgid "%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:629
+#: src/polyx/gui/labeler/window.py:632
 msgid "Counting complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:629
+#: src/polyx/gui/labeler/window.py:632
 msgid "There are no unreviewed images left."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:664
+#: src/polyx/gui/labeler/window.py:667
 msgid "No annotations"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:439 src/polyx/gui/viewer/window.py:670
+#: src/polyx/gui/labeler/window.py:442 src/polyx/gui/viewer/window.py:670
 msgid "Error loading the model"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:461
+#: src/polyx/gui/labeler/window.py:464
 #, python-format
 msgid "● Pre-annotated %(count)d box"
 msgid_plural "● Pre-annotated %(count)d boxes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/labeler/window.py:470
+#: src/polyx/gui/labeler/window.py:473
 msgid "Pre-annotation error"
 msgstr ""
 
@@ -2998,22 +2998,22 @@ msgstr ""
 msgid "Augmentation level"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/augmentation.py:72
+#: src/polyx/gui/trainer/pages/augmentation.py:74
 msgid ""
 "<b>None</b>: no transformations. &nbsp; <b>Light</b>: flips and HSV jitter only. &nbsp; "
 "<b>Medium</b> (recommended): + mosaic, light mixup. &nbsp; <b>Strong</b>: + aggressive copy-"
 "paste."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/augmentation.py:83
+#: src/polyx/gui/trainer/pages/augmentation.py:85
 msgid "Manual sliders (advanced)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/augmentation.py:106
+#: src/polyx/gui/trainer/pages/augmentation.py:108
 msgid "Recommendations"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/augmentation.py:108
+#: src/polyx/gui/trainer/pages/augmentation.py:110
 msgid ""
 "• <b>Small dataset (&lt; 500 imgs)</b>: use Strong. More synthetic variety makes up for few "
 "examples.<br>• <b>PET/PP/LDPE microplastics</b>: do <b>NOT</b> use a high HSV-H: color is the "
@@ -3024,6 +3024,34 @@ msgstr ""
 
 #: src/polyx/gui/trainer/pages/augmentation.py:61
 msgid "Level:"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:88
+msgid "HSV-H (hue):"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:89
+msgid "HSV-S (saturation):"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:90
+msgid "HSV-V (value):"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:91
+msgid "Fliplr (horizontal):"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:92
+msgid "Mosaic:"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:93
+msgid "Mixup:"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/augmentation.py:94
+msgid "Copy-paste:"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/compare.py:61
@@ -3078,7 +3106,7 @@ msgstr ""
 msgid "Path to data.yaml…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:157
+#: src/polyx/gui/trainer/pages/dataset.py:157 src/polyx/gui/trainer/pages/dataset.py:509
 msgid "No data.yaml loaded."
 msgstr ""
 
@@ -3136,12 +3164,20 @@ msgstr ""
 msgid "Checks that the dataset is sound before training. It runs automatically when data.yaml is loaded."
 msgstr ""
 
+#: src/polyx/gui/trainer/pages/dataset.py:262
+msgid "data.yaml loaded and valid"
+msgstr ""
+
 #: src/polyx/gui/trainer/pages/dataset.py:263
 msgid "Train split with images"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/dataset.py:264
 msgid "Val split with images"
+msgstr ""
+
+#: src/polyx/gui/trainer/pages/dataset.py:265
+msgid "Labels found (≥ 80 %)"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/dataset.py:267
@@ -3438,43 +3474,43 @@ msgid ""
 " as Custom."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:68
+#: src/polyx/gui/trainer/pages/model.py:70
 msgid "Family and size"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:104
+#: src/polyx/gui/trainer/pages/model.py:106
 msgid "Train both architectures (v8 and v11) with the same configuration"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:120
+#: src/polyx/gui/trainer/pages/model.py:122
 msgid "Also save the best weights for the real dataset"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:129
+#: src/polyx/gui/trainer/pages/model.py:131
 msgid ""
 "When it finishes there are three sets of weights in the run folder: <b>best_sintetico.pt</b>, "
 "<b>best_real.pt</b> and <b>last.pt</b> (this last one is what you use to resume training)."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:140
+#: src/polyx/gui/trainer/pages/model.py:142
 msgid "Custom weights (optional)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:142
+#: src/polyx/gui/trainer/pages/model.py:144
 msgid ""
 "If you have an already-trained .pt and want to continue from it, select it. Leave empty to use "
 "the base model of the chosen family/size."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:153
+#: src/polyx/gui/trainer/pages/model.py:155
 msgid "Path to a .pt file to continue training from…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:218
+#: src/polyx/gui/trainer/pages/model.py:223
 msgid "Select .pt weights"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:218
+#: src/polyx/gui/trainer/pages/model.py:223
 msgid "PyTorch weights (*.pt)"
 msgstr ""
 
@@ -3482,15 +3518,15 @@ msgstr ""
 msgid "Preset:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:71
+#: src/polyx/gui/trainer/pages/model.py:73
 msgid "Family:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:80
+#: src/polyx/gui/trainer/pages/model.py:82
 msgid "Size:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:198
+#: src/polyx/gui/trainer/pages/model.py:203
 #, python-format
 msgid ""
 "<b>%(weights)s</b> will be trained one after the other, with identical imgsz, batch, epochs, "
@@ -3499,7 +3535,7 @@ msgid ""
 "they share the GPU. When finished, the comparison appears in the log and in the Compare tab."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/model.py:205
+#: src/polyx/gui/trainer/pages/model.py:210
 #, python-format
 msgid ""
 "Only <b>%(model)s</b> will be trained. Tick the box to also train the other family and compare "
@@ -3910,7 +3946,7 @@ msgstr ""
 
 #: src/polyx/gui/viewer/window.py:242 src/polyx/gui/viewer/window.py:682
 #: src/polyx/gui/viewer/window.py:788 src/polyx/gui/viewer/window.py:899
-#: src/polyx/gui/viewer/window.py:1325
+#: src/polyx/gui/viewer/window.py:1304 src/polyx/gui/viewer/window.py:1325
 msgid "No image"
 msgstr ""
 
@@ -3972,7 +4008,7 @@ msgstr ""
 msgid "✕  Cancel calibration"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:449
+#: src/polyx/gui/viewer/window.py:449 src/polyx/gui/viewer/window.py:1310
 msgid "Not calibrated"
 msgstr ""
 

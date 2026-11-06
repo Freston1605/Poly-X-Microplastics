@@ -35,9 +35,9 @@ from .canvas import BboxCanvas
 from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
-    "Microplásticos Nile Red": ["PET", "PP", "LDPE"],
-    "General (1 clase)": ["objeto"],
-    "Personalizado": [],
+    "Nile Red microplastics": ["PET", "PP", "LDPE"],
+    "General (1 class)": ["objeto"],
+    "Custom": [],
 }
 
 # Colors matching those of the canvas
@@ -75,7 +75,7 @@ class LabelerWindow(QMainWindow):
 
         self._connect_signals()
         self._install_shortcuts()
-        self._apply_preset("Microplásticos Nile Red")
+        self._apply_preset("Nile Red microplastics")
 
         # ── Auto-save every 60 s ──
         self._autosave_timer = QTimer(self)
@@ -213,8 +213,11 @@ class LabelerWindow(QMainWindow):
         # Preset
         rv.addWidget(QLabel(_("Class preset:")))
         self.combo_preset = QComboBox()
-        self.combo_preset.addItems(_PRESETS.keys())
-        self.combo_preset.currentTextChanged.connect(self._apply_preset)
+        for _name in _PRESETS:
+            self.combo_preset.addItem(_(_name), _name)
+        self.combo_preset.currentIndexChanged.connect(
+            lambda _index: self._apply_preset(self.combo_preset.currentData())
+        )
         rv.addWidget(self.combo_preset)
 
         rv.addWidget(HLine())

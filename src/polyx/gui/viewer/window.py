@@ -1301,13 +1301,13 @@ class ViewerWindow(QMainWindow):
 
         img = self.state.current_image
 
-        img_txt = img.name if img else "Sin imagen"
+        img_txt = img.name if img else _("No image")
 
         if self.state.um_per_px > 0:
             calib_txt = f"{self.state.um_per_px:.4f} μm/px"
 
         else:
-            calib_txt = "Sin calibración"
+            calib_txt = _("Not calibrated")
 
         n_det = len(self.state.detections)
 

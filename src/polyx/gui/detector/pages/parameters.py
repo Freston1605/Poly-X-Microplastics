@@ -32,12 +32,12 @@ def _hint(text: str) -> QLabel:
 
 
 # Quality profiles: they hide YOLO jargon behind a simple choice.
-# `Máxima detección` targets tiny particles in high-resolution photos
+# `Maximum detection` targets tiny particles in high-resolution photos
 # (if the GPU cannot handle the imgsz, the auto-fallback lowers the size on its own).
 PRESETS = {
-    "Rápido": {"conf": 0.25, "imgsz": 1280},
-    "Equilibrado": {"conf": 0.15, "imgsz": 2560},
-    "Máxima detección": {"conf": 0.10, "imgsz": 4096},
+    "Fast": {"conf": 0.25, "imgsz": 1280},
+    "Balanced": {"conf": 0.15, "imgsz": 2560},
+    "Maximum detection": {"conf": 0.10, "imgsz": 4096},
 }
 
 
@@ -85,9 +85,10 @@ class ParametersPage(DetectorPage):
         preset_row.setSpacing(8)
         preset_row.addWidget(QLabel(_("Profile:")))
         self.combo_preset = QComboBox()
-        self.combo_preset.addItem(_("Custom"))
-        self.combo_preset.addItems(list(PRESETS.keys()))
-        self.combo_preset.currentTextChanged.connect(self._apply_preset)
+        self.combo_preset.addItem(_("Custom"), None)
+        for _name in PRESETS:
+            self.combo_preset.addItem(_(_name), _name)
+        self.combo_preset.currentIndexChanged.connect(self._apply_preset)
         self.combo_preset.setMinimumWidth(190)
         preset_row.addWidget(self.combo_preset)
         preset_row.addWidget(
@@ -434,9 +435,9 @@ class ParametersPage(DetectorPage):
         l5.addLayout(g5)
         self.body.addWidget(c5)
 
-    def _apply_preset(self, name: str):
+    def _apply_preset(self, _index: int):
         """Applies the chosen profile (conf + imgsz) to the controls."""
-        cfg = PRESETS.get(name)
+        cfg = PRESETS.get(self.combo_preset.currentData())
         if not cfg:
             return
         self._applying_preset = True

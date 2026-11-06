@@ -259,10 +259,10 @@ class DatasetPage(TrainerPage):
         # Validation labels
         self._val_checks: list[QLabel] = []
         val_checks_names = [
-            "data.yaml cargado y válido",
+            _("data.yaml loaded and valid"),
             _("Train split with images"),
             _("Val split with images"),
-            "Labels encontradas (≥ 80 %)",
+            _("Labels found (≥ 80 %)"),
             "Clases definidas en YAML",
             _("Valid training parameters"),
         ]
@@ -506,7 +506,7 @@ class DatasetPage(TrainerPage):
 
         yaml_path = self.state.dataset.yaml_path
         if not yaml_path or not yaml_path.exists():
-            self._set_check(0, False, "No hay data.yaml cargado.")
+            self._set_check(0, False, _("No data.yaml loaded."))
             self._validate_config_fast()
             return
         try:

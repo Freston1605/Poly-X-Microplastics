@@ -348,9 +348,9 @@ class ParametersPage(TrainerPage):
         p.device = self.ed_device.text().strip() or "0"
         p.workers = self.sb_workers.value()
         p.run_name = self.ed_run.text().strip()
-        # Manual change → `Personalizado` preset
-        if self.state.model.preset_name != "Personalizado":
-            self.state.model.preset_name = "Personalizado"
+        # Manual change → `Custom` preset
+        if self.state.model.preset_name != "Custom":
+            self.state.model.preset_name = "Custom"
             self.state.model_changed.emit()
         self._update_estimate()
 
