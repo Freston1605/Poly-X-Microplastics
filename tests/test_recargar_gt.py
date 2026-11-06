@@ -177,8 +177,8 @@ def test_reload_redraw_golden_combined_and_gt_views(qapp, tmp_path):
     model_dir = st.run_dir / "m0"
     assert result.annotated_path.parent == result.gt_path.parent == model_dir
 
-    # Golden hashes of the reload's current drawing path
-    # (_draw_annotated / _color_bgr_for_class). Captured before #38.
+    # Golden hashes of the reload's pre-#38 drawing path: the composer
+    # migration must not move them.
     assert (
         _sha(result.annotated_path)
         == "419d7f0ed6cdf164f29588bb7c3fff398af4c2bf85f5d29dbaeddad8e68f17a7"

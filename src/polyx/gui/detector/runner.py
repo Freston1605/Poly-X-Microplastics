@@ -13,7 +13,7 @@ import numpy as np
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
-from polyx.core.annotate import run_label_path, save_view, triptych
+from polyx.core.annotate import Triptych, run_label_path, save_view, triptych
 from polyx.core.detect import make_detector
 from polyx.core.detect.yolo import Detection
 from polyx.core.image_io import read_image
@@ -106,24 +106,7 @@ class DetectorRunner(QThread):
             if getattr(slot.loaded, "last_fallback", False):
                 reg["fallback_en"].append(img_path.name)
 
-    def _annotate_images(self, img_bgr, preds, gts, has_gt):
-        """Render the three views through the annotation module's composer.
-
-        ``has_gt`` is explicit so a reviewed plate with zero GT boxes keeps
-        its GT view, instead of looking like a plate with no GT file.
-        """
-        views = triptych(
-            img_bgr,
-            preds,
-            gts,
-            pred_label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
-            has_gt=has_gt,
-        )
-        return views.pred, views.combined, views.gt
-
-    def _save_outputs(
-        self, state, slot, idx_img, img_path, W, H, preds, combined, pred_img, gt_img, has_gt
-    ):
+    def _save_outputs(self, state, slot, idx_img, img_path, W, H, preds, views: Triptych):
         """Write the PNGs and the YOLO labels of one image, and return their paths.
 
         Returns the path and not the bytes on purpose: in a large batch holding
@@ -135,9 +118,13 @@ class DetectorRunner(QThread):
         sub = state.run_dir / slot.alias
         sub.mkdir(parents=True, exist_ok=True)
 
-        annotated_path = save_view(combined, sub, idx_img, img_path.stem, "_annot")
-        pred_path = save_view(pred_img, sub, idx_img, img_path.stem, "_pred")
-        gt_path = save_view(gt_img, sub, idx_img, img_path.stem, "_gt") if has_gt else None
+        annotated_path = save_view(views.combined, sub, idx_img, img_path.stem, "_annot")
+        pred_path = save_view(views.pred, sub, idx_img, img_path.stem, "_pred")
+        gt_path = (
+            save_view(views.gt, sub, idx_img, img_path.stem, "_gt")
+            if views.gt is not None
+            else None
+        )
 
         # The boxes in text, not only drawn: a PNG cannot be re-analyzed or
         # reopened for correction. The confidence goes as the sixth column,
@@ -362,7 +349,13 @@ class DetectorRunner(QThread):
         tp, fp, fn, mc = self._match_gt(preds, ctx.gts, has_gt, params)
 
         # ── Annotated images ──────────────────────────────
-        pred_img, combined, gt_img = self._annotate_images(ctx.bgr, preds, ctx.gts, has_gt)
+        views = triptych(
+            ctx.bgr,
+            preds,
+            ctx.gts,
+            pred_label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
+            has_gt=has_gt,
+        )
 
         # ── Save PNGs in run_dir ────────────────────────
         annotated_path, pred_path, gt_path = self._save_outputs(
@@ -373,10 +366,7 @@ class DetectorRunner(QThread):
             ctx.width,
             ctx.height,
             preds,
-            combined,
-            pred_img,
-            gt_img,
-            has_gt,
+            views,
         )
 
         return ImageResult(

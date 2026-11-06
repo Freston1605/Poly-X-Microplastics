@@ -255,9 +255,8 @@ def test_characterization_detector_drawing_golden(qapp, tmp_path):
     def _sha(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
-    # Golden pixel-hashes of the three views produced by the runner's current
-    # drawing path (_draw_annotated / _color_bgr_for_class / _annotate_images).
-    # Captured before the triptych migration.
+    # Golden pixel-hashes of the three views produced by the runner before the
+    # triptych migration: the composer must not move them.
     assert (
         _sha(result.pred_path) == "cd2d41b0ada491fa3da76995c438cf615edf80d3222eb9036aa3c27c5d84cba9"
     )

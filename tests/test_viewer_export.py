@@ -10,6 +10,7 @@ uses — never as the particle's size.
 
 from __future__ import annotations
 
+import hashlib
 import math
 import sys
 from pathlib import Path
@@ -101,8 +102,6 @@ def test_size_label_uncalibrated_with_measured_size_still_falls_back():
 
 
 # ── The exported PNG: the primitive with measured-size labels ─────────────
-
-import hashlib  # noqa: E402
 
 
 def _export_plate() -> np.ndarray:
