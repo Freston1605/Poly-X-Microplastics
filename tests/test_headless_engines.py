@@ -10,6 +10,7 @@ zero-mask bug through — see the fillPoly note in
 
 from __future__ import annotations
 
+import hashlib
 import json
 from types import SimpleNamespace
 
@@ -17,6 +18,7 @@ import cv2
 import numpy as np
 import pytest
 
+from polyx.core import annotate as A
 from polyx.core.detect.protocol import Instance, find_gt_for_image, read_yolo_txt
 from polyx.core.detection_run import run_batch
 from polyx.core.quality.metrics import mask_iou, match_image
@@ -212,7 +214,16 @@ def test_run_batch_counts_and_outputs(tmp_path):
     assert "class_id" in csv_text and "img1.png" in csv_text
     metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
     assert metrics["tp"] == 1
-    assert (out / "images" / "img1.png").is_file()
+    out_png = out / "images" / "img1.png"
+    assert out_png.is_file()
+    # The batch now draws through the annotation primitive: class colours
+    # replace the old uniform green, with the scale-aware thickness.
+    decoded = cv2.imdecode(np.fromfile(out_png, dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert tuple(int(v) for v in decoded[40, 50]) == A.bgr_for_class("particle")
+    # Deliberate appearance change, pinned so it stays a review.
+    assert hashlib.sha256(out_png.read_bytes()).hexdigest() == (
+        "70bddba445ddaa3bedc932762698e1569e1884e8d9be1fecb3699f3a7ecb21c9"
+    )
 
 
 def test_run_batch_uses_mask_iou_when_both_sides_have_masks(tmp_path):

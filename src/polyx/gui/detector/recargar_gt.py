@@ -14,14 +14,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import cv2
-
+from polyx.core.annotate import save_view, triptych
 from polyx.core.detect.protocol import compute_box_size_um, size_image
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.quality.metrics import match_image
-
-from .runner import _color_bgr_for_class, _draw_annotated
 
 
 def _same_boxes(a, b, tol: float = 0.5) -> bool:
@@ -137,47 +134,21 @@ def reload_gt(state, progress=None) -> dict:
                 r.tp = r.fp = r.fn = r.miscls = 0
 
             # The predictions image does not change -- the predictions are the
-            # same -- but the control and combined ones do.
+            # same -- but the control and combined ones do. They are drawn by
+            # the same composer the original run used, so the reload stays
+            # identical in style to what it is replacing.
             sub = state.run_dir / state.model_slots[mi].alias
             sub.mkdir(parents=True, exist_ok=True)
-            base = f"{idx_img:04d}_{path_2.stem}"
 
-            pred_img = _draw_annotated(
+            views = triptych(
                 img_bgr,
                 r.predictions,
-                color_for=lambda d: _color_bgr_for_class(d.class_name),
-                label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
+                gts,
+                pred_label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
+                has_gt=has_gt,
             )
-            if has_gt:
-                combined = _draw_annotated(
-                    pred_img,
-                    gts,
-                    color_for=lambda d: (255, 200, 80),
-                    label_for=lambda d: f"GT {d.class_name}",
-                )
-                gt_img = _draw_annotated(
-                    img_bgr,
-                    gts,
-                    color_for=lambda d: _color_bgr_for_class(d.class_name),
-                    label_for=lambda d: f"{d.class_name}",
-                )
-            else:
-                combined, gt_img = pred_img, None
-
-            r.annotated_path = _save(combined, sub, base, "_annot")
-            r.gt_path = _save(gt_img, sub, base, "_gt")
+            r.annotated_path = save_view(views.combined, sub, idx_img, path_2.stem, "_annot")
+            r.gt_path = save_view(views.gt, sub, idx_img, path_2.stem, "_gt") if has_gt else None
             summary["recalculadas"] += 1
 
     return summary
-
-
-def _save(image, sub: Path, base: str, suffix_2: str):
-    """Writes the PNG into the run folder and returns its path."""
-    if image is None:
-        return None
-    ok, buf = cv2.imencode(".png", image)
-    if not ok:
-        return None
-    destination = sub / f"{base}{suffix_2}.png"
-    destination.write_bytes(bytes(buf))
-    return destination

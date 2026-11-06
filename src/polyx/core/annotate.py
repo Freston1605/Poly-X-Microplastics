@@ -8,8 +8,9 @@ the report, and the line ended up measuring half a pixel), the run-view
 naming contract (written and parsed from one place so the Viewer cannot
 desync from the runner), and the drawn views themselves: the primitive
 draws boxes + labels under a style; the triptych composes the three views
-of a run — predictions, ground truth, combined. The triptych spec's
-migration tickets move the drawing paths onto this owner.
+of a run — predictions, ground truth, combined. The Detector runner, the
+GT-reload path, the Viewer's export and the headless batch all draw
+through this owner.
 """
 
 from __future__ import annotations
@@ -70,6 +71,12 @@ def line_width(img_shape: tuple[int, ...]) -> int:
 VIEW_SUFFIXES = ("_annot", "_pred", "_gt", "")
 
 _RUN_VIEW_RE = re.compile(r"^(\d+)_(.+)\.png$")
+_RUN_LABEL_RE = re.compile(r"^(\d+)_(.+)\.txt$")
+
+
+def _run_stem(index: int, stem: str) -> str:
+    """The index/stem prefix shared by every file of a run."""
+    return f"{index:04d}_{stem}"
 
 
 def run_view_path(folder: Path, index: int, stem: str, suffix: str = "") -> Path:
@@ -79,7 +86,28 @@ def run_view_path(folder: Path, index: int, stem: str, suffix: str = "") -> Path
     ``{index:04d}_{stem}{suffix}.png``. The index comes before everything
     else because two photos from different folders can share a stem.
     """
-    return folder / f"{index:04d}_{stem}{suffix}.png"
+    return folder / f"{_run_stem(index, stem)}{suffix}.png"
+
+
+def run_label_path(folder: Path, index: int, stem: str) -> Path:
+    """The prediction label of one image inside a run folder.
+
+    Same index/stem contract as :func:`run_view_path`; the label is the
+    ``.txt`` the Viewer loads, not a drawn view.
+    """
+    return folder / f"{_run_stem(index, stem)}.txt"
+
+
+def parse_run_label_name(name: str) -> tuple[int, str] | None:
+    """Parse a run label's file name back into (index, stem).
+
+    Returns ``None`` for anything that is not one: the caller decides
+    whether that is an error or something to skip.
+    """
+    match = _RUN_LABEL_RE.match(name)
+    if match is None:
+        return None
+    return (int(match.group(1)), match.group(2))
 
 
 def parse_run_view_name(name: str) -> tuple[int, str, str] | None:
@@ -178,6 +206,7 @@ def triptych(
     pred_label_for=None,
     gt_label_for=None,
     gt_prefix: str = "GT",
+    has_gt: bool | None = None,
 ) -> Triptych:
     """The three views of a run: predictions, ground truth, combined.
 
@@ -187,6 +216,12 @@ def triptych(
     ``{gt_prefix} `` label — over the predictions view. Without ground
     truth there is no GT view and the combined view IS the predictions
     view, the same array.
+
+    ``has_gt`` distinguishes "no ground-truth file" from "a ground-truth
+    file with zero boxes": a reviewed plate with nothing to count still
+    has a GT view (the untouched plate), and its combined view is the
+    predictions view. The default infers it from ``gt`` for callers that
+    do not know the difference.
 
     Callers can restyle the predictions view (``color_for``,
     ``pred_label_for``) and the GT label text (``gt_label_for``); the GT
@@ -200,7 +235,9 @@ def triptych(
         color_for=color_for,
         label_for=pred_label_for or (lambda d: f"{d.class_name} {d.conf:.2f}"),
     )
-    if not gt:
+    if has_gt is None:
+        has_gt = bool(gt)
+    if not has_gt:
         return Triptych(pred=pred, gt=None, combined=pred)
     # The GT view keeps the class colours regardless of any injected colour
     # mapping: the spec assigns class colours to the ground truth.
@@ -245,7 +282,9 @@ __all__ = [
     "bgr_for_class",
     "draw_detections",
     "line_width",
+    "parse_run_label_name",
     "parse_run_view_name",
+    "run_label_path",
     "run_view_path",
     "save_view",
     "triptych",

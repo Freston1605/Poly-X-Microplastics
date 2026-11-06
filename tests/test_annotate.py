@@ -74,6 +74,25 @@ def test_parse_run_view_name_rejects_strangers():
     assert A.parse_run_view_name("placa1_annot.png") is None
 
 
+def test_run_label_path_writes_the_documented_convention(tmp_path):
+    assert A.run_label_path(tmp_path, 3, "placa1") == tmp_path / "0003_placa1.txt"
+    assert A.run_label_path(tmp_path, 12, "placa_2") == tmp_path / "0012_placa_2.txt"
+
+
+def test_parse_run_label_name_round_trips(tmp_path):
+    # The label file is the prediction beside the run views: same index and
+    # stem contract, .txt instead of .png, no view suffix.
+    for stem in ("placa1", "placa_2", "placa_pred"):
+        name = A.run_label_path(tmp_path, 3, stem).name
+        assert A.parse_run_label_name(name) == (3, stem), stem
+
+
+def test_parse_run_label_name_rejects_strangers():
+    assert A.parse_run_label_name("classes.txt") is None
+    assert A.parse_run_label_name("0003_placa1.png") is None
+    assert A.parse_run_label_name("placa1.txt") is None
+
+
 # ── The primitive: one annotated view ─────────────────────────────────────
 
 import cv2  # noqa: E402
@@ -130,6 +149,21 @@ def test_triptych_without_gt_merges_the_views():
     views = A.triptych(_plate(), [_pet()], [])
     assert views.gt is None
     assert views.combined is views.pred
+
+
+def test_triptych_with_an_empty_gt_file_keeps_the_gt_view():
+    # A reviewed plate with nothing to count still has a GT file. It must
+    # not look like a plate without ground truth: the GT view exists (the
+    # untouched plate) and the combined view is the predictions alone.
+    views = A.triptych(_plate(), [_pet()], [], has_gt=True)
+    assert views.gt is not None
+    assert np.array_equal(views.gt, _plate())
+    assert np.array_equal(views.combined, views.pred)
+
+
+def test_triptych_infers_has_gt_from_the_boxes_by_default():
+    assert A.triptych(_plate(), [_pet()], []).gt is None
+    assert A.triptych(_plate(), [_pet()], [_gt_below()]).gt is not None
 
 
 # ── Goldens: the style pinned, so any change is deliberate ────────────────

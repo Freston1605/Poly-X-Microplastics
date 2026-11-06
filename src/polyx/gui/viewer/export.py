@@ -10,6 +10,9 @@ without um/px there are no micrometers to show.
 
 from __future__ import annotations
 
+import numpy as np
+
+from polyx.core.annotate import draw_detections
 from polyx.core.detect.protocol import equal_area_diameter
 from polyx.core.detect.yolo import Detection
 
@@ -49,6 +52,22 @@ def size_label(det: Detection, um_per_px: float | None) -> str:
         mark = "≈" if det.size_source == "box" else ""
         return f"{det.class_name} {mark}{det.diam_um:.1f} μm"
     return f"{det.class_name} {_box_diam_px(det):.0f} px"
+
+
+def render_annotated_frame(
+    frame: np.ndarray, dets: list[Detection], um_per_px: float | None
+) -> np.ndarray:
+    """Draw the exported annotated PNG's frame with the shared primitive.
+
+    The style is the primitive's — class colours, scale-aware thickness,
+    particle number first — and the label is the measured-size formatter,
+    so the export keeps showing the report's numbers.
+    """
+    return draw_detections(
+        frame,
+        dets,
+        label_for=lambda d: size_label(d, um_per_px),
+    )
 
 
 def csv_rows(dets: list[Detection], um_per_px: float | None) -> list[list[str]]:

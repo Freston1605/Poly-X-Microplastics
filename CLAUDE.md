@@ -64,7 +64,7 @@ src/                      # Source code (installable package)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
-    │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-view naming
+    │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
     │   ├── detection_run.py  # Headless detection engine
     │   ├── training.py       # Headless training engine
@@ -230,6 +230,8 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 
 - **`CLASS_COLOR_HEX`** (PET/PP/LDPE) — these are domain data. If they changed with
   the theme, two screenshots of the same analysis would not be comparable.
+  Qt paint sites obtain a class `QColor` through `T.class_qcolor(name)`; an
+  unknown class gets `FALLBACK_COLOR_HEX` instead of raising.
 - **`T.DOC`** — frozen palette (the light one) for the **HTML reports**. A report
   gets printed, attached and archived: if it came out dark because whoever generated
   it works at night, it would waste ink and two reports of the same analysis would
@@ -596,7 +598,7 @@ compute_box_size_um() → diam_um (if um_per_px calibrated)
     ↓
 ImageResult
     ↓
-cv2.rectangle() + annotation → PNG
+polyx.core.annotate (triptych + run-view naming) → PNG
     ↓
 <user data dir>/runs/YYYYMMDD_HHMMSS/
 ```
