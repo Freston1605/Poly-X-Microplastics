@@ -1,15 +1,16 @@
-"""Rebuild a DetectorState from a headless run folder.
+"""Rebuild a DetectorState from a detection run for report generation.
 
-The headless CLI (``polyx-detect``) writes centroids.csv, summary.json and
-annotated PNGs. When a paper-quality report is wanted afterwards, this
-module reassembles the Qt-state shape that ``polyx.gui.report_html``
-expects. It lives in ``polyx.gui`` — not in the CLI — so the no-Qt-in-CLI
-guards stay true by construction instead of by importlib deferment.
+``build_state_from_run`` reads the old headless folder (``centroids.csv``,
+``summary.json`` and ``annotated`` PNGs) and stays for pre-canonical runs.
+``build_state_from_result`` is ticket #59's transitional adapter from a
+canonical :class:`polyx.core.detection_run.RunResult`; ticket #63 replaces it
+with direct ``RunResult`` rendering and it must be deleted then. Both live in
+``polyx.gui`` — not in the CLI — so the no-Qt-in-CLI guards stay true.
 
 Honesty note: the report sums ``tp/fp/fn`` per image, so those counts are
-taken from ``summary["per_image"]`` (written by ``run_batch``) and never
-from the run aggregate. An aggregate copied into every row would be
-multiplied by the number of images.
+taken from ``summary["per_image"]`` (written by ``run_batch``) or from each
+canonical ``ImageResult``, never from the run aggregate. An aggregate copied
+into every row would be multiplied by the number of images.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ import csv
 import json
 from pathlib import Path
 
-from polyx.core.detection_run import IMAGE_EXTS
+from polyx.core.detection_run import IMAGE_EXTS, RunResult
 
 
 def _load_summary(run_dir: Path) -> dict:
@@ -99,4 +100,57 @@ def build_state_from_run(run_dir: Path, image_dir: Path):
     # Class names ride on the Instance objects themselves («class» column),
     # so the report's per-class sections resolve without extra bookkeeping.
     state.model_slots[0].alias = "model"
+    return state
+
+
+def build_state_from_result(result: RunResult):
+    """Build a report state from a canonical :class:`RunResult`.
+
+    TRANSITIONAL ADAPTER, delete in #63. The report still speaks
+    ``DetectorState``; ticket #63 makes ``generate_report`` consume
+    ``RunResult`` directly and this function has no reason to exist then. It
+    deliberately copies data instead of adding a second run-folder reader: the
+    canonical folder is already parsed by ``load_run``, and the CLI calls this
+    with the result it just produced.
+    """
+    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+
+    state = DetectorState()
+    state.params = result.params
+    state.run_dir = result.run_dir
+    state.images = list(result.images)
+    state.calibrations = dict(result.calibrations_by_name)
+    # The report keys results by the same dense indices as the engine, so the
+    # slot list must be exactly the run's models, not the GUI's three slots.
+    state.model_slots = [
+        ModelSlot(
+            alias=info.alias,
+            path=info.path if info.path is not None else Path(info.alias),
+            model_type=info.model_type,
+            names=dict(info.names),
+            sha256=info.sha256,
+        )
+        for info in result.models
+    ]
+    state.results = {
+        index: [
+            ImageResult(
+                image_path=row.image_path,
+                model_idx=row.model_idx,
+                predictions=list(row.predictions),
+                gt=list(row.gt),
+                has_gt=row.has_gt,
+                tp=row.tp,
+                fp=row.fp,
+                fn=row.fn,
+                miscls=row.miscls,
+                annotated_path=row.annotated_path,
+                pred_path=row.pred_path,
+                gt_path=row.gt_path,
+                tiling=row.tiling,
+            )
+            for row in rows
+        ]
+        for index, rows in result.results.items()
+    }
     return state
