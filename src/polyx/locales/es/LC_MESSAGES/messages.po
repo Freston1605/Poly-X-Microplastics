@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 20:08-0300\n"
+"POT-Creation-Date: 2026-11-06 20:14-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -13,6 +13,298 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
+
+#: src/polyx/cli/detect.py:71
+msgid "Batch-detect microplastics (headless)"
+msgstr "Detección por lotes de microplásticos (sin interfaz)"
+
+#: src/polyx/cli/detect.py:77
+msgid "weights path; repeat once per model (aliases default to the file stem)"
+msgstr "ruta de los pesos; repite una vez por modelo (el alias por defecto es el nombre del fichero)"
+
+#: src/polyx/cli/detect.py:84
+msgid "detector type; repeat once per model, or give one value for all (default: yolo)"
+msgstr "tipo de detector; repite una vez por modelo, o da un valor para todos (por defecto: yolo)"
+
+#: src/polyx/cli/detect.py:87
+msgid "exact run folder to write"
+msgstr "carpeta del run exacta donde escribir"
+
+#: src/polyx/cli/detect.py:88
+msgid "overwrite a non-empty run folder"
+msgstr "sobrescribe una carpeta de run no vacía"
+
+#: src/polyx/cli/detect.py:95 src/polyx/cli/eval.py:27 src/polyx/cli/train.py:27
+msgid "'cpu', a CUDA index, or empty = auto-select (default: auto)"
+msgstr "'cpu', un índice CUDA, o vacío = selección automática (por defecto: auto)"
+
+#: src/polyx/cli/detect.py:102
+msgid "per-photo calibration policy (default: auto)"
+msgstr "política de calibración por foto (por defecto: auto)"
+
+#: src/polyx/cli/detect.py:108
+msgid "manual µm/px; used alone it selects --calibrate manual"
+msgstr "µm/px manual; usado solo selecciona --calibrate manual"
+
+#: src/polyx/cli/detect.py:114
+msgid "explicit index CSV mapping image names to µm/px"
+msgstr "CSV de índice explícito que asigna nombres de imagen a µm/px"
+
+#: src/polyx/cli/detect.py:122
+msgid "tiling policy: auto by photo size, always, or never (default: auto)"
+msgstr "política de mosaico: auto por tamaño de foto, always o never (por defecto: auto)"
+
+#: src/polyx/cli/detect.py:128
+msgid "longest side above which --tiling auto splits the photo (default: 2000)"
+msgstr "lado mayor a partir del cual --tiling auto divide la foto (por defecto: 2000)"
+
+#: src/polyx/cli/detect.py:134
+msgid "tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)"
+msgstr "lado del mosaico en px; 0 lo deriva de min(threshold, imgsz) (por defecto: 0)"
+
+#: src/polyx/cli/detect.py:140
+msgid "overlap between tiles, 0..0.9 (default: 0.25)"
+msgstr "solape entre mosaicos, 0..0.9 (por defecto: 0.25)"
+
+#: src/polyx/cli/detect.py:142
+msgid "drop particles below it"
+msgstr "descarta las partículas por debajo"
+
+#: src/polyx/cli/detect.py:143
+msgid "drop particles above it"
+msgstr "descarta las partículas por encima"
+
+#: src/polyx/cli/detect.py:148
+msgid "below this confidence the particle is reported as unassignable (default: 0)"
+msgstr "por debajo de esta confianza la partícula se informa como no asignable (por defecto: 0)"
+
+#: src/polyx/cli/detect.py:153
+msgid "run-order paper-quality HTML report (requires PySide6, [gui] extra)"
+msgstr "informe HTML de calidad de artículo en el orden del run (requiere PySide6, extra [gui])"
+
+#: src/polyx/cli/detect.py:285
+#, python-format
+msgid "IMAGES: %(images)d  DETECTIONS: %(detections)d"
+msgstr "IMÁGENES: %(images)d  DETECCIONES: %(detections)d"
+
+#: src/polyx/cli/detect.py:288
+#, python-format
+msgid "OUTPUT: %(run_dir)s"
+msgstr "SALIDA: %(run_dir)s"
+
+#: src/polyx/cli/detect.py:167
+#, python-format
+msgid "--model-type takes one value for all models or one per model (%(count)d); got %(got)d"
+msgstr ""
+"--model-type toma un valor para todos los modelos o uno por modelo (%(count)d); se recibieron "
+"%(got)d"
+
+#: src/polyx/cli/detect.py:260
+msgid "Use --force to overwrite the canonical files."
+msgstr "Usa --force para sobrescribir los ficheros canónicos."
+
+#: src/polyx/cli/detect.py:262
+msgid "Choose a folder path for --out."
+msgstr "Elige una ruta de carpeta para --out."
+
+#: src/polyx/cli/detect.py:275
+#, python-format
+msgid "ABORTED: %(run_dir)s"
+msgstr "ABORTADO: %(run_dir)s"
+
+#: src/polyx/cli/detect.py:290
+#, python-format
+msgid "SKIPPED: %(count)d"
+msgstr "OMITIDAS: %(count)d"
+
+#: src/polyx/cli/detect.py:303 src/polyx/cli/detect.py:307 src/polyx/cli/report.py:72
+#, python-format
+msgid "COMPACT REPORT: %(path)s"
+msgstr "INFORME COMPACTO: %(path)s"
+
+#: src/polyx/cli/detect.py:247 src/polyx/cli/detect.py:267 src/polyx/cli/detect.py:271
+#: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:80
+#: src/polyx/cli/train.py:61
+#, python-format
+msgid "ERROR: %(error)s"
+msgstr "ERROR: %(error)s"
+
+#: src/polyx/cli/detect.py:253
+#, python-format
+msgid "ERROR loading model: %(error)s"
+msgstr "ERROR al cargar el modelo: %(error)s"
+
+#: src/polyx/cli/detect.py:264
+#, python-format
+msgid "ERROR: %(error)s. %(hint)s"
+msgstr "ERROR: %(error)s. %(hint)s"
+
+#: src/polyx/cli/detect.py:268
+#, python-format
+msgid "PARTIAL RUN: %(run_dir)s"
+msgstr "EJECUCIÓN PARCIAL: %(run_dir)s"
+
+#: src/polyx/cli/detect.py:305 src/polyx/cli/report.py:74
+#, python-format
+msgid "FULL REPORT: %(path)s"
+msgstr "INFORME COMPLETO: %(path)s"
+
+#: src/polyx/cli/detect.py:301 src/polyx/cli/report.py:70
+#, python-format
+msgid "Full report unavailable (%(error)s); writing compact report."
+msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
+
+#: src/polyx/cli/download_models.py:82
+msgid "Download Poly-X model weights"
+msgstr "Descarga los pesos de los modelos de Poly-X"
+
+#: src/polyx/cli/download_models.py:83
+msgid "output filename"
+msgstr "nombre del fichero de salida"
+
+#: src/polyx/cli/download_models.py:84
+msgid "download URL"
+msgstr "URL de descarga"
+
+#: src/polyx/cli/download_models.py:85
+msgid "expected SHA-256 (optional)"
+msgstr "SHA-256 esperado (opcional)"
+
+#: src/polyx/cli/download_models.py:86
+msgid "overwrite existing"
+msgstr "sobrescribe el existente"
+
+#: src/polyx/cli/download_models.py:94
+#, python-format
+msgid "Downloading %(url)s -> %(path)s"
+msgstr "Descargando %(url)s -> %(path)s"
+
+#: src/polyx/cli/download_models.py:100
+#, python-format
+msgid "Saved: %(path)s"
+msgstr "Guardado: %(path)s"
+
+#: src/polyx/cli/download_models.py:40
+#, python-format
+msgid ""
+"\r"
+"[%(bar)s] %(pct)3d%%  %(done)6.1f/%(total)6.1f MB"
+msgstr ""
+"\r"
+"[%(bar)s] %(pct)3d%%  %(done)6.1f/%(total)6.1f MB"
+
+#: src/polyx/cli/download_models.py:44
+#, python-format
+msgid ""
+"\r"
+"Downloaded %(done)6.1f MB"
+msgstr ""
+"\r"
+"Descargado %(done)6.1f MB"
+
+#: src/polyx/cli/download_models.py:91
+#, python-format
+msgid "Already present: %(path)s"
+msgstr "Ya existe: %(path)s"
+
+#: src/polyx/cli/download_models.py:71
+#, python-format
+msgid "SHA-256 mismatch: got %(got)s, expected %(expected)s"
+msgstr "SHA-256 no coincide: se obtuvo %(got)s, se esperaba %(expected)s"
+
+#: src/polyx/cli/download_models.py:77
+#, python-format
+msgid "Download failed: %(error)s"
+msgstr "Falló la descarga: %(error)s"
+
+#: src/polyx/cli/eval.py:18
+msgid "Evaluate a Poly-X YOLO model (headless)"
+msgstr "Evalúa un modelo YOLO de Poly-X (sin interfaz)"
+
+#: src/polyx/cli/eval.py:53 src/polyx/cli/report.py:82
+#, python-format
+msgid "WROTE: %(path)s"
+msgstr "ESCRITO: %(path)s"
+
+#: src/polyx/cli/eval.py:54
+#, python-format
+msgid "mAP50: %(value)s"
+msgstr "mAP50: %(value)s"
+
+#: src/polyx/cli/main.py:27
+msgid "Poly-X command line."
+msgstr "Línea de comandos de Poly-X."
+
+#: src/polyx/cli/main.py:29
+msgid "Usage:"
+msgstr "Uso:"
+
+#: src/polyx/cli/main.py:58
+msgid "Commands:"
+msgstr "Comandos:"
+
+#: src/polyx/cli/main.py:62
+msgid "Run 'polyx <command> --help' for command-specific options."
+msgstr "Ejecuta 'polyx <comando> --help' para ver las opciones de cada comando."
+
+#: src/polyx/cli/main.py:80
+msgid "Run 'polyx --help' for the list of commands."
+msgstr "Ejecuta 'polyx --help' para ver la lista de comandos."
+
+#: src/polyx/cli/main.py:79
+#, python-format
+msgid "Unknown command: %(command)s"
+msgstr "Comando desconocido: %(command)s"
+
+#: src/polyx/cli/main.py:30 src/polyx/cli/main.py:31
+msgid "launch the GUI"
+msgstr "abrir la interfaz gráfica"
+
+#: src/polyx/cli/main.py:32
+msgid "headless training"
+msgstr "entrenamiento sin interfaz"
+
+#: src/polyx/cli/main.py:33
+msgid "headless detection"
+msgstr "detección sin interfaz"
+
+#: src/polyx/cli/main.py:34
+msgid "headless evaluation"
+msgstr "evaluación sin interfaz"
+
+#: src/polyx/cli/main.py:35
+msgid "compact HTML report"
+msgstr "informe HTML compacto"
+
+#: src/polyx/cli/main.py:36
+msgid "download weights"
+msgstr "descargar los pesos"
+
+#: src/polyx/cli/report.py:25
+msgid "Generate an HTML report from a run folder"
+msgstr "Genera un informe HTML desde una carpeta de run"
+
+#: src/polyx/cli/report.py:32
+msgid "original photographs of a pre-canonical headless run"
+msgstr "fotografías originales de un run sin interfaz anterior al formato canónico"
+
+#: src/polyx/cli/report.py:37
+msgid "paper-quality report (requires PySide6, [gui] extra)"
+msgstr "informe de calidad de artículo (requiere PySide6, extra [gui])"
+
+#: src/polyx/cli/train.py:18
+msgid "Train a Poly-X YOLO model (headless)"
+msgstr "Entrena un modelo YOLO de Poly-X (sin interfaz)"
+
+#: src/polyx/cli/train.py:63
+#, python-format
+msgid "BEST: %(path)s"
+msgstr "MEJOR: %(path)s"
+
+#: src/polyx/cli/train.py:54
+#, python-format
+msgid "epoch %(epoch)s: %(metrics)s"
+msgstr "época %(epoch)s: %(metrics)s"
 
 #: src/polyx/core/platform.py:210
 msgid "Device (0/cpu):"
@@ -29,6 +321,54 @@ msgstr "Dispositivo (mps/cpu):"
 #: src/polyx/core/platform.py:206
 msgid "Device (cpu):"
 msgstr "Dispositivo (cpu):"
+
+#: src/polyx/core/report_simple.py:95
+#, python-format
+msgid "... %(count)d more row omitted"
+msgid_plural "... %(count)d more rows omitted"
+msgstr[0] "... se omite %(count)d fila más"
+msgstr[1] "... se omiten %(count)d filas más"
+
+#: src/polyx/core/report_simple.py:54 src/polyx/core/report_simple.py:59
+msgid "Poly-X run report"
+msgstr "Informe de ejecución de Poly-X"
+
+#: src/polyx/core/report_simple.py:60
+msgid "Run dir:"
+msgstr "Carpeta del run:"
+
+#: src/polyx/core/report_simple.py:73
+#, python-format
+msgid "%(count)d skipped image"
+msgid_plural "%(count)d skipped images"
+msgstr[0] "%(count)d imagen omitida"
+msgstr[1] "%(count)d imágenes omitidas"
+
+#: src/polyx/core/report_simple.py:77
+msgid "Images:"
+msgstr "Imágenes:"
+
+#: src/polyx/core/report_simple.py:77
+msgid "Detections:"
+msgstr "Detecciones:"
+
+#: src/polyx/core/report_simple.py:63
+msgid "Status:"
+msgstr "Estado:"
+
+#: src/polyx/core/report_simple.py:64
+msgid "Schema:"
+msgstr "Esquema:"
+
+#: src/polyx/core/report_simple.py:69 src/polyx/gui/report/registry.py:120
+msgid "Models:"
+msgstr "Modelos:"
+
+#: src/polyx/core/report_simple.py:84 src/polyx/gui/detector/pages/compare.py:38
+#: src/polyx/gui/detector/pages/results.py:57 src/polyx/gui/report/figures.py:206
+#: src/polyx/gui/report/sections.py:281
+msgid "Detections"
+msgstr "Detecciones"
 
 #: src/polyx/core/stats.py:48
 msgid "Fibre"
@@ -547,11 +887,6 @@ msgstr "Detecciones por imagen"
 #: src/polyx/gui/viewer/window.py:292
 msgid "Model"
 msgstr "Modelo"
-
-#: src/polyx/gui/detector/pages/compare.py:38 src/polyx/gui/detector/pages/results.py:57
-#: src/polyx/gui/report/figures.py:206 src/polyx/gui/report/sections.py:281
-msgid "Detections"
-msgstr "Detecciones"
 
 #: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/results.py:157
 #: src/polyx/gui/report/sections.py:282
@@ -2147,6 +2482,7 @@ msgid "Prediction"
 msgstr "Predicción"
 
 #: src/polyx/gui/report/figures.py:515 src/polyx/gui/report/sections.py:374
+#: src/polyx/gui/trainer/pages/summary.py:126
 msgid "Confusion matrix"
 msgstr "Matriz de confusión"
 
@@ -2303,7 +2639,7 @@ msgstr "Galería por imagen"
 msgid "Counts by sample and polymer type"
 msgstr "Conteo por muestra y tipo de plástico"
 
-#: src/polyx/gui/report/registry.py:32
+#: src/polyx/gui/report/registry.py:32 src/polyx/gui/trainer/pages/summary.py:150
 msgid "References"
 msgstr "Referencias bibliográficas"
 
@@ -2318,10 +2654,6 @@ msgstr "por fluorescencia Nile Red"
 #: src/polyx/gui/report/registry.py:119
 msgid "Author:"
 msgstr "Autor:"
-
-#: src/polyx/gui/report/registry.py:120
-msgid "Models:"
-msgstr "Modelos:"
 
 #: src/polyx/gui/report/registry.py:124
 msgid "Contents"
@@ -3428,7 +3760,7 @@ msgstr "Refrescar lista"
 msgid "Open the runs_train/ folder"
 msgstr "Abrir carpeta runs_train/"
 
-#: src/polyx/gui/trainer/pages/compare.py:86
+#: src/polyx/gui/trainer/pages/compare.py:86 src/polyx/gui/trainer/pages/summary.py:114
 msgid "Epochs"
 msgstr "Épocas"
 
@@ -4160,6 +4492,7 @@ msgstr "<br><span style='font-size:9pt'>%(details)s</span>"
 msgid "<br><span style='font-size:9pt'>%(detail)s</span>"
 msgstr "<br><span style='font-size:9pt'>%(detail)s</span>"
 
+#: src/polyx/gui/trainer/pages/summary.py:161 src/polyx/gui/trainer/pages/summary.py:165
 #: src/polyx/gui/trainer/pages/summary.py:206
 msgid "Training report"
 msgstr "Informe del entrenamiento"
@@ -4171,6 +4504,54 @@ msgid ""
 msgstr ""
 "Genera un informe HTML autocontenido con las curvas y métricas del run elegido. Listo para "
 "convertir a PDF (Ctrl+P en el navegador)."
+
+#: src/polyx/gui/trainer/pages/summary.py:125
+msgid "Training curves (loss + metrics)"
+msgstr "Curvas de entrenamiento (loss + métricas)"
+
+#: src/polyx/gui/trainer/pages/summary.py:127
+msgid "Precision–Recall curve"
+msgstr "Curva Precision–Recall"
+
+#: src/polyx/gui/trainer/pages/summary.py:128
+msgid "F1 vs confidence curve"
+msgstr "Curva F1 vs confianza"
+
+#: src/polyx/gui/trainer/pages/summary.py:129
+msgid "Precision vs confidence curve"
+msgstr "Curva Precision vs confianza"
+
+#: src/polyx/gui/trainer/pages/summary.py:130
+msgid "Recall vs confidence curve"
+msgstr "Curva Recall vs confianza"
+
+#: src/polyx/gui/trainer/pages/summary.py:131
+msgid "Label distribution in train"
+msgstr "Distribución de etiquetas en train"
+
+#: src/polyx/gui/trainer/pages/summary.py:132
+msgid "Validation batch 0 predictions"
+msgstr "Predicciones del batch 0 de validación"
+
+#: src/polyx/gui/trainer/pages/summary.py:167
+msgid "Folder:"
+msgstr "Carpeta:"
+
+#: src/polyx/gui/trainer/pages/summary.py:167
+msgid "Generated:"
+msgstr "Generado:"
+
+#: src/polyx/gui/trainer/pages/summary.py:170
+msgid "1. Final metrics"
+msgstr "1. Métricas finales"
+
+#: src/polyx/gui/trainer/pages/summary.py:173
+msgid "2. Curves and figures"
+msgstr "2. Curvas y figuras"
+
+#: src/polyx/gui/trainer/pages/summary.py:179
+msgid "© Cristofher Ferrada · Poly-X · Autogenerated report."
+msgstr "© Cristofher Ferrada · Poly-X · Reporte autogenerado."
 
 #: src/polyx/gui/trainer/pages/summary.py:215
 msgid "Run selection"
@@ -4204,6 +4585,11 @@ msgstr "Generando informe…"
 msgid "✗ Error"
 msgstr "✗ Error"
 
+#: src/polyx/gui/trainer/pages/summary.py:88
+#, python-format
+msgid "No such run folder: %(path)s"
+msgstr "No existe la carpeta del run: %(path)s"
+
 #: src/polyx/gui/trainer/pages/summary.py:218
 msgid "Run:"
 msgstr "Run:"
@@ -4220,6 +4606,14 @@ msgstr "No hay runs disponibles."
 #, python-format
 msgid "✓ Generated: %(path)s"
 msgstr "✓ Generado: %(path)s"
+
+#: src/polyx/gui/trainer/pages/summary.py:171
+msgid "No readable results.csv."
+msgstr "Sin results.csv legible."
+
+#: src/polyx/gui/trainer/pages/summary.py:174
+msgid "No figures found in the run."
+msgstr "No se encontraron figuras en el run."
 
 #: src/polyx/gui/trainer/pages/train.py:140
 msgid ""

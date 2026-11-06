@@ -103,9 +103,10 @@ def test_compact_report_keeps_reading_old_headless_folders(tmp_path):
     output = generate(HEADLESS_RUN, tmp_path / "report.html")
 
     html = output.read_text(encoding="utf-8")
-    assert "Poly-X run report" in html
-    assert "Images: 2" in html
-    assert "Detections: 3" in html
+    # conftest pins POLYX_LOCALE=es; #73 rewrites these against the selection.
+    assert "Informe de ejecución de Poly-X" in html
+    assert "Imágenes: 2" in html
+    assert "Detecciones: 3" in html
     assert "PET" in html
 
 
@@ -127,7 +128,7 @@ def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys)
     )
 
     assert code == 0
-    assert "FULL REPORT:" in capsys.readouterr().out
+    assert "INFORME COMPLETO:" in capsys.readouterr().out
     assert "Informe de detección" in output.read_text(encoding="utf-8")
 
 
@@ -148,11 +149,11 @@ def test_report_cli_renders_the_compact_report_from_a_legacy_folder(tmp_path, ca
     )
 
     assert code == 0
-    assert "WROTE:" in capsys.readouterr().out
+    assert "ESCRITO:" in capsys.readouterr().out
     html = output.read_text(encoding="utf-8")
-    assert "Poly-X run report" in html
-    assert "Images: 2" in html
-    assert "Detections: 3" in html
+    assert "Informe de ejecución de Poly-X" in html
+    assert "Imágenes: 2" in html
+    assert "Detecciones: 3" in html
 
 
 # ── Old GUI run folders ────────────────────────────────────────────────
