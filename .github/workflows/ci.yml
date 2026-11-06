@@ -48,25 +48,19 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --python 3.11 --extra gui
 
-      - name: Lint
-        run: uv run --locked --extra gui ruff check src/ tests/ tools/ install/
-
-      # Mechanical palette rule: the hook catches it locally, CI catches it
-      # when the hook was never installed.
+      # Mechanical palette rule: the hook catches it locally, the pre-commit
+      # workflow catches it when the hook was never installed.
       - name: Palette fallback guardrail
         run: python tools/check_palette_fallbacks.py
-
-      - name: Check formatting
-        run: uv run --locked --extra gui ruff format --check src/ tests/ tools/ install/
 
       # Type check: blocking on the engine (core + cli), advisory on the GUI
       # until its dynamic theme/Qt surface is typed. ty is Astral's checker
       # (same family as ruff/uv); config lives in [tool.ty] in pyproject.toml.
       - name: Type check (engine)
-        run: uv run --locked --extra gui ty check src/polyx/core src/polyx/cli
+        run: uv run --locked --extra gui ty check --output-format=github src/polyx/core src/polyx/cli
 
       - name: Type check (GUI, advisory)
-        run: uv run --locked --extra gui ty check src/polyx/gui
+        run: uv run --locked --extra gui ty check --output-format=github src/polyx/gui
         continue-on-error: true
 
   test:

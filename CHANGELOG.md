@@ -4,6 +4,20 @@ All notable changes to Poly-X are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Fast `Ruff` CI workflow (`ruff check` + `ruff format --check`) that installs
+  the ruff version pinned in `uv.lock` and needs no project dependencies.
+- `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
+  hooks that were never installed locally still fail the PR.
+- ty diagnostics are emitted as GitHub Actions annotations.
+
+### Changed
+- `ci.yml` no longer duplicates the ruff steps; the `Ruff` workflow owns
+  linting and formatting.
+- `ruff-pre-commit` bumped to `v0.17.2` to match the locked ruff version.
+
 ## [2.0.0] - 2026-10-26
 
 ### Added
