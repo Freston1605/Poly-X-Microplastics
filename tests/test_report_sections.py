@@ -7,12 +7,13 @@ Este archivo cierra el contrato del slice: cada constructor es importable y
 llamable por su cuenta, con los mismos precomputos que usa el impl, y su
 salida para el estado benigno coincide con lo que el baseline benigno
 (tests/fixtures/baseline_informe/benigna/informe.html) realmente contiene.
-Ese baseline es el gate actual, recapturado en M006/S05 en ingles.
+The baseline is the semantic gate: section body against section body, never
+the whole document and never a hash of it.
 
-The language contract is the one in tests/test_benign_report_render.py
-(POLYX_LOCALE=en): the baseline was captured in English and any assertion about
-body text needs the same language, pinned and reloaded in the autouse fixture --
-see the language note in that module for the full provenance.
+The baseline was captured in English, so the autouse fixture selects English
+through ``i18n.set_language`` and restores the suite's language afterwards.
+The report is read through the public surface; no test here inspects the
+catalogue.
 
 Los cuerpos vacios NO son fallos: para el lote benigno (una foto, un modelo,
 sin ground truth, sin calibraciones, sin tramo de profundidad en el nombre)
@@ -23,30 +24,26 @@ es exactamente por lo que el baseline no tiene sus <h2>.
 
 from __future__ import annotations
 
-import importlib
-import os
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-# Baseline benigno de M006/S05: solo lectura en la suite; se recaptura con
-# tools/audit/capture_report_fixtures.py solo ante un cambio consciente del
-# informe, actualizando sha256, pin y README juntos.
+# English baseline: read-only in the suite. Recapture it with
+# tools/audit/capture_report_fixtures.py only after a conscious report change.
 BASELINE_HTML = (
     Path(__file__).resolve().parent / "fixtures" / "baseline_informe" / "benigna" / "informe.html"
 )
 
-# Las figuras del baseline son PNG base64 de matplotlib, cuyos bytes cambian
-# con el renderer/fuentes del SO incluso a la misma version pinneada. Los
-# tests que comparan un CUERPO DE SECCION aislado contra el baseline completo
-# normalizan las figuras a un marcador CONSTANTE (<FIG>): el cuerpo aislado
-# renumera su marcador ordinal desde 1 pero el baseline los numera desde su
-# posicion global, asi que un marcador ordinal no casa entre ambos. La
-# posicion de cada figura dentro del informe completo la cubre el gate de
-# tests/test_benign_report_render.py (renders de TODAS las secciones
-# juntas, mismos ordinales en ambos lados); aqui solo se fija estructura.
+# The baseline figures are matplotlib base64 PNGs whose bytes change with the
+# OS renderer/fonts even at the same pinned version. Tests that check an
+# isolated SECTION BODY against the whole baseline normalise the figures to a
+# CONSTANT marker (<FIG>): the isolated body renumbers its ordinal marker from
+# 1, while the baseline numbers them from their global position, so an ordinal
+# marker does not match between the two. The position of each figure inside the
+# whole report is not checked here: this gate fixes each section's structure,
+# not the whole document.
 import re as _re  # noqa: E402
 
 _PNG_URI_RE_SECTION = _re.compile(r"data:image/png;base64,[A-Za-z0-9+/=]+")
@@ -56,8 +53,6 @@ def _sin_payload_figuras(html: str) -> str:
     """Reemplaza cada data-URI de PNG por el marcador constante <FIG>."""
     return _PNG_URI_RE_SECTION.sub("data:image/png;base64,<FIG>", html)
 
-
-from tests.test_benign_report_render import _normalizar_figuras  # noqa: E402,F401
 
 # El baseline ya normalizado con marcador constante (solo separa estructura):
 # unico lugar que lee el archivo. Los cuerpos de seccion se comparan contra
@@ -84,35 +79,21 @@ CONSTRUCTORES = (
 
 
 @pytest.fixture(autouse=True)
-def _idioma_del_baseline(tmp_path):
-    """Fuerza el idioma del baseline (en) y recarga i18n/report_html.
+def _baseline_language():
+    """Select the baseline language (en) and restore the suite's afterwards.
 
-    Misma receta que el fixture de tests/test_benign_report_render.py:
-    polyx.core.i18n cachea el idioma al importar, y los cuerpos que aqui se
-    comparan con texto del baseline (en ingles) saldrian en otro idioma sin
-    esta recarga. Se restaura el entorno al salir para no contaminar a otros
-    tests. POLYX_LOG_DIR ya lo aisla el fixture autouse de tests/conftest.py
-    (decision D007); aqui no se llama a generate_report, asi que no hay
-    logger que silenciar.
+    The baseline HTML was captured in English; the section bodies compared
+    against it need the same language. The switch goes through the public
+    ``set_language`` seam, and POLYX_LOG_DIR is already isolated by the
+    autouse fixture in tests/conftest.py (decision D007); no report is
+    generated here, so there is no logger to silence.
     """
-    import polyx.core.i18n as i18n
+    from polyx.core import i18n
 
-    previous_locale = os.environ.get("POLYX_LOCALE")
-    os.environ["POLYX_LOCALE"] = "en"
-
-    importlib.reload(i18n)
-    import polyx.gui.report_html as rh
-
-    importlib.reload(rh)
-
+    previous = i18n.language()
+    assert i18n.set_language("en")
     yield
-
-    if previous_locale is None:
-        os.environ.pop("POLYX_LOCALE", None)
-    else:
-        os.environ["POLYX_LOCALE"] = previous_locale
-    importlib.reload(i18n)
-    importlib.reload(rh)
+    i18n.set_language(previous)
 
 
 def _precomputados(st) -> SimpleNamespace:

@@ -27,10 +27,9 @@ la ficha de articulo y 1 fila de la tabla de tamano). El nombre no lleva '/'
 a proposito: pathlib la partiria en componentes y el '<' de apertura se
 perderia de Path.name (P001).
 
-El idioma se fija a 'en' con la misma mecanica del fixture autouse de
-tests/test_benign_report_render.py: polyx.core.i18n cachea el idioma al
-importar (env -> ~/.polyx_idioma.json -> locale del sistema) y sin forzarlo
-los conteos dependen de la maquina. Los anclajes estructurales de los
+The language is pinned to 'en' before i18n is imported (env -> saved preference
+-> system locale); without the pin the counts in this test depend on the
+machine. Los anclajes estructurales de los
 sumideros (td, strong, h3, comillas «») salen de las plantillas del informe
 mismo, no de datos de usuarios, y con el idioma fijado son estables: si una
 reforma de report_html mueve una marca de plantilla, este test delimita
@@ -94,16 +93,15 @@ SUMIDEROS_NOMBRE: list[tuple[str, str, int]] = [
 
 @pytest.fixture(autouse=True)
 def _idioma_y_logs_muertos(tmp_path):
-    """Fuerza el idioma 'en' y revierte el logger del pipeline a NullHandler.
+    """Force 'en' and revert the pipeline logger to a NullHandler.
 
-    Misma mecanica que tests/test_benign_report_render.py: i18n cachea el
-    idioma al importar y sin POLYX_LOCALE los conteos de este test son
-    maquina-dependientes. El logger 'polyx.detector' queda cacheado por
-    logger_para con un RotatingFileHandler a carpeta_logs(); si no se
-    controla, la suite escribiria en el HOME real y variaria segun el orden
-    de los tests. Se fija POLYX_LOG_DIR a tmp_path antes del primer
-    logger_para. Los estados de fixture no usan QObjects y no emiten
-    eventos: no se pierde nada al silenciar.
+    The language is pinned to 'en' before i18n is imported; without
+    POLYX_LOCALE the counts in this test depend on the machine. The
+    'polyx.detector' logger is cached by logger_para with a RotatingFileHandler
+    pointed at carpeta_logs(); without POLYX_LOG_DIR the suite would write to
+    the real HOME and vary with test order. POLYX_LOG_DIR is set to tmp_path
+    before the first logger_para. The fixture states use no QObjects and emit
+    no events, so nothing is lost by silencing it.
     """
     import polyx.core.i18n as i18n
 

@@ -77,8 +77,9 @@ def test_legacy_headless_folder_without_originals_still_loads():
     assert run.results[0][0].annotated_path == HEADLESS_RUN / "images" / "plate1.png"
 
 
-def test_legacy_headless_folder_renders_the_full_report(tmp_path):
+def test_legacy_headless_folder_renders_the_full_report(tmp_path, selected_language):
     """The rebuilt RunResult feeds the same report seam as a canonical run."""
+    selected_language("es")
     from polyx.core.detection_run import load_legacy_run
     from polyx.gui.report_html import generate_report
 
@@ -96,22 +97,23 @@ def test_legacy_headless_folder_renders_the_full_report(tmp_path):
     assert "Matriz de confusión" not in html
 
 
-def test_compact_report_keeps_reading_old_headless_folders(tmp_path):
+def test_compact_report_keeps_reading_old_headless_folders(tmp_path, selected_language):
     """The Qt-free compact report still has its pre-canonical fallback."""
+    selected_language("es")
     from polyx.core.report_simple import generate
 
     output = generate(HEADLESS_RUN, tmp_path / "report.html")
 
     html = output.read_text(encoding="utf-8")
-    # conftest pins POLYX_LOCALE=es; #73 rewrites these against the selection.
     assert "Informe de ejecución de Poly-X" in html
     assert "Imágenes: 2" in html
     assert "Detecciones: 3" in html
     assert "PET" in html
 
 
-def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys):
+def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys, selected_language):
     """`polyx-report --full-report` is a real consumer of the legacy loader."""
+    selected_language("es")
     from polyx.cli.report import main
 
     output = tmp_path / "report.html"
@@ -132,8 +134,11 @@ def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys)
     assert "Informe de detección" in output.read_text(encoding="utf-8")
 
 
-def test_report_cli_renders_the_compact_report_from_a_legacy_folder(tmp_path, capsys):
+def test_report_cli_renders_the_compact_report_from_a_legacy_folder(
+    tmp_path, capsys, selected_language
+):
     """`polyx-report` without --full-report also reads old headless folders."""
+    selected_language("es")
     from polyx.cli.report import main
 
     output = tmp_path / "compact.html"
