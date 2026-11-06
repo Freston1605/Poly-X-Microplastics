@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
-from polyx.core.i18n import _
+from polyx.core.i18n import _, ngettext
 from polyx.core.labels import STUDY_CLASSES, bbox_from, write_classes, write_lines
 from polyx.core.paths import DATASET_CORRECTIONS_DIR
 from polyx.gui import iconos
@@ -217,9 +217,14 @@ class ReviewDialog(QDialog):
                 it.setForeground(QColor(T.ERR))
             self.list.addItem(it)
         self.list.blockSignals(False)
-        self.setWindowTitle(
-            f"Revisión de detecciones — {len(self._results)} imágenes (✓{good} ✗{bad}) — Poly-X"
-        )
+        count = len(self._results)
+        title = ngettext(
+            "Detection review — %(count)d image",
+            "Detection review — %(count)d images",
+            count,
+        ) % {"count": count}
+        title += _(" (✓%(good)d ✗%(bad)d) — Poly-X") % {"good": good, "bad": bad}
+        self.setWindowTitle(title)
 
     def _on_list_row(self, row: int):
         # auto-save the verdict/boxes in memory of the previous image is already done
@@ -304,7 +309,14 @@ class ReviewDialog(QDialog):
         cls_path = out_dir / "classes.txt"
         if not cls_path.exists():
             write_classes(out_dir)
-        self.lbl_status.setText(f"✓ Guardado: {txt_path}  ({len(dets)} cajas)")
+        self.lbl_status.setText(
+            ngettext(
+                "✓ Saved: %(path)s  (%(count)d box)",
+                "✓ Saved: %(path)s  (%(count)d boxes)",
+                len(dets),
+            )
+            % {"path": txt_path, "count": len(dets)}
+        )
 
     def _send_to_dataset(self):
         """Active learning: accumulates image + corrected boxes to retrain."""
@@ -329,7 +341,12 @@ class ReviewDialog(QDialog):
             write_classes(root)
         n = len(list((root / "labels").glob("*.txt")))
         self.lbl_status.setText(
-            f"Enviada al dataset de reentrenamiento — {n} imagen(es) "
-            f"acumuladas en dataset_correcciones/. Cuando juntes ~50, haz "
-            f"fine-tuning en el Entrenador."
+            ngettext(
+                "Sent to the retraining dataset — %(count)d image accumulated in "
+                "dataset_correcciones/. Once you have ~50, fine-tune in the Trainer.",
+                "Sent to the retraining dataset — %(count)d images accumulated in "
+                "dataset_correcciones/. Once you have ~50, fine-tune in the Trainer.",
+                n,
+            )
+            % {"count": n}
         )

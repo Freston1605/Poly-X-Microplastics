@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.annotate import find_run_labels
-from polyx.core.i18n import _
+from polyx.core.i18n import _, ngettext
 from polyx.core.paths import RUNS_DIR
 from polyx.gui import iconos, marca
 from polyx.gui import theme as T
@@ -541,7 +541,7 @@ class ViewerWindow(QMainWindow):
     def _open_image(self):
 
         path, _unused = QFileDialog.getOpenFileName(
-            self, "Abrir imagen", "", "Imágenes (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)"
+            self, _("Open image"), "", _("Images (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)")
         )
 
         if path:
@@ -551,7 +551,7 @@ class ViewerWindow(QMainWindow):
 
     def _open_folder(self):
 
-        folder = QFileDialog.getExistingDirectory(self, "Abrir carpeta de imágenes")
+        folder = QFileDialog.getExistingDirectory(self, _("Open image folder"))
 
         if folder:
             self.state.load_folder(Path(folder))
@@ -571,7 +571,7 @@ class ViewerWindow(QMainWindow):
 
         self._update_status_bar()
 
-        self._set_status("● Imagen cargada", T.OK)
+        self._set_status(_("● Image loaded"), T.OK)
 
     def _update_nav(self):
 
@@ -586,7 +586,7 @@ class ViewerWindow(QMainWindow):
     def _load_model(self):
 
         path, _unused = QFileDialog.getOpenFileName(
-            self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)"
+            self, _("Load YOLO model"), "", _("YOLO model (*.pt)")
         )
 
         if not path:
@@ -599,7 +599,7 @@ class ViewerWindow(QMainWindow):
 
             self.lbl_model.setText(Path(path).name)
 
-            self._set_status("● Modelo listo", T.OK)
+            self._set_status(_("● Model ready"), T.OK)
 
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))
@@ -623,7 +623,11 @@ class ViewerWindow(QMainWindow):
         device = "0" if (self.chk_gpu.isChecked() and _there_are_gpu()) else "cpu"
 
         try:
-            self._set_status(f"● Detectando (imgsz {imgsz}, {device})…", T.ACCENT)
+            self._set_status(
+                _("● Detecting (imgsz %(imgsz)d, %(device)s)…")
+                % {"imgsz": imgsz, "device": device},
+                T.ACCENT,
+            )
 
             QApplication.setOverrideCursor(Qt.WaitCursor)
 
@@ -653,13 +657,32 @@ class ViewerWindow(QMainWindow):
                 p = plan["plan"]
 
                 self._set_status(
-                    f"● {len(dets)} detecciones (troceada en {p['n_tiles']} tiles "
-                    f"de {p['tile']} px, imgsz {imgsz})",
+                    ngettext(
+                        "● %(count)d detection (tiled into %(tiles)d tiles of "
+                        "%(tile)d px, imgsz %(imgsz)d)",
+                        "● %(count)d detections (tiled into %(tiles)d tiles of "
+                        "%(tile)d px, imgsz %(imgsz)d)",
+                        len(dets),
+                    )
+                    % {
+                        "count": len(dets),
+                        "tiles": p["n_tiles"],
+                        "tile": p["tile"],
+                        "imgsz": imgsz,
+                    },
                     T.OK,
                 )
 
             else:
-                self._set_status(f"● {len(dets)} detecciones (imgsz {imgsz})", T.OK)
+                self._set_status(
+                    ngettext(
+                        "● %(count)d detection (imgsz %(imgsz)d)",
+                        "● %(count)d detections (imgsz %(imgsz)d)",
+                        len(dets),
+                    )
+                    % {"count": len(dets), "imgsz": imgsz},
+                    T.OK,
+                )
 
         except Exception as e:  # noqa: BLE001
             # Without enough VRAM the failure is common when raising imgsz: it says
@@ -669,14 +692,14 @@ class ViewerWindow(QMainWindow):
             msg = str(e)
 
             if "out of memory" in msg.lower():
-                msg = (
-                    f"Sin memoria de GPU a imgsz {imgsz}.\n\n"
-                    f"Baja la resolución de inferencia o desmarca «Usar GPU»."
-                )
+                msg = _(
+                    "Out of GPU memory at imgsz %(imgsz)d.\n\n"
+                    "Lower the inference resolution or untick “Use GPU”."
+                ) % {"imgsz": imgsz}
 
             QMessageBox.warning(self, _("Detection error"), msg)
 
-            self._set_status("● Error en detección", T.ERR)
+            self._set_status(_("● Detection error"), T.ERR)
 
         finally:
             QApplication.restoreOverrideCursor()
@@ -771,7 +794,11 @@ class ViewerWindow(QMainWindow):
             dets = read_yolo_txt(txt, width_2, height, names)
 
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, _("Error"), f"No se pudieron leer las predicciones: {e}")
+            QMessageBox.warning(
+                self,
+                _("Error"),
+                _("Could not read the predictions: %(error)s") % {"error": e},
+            )
 
             return
 
@@ -816,7 +843,8 @@ class ViewerWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 _("No labels"),
-                f"No hay archivo de etiquetas junto a la imagen:\n{img.with_suffix('.txt').name}",
+                _("There is no label file next to the image:\n%(name)s")
+                % {"name": img.with_suffix(".txt").name},
             )
 
             return
@@ -836,10 +864,24 @@ class ViewerWindow(QMainWindow):
 
         self.state.detections_changed.emit(dets)
 
-        warning_2 = f"  ({malformed} línea(s) ilegible(s))" if malformed else ""
+        warning_2 = (
+            ngettext(
+                "  (%(count)d unreadable line)",
+                "  (%(count)d unreadable lines)",
+                malformed,
+            )
+            % {"count": malformed}
+            if malformed
+            else ""
+        )
 
         self._set_status(
-            f"● {len(dets)} etiquetas cargadas de {txt.name}{warning_2}",
+            ngettext(
+                "● %(count)d label loaded from %(file)s%(warning)s",
+                "● %(count)d labels loaded from %(file)s%(warning)s",
+                len(dets),
+            )
+            % {"count": len(dets), "file": txt.name, "warning": warning_2},
             T.WARN if malformed else T.OK,
         )
 
@@ -865,7 +907,10 @@ class ViewerWindow(QMainWindow):
 
         self._update_filter_combo(dets)
 
-        self.lbl_det_count.setText(f"{len(dets)} detección(es)")
+        self.lbl_det_count.setText(
+            ngettext("%(count)d detection", "%(count)d detections", len(dets))
+            % {"count": len(dets)}
+        )
 
         self._update_status_bar()
 
@@ -1012,9 +1057,16 @@ class ViewerWindow(QMainWindow):
         self.lbl_record.setPixmap(pix)
 
         self.lbl_record_tit.setText(
-            f"Partícula #{det.number} · {det.class_name} · {det.morphotype or '—'}"
-            "   —   izquierda: sin marcas · derecha: verde = contorno medido, "
-            "amarillo = Feret, magenta = geodésico"
+            _(
+                "Particle #%(number)s · %(class)s · %(morphotype)s"
+                "   —   left: no marks · right: green = measured contour, "
+                "yellow = Feret, magenta = geodesic"
+            )
+            % {
+                "number": det.number,
+                "class": det.class_name,
+                "morphotype": det.morphotype or "—",
+            }
         )
 
         um = self.state.um_per_px
@@ -1087,7 +1139,7 @@ class ViewerWindow(QMainWindow):
                 _("Click 3 points on the edge\nof a circular object of known size.")
             )
 
-        self._set_status("● Modo calibración activo", T.WARN)
+        self._set_status(_("● Calibration mode active"), T.WARN)
 
     def _on_calib_pts_changed(self, pts: list):
 
@@ -1105,7 +1157,14 @@ class ViewerWindow(QMainWindow):
         needed = 2 if mode == "linea" else 3
 
         self.lbl_calib_hint.setText(
-            f"Haz clic en {needed - len(pts)} punto(s) más." if pts else self.lbl_calib_hint.text()
+            ngettext(
+                "Click %(count)d more point.",
+                "Click %(count)d more points.",
+                needed - len(pts),
+            )
+            % {"count": needed - len(pts)}
+            if pts
+            else self.lbl_calib_hint.text()
         )
 
     def _on_calib_ready(self):
@@ -1121,8 +1180,8 @@ class ViewerWindow(QMainWindow):
         if mode == "linea":
             val, ok = QInputDialog.getDouble(
                 self,
-                "Calibración — Línea",
-                "Tamaño real de la línea marcada (μm):",
+                _("Calibration — Line"),
+                _("Real length of the marked line (μm):"),
                 1000.0,
                 0.001,
                 1_000_000.0,
@@ -1140,8 +1199,8 @@ class ViewerWindow(QMainWindow):
 
             val, ok = QInputDialog.getDouble(
                 self,
-                "Calibración — Círculo",
-                "Diámetro real del objeto circular (μm):\nPlaca Petri de 100 mm → 100000",
+                _("Calibration — Circle"),
+                _("Real diameter of the circular object (μm):\n100 mm Petri dish → 100000"),
                 100_000.0,
                 0.001,
                 10_000_000.0,
@@ -1156,13 +1215,15 @@ class ViewerWindow(QMainWindow):
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
-        self.lbl_calib_result.setText(f"{um_per_px:.4f} μm/px  ({mode_name})")
+        self.lbl_calib_result.setText(
+            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_name}
+        )
 
         self.lbl_calib_result.setStyleSheet(
             f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;"
         )
 
-        self._set_status(f"● Calibración aplicada: {um_per_px:.4f} μm/px", T.OK)
+        self._set_status(_("● Calibration applied: %(value).4f μm/px") % {"value": um_per_px}, T.OK)
 
         self._update_status_bar()
 
@@ -1202,7 +1263,7 @@ class ViewerWindow(QMainWindow):
 
         # Choose the destination folder
 
-        out_dir = QFileDialog.getExistingDirectory(self, "Carpeta de salida")
+        out_dir = QFileDialog.getExistingDirectory(self, _("Output folder"))
 
         if not out_dir:
             return
@@ -1220,14 +1281,16 @@ class ViewerWindow(QMainWindow):
 
             self._save_json(img, save_dir)
 
-            self._set_status(f"● Guardado en {save_dir.name}", T.OK)
+            self._set_status(_("● Saved to %(folder)s") % {"folder": save_dir.name}, T.OK)
 
-            QMessageBox.information(self, _("Saved"), f"Archivos guardados en:\n{save_dir}")
+            QMessageBox.information(
+                self, _("Saved"), _("Files saved to:\n%(folder)s") % {"folder": save_dir}
+            )
 
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error while saving"), str(e))
 
-            self._set_status("● Error al guardar", T.ERR)
+            self._set_status(_("● Error while saving"), T.ERR)
 
     def _save_annotated_image(self, img: Path, save_dir: Path):
 
@@ -1317,10 +1380,10 @@ class ViewerWindow(QMainWindow):
 
                     self.lbl_model.setText(path.name)
 
-                    self._set_status("● Modelo cargado", T.OK)
+                    self._set_status(_("● Model loaded"), T.OK)
 
                 except Exception as e:  # noqa: BLE001
-                    self._set_status(f"● Error: {e}", T.ERR)
+                    self._set_status(_("● Error: %(error)s") % {"error": e}, T.ERR)
 
             elif path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}:
                 self.state.load_single(path)

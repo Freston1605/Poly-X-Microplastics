@@ -153,9 +153,9 @@ class DetectorWindow(QMainWindow):
         self.stack.setCurrentIndex(0)
 
         # Connect global signals to reflect state in the footer
-        self.state.run_started.connect(lambda: self._set_status("● Ejecutando…", T.ACCENT))
-        self.state.run_finished.connect(lambda: self._set_status("● Finalizado", T.OK))
-        self.state.run_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
+        self.state.run_started.connect(lambda: self._set_status(_("● Running…"), T.ACCENT))
+        self.state.run_finished.connect(lambda: self._set_status(_("● Finished"), T.OK))
+        self.state.run_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
 
     def _build_pages(self):
         # Late import to avoid cycles

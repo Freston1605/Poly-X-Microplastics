@@ -518,7 +518,7 @@ class ReportPage(DetectorPage):
         out_dir = self.state.run_dir
         if out_dir is None or not out_dir.exists():
             # Ask for the destination folder
-            d = QFileDialog.getExistingDirectory(self, "Carpeta destino del reporte")
+            d = QFileDialog.getExistingDirectory(self, _("Report destination folder"))
             if not d:
                 return
             out_dir = Path(d)
@@ -581,7 +581,7 @@ class ReportPage(DetectorPage):
         )
         suggested = str(base_dir / "informe_deteccion.pdf")
         path, _unused = QFileDialog.getSaveFileName(
-            self, "Guardar informe como PDF", suggested, "PDF (*.pdf)"
+            self, _("Save report as PDF"), suggested, _("PDF (*.pdf)")
         )
         if not path:
             return

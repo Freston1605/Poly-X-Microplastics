@@ -389,28 +389,49 @@ class ParametersPage(TrainerPage):
             elif info.torch_cuda:
                 extra.append(f"torch {info.torch_version} / CUDA {info.torch_cuda}")
             self.lbl_gpu.setText(
-                f"<b>GPU detectada:</b> {info.name} · "
-                f"VRAM total: <b>{humanize_gb(info.vram_total_gb)}</b> · "
-                f"libre: <b>{humanize_gb(info.vram_free_gb)}</b>"
-                + (f"<br><span style='font-size:9pt'>{' · '.join(extra)}</span>" if extra else "")
+                _(
+                    "<b>GPU detected:</b> %(name)s · VRAM total: <b>%(total)s</b> · "
+                    "free: <b>%(free)s</b>"
+                )
+                % {
+                    "name": info.name,
+                    "total": humanize_gb(info.vram_total_gb),
+                    "free": humanize_gb(info.vram_free_gb),
+                }
+                + (
+                    _("<br><span style='font-size:9pt'>%(details)s</span>")
+                    % {"details": " · ".join(extra)}
+                    if extra
+                    else ""
+                )
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.OK_TX}; font-size: 10pt; border: none;")
         elif info.gpu_sin_torch:
             # The distinction matters: the card works, what is wrong is the
             # installation. Saying `no GPU` here would send someone to buy hardware.
             self.lbl_gpu.setText(
-                f"⚠ <b>{info.name}</b> está presente "
-                f"({humanize_gb(info.vram_total_gb)}, driver {info.driver}) "
-                f"<b>pero PyTorch no la puede usar.</b><br>"
-                f"<span style='font-size:9pt'>{info.detail} "
-                f"Reinstala PyTorch con CUDA (SETUP.bat) — hasta entonces se "
-                f"entrena por CPU.</span>"
+                _(
+                    "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) "
+                    "<b>but PyTorch cannot use it.</b><br>"
+                    "<span style='font-size:9pt'>%(detail)s Reinstall PyTorch with CUDA "
+                    "(SETUP.bat) — until then it trains on CPU.</span>"
+                )
+                % {
+                    "name": info.name,
+                    "vram": humanize_gb(info.vram_total_gb),
+                    "driver": info.driver,
+                    "detail": info.detail,
+                }
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.ERR_TX}; font-size: 10pt; border: none;")
         else:
             self.lbl_gpu.setText(
-                "✗ No se detectó GPU NVIDIA. Entrenarás en CPU (será MUY lento)."
-                + (f"<br><span style='font-size:9pt'>{info.detail}</span>" if info.detail else "")
+                _("✗ No NVIDIA GPU detected. You will train on CPU (it will be VERY slow).")
+                + (
+                    _("<br><span style='font-size:9pt'>%(detail)s</span>") % {"detail": info.detail}
+                    if info.detail
+                    else ""
+                )
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.WARN_TX}; font-size: 10pt; border: none;")
         self._update_estimate()
@@ -431,8 +452,16 @@ class ParametersPage(TrainerPage):
         sz = recommend_max_imgsz(size, batch, info.vram_free_gb, amp=amp)
         self.combo_imgsz.setCurrentText(str(sz))
         self.lbl_est.setText(
-            f"✓ Recomendación: imgsz = {sz} (modelo {size}, batch {batch}, "
-            f"VRAM libre {humanize_gb(info.vram_free_gb)})"
+            _(
+                "✓ Recommendation: imgsz = %(imgsz)d (model %(model)s, batch %(batch)d, "
+                "free VRAM %(vram)s)"
+            )
+            % {
+                "imgsz": sz,
+                "model": size,
+                "batch": batch,
+                "vram": humanize_gb(info.vram_free_gb),
+            }
         )
 
     def _suggest_batch(self):
@@ -451,7 +480,8 @@ class ParametersPage(TrainerPage):
         )
         self.sb_batch.setValue(b)
         self.lbl_est.setText(
-            f"✓ Recomendación: batch = {b} para imgsz {imgsz} ({humanize_gb(info.vram_free_gb)} libres)"
+            _("✓ Recommendation: batch = %(batch)d for imgsz %(imgsz)d (%(vram)s free)")
+            % {"batch": b, "imgsz": imgsz, "vram": humanize_gb(info.vram_free_gb)}
         )
 
     def _measure_dataset(self) -> tuple[int, float]:

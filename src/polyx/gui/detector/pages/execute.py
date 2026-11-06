@@ -283,7 +283,10 @@ class RunPage(DetectorPage):
         self.progress.setMaximum(total)
         self.progress.setValue(done)
         self.state.run_progress.emit(done, total, name)
-        self.lbl_progress_info.setText(f"Procesando {name}  ({done}/{total})")
+        self.lbl_progress_info.setText(
+            _("Processing %(name)s  (%(done)d/%(total)d)")
+            % {"name": name, "done": done, "total": total}
+        )
 
     def _on_image_done(self, model_idx: int, res):
         active = self.state.active_models()
@@ -320,5 +323,5 @@ class RunPage(DetectorPage):
         self.state.set_running(False)
         self.btn_start.setEnabled(True)
         self.btn_stop.setEnabled(False)
-        self.lbl_progress_info.setText(f"Error: {msg}")
+        self.lbl_progress_info.setText(_("Error: %(message)s") % {"message": msg})
         QMessageBox.critical(self, _("The run failed"), msg)

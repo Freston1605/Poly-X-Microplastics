@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detect.protocol import find_gt_for_image
-from polyx.core.i18n import _
+from polyx.core.i18n import _, ngettext
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -103,14 +103,16 @@ class ImagesPage(DetectorPage):
 
     # ──────────────────────────────────────────
     def _pick_files(self):
-        ext_filter = "Imágenes (" + " ".join(f"*{e}" for e in IMAGE_EXTS) + ")"
-        files, _unused = QFileDialog.getOpenFileNames(self, "Seleccionar imágenes", "", ext_filter)
+        ext_filter = _("Images (%(patterns)s)") % {
+            "patterns": " ".join(f"*{extension}" for extension in IMAGE_EXTS)
+        }
+        files, _unused = QFileDialog.getOpenFileNames(self, _("Select images"), "", ext_filter)
         if files:
             self.state.images = [Path(f) for f in files]
             self._refresh_table()
 
     def _pick_folder(self):
-        d = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta con imágenes")
+        d = QFileDialog.getExistingDirectory(self, _("Select a folder with images"))
         if d:
             root = Path(d)
             imgs: list[Path] = []
@@ -125,7 +127,7 @@ class ImagesPage(DetectorPage):
         self._refresh_table()
 
     def _pick_gt_folder(self):
-        d = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta GT")
+        d = QFileDialog.getExistingDirectory(self, _("Select the GT folder"))
         if d:
             self.ed_gt.setText(d)
             self._gt_text_changed()
@@ -166,7 +168,9 @@ class ImagesPage(DetectorPage):
 
     def _refresh_table(self):
         imgs = self.state.images
-        self.lbl_count.setText(f"{len(imgs)} imágene{'s' if len(imgs) != 1 else ''}")
+        self.lbl_count.setText(
+            ngettext("%(count)d image", "%(count)d images", len(imgs)) % {"count": len(imgs)}
+        )
         self.table.setRowCount(len(imgs))
         for r, p in enumerate(imgs):
             self.table.setItem(r, 0, QTableWidgetItem(p.name))

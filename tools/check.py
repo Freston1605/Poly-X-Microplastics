@@ -3,8 +3,8 @@
 The project ``.venv`` is installed editable against the main checkout, so
 running pytest or ty from a git worktree would otherwise import the wrong
 ``src/``. This script locates that interpreter, points ``PYTHONPATH`` at the
-worktree it is run from, and runs the same gate as CI: the suite, ruff and the
-ty engine check.
+worktree it is run from, and runs the same gate as CI: the translation audit,
+the suite, ruff and the ty engine check.
 
 A worktree's own ``.venv`` is used only when it can import pytest and PySide6.
 A partial environment created by ``uv run`` without the GUI extra is skipped in
@@ -127,6 +127,18 @@ def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
     return forwarded, worker_args
 
 
+def _commands(python: Path, xdist_args: list[str], pytest_args: list[str]) -> list[list[str]]:
+    """The gate's commands, in the order they should fail."""
+    return [
+        # Fast and deterministic: a stale catalog fails before the suite runs.
+        [str(python), str(ROOT / "tools" / "check_i18n.py")],
+        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
+        [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
+        [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
+        [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
+    ]
+
+
 def main(argv: list[str]) -> int:
     pytest_args, xdist_args = _split_parallel(argv)
     python = _python()
@@ -138,13 +150,7 @@ def main(argv: list[str]) -> int:
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
-    commands = [
-        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
-        [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
-    ]
-    for command in commands:
+    for command in _commands(python, xdist_args, pytest_args):
         code = _run(command, env)
         if code:
             return code
