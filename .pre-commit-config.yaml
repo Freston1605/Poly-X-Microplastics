@@ -18,13 +18,14 @@ repos:
       - id: no-hardcoded-fallback
         name: No hardcoded fallback colours
         entry: python tools/check_palette_fallbacks.py
-        language: system
+        language: python
         pass_filenames: false
         files: \.py$
 
-      - id: english-identifiers
-        name: English identifiers in new code
+      - id: english-added-lines
+        name: English identifiers, comments and docstrings in added lines
         entry: python tools/check_english_ids.py
-        language: system
-        pass_filenames: false
-        files: ^src/|^tests/
+        language: python
+        pass_filenames: true
+        require_serial: true
+        files: ^(?:src|tests)/.*\.py$
