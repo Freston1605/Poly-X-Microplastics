@@ -642,12 +642,17 @@ def test_available_languages_discovers_a_new_catalog_directory(tmp_path, monkeyp
     (tmp_path / "pt" / "LC_MESSAGES" / "messages.po").write_text(
         _catalog(_entry("Open", "Abrir")), encoding="utf-8"
     )
+    (tmp_path / "xx" / "LC_MESSAGES").mkdir(parents=True)
+    (tmp_path / "xx" / "LC_MESSAGES" / "messages.po").write_text(
+        _catalog(_entry("Open", "Abrir")), encoding="utf-8"
+    )
     monkeypatch.setattr(i18n, "LOCALES_DIR", tmp_path)
 
     languages = i18n.available_languages()
 
     assert "pt" in languages
     assert languages["pt"] != "pt"
+    assert languages["xx"] == "xx"
 
 
 def test_a_fresh_checkout_compiles_a_catalog_on_demand(tmp_path, monkeypatch):

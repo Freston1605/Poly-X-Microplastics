@@ -160,9 +160,12 @@ def _display_name(tag: str) -> str:
         return "English"
     try:
         from babel import Locale
-
-        return Locale.parse(tag).get_display_name(DEFAULT_LANGUAGE) or tag
-    except (ImportError, ValueError):
+        from babel.core import UnknownLocaleError
+    except ImportError:
+        return tag
+    try:
+        return Locale.parse(tag).get_display_name(tag).capitalize() or tag
+    except (UnknownLocaleError, ValueError):
         return tag
 
 
