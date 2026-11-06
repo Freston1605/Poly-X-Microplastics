@@ -156,18 +156,13 @@ def test_gui_state_reuses_the_core_shapes():
 
     assert InferenceParams is CoreRunParams
     assert GuiRunParams is CoreRunParams
-    assert issubclass(GuiImageResult, CoreImageResult)
+    # The GUI re-exports the core result unchanged: review verdicts are state,
+    # not part of a run's measured data.
+    assert GuiImageResult is CoreImageResult
     assert issubclass(ModelSlot, CoreModelInfo)
 
-    # The review verdict is the only field the GUI adds to the result.
-    core_fields = {field.name for field in dataclasses.fields(CoreImageResult)}
-    gui_fields = {field.name for field in dataclasses.fields(GuiImageResult)}
-    assert gui_fields - core_fields == {"verdict"}
-
     result = GuiImageResult(image_path=Path("photo.png"), model_idx=0)
-    assert result.verdict is None
-    result.verdict = "buena"
-    assert result.verdict == "buena"
+    assert not hasattr(result, "verdict")
 
 
 # ── predict_auto contract ──────────────────────────────────────────────

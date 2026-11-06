@@ -1,56 +1,39 @@
-"""Background inference thread. Processes all the images with all the models."""
+"""Qt adapter around the canonical, Qt-free detection engine.
+
+The runner owns the thread and the model loading; everything else -- decode,
+calibration, ground truth, prediction, measurement, matching, drawing and the
+run folder -- belongs to :func:`polyx.core.detection_run.run_detection`. The
+engine numbers its active models densely (``0..N-1``); this adapter maps those
+back onto the GUI's real ``model_slots`` indices before publishing results.
+"""
 
 from __future__ import annotations
 
-import contextlib
-import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
-from polyx.core.annotate import Triptych, run_label_path, save_view, triptych
 from polyx.core.detect import make_detector
-from polyx.core.detect.yolo import Detection
-from polyx.core.image_io import read_image
-from polyx.core.labels import (
-    bbox_from,
-    find_label_file,
-    read_label_file,
-    write_classes,
-    write_lines,
+from polyx.core.detection_run import (
+    CalibrationPolicy,
+    ImageResult,
+    ModelSpec,
+    RunConfig,
+    RunFailed,
+    RunResult,
+    run_detection,
 )
-from polyx.core.measure.calibration import carry_index, resolver, search_index, summary_batch
-from polyx.core.measure.shape import measure_detections
 from polyx.core.paths import RUNS_DIR
-from polyx.core.provenance import provenance, sha256_file
-from polyx.core.quality.assignment import mark_assignables
-from polyx.core.quality.metrics import match_image
 
-from .state import DetectorState, ImageResult
-
-
-@dataclass
-class _ImageContext:
-    """One decoded image plus what is derived once per image, not per model."""
-
-    img_path: Path
-    idx_img: int
-    bgr: np.ndarray
-    height: int
-    width: int
-    um_px: float | None
-    gt_txt: Path | None
-    gts: list
+from .state import DetectorState
 
 
 class DetectorRunner(QThread):
     progress = Signal(int, int, str)
-    image_done = Signal(int, object)  # model_idx, ImageResult
+    image_done = Signal(int, object)  # real model slot index, ImageResult
     finished_ok = Signal()
     aborted = Signal()
     failed = Signal(str)
@@ -61,6 +44,8 @@ class DetectorRunner(QThread):
         # Where runs are created: the per-user data dir (ADR-0001), unless
         # the caller injects a root (the tests point it at tmp_path).
         self._runs_root = RUNS_DIR if runs_root is None else runs_root
+        # Dense engine index -> real index within ``state.model_slots``.
+        self._active_indices: list[int] = []
 
     def _load_models(self, slots, _log) -> None:
         """Lazily resolve and load every active model. Raises on the first failure."""
@@ -74,333 +59,105 @@ class DetectorRunner(QThread):
                 obs.event_error(_log, "model.error", exc, alias=s.alias, file=str(s.path))
                 raise
 
-    def _tiling_description(self, plan_tiling: dict) -> str:
-        """Human-readable tiling plan for one image, or '' when not tiled."""
-        if not plan_tiling.get("troceado"):
-            return ""
-        p = plan_tiling["plan"]
-        return (
-            f"{plan_tiling['ancho']}×{plan_tiling['alto']} px → "
-            f"{p['n_tiles']} tiles de {p['tile']} px, "
-            f"{int(p['overlap'] * 100)}% solape"
-        )
-
-    def _record_execution(self, reg: dict, plan_tiling: dict, slot, img_path) -> None:
-        """Update the per-model execution bookkeeping for one image.
-
-        The decision is recorded, not logged in passing: the report must be
-        able to declare whether that photo was counted as tiled.
-        """
-        reg["imagenes"] += 1
-        if plan_tiling.get("troceado"):
-            reg["troceadas"] += 1
-            # The tile enters the network at its native resolution; the
-            # requested imgsz is not applied to the full photo.
-            reg["imgsz_usados"].add(int(plan_tiling["plan"]["tile"]))
-        else:
-            # last_imgsz/last_fallback are only written by predict(),
-            # which is precisely the untiled path.
-            used_2 = getattr(slot.loaded, "last_imgsz", 0)
-            if used_2:
-                reg["imgsz_usados"].add(int(used_2))
-            if getattr(slot.loaded, "last_fallback", False):
-                reg["fallback_en"].append(img_path.name)
-
-    def _save_outputs(self, state, slot, idx_img, img_path, W, H, preds, views: Triptych):
-        """Write the PNGs and the YOLO labels of one image, and return their paths.
-
-        Returns the path and not the bytes on purpose: in a large batch holding
-        every PNG in memory reached several GB, and the file is already written
-        right here anyway. The name carries the image index because two photos
-        from different folders can share a name (1.1.jpg exists in several
-        controls) and would overwrite each other.
-        """
-        sub = state.run_dir / slot.alias
-        sub.mkdir(parents=True, exist_ok=True)
-
-        annotated_path = save_view(views.combined, sub, idx_img, img_path.stem, "_annot")
-        pred_path = save_view(views.pred, sub, idx_img, img_path.stem, "_pred")
-        gt_path = (
-            save_view(views.gt, sub, idx_img, img_path.stem, "_gt")
-            if views.gt is not None
-            else None
-        )
-
-        # The boxes in text, not only drawn: a PNG cannot be re-analyzed or
-        # reopened for correction. The confidence goes as the sixth column,
-        # so the file reopens in the Labeller as pre-annotation -- counting
-        # 500 particles from the model's boxes is another task than doing it
-        # from zero -- and the record of each box's confidence survives.
-        # NEVER next to the photo: that is where the manual-count .txt
-        # lives, and dumping predictions on top would destroy the ground
-        # truth irrecoverably.
-        write_lines(
-            run_label_path(sub / "labels", idx_img, img_path.stem),
-            [bbox_from(d, W, H) for d in preds],
-            include_conf=True,
-        )
-        return annotated_path, pred_path, gt_path
-
-    def _filter_by_size(self, preds, um_px, params):
-        """Drop particles outside the configured μm range (no filter when both bounds are 0)."""
-        if not um_px or (params.size_min_um <= 0 and params.size_max_um <= 0):
-            return preds
-        keep = []
-        for d in preds:
-            if d.diam_um is None:
-                keep.append(d)
-                continue
-            if params.size_min_um > 0 and d.diam_um < params.size_min_um:
-                continue
-            if params.size_max_um > 0 and d.diam_um > params.size_max_um:
-                continue
-            keep.append(d)
-        return keep
-
-    def _measure_detections(self, dets, img_bgr, um_px, params) -> int:
-        """Measure every detection: box size first, then real shape if enabled.
-
-        The box size comes first as a fallback: if segmentation does not manage
-        to isolate the particle, an approximate size -- noted as such -- is
-        preferable to losing it.
-
-        Returns how many particles had no measurable shape. Ground truth goes
-        through here too (it does not depend on the model), where the count is
-        simply not used.
-        """
-        return measure_detections(dets, img_bgr, um_px, measure_shape=params.measure_shape)
-
-    def _score_predictions(self, preds, img_bgr, um_px, params, slot, shapeless):
-        """Size, filter, abstain and number one model's predictions for one image.
-
-        Order matters: abstention goes AFTER the size filter and BEFORE matching
-        against GT, because it does not discard particles -- it only decides
-        whether to assign them a polymer or report them as «not assignable».
-        """
-        # Compute the prediction sizes (GT was already computed above)
-        failures = self._measure_detections(preds, img_bgr, um_px, params)
-        if failures:
-            shapeless[slot.alias] = shapeless.get(slot.alias, 0) + failures
-
-        # Size filter
-        preds = self._filter_by_size(preds, um_px, params)
-
-        mark_assignables(preds, params.conf_assignment)
-
-        # Number from top to bottom and left to right, not in
-        # the order in which the model returned them: this way number 1
-        # is at the very top, and finding number 37 in the photo is viable.
-        for _i, _d in enumerate(sorted(preds, key=lambda z: (round(z.y1 / 40), z.x1)), 1):
-            _d.number = _i
-        return preds
-
-    def _match_gt(self, preds, gts, has_gt, params) -> tuple[int, int, int, int]:
-        """Match predictions against ground truth: (tp, fp, fn, misclassified).
-
-        The .txt existing = there is ground truth, even with no boxes: a
-        reviewed plate with zero particles is a datum, not an unreviewed
-        plate. With ``bool(gts)`` those plates were left out of the metrics,
-        and the detections the model made on them did not count as false
-        positives.
-        """
-        if not has_gt:
-            return 0, 0, 0, 0
-        m = match_image(preds, gts, iou_thr=params.iou_tp)
-        return m.tp, m.fp, m.fn, m.miscls
-
-    def _prepare_image(self, state, img_path, idx_img, slots, params, index_2, _log):
-        """Decode, calibrate and load the ground truth of ONE image.
-
-        Returns ``None`` when the image cannot be decoded, otherwise an
-        :class:`_ImageContext` with everything every model of this image needs.
-        """
-        # Load the image once for GT/annotation
-        img_bgr = read_image(img_path)
-        if img_bgr is None:
-            obs.event(_log, "image.undecodable", level=logging.WARNING, file=str(img_path))
-            return None
-        H, W = img_bgr.shape[:2]
-
-        # Scale of THIS photo. The already-read image is passed in so as not to
-        # decode 12 MP again just to measure the ring.
-        cal = resolver(
-            img_path,
-            index=index_2,
-            um_por_px_manual=params.um_per_px,
-            diameter_mm=params.diameter_plate_mm,
-            measure_plate=params.measure_plate,
-            bgr=img_bgr,
-            height_plate_mm=params.height_plate_mm,
-            distance_camera_mm=params.distance_camera_mm,
-        )
-        state.calibrations[img_path.name] = cal
-        um_px = cal.um_por_px if cal.valid else None
-        if not cal.valid:
-            obs.event(
-                _log,
-                "calibration.invalid",
-                level=logging.WARNING,
-                file=str(img_path),
-                reason=getattr(cal, "reason", None),
-            )
-
-        # Load GT if it exists (uses first-model names when available)
-        names_first = slots[0].loaded.names if slots[0].loaded else {}
-        gt_txt = find_label_file(img_path, state.gt_folder)
-        gts: list[Detection] = []
-        if gt_txt is not None:
-            gts, _malformed = read_label_file(gt_txt, W, H, names_first)
-            # The GT size does not depend on the model → it is computed once
-            self._measure_detections(gts, img_bgr, um_px, params)
-
-        return _ImageContext(
-            img_path=img_path,
-            idx_img=idx_img,
-            bgr=img_bgr,
-            height=H,
-            width=W,
-            um_px=um_px,
-            gt_txt=gt_txt,
-            gts=gts,
-        )
-
-    def _create_run_dir(self, state) -> str:
-        """Create this run's folder under ``<project>/runs`` and return its stamp.
+    def _create_run_dir(self, state: DetectorState) -> str:
+        """Create this run's folder under the runs root and return its stamp.
 
         The stamp is what ``obs.set_run_id`` correlates every event of the
         batch with.
         """
-        run_dir = self._runs_root
-        run_dir.mkdir(parents=True, exist_ok=True)
+        self._runs_root.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        state.run_dir = run_dir / f"detect_{stamp}"
+        state.run_dir = self._runs_root / f"detect_{stamp}"
         state.run_dir.mkdir(parents=True, exist_ok=True)
         return stamp
 
-    def _process_image(
-        self,
-        state,
-        img_path,
-        idx_img,
-        slots,
-        params,
-        index_2,
-        execution,
-        shapeless,
-        total,
-        done_start,
-        _log,
-    ) -> int:
-        """Decode, calibrate and run every model on ONE image.
+    def _build_config(self, state: DetectorState, slots, output_dir: Path) -> RunConfig:
+        """Translate the GUI state into the engine's run configuration.
 
-        Emits ``image_done``/``progress`` per model and returns how many
-        models were processed, so the caller can advance its batch counter.
+        The GUI has always resolved scales per photo: an explicit index CSV,
+        else the known index files, else the plate, else the manual value.
+        That is exactly the engine's ``auto`` policy.
         """
-        # ``done_start`` is the caller's cumulative count for the batch.
-        done = done_start
-
-        ctx = self._prepare_image(state, img_path, idx_img, slots, params, index_2, _log)
-        if ctx is None:
-            done += len(slots)
-            self.progress.emit(done, total, img_path.name)
-            return len(slots)
-
+        params = state.params
+        models: list[ModelSpec] = []
         for slot in slots:
-            res = self._process_model(state, ctx, slot, params, execution, shapeless)
-            state.results.setdefault(res.model_idx, []).append(res)
-            self.image_done.emit(res.model_idx, res)
-
-            done += 1
-            self.progress.emit(done, total, img_path.name)
-
-        return len(slots)
-
-    def _process_model(self, state, ctx, slot, params, execution, shapeless) -> ImageResult:
-        """Run ONE model on one already-decoded image and build its result."""
-        # ``slot`` is the order within active_models(); the result needs the
-        # real slot index within model_slots.
-        real_idx = state.model_slots.index(slot)
-        plan_tiling: dict = {}
-        preds = slot.loaded.predict_auto(
-            str(ctx.img_path),
-            conf=params.conf,
-            iou=params.iou_nms,
-            imgsz=params.imgsz,
-            device=params.device,
-            tiling=params.tiling,
-            threshold_px=params.tiling_threshold_px,
-            tile=params.tiling_tile,
-            overlap=params.tiling_overlap,
-            record=plan_tiling,
+            if slot.loaded is None:
+                raise RuntimeError(f"model {slot.alias!r} is not loaded")
+            models.append(
+                ModelSpec(
+                    detector=slot.loaded,
+                    alias=slot.alias,
+                    path=slot.path,
+                    model_type=slot.model_type or "yolo",
+                    names=dict(slot.names or {}),
+                    sha256=slot.sha256,
+                )
+            )
+        index_path = Path(params.index_calibration) if params.index_calibration else None
+        calibration = CalibrationPolicy(
+            mode="auto",
+            um_per_px=params.um_per_px,
+            index_path=index_path,
+            measure_plate=params.measure_plate,
+            diameter_plate_mm=params.diameter_plate_mm,
+            height_plate_mm=params.height_plate_mm,
+            distance_camera_mm=params.distance_camera_mm,
         )
-        tiling_desc = self._tiling_description(plan_tiling)
-
-        reg = execution.setdefault(
-            slot.alias,
-            {"imagenes": 0, "troceadas": 0, "imgsz_usados": set(), "fallback_en": []},
-        )
-        self._record_execution(reg, plan_tiling, slot, ctx.img_path)
-
-        # Size, filter, abstention and numbering (GT was measured above)
-        preds = self._score_predictions(preds, ctx.bgr, ctx.um_px, params, slot, shapeless)
-
-        # Match against GT
-        has_gt = ctx.gt_txt is not None
-        tp, fp, fn, mc = self._match_gt(preds, ctx.gts, has_gt, params)
-
-        # ── Annotated images ──────────────────────────────
-        views = triptych(
-            ctx.bgr,
-            preds,
-            ctx.gts,
-            pred_label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
-            has_gt=has_gt,
+        return RunConfig(
+            images=list(state.images),
+            models=models,
+            output_dir=output_dir,
+            params=params,
+            gt_folder=state.gt_folder,
+            calibration=calibration,
         )
 
-        # ── Save PNGs in run_dir ────────────────────────
-        annotated_path, pred_path, gt_path = self._save_outputs(
-            state,
-            slot,
-            ctx.idx_img,
-            ctx.img_path,
-            ctx.width,
-            ctx.height,
-            preds,
-            views,
-        )
+    def _on_progress(self, done: int, total: int, image_path: Path) -> None:
+        """Forward the engine's (models x images) counter to the Qt signal."""
+        self.progress.emit(done, total, Path(image_path).name)
 
-        return ImageResult(
-            image_path=ctx.img_path,
-            model_idx=real_idx,
-            predictions=preds,
-            gt=ctx.gts,
-            has_gt=has_gt,
-            tp=tp,
-            fp=fp,
-            fn=fn,
-            miscls=mc,
-            annotated_path=annotated_path,
-            pred_path=pred_path,
-            gt_path=gt_path,
-            tiling=tiling_desc,
-        )
+    def _on_result(self, result: ImageResult) -> None:
+        """Publish one engine result under its real GUI model slot."""
+        real_idx = self._active_indices[result.model_idx]
+        self.state.results.setdefault(real_idx, []).append(result)
+        self.image_done.emit(real_idx, result)
 
-    def _finalize_run(self, state, slots, start, execution, shapeless, _log) -> None:
-        """Emit the closing observability events and signal success."""
-        ms = int((datetime.now() - start).total_seconds() * 1000)
+    def _publish(self, result: RunResult) -> None:
+        """Make the engine's run record the state the GUI pages read.
+
+        The callbacks have already appended each result as it appeared; this
+        final sync also covers a partial run whose failure landed between the
+        engine recording a result and calling back.
+        """
+        state = self.state
+        state.run_result = result
+        state.run_dir = result.run_dir
+        state.calibrations = dict(result.calibrations_by_name)
+        mapped: dict[int, list[ImageResult]] = {i: [] for i in range(len(state.model_slots))}
+        for dense_idx, rows in result.results.items():
+            mapped[self._active_indices[dense_idx]] = list(rows)
+        state.results = mapped
+
+    def _log_finish(self, result: RunResult, started: datetime, _log) -> None:
+        """Emit the closing observability events of a completed run."""
+        ms = int((datetime.now() - started).total_seconds() * 1000)
+        execution = result.execution
+        shapeless = {
+            result.models[index].alias: stats.shapeless
+            for index, stats in execution.items()
+            if stats.shapeless
+        }
         obs.event(
             _log,
             "run.finish",
             ms=ms,
-            placas=len(state.images),
+            placas=len(result.images),
             imgsz_usados=sorted(
-                {int(s) for reg in execution.values() for s in reg.get("imgsz_usados", [])}
+                {int(value) for stats in execution.values() for value in stats.imgsz_used}
             ),
-            sin_forma=dict(shapeless),
+            sin_forma=shapeless,
         )
-        # A batch with many shapeless particles deserves a look: it may be
-        # the model, the threshold, or out-of-focus photos, and it is not shown in the UI.
-        worst = max(shapeless.items(), key=lambda kv: kv[1], default=())
+        worst = max(shapeless.items(), key=lambda item: item[1], default=())
         if worst and worst[1] > 0:
             obs.event(
                 _log,
@@ -409,19 +166,15 @@ class DetectorRunner(QThread):
                 modelo=worst[0],
                 sin_forma=worst[1],
             )
-        self.finished_ok.emit()
 
     def run(self):
-        # Observability logic: run_id starts as None and is set when the
-        # run folder exists; evento_error leaves the traceback that previously
-        # was lost under pythonw.
         _log = obs.logger_for("detector")
         obs.set_run_id(None)
+        state = self.state
+        started = datetime.now()
         try:
-            state = self.state
-            params = state.params
             slots = state.active_models()
-            start = datetime.now()
+            params = state.params
             obs.event(
                 _log,
                 "run.config",
@@ -434,24 +187,6 @@ class DetectorRunner(QThread):
                 medir_forma=params.measure_shape,
                 um_por_px=params.um_per_px,
             )
-            # What was actually used, image by image, versus what was
-            # requested on the `Parametros` page: the auto-fallback may have lowered imgsz
-            # for lack of VRAM, and tiling depends on each photo's size.
-            # Without recording it, the report declares a resolution that may not
-            # be the one that produced those boxes.
-            execution: dict[str, dict] = {}
-
-            # The scale is resolved per image, not once for the batch. The
-            # index is read only once: it has 552 rows, and re-reading it per photo would
-            # waste time.
-            index_2 = carry_index(params.index_calibration) if params.index_calibration else {}
-            if not index_2 and state.images:
-                index_2 = search_index(state.images[0])
-            state.calibrations = {}
-            # Particles that could not be segmented, per model. It goes into the
-            # summary: a size measured on the box is not equivalent to
-            # one measured on the mask, and it must be possible to say how many there are.
-            shapeless: dict[str, int] = {}
             if not slots:
                 self.failed.emit("No hay modelos cargados.")
                 return
@@ -459,117 +194,33 @@ class DetectorRunner(QThread):
                 self.failed.emit("No hay imágenes seleccionadas.")
                 return
 
-            # Create run folder
+            self._active_indices = [state.model_slots.index(slot) for slot in slots]
             stamp = self._create_run_dir(state)
             obs.set_run_id(stamp)
 
-            # Load models
             self._load_models(slots, _log)
 
-            # Reset results
             state.results = {i: [] for i in range(len(state.model_slots))}
-            total = len(state.images) * len(slots)
-            done = 0
-
-            for idx_img, img_path in enumerate(state.images):
-                if state.consume_abort():
-                    self.aborted.emit()
-                    return
-
-                done += self._process_image(
-                    state,
-                    img_path,
-                    idx_img,
-                    slots,
-                    params,
-                    index_2,
-                    execution,
-                    shapeless,
-                    total,
-                    done,
-                    _log,
-                )
-
-            self._finalize_run(state, slots, start, execution, shapeless, _log)
-        except Exception as e:  # noqa: BLE001
-            self.failed.emit(f"{type(e).__name__}: {e}")
-            obs.event_error(_log, "run.error", e)
-
-    def _write_summary(self, state, slots, start=None, execution=None, shapeless=None) -> None:
-        """Leaves the run self-describing: provenance, parameters and totals per model.
-
-        Without this a run folder is loose PNGs and there is no way to know
-        with what confidence or with which weights they came out. The run is
-        not failed if the dump cannot be written: the results are already in
-        memory and on disk.
-        """
-        p = state.params
-        execution = execution or {}
-        fin = datetime.now()
-        data = {
-            # Who produced this: version, commit and libraries. It goes first because
-            # it is what one checks when trying to reproduce a table from the paper.
-            "procedencia": provenance(),
-            "cuando": {
-                "inicio": start.isoformat(timespec="seconds") if start else "",
-                "fin": fin.isoformat(timespec="seconds"),
-                "duracion_s": round((fin - start).total_seconds(), 1) if start else 0.0,
-            },
-            "parametros": {
-                "confianza": p.conf,
-                "iou_nms": p.iou_nms,
-                "iou_tp": p.iou_tp,
-                "imgsz": p.imgsz,
-                "device": p.device,
-                "um_por_px": p.um_per_px,
-                "troceo": p.tiling,
-                "troceo_umbral_px": p.tiling_threshold_px,
-            },
-            # What standard the sizes were measured against. A value in um without this
-            # cannot be verified or reproduced.
-            "calibracion": summary_batch(list(getattr(state, "calibrations", {}).values())),
-            "imagenes": len(state.images),
-            "modelos": [],
-        }
-        for slot in slots:
-            mi = state.model_slots.index(slot)
-            rs = state.results.get(mi, [])
-            con_gt = [r for r in rs if r.has_gt]
-            tp = sum(r.tp for r in con_gt)
-            fp = sum(r.fp for r in con_gt)
-            fn = sum(r.fn for r in con_gt)
-            mc = sum(r.miscls for r in con_gt)
-            reg = execution.get(slot.alias, {})
-            data["modelos"].append(
-                {
-                    "alias": slot.alias,
-                    "peso": str(slot.path) if slot.path else "",
-                    # Two best.pt from two different trainings are named the same;
-                    # the fingerprint is the only thing that truly distinguishes them.
-                    "sha256": sha256_file(slot.path) if slot.path else "",
-                    "detecciones": sum(len(r.predictions) for r in rs),
-                    "imagenes_con_gt": len(con_gt),
-                    "tp": tp,
-                    "fp": fp,
-                    "fn": fn,
-                    "mal_clasificados": mc,
-                    "imgsz_usados": sorted(reg.get("imgsz_usados", ())),
-                    "imagenes_troceadas": reg.get("troceadas", 0),
-                    # If this list is not empty, those photos were inferred at lower
-                    # resolution than requested because the GPU ran out of memory.
-                    "fallback_por_memoria": reg.get("fallback_en", []),
-                    "particulas_sin_forma": (shapeless or {}).get(slot.alias, 0),
-                }
+            state.calibrations = {}
+            state.run_result = None
+            config = self._build_config(state, slots, state.run_dir)
+            result = run_detection(
+                config,
+                on_progress=self._on_progress,
+                on_result=self._on_result,
+                should_abort=state.consume_abort,
             )
-            # classes.txt next to the labels, so they can be reopened as
-            # pre-annotation in the Etiquetador without guessing the class order.
-            names_2 = getattr(slot.loaded, "names", None) or {}
-            if names_2:
-                with contextlib.suppress(OSError):
-                    write_classes(state.run_dir / slot.alias, [names_2[k] for k in sorted(names_2)])
-        try:  # noqa: SIM105
-            (state.run_dir / "resumen.json").write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
-        except OSError:
-            pass
+        except RunFailed as exc:
+            self._publish(exc.result)
+            obs.event_error(_log, "run.error", exc)
+            self.failed.emit(str(exc))
+        except Exception as exc:  # noqa: BLE001
+            obs.event_error(_log, "run.error", exc)
+            self.failed.emit(f"{type(exc).__name__}: {exc}")
+        else:
+            self._publish(result)
+            if result.status == "aborted":
+                self.aborted.emit()
+                return
+            self._log_finish(result, started, _log)
+            self.finished_ok.emit()

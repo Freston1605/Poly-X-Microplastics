@@ -11,8 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from polyx.core.detect import DetectionSource
-from polyx.core.detection_run import ImageResult as CoreImageResult
-from polyx.core.detection_run import ModelInfo, RunParams
+from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
 from polyx.core.i18n import tr
 
 # Compatibility name used by the pages and by old headless folder readers.
@@ -25,14 +24,6 @@ class ModelSlot(ModelInfo):
     """A model slot in the `Modelos` tab (up to 3): metadata plus its backend."""
 
     loaded: DetectionSource | None = None
-
-
-@dataclass
-class ImageResult(CoreImageResult):
-    """Per-image result plus the GUI review verdict."""
-
-    # user verdict after visual review: None / `"buena"` / `"mala"`
-    verdict: str | None = None
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -57,12 +48,17 @@ class DetectorState(QObject):
         self.images: list[Path] = []
         self.gt_folder: Path | None = None
         self.params = InferenceParams()
-        # results[model_idx] -> List[ImageResult]
+        # results[real_model_slot_idx] -> List[ImageResult]. The engine numbers
+        # its active models densely; the runner maps those back to these slots.
         self.results: dict[int, list[ImageResult]] = {}
         # Scale of each image and where it came from, by filename. The
         # runner fills it; the report reports it. Without this the sizes in um
         # would appear without saying what standard they were measured against.
         self.calibrations: dict[str, object] = {}
+        # The canonical run record backing this GUI state, once a run exists.
+        self.run_result: RunResult | None = None
+        # Review verdicts are GUI state, keyed by real model slot and image.
+        self.verdicts: dict[tuple[int, Path], str] = {}
         # run timestamp/folder
         self.run_dir: Path | None = None
         self._running = False
@@ -71,6 +67,18 @@ class DetectorState(QObject):
     # ── helpers ──
     def active_models(self) -> list[ModelSlot]:
         return [s for s in self.model_slots if s.path is not None]
+
+    def set_verdict(self, model_idx: int, image_path: Path, verdict: str | None) -> None:
+        """Store (or clear) the review verdict of one image for one model slot."""
+        key = (model_idx, Path(image_path))
+        if verdict is None:
+            self.verdicts.pop(key, None)
+        else:
+            self.verdicts[key] = verdict
+
+    def verdict_for(self, model_idx: int, image_path: Path) -> str | None:
+        """The stored review verdict, or ``None`` when still unreviewed."""
+        return self.verdicts.get((model_idx, Path(image_path)))
 
     def has_gt(self) -> bool:
         """Does any image have GT?"""
@@ -96,4 +104,6 @@ class DetectorState(QObject):
     def reset_results(self):
         self.results = {}
         self.calibrations = {}
+        self.run_result = None
+        self.verdicts = {}
         self.run_dir = None

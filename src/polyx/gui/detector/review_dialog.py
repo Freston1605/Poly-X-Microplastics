@@ -48,6 +48,7 @@ class ReviewDialog(QDialog):
         self.setWindowTitle(tr("Revisión de detecciones — Poly-X"))
         self.setModal(False)
         self._current_idx = -1
+        self._model_idx = -1
         self._results: list = []  # ImageResult of the active model
 
         root = QVBoxLayout(self)
@@ -193,6 +194,7 @@ class ReviewDialog(QDialog):
         if combo_idx < 0 or combo_idx >= len(self._model_indices):
             return
         mi = self._model_indices[combo_idx]
+        self._model_idx = mi
         self._results = list(self.state.results.get(mi, []))
         self._refresh_list()
         if self._results:
@@ -204,17 +206,18 @@ class ReviewDialog(QDialog):
         good = bad = 0
         for res in self._results:
             name = Path(res.image_path).name
+            verdict = self.state.verdict_for(self._model_idx, res.image_path)
             mark = ""
-            if res.verdict == "buena":
+            if verdict == "buena":
                 mark = "✓ "
                 good += 1
-            elif res.verdict == "mala":
+            elif verdict == "mala":
                 mark = "✗ "
                 bad += 1
             it = QListWidgetItem(f"{mark}{name}")
-            if res.verdict == "buena":
+            if verdict == "buena":
                 it.setForeground(QColor(T.OK))
-            elif res.verdict == "mala":
+            elif verdict == "mala":
                 it.setForeground(QColor(T.ERR))
             self.list.addItem(it)
         self.list.blockSignals(False)
@@ -241,14 +244,16 @@ class ReviewDialog(QDialog):
             parts.append(f"VP: {res.tp}")
             parts.append(f"FP: {res.fp}")
             parts.append(f"FN: {res.fn}")
-        v = {"buena": "✓ Buena", "mala": "✗ Mala"}.get(res.verdict, "sin revisar")
+        verdict = self.state.verdict_for(self._model_idx, res.image_path)
+        v = {"buena": "✓ Buena", "mala": "✗ Mala"}.get(verdict, "sin revisar")
         parts.append(f"·  {v}")
         self.lbl_counts.setText("   ".join(parts))
 
     def _set_verdict(self, verdict: str):
         if not (0 <= self._current_idx < len(self._results)):
             return
-        self._results[self._current_idx].verdict = verdict
+        res = self._results[self._current_idx]
+        self.state.set_verdict(self._model_idx, res.image_path, verdict)
         # update the list mark without losing the selection
         row = self._current_idx
         self._refresh_list()

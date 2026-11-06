@@ -117,6 +117,7 @@ def build_state_from_result(result: RunResult):
 
     state = DetectorState()
     state.params = result.params
+    state.run_result = result
     state.run_dir = result.run_dir
     state.images = list(result.images)
     state.calibrations = dict(result.calibrations_by_name)

@@ -558,13 +558,18 @@ Global state of the Detector (Qt signals):
 state.model_slots: List[ModelSlot]      # Up to 3 models
 state.images: List[Path]                # Images to analyse
 state.params: RunParams                 # conf, IoU, um_per_px (core shape)
-state.results: Dict[int, List[ImageResult]]  # Results per model
+state.run_result: RunResult | None      # Current canonical run record
+state.results: Dict[int, List[ImageResult]]  # Per real model slot
+state.verdicts: Dict[Tuple[int, Path], str]  # Review verdicts (GUI only)
 ```
+The engine numbers active models densely (`0..N-1`); `DetectorRunner` maps those
+indices onto the real `model_slots` before filling `results` or emitting
+`image_done`.
 
 ### `ImageResult` (src/polyx/core/detection_run/result.py)
-Result of one image, Qt-free. The GUI subclass in
-`src/polyx/gui/detector/state.py` adds the review verdict; it is not part of
-the core shape.
+Result of one image, Qt-free. The GUI re-exports it unchanged. The review
+verdict is not part of this shape: it lives in `DetectorState.verdicts`, keyed
+by real model slot and image path.
 ```python
 image_path: Path
 predictions: List[Detection]
@@ -588,23 +593,17 @@ miscls: int      # Correctly located but wrong class
 
 ### Detector
 ```
-Images (folder)
+Images + loaded models + RunParams + CalibrationPolicy
     ↓
-YoloModel.predict() × N models
+run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
+                  measure, match, draw, persist)
     ↓
-Detection[] (bbox + class + conf)
+RunResult  (dense active-model indices, partial on abort/failure)
     ↓
-read_yolo_txt() → Ground truth (if present)
+DetectorRunner: map indices onto model_slots → Qt signals
     ↓
-match_image() → TP/FP/FN (IoU ≥ 0.5)
-    ↓
-compute_box_size_um() → diam_um (if um_per_px calibrated)
-    ↓
-ImageResult
-    ↓
-polyx.core.annotate (triptych + run-view naming) → PNG
-    ↓
-<user data dir>/runs/YYYYMMDD_HHMMSS/
+<user data dir>/runs/detect_YYYYMMDD_HHMMSS/
+    run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
 
 ### Trainer
