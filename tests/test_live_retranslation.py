@@ -108,6 +108,8 @@ def test_language_change_is_rebroadcast_to_top_level_windows(qapp):
     from polyx.core import i18n
     from polyx.gui import i18n_qt
 
+    # Start from a different language: asking for the active one is a no-op.
+    i18n.set_language("en")
     i18n_qt.activate()
     probe = Probe()
     i18n.set_language("es")
@@ -258,6 +260,81 @@ def test_viewer_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     assert window.state.um_per_px == 31.5
     assert window.state.model is model
     window.deleteLater()
+
+
+# ── Another application ──────────────────────────────────────────────
+def _pump_until(qapp, predicate, timeout_ms: int = 3000) -> bool:
+    """Run the event loop until ``predicate`` holds or the budget runs out."""
+    from PySide6.QtTest import QTest
+
+    waited = 0
+    while waited < timeout_ms and not predicate():
+        QTest.qWait(20)
+        waited += 20
+    qapp.processEvents()
+    return predicate()
+
+
+def test_a_language_saved_by_another_process_reaches_open_windows(qapp):
+    """A module process applies the preference another process saved."""
+    import json
+
+    from polyx.core import i18n, preferences
+    from polyx.gui import i18n_qt
+    from polyx.gui.launcher import LauncherWindow
+
+    i18n.set_language("es")
+    window = LauncherWindow()
+    assert window.btn_prefs.text() == "Preferencias"
+    i18n_qt.activate()
+
+    # The launcher, in the real program, saves the choice and stays in its
+    # own application: no signal crosses the boundary, only the file does.
+    preferences.FILE.write_text(json.dumps({"locale": "en"}), encoding="utf-8")
+
+    assert _pump_until(qapp, lambda: i18n.language() == "en")
+    assert window.btn_prefs.text() == "Preferences"
+    window.deleteLater()
+
+
+def test_a_preferences_file_created_after_startup_is_still_watched(qapp):
+    """A first run has no preferences file yet; the parent is watched."""
+    import json
+
+    from polyx.core import i18n, preferences
+    from polyx.gui import i18n_qt
+
+    i18n.set_language("es")
+    preferences.FILE.unlink(missing_ok=True)
+    i18n_qt.activate()
+    assert not preferences.FILE.exists()
+
+    preferences.FILE.write_text(json.dumps({"locale": "en"}), encoding="utf-8")
+
+    assert _pump_until(qapp, lambda: i18n.language() == "en")
+
+
+def test_applying_a_watched_language_does_not_loop(qapp):
+    """Applying another process's choice never writes or broadcasts again."""
+    import json
+
+    from polyx.core import i18n, preferences
+    from polyx.gui import i18n_qt
+
+    changes: list[str] = []
+    i18n.set_language("es")
+    i18n_qt.activate()
+    i18n.when_changing(changes.append)
+
+    preferences.FILE.write_text(json.dumps({"locale": "en"}), encoding="utf-8")
+    assert _pump_until(qapp, lambda: i18n.language() == "en")
+    assert changes == ["en"]
+
+    # The applied value is not written back, so the watcher stays quiet.
+    saved = preferences.FILE.read_bytes()
+    _pump_until(qapp, lambda: False, timeout_ms=300)
+    assert changes == ["en"]
+    assert preferences.FILE.read_bytes() == saved
 
 
 # ── Reports: a view re-renders, an artifact does not ─────────────────

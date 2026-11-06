@@ -981,15 +981,16 @@ is remembered between sessions; the first time it follows the system language.</
 
 <div class="aviso">
   <span class="et">When it takes effect</span>
-  <p>Because modules are separate processes, they read the language <b>as they
-  open</b>. The change shows up as soon as you open the next module, not in
-  windows that are already open.</p>
+  <p>Every open window switches <b>immediately</b>. Modules are separate
+  processes, but each one watches the saved choice and re-reads the catalogue,
+  so nothing has to be reopened. Loaded images, models and the current run are
+  kept.</p>
   <p>The <b>detection report also comes out in the chosen language</b>: titles,
   tables, figure captions, chart axes and the methods prose. Even the HTML
   <code>lang</code> attribute is set, so the browser's spell-checker and screen
   readers handle it properly.</p>
   <p>To force it without touching the interface, the environment variable
-  <code>POLYX_IDIOMA=en</code>.</p>
+  <code>POLYX_LOCALE=en</code>.</p>
 </div>
 
 <h3>The new-version notice</h3>

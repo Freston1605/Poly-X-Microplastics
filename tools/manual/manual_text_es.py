@@ -725,9 +725,10 @@ se recuerda entre sesiones; la primera vez toma el idioma del sistema.</p>
 
 <div class="aviso">
   <span class="et">Cuando surte efecto</span>
-  <p>Como los módulos son procesos separados, leen el idioma <b>al abrirse</b>.
-  El cambio se nota en cuanto abras el siguiente módulo, no en las ventanas que
-  ya están abiertas.</p>
+  <p>Todas las ventanas abiertas cambian <b>al momento</b>. Los módulos son
+  procesos separados, pero cada uno vigila la elección guardada y vuelve a leer
+  el catálogo, así que no hay que reabrir nada. Las imágenes, los modelos y la
+  ejecución en curso se conservan.</p>
   <p>El <b>informe de detección también sale en el idioma elegido</b>: títulos,
   tablas, pies de figura, ejes de los gráficos y la prosa de métodos. Incluso el
   atributo <code>lang</code> del HTML se ajusta, para que el corrector del
