@@ -11,6 +11,7 @@ canonical folder as each result appears.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -19,7 +20,13 @@ from polyx.core.annotate import triptych
 from polyx.core.detect.protocol import Instance
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
-from polyx.core.measure.calibration import ORIGIN_NONE, Calibration, resolver
+from polyx.core.measure.calibration import (
+    ORIGIN_NONE,
+    Calibration,
+    carry_index,
+    resolver,
+    search_index,
+)
 from polyx.core.measure.shape import measure_detections
 from polyx.core.provenance import logger_for, provenance, sha256_file
 from polyx.core.quality.metrics import match_image
@@ -98,17 +105,31 @@ def _build_models(config: RunConfig) -> list[ModelInfo]:
 
 
 def _calibration_mode(policy: CalibrationPolicy) -> str:
-    mode = str(policy.mode or "manual").strip().lower()
+    mode = str(policy.mode or "auto").strip().lower()
     if mode not in CALIBRATION_MODES:
         raise ValueError(
             f"unknown calibration mode: {policy.mode!r}; expected one of {CALIBRATION_MODES}"
         )
-    if mode in ("auto", "index"):
-        # Ticket #60 owns the fallback order and the per-photo search.
-        raise NotImplementedError(
-            f"calibration mode {mode!r} is not wired yet; use 'manual' or 'none'"
-        )
     return mode
+
+
+def _calibration_index(
+    policy: CalibrationPolicy,
+    mode: str,
+    images: list[Path],
+) -> dict[str, float]:
+    """Load the filename-to-scale map once for the whole run.
+
+    An explicit path is authoritative: it is used alone, even if the file
+    happens to be incomplete. Without one, the known index names are searched
+    from the image root. That is the run-level half of the agreed order; the
+    per-image half (index, then plate, then manual) lives in ``resolver``.
+    """
+    if mode not in ("auto", "index"):
+        return {}
+    if policy.index_path is not None:
+        return carry_index(policy.index_path)
+    return search_index(images[0]) if images else {}
 
 
 def _resolve_calibration(
@@ -116,14 +137,47 @@ def _resolve_calibration(
     bgr: np.ndarray,
     policy: CalibrationPolicy,
     mode: str,
+    index: dict[str, float],
 ) -> Calibration:
+    """Scale of one photo, following the mode's documented source order."""
+    diameter_mm = policy.diameter_plate_mm
     if mode == "none":
-        return Calibration(origin=ORIGIN_NONE, diameter_mm=policy.diameter_plate_mm)
+        return Calibration(origin=ORIGIN_NONE, diameter_mm=diameter_mm)
+
+    if mode == "manual":
+        calibration = resolver(
+            image_path,
+            um_por_px_manual=policy.um_per_px,
+            diameter_mm=diameter_mm,
+            measure_plate=False,
+        )
+        if not calibration.valid and not calibration.warning:
+            return replace(
+                calibration,
+                warning="manual calibration needs a positive um_per_px",
+            )
+        return calibration
+
+    if mode == "index":
+        calibration = resolver(
+            image_path,
+            index=index,
+            diameter_mm=diameter_mm,
+            measure_plate=False,
+        )
+        if not calibration.valid and not calibration.warning:
+            return replace(
+                calibration,
+                warning="image is not listed in the calibration index",
+            )
+        return calibration
+
     return resolver(
         image_path,
+        index=index,
         um_por_px_manual=policy.um_per_px,
-        diameter_mm=policy.diameter_plate_mm,
-        measure_plate=False,
+        diameter_mm=diameter_mm,
+        measure_plate=policy.measure_plate,
         bgr=bgr,
         height_plate_mm=policy.height_plate_mm,
         distance_camera_mm=policy.distance_camera_mm,
@@ -188,6 +242,7 @@ def run_detection(
     mode = _calibration_mode(config.calibration)
 
     images = [Path(path) for path in config.images]
+    index = _calibration_index(config.calibration, mode, images)
     output_dir = Path(config.output_dir)
     models = _build_models(config)
     _prepare_output_dir(output_dir, config.force)
@@ -225,6 +280,11 @@ def run_detection(
             if bgr is None:
                 log.warning("image.undecodable file=%s", image_path)
                 result.skipped_images.append(image_path)
+                result.calibrations[image_path] = Calibration(
+                    origin=ORIGIN_NONE,
+                    diameter_mm=config.calibration.diameter_plate_mm,
+                    warning="the image could not be read",
+                )
                 writer.record_skip()
                 done += len(models)
                 if on_progress is not None:
@@ -232,7 +292,7 @@ def run_detection(
                 continue
 
             height, width = bgr.shape[:2]
-            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode)
+            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode, index)
             result.calibrations[image_path] = calibration
             um_per_px = calibration.um_por_px if calibration.valid else None
 

@@ -50,16 +50,20 @@ class ModelSpec:
 class CalibrationPolicy:
     """How each photo gets its micrometres-per-pixel scale.
 
-    Ticket #58 wires the ``manual`` and ``none`` paths. ``auto`` and ``index``
-    are part of the shape because the shared contract already names them, but
-    their fallback order (explicit index, searched index, plate measurement,
-    manual value) belongs to ticket #60.
+    ``auto`` looks the image up in an explicit index CSV when one is given,
+    then in the index files searched from the image root, then measures the
+    plate on the photo itself, and finally falls back to ``um_per_px``.
+    ``manual`` uses only ``um_per_px``, ``index`` only the CSV and ``none``
+    leaves the image uncalibrated, so no micrometre size is invented.
+
+    ``measure_plate`` only gates the plate step of ``auto``: the explicit
+    modes never measure it.
     """
 
-    mode: str = "manual"
+    mode: str = "auto"
     um_per_px: float = 0.0
     index_path: Path | None = None
-    measure_plate: bool = False
+    measure_plate: bool = True
     diameter_plate_mm: float = 100.0
     height_plate_mm: float = 0.0
     distance_camera_mm: float = 0.0
