@@ -449,14 +449,17 @@ def test_none_calibration_invents_no_micrometre_sizes(tmp_path):
     assert {row["calibration_origin"] for row in rows} == {ORIGIN_NONE}
 
 
-def test_predict_auto_is_called_with_tiling_disabled(tmp_path):
+def test_predict_auto_is_called_with_the_run_tiling_policy(tmp_path):
     image = write_plate(tmp_path / "photos" / "plate.png")
     detector = FakeDetector()
     result = run_detection(make_config([image], [detector], tmp_path / "run"))
 
     call_path, kwargs = detector.calls[0]
     assert call_path == image
-    assert kwargs["tiling"] == "nunca"
+    assert kwargs["tiling"] == result.params.tiling == "auto"
+    assert kwargs["threshold_px"] == result.params.tiling_threshold_px
+    assert kwargs["tile"] == result.params.tiling_tile
+    assert kwargs["overlap"] == result.params.tiling_overlap
     assert kwargs["conf"] == result.params.conf
     assert kwargs["iou"] == result.params.iou_nms
     assert kwargs["imgsz"] == result.params.imgsz

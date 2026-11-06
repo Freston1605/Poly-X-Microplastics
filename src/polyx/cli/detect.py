@@ -18,6 +18,8 @@ Usage:
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
         --index-calibration ./indice.csv
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate none
+    polyx-detect --model best.pt --images ./photos --out ./run --tiling auto \\
+        --tiling-tile 1024 --size-min-um 10 --conf-assignment 0.5
     polyx-detect --model best.pt --images ./photos --out ./run --full-report
 """
 
@@ -109,6 +111,38 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
     parser.add_argument(
+        "--tiling",
+        choices=("auto", "siempre", "nunca"),
+        default="auto",
+        help="tiling policy: auto by photo size, always, or never (default: auto)",
+    )
+    parser.add_argument(
+        "--tiling-threshold-px",
+        type=int,
+        default=2000,
+        help="longest side above which --tiling auto splits the photo (default: 2000)",
+    )
+    parser.add_argument(
+        "--tiling-tile",
+        type=int,
+        default=0,
+        help="tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)",
+    )
+    parser.add_argument(
+        "--tiling-overlap",
+        type=float,
+        default=0.25,
+        help="overlap between tiles, 0..0.9 (default: 0.25)",
+    )
+    parser.add_argument("--size-min-um", type=float, default=0.0, help="drop particles below it")
+    parser.add_argument("--size-max-um", type=float, default=0.0, help="drop particles above it")
+    parser.add_argument(
+        "--conf-assignment",
+        type=float,
+        default=0.0,
+        help="below this confidence the particle is reported as unassignable (default: 0)",
+    )
+    parser.add_argument(
         "--full-report",
         action="store_true",
         help="run-order paper-quality HTML report (requires PySide6, [gui] extra)",
@@ -166,6 +200,13 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
         imgsz=args.imgsz,
         um_per_px=args.um_per_px,
         measure_shape=not args.no_measure_shape,
+        size_min_um=args.size_min_um,
+        size_max_um=args.size_max_um,
+        conf_assignment=args.conf_assignment,
+        tiling=args.tiling,
+        tiling_threshold_px=args.tiling_threshold_px,
+        tiling_tile=args.tiling_tile,
+        tiling_overlap=args.tiling_overlap,
     )
     if args.device is not None and str(args.device).strip():
         params.device = str(args.device)
