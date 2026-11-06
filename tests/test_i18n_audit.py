@@ -495,6 +495,144 @@ def test_stylesheets_and_object_names_are_not_translated(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Non-Qt surfaces: the command line and the HTML documents built by hand.
+# ---------------------------------------------------------------------------
+
+
+def test_cli_printed_message_without_translation_fails_the_gate(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/cli/tool.py": (
+                'from polyx.core.i18n import _\n\n\ndef main():\n    print("Open folder")\n'
+            )
+        },
+    )
+
+    findings = audit.audit_sources(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "unwrapped-string"
+    assert findings[0].path == "src/polyx/cli/tool.py"
+    assert findings[0].line == 5
+    assert "Open folder" in findings[0].detail
+
+
+def test_cli_argument_help_without_translation_fails_the_gate(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/cli/tool.py": (
+                "from argparse import ArgumentParser\n\n"
+                'parser = ArgumentParser(description="Batch detect")\n'
+            )
+        },
+    )
+
+    findings = audit.audit_sources(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "unwrapped-string"
+    assert "Batch detect" in findings[0].detail
+
+
+def test_a_wrapped_cli_message_passes(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/cli/tool.py": (
+                'from polyx.core.i18n import _\n\n\ndef main():\n    print(_("Open folder"))\n'
+            )
+        },
+    )
+
+    assert audit.audit_sources(tmp_path) == []
+
+
+def test_cli_machine_contract_strings_pass(tmp_path):
+    """CSV headers, metadata keys and log messages are not prose."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/cli/tool.py": (
+                "import logging\n\n"
+                "log = logging.getLogger(__name__)\n\n\n"
+                "def write(rows):\n"
+                '    header = "image,class,conf"\n'
+                '    key = "schema_version"\n'
+                '    log.info("run started")\n'
+                "    return rows\n"
+            )
+        },
+    )
+
+    assert audit.audit_sources(tmp_path) == []
+
+
+def test_compact_report_prose_without_translation_fails_the_gate(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/core/report_simple.py": (
+                'def generate():\n    return "<h1>Poly-X run report</h1>"\n'
+            )
+        },
+    )
+
+    findings = audit.audit_sources(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "unwrapped-string"
+    assert "Poly-X run report" in findings[0].detail
+
+
+def test_training_summary_prose_without_translation_fails_the_gate(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/gui/trainer/pages/summary.py": (
+                'def build():\n    return "<h2>Referencias</h2>"\n'
+            )
+        },
+    )
+
+    findings = audit.audit_sources(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "unwrapped-string"
+    assert "Referencias" in findings[0].detail
+
+
+def test_bibliography_citations_are_not_flagged(tmp_path):
+    """Citations are names and titles, not interface prose."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/gui/trainer/pages/summary.py": (
+                'def build():\n    return "<li>Pérez M (2024). Development of a new method.</li>"\n'
+            )
+        },
+    )
+
+    assert audit.audit_sources(tmp_path) == []
+
+
+def test_html_machine_contract_strings_pass(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/core/report_simple.py": (
+                "CSS = '*{box-sizing:border-box;}'\n"
+                "HEADER = 'image,class,conf'\n"
+                "PATH = 'run.json'\n"
+            )
+        },
+    )
+
+    assert audit.audit_sources(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
 # The real tree.
 # ---------------------------------------------------------------------------
 

@@ -1,18 +1,14 @@
 """Unified ``polyx`` command-line entry point.
 
-Usage:
-    polyx                      # launch the GUI
-    polyx gui                  # launch the GUI
-    polyx train ...            # headless training
-    polyx detect ...           # headless detection
-    polyx eval ...             # headless evaluation
-    polyx report ...           # compact HTML report
-    polyx download-models ...  # download weights
+Dispatches each command to its module. The GUI path imports Qt lazily, so the
+headless commands keep working without the ``gui`` extra.
 """
 
 from __future__ import annotations
 
 import sys
+
+from polyx.core.i18n import _
 
 _COMMANDS = {
     "gui": "polyx.gui.__main__",
@@ -22,6 +18,24 @@ _COMMANDS = {
     "report": "polyx.cli.report",
     "download-models": "polyx.cli.download_models",
 }
+
+
+def _usage() -> str:
+    """The help screen, translated when it is printed."""
+    return "\n".join(
+        [
+            _("Poly-X command line."),
+            "",
+            _("Usage:"),
+            f"    polyx                      # {_('launch the GUI')}",
+            f"    polyx gui                  # {_('launch the GUI')}",
+            f"    polyx train ...            # {_('headless training')}",
+            f"    polyx detect ...           # {_('headless detection')}",
+            f"    polyx eval ...             # {_('headless evaluation')}",
+            f"    polyx report ...           # {_('compact HTML report')}",
+            f"    polyx download-models ...  # {_('download weights')}",
+        ]
+    )
 
 
 def _launch_gui() -> int:
@@ -39,13 +53,13 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv[1:]
 
     if not argv or argv[0] in ("-h", "--help"):
-        print(__doc__.strip())
+        print(_usage())
         print()
-        print("Commands:")
+        print(_("Commands:"))
         for name in _COMMANDS:
             print(f"  {name}")
         print()
-        print("Run 'polyx <command> --help' for command-specific options.")
+        print(_("Run 'polyx <command> --help' for command-specific options."))
         return 0
 
     cmd = argv[0]
@@ -57,13 +71,13 @@ def main(argv: list[str] | None = None) -> int:
 
             mod = importlib.import_module(_COMMANDS[rest[0]])
             return mod.main(["--help"])
-        print(__doc__.strip())
+        print(_usage())
         return 0
 
     if cmd not in _COMMANDS:
         # Backwards-friendly: unknown first token -> try GUI? No, error.
-        print(f"Unknown command: {cmd}", file=sys.stderr)
-        print("Run 'polyx --help' for the list of commands.", file=sys.stderr)
+        print(_("Unknown command: %(command)s") % {"command": cmd}, file=sys.stderr)
+        print(_("Run 'polyx --help' for the list of commands."), file=sys.stderr)
         return 2
 
     if cmd == "gui":

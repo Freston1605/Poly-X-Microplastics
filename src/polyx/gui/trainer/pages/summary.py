@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, language
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -85,7 +85,7 @@ table.data td{{padding:6px 9px;border-bottom:1px solid {T.DOC.RULE_SOFT};}}
 def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = True) -> Path:
     """Builds the training HTML report from the run folder."""
     if not run_dir.exists():
-        raise RuntimeError(f"No existe {run_dir}")
+        raise RuntimeError(_("No such run folder: %(path)s") % {"path": run_dir})
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     header, rows = _read_results_csv_full(run_dir)
@@ -111,7 +111,7 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
         rec = col("metrics/recall(B)", "metrics/recall")
         kpi_html = f"""
         <div class='kpis'>
-          <div class='kpi'><div class='l'>Épocas</div><div class='v'>{last_epoch}</div><div class='b'></div></div>
+          <div class='kpi'><div class='l'>{_("Epochs")}</div><div class='v'>{last_epoch}</div><div class='b'></div></div>
           <div class='kpi'><div class='l'>mAP@50</div><div class='v'>{f"{map50:.3f}" if map50 is not None else "—"}</div><div class='b' style='background:{T.DOC.OK}'></div></div>
           <div class='kpi'><div class='l'>mAP@50-95</div><div class='v'>{f"{map95:.3f}" if map95 is not None else "—"}</div><div class='b' style='background:{T.DOC.VIO}'></div></div>
           <div class='kpi'><div class='l'>P / R</div><div class='v'>{f"{prec:.2f}/{rec:.2f}" if prec is not None and rec is not None else "—"}</div><div class='b' style='background:{T.DOC.WARN}'></div></div>
@@ -122,14 +122,14 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
     # Figures produced by Ultralytics
     figs = []
     for name, label in [
-        ("results.png", "Curvas de entrenamiento (loss + métricas)"),
-        ("confusion_matrix.png", "Matriz de confusión"),
-        ("PR_curve.png", "Curva Precision–Recall"),
-        ("F1_curve.png", "Curva F1 vs confianza"),
-        ("P_curve.png", "Curva Precision vs confianza"),
-        ("R_curve.png", "Curva Recall vs confianza"),
-        ("labels.jpg", "Distribución de etiquetas en train"),
-        ("val_batch0_pred.jpg", "Predicciones del batch 0 de validación"),
+        ("results.png", _("Training curves (loss + metrics)")),
+        ("confusion_matrix.png", _("Confusion matrix")),
+        ("PR_curve.png", _("Precision–Recall curve")),
+        ("F1_curve.png", _("F1 vs confidence curve")),
+        ("P_curve.png", _("Precision vs confidence curve")),
+        ("R_curve.png", _("Recall vs confidence curve")),
+        ("labels.jpg", _("Label distribution in train")),
+        ("val_batch0_pred.jpg", _("Validation batch 0 predictions")),
     ]:
         p = run_dir / name
         if p.exists():
@@ -146,8 +146,8 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
 
     refs = ""
     if include_refs:
-        refs = """
-        <h2>Referencias</h2>
+        refs = f"""
+        <h2>{_("References")}</h2>
         <ol>
           <li>Pérez M, Parra S, Ferrada C, Bravo M, Pérez PA, Quiroz W (2024). Development of a new methodology for the determination of PET microplastics in sediment, based on microwave-assisted acid digestion. <em>PLoS ONE</em> 19(12): e0314520.</li>
           <li>Ferrada C, Pérez M, Parra S, Salas E, Sepúlveda F, Bravo MA, Quiroz W (2024). Evaluation of microwave-assisted acid/oxidant digestion method for the detection of polyethylene microplastics in <em>Merluccius gayi</em> fish by Nile Red fluorescent staining and image analysis. <em>J. Chil. Chem. Soc.</em> 69(1): 6082-6085.</li>
@@ -157,26 +157,26 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     doc = f"""<!doctype html>
-<html lang='es'><head><meta charset='utf-8'>
-<title>Reporte de entrenamiento · {html.escape(run_dir.name)}</title>
+<html lang='{language()}'><head><meta charset='utf-8'>
+<title>{_("Training report")} · {html.escape(run_dir.name)}</title>
 <style>{CSS}</style>
 </head><body><div class='container'>
 <header class='cover'>
-  <div class='kicker'>Poly-X · Reporte de entrenamiento</div>
+  <div class='kicker'>Poly-X · {_("Training report")}</div>
   <h1>{html.escape(run_dir.name)}</h1>
-  <p class='meta'><strong>Carpeta:</strong> {html.escape(str(run_dir))} &middot; <strong>Generado:</strong> {now}</p>
+  <p class='meta'><strong>{_("Folder:")}</strong> {html.escape(str(run_dir))} &middot; <strong>{_("Generated:")}</strong> {now}</p>
 </header>
 
-<h2>1. Métricas finales</h2>
-{metrics_html or "<p>Sin results.csv legible.</p>"}
+<h2>{_("1. Final metrics")}</h2>
+{metrics_html or f"<p>{_('No readable results.csv.')}</p>"}
 
-<h2>2. Curvas y figuras</h2>
-{figs_html or "<p>No se encontraron figuras en el run.</p>"}
+<h2>{_("2. Curves and figures")}</h2>
+{figs_html or f"<p>{_('No figures found in the run.')}</p>"}
 
 {refs}
 
 <p style='margin-top:60px;color:{T.DOC.INK3};font-size:9.5pt;border-top:1px solid {T.DOC.RULE};padding-top:14px;'>
-© Cristofher Ferrada · Poly-X · Reporte autogenerado.</p>
+{_("© Cristofher Ferrada · Poly-X · Autogenerated report.")}</p>
 </div></body></html>
 """
     out_path.write_text(doc, encoding="utf-8")
