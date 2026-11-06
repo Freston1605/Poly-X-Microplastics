@@ -20,7 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import polyx.core.measure as M
-from tests.formas import (
+from tests.shapes import (
     CASOS,
     arco,
     circulo,

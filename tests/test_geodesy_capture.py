@@ -1,6 +1,6 @@
-"""Pruebas de la logica de captura de ``tests/capturar_fixtures_geodesia.py``.
+"""Pruebas de la logica de captura de ``tests/capture_geodesy_fixtures.py``.
 
-El harness de ``test_geodesia.py`` recubre automaticamente cada ``.npy`` que
+El harness de ``test_geodesy.py`` recubre automaticamente cada ``.npy`` que
 este en ``tests/fixtures/geodesia/``; su valor depende de que la captura sea
 fiel (la mascara guardada TIENE que ser la misma que midio el pipeline) y de
 que el script nunca pise por debajo lo ya capturado.
@@ -32,8 +32,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import capturar_fixtures_geodesia as CFG
-import generar_fixtures_geodesia as GFG
+import capture_geodesy_fixtures as CFG
+import generate_geodesy_fixtures as GFG
 import polyx.core.measure as M
 
 

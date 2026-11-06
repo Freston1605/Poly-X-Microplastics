@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture the M006/S05 English baseline reports (benign and hostile).
 
-Builds the two shared DetectorState fixtures from tests/fixtures_informe.py
+Builds the two shared DetectorState fixtures from tests/report_fixtures.py
 and renders each one through polyx.gui.report_html.generate_report exactly
 as the app does (all sections, real pipeline, cronometro wrapper included).
 The resulting HTML files are the M006/S05 English baseline used by the
@@ -17,7 +17,7 @@ Outputs (relative to the repo root):
 - tests/fixtures/baseline_informe/benigna/informe.html  (+ informe.sha256)
 - tests/fixtures/baseline_informe/hostil/informe.html   (+ informe.sha256)
 
-Run from the repo root:  python tools/audit/capturar_fixtures_informe.py
+Run from the repo root:  python tools/audit/capture_report_fixtures.py
 """
 
 from __future__ import annotations
@@ -28,17 +28,17 @@ import sys
 from pathlib import Path
 
 # The baseline is the English render (M006/S05): pin the language BEFORE
-# importing tests.fixtures_informe or any polyx module, because i18n
+# importing tests.report_fixtures or any polyx module, because i18n
 # resolves and caches the language at import time.
 os.environ["POLYX_LOCALE"] = "en"
 
 # Run as a raw file from tools/audit/, sys.path[0] points there: the repo
-# root must go first so `import tests.fixtures_informe` and `import polyx`
+# root must go first so `import tests.report_fixtures` and `import polyx`
 # resolve exactly as they do under pytest.
 RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ))
 
-from tests.fixtures_informe import estado_benigno, estado_hostil  # noqa: E402
+from tests.report_fixtures import estado_benigno, estado_hostil  # noqa: E402
 
 SALIDAS = {
     "benigna": RAIZ / "tests" / "fixtures" / "baseline_informe" / "benigna",
@@ -59,7 +59,7 @@ def capturar() -> dict[str, str]:
     # (OS kernel, RAM, GPU, torch version) differ per runner. The byte
     # baseline is captured against the PINNED stack (CI: Python 3.11 +
     # matplotlib 3.9.2), so the equipment rows are pinned to canonical values
-    # here and in tests/test_render_reporte_benigno.py (fixture
+    # here and in tests/test_benign_report_render.py (fixture
     # _idioma_del_baseline_y_logs_muertos). Never capture with live rows:
     # the fixture would not reproduce them on any other machine.
     def patched_team():
@@ -74,10 +74,10 @@ def capturar() -> dict[str, str]:
     machine._team = patched_team
 
     # The gate compares figures by stable marker (see _normalizar_figuras in
-    # tests/test_render_reporte_benigno.py): matplotlib PNG bytes differ per
+    # tests/test_benign_report_render.py): matplotlib PNG bytes differ per
     # renderer SO even at the same pin, so informe.sha256 registers the
     # NORMALIZED digest -- the same value the identity test compares.
-    from tests.test_render_reporte_benigno import _normalizar_figuras
+    from tests.test_benign_report_render import _normalizar_figuras
 
     # Same environmental pins as the test fixture: ultralytics version line
     # in the methods paragraph must not depend on which packages are

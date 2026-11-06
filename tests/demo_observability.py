@@ -14,7 +14,7 @@ la demo, por eso se mide el tamano previo de cada archivo y se lee desde ahi.
 
 Uso::
 
-    python tests/demo_observabilidad.py [--log-dir DIR] [--placas 10]
+    python tests/demo_observability.py [--log-dir DIR] [--placas 10]
 
 ``--log-dir`` por defecto usa la carpeta real (``~/.polyx/logs`` o
 ``POLYX_LOG_DIR``); pasar uno temporario para que no toque nada personal.

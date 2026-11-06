@@ -23,7 +23,7 @@ is out of scope for M004. The test therefore asserts yolo_wrap IS importable
 cv2's absence.
 
 Language note: the subprocess forces POLYX_LOCALE=en (the same contract as the
-render baseline, see tests/test_render_reporte_benigno.py) plus
+render baseline, see tests/test_benign_report_render.py) plus
 QT_QPA_PLATFORM=offscreen for hermeticity; neither affects the import topology,
 they only remove the dependency on the machine's locale and environment of the
 maquina.
@@ -98,5 +98,5 @@ def test_importar_informe_no_carga_los_pesados():
         f"dentro del cuerpo de las funciones en report_html.py). Un import "
         f"eager de {leak} encarece el costo de arranque para TODO consumidor "
         f"del modulo de informe (GUI, trainer, tests). Vea decision D017 y "
-        f"tests/test_importes_diferidos_informe.py."
+        f"tests/test_report_deferred_imports.py."
     )

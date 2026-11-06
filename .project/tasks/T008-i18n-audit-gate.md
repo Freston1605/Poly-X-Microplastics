@@ -9,10 +9,10 @@ base: null
 worktree: null
 task_branch: null
 files:
-  - tests/test_comments_ingles.py
-  - tests/test_docstrings_ingles.py
-  - tests/test_identifiers_ingles.py
-  - tests/test_report_headings_ingles.py
+  - tests/test_comments_english.py
+  - tests/test_docstrings_english.py
+  - tests/test_identifiers_english.py
+  - tests/test_report_headings_english.py
   - tests/test_translate_identifiers.py
   - auditar_traduccion.py
 ---
@@ -47,7 +47,7 @@ The i18n audit scripts and tests hard-code `REPO_ROOT / "polyx"` roots that move
 ## Verify
 
 ```bash
-python -m pytest tests/test_comments_ingles.py tests/test_identifiers_ingles.py tests/test_docstrings_ingles.py -q
+python -m pytest tests/test_comments_english.py tests/test_identifiers_english.py tests/test_docstrings_english.py -q
 ```
 
 Heavy: no

@@ -3,7 +3,7 @@
 El escape de T05 (_esc = html.escape(str(v), quote=False) en cada sumidero
 de polyx/core/report_html.py) tiene que demostrarse sobre el RENDER, no solo
 sobre las funciones internas: este test construye el estado hostil de
-tests/fixtures_informe.py, lo pasa por generate_report (el mismo seam que
+tests/report_fixtures.py, lo pasa por generate_report (el mismo seam que
 usa la aplicacion) con TODAS las secciones, y comprueba que:
 
   1. NINGUNA de las dos inyecciones de referencia llega viva al HTML: no
@@ -28,7 +28,7 @@ a proposito: pathlib la partiria en componentes y el '<' de apertura se
 perderia de Path.name (P001).
 
 El idioma se fija a 'en' con la misma mecanica del fixture autouse de
-tests/test_render_reporte_benigno.py: polyx.core.i18n cachea el idioma al
+tests/test_benign_report_render.py: polyx.core.i18n cachea el idioma al
 importar (env -> ~/.polyx_idioma.json -> locale del sistema) y sin forzarlo
 los conteos dependen de la maquina. Los anclajes estructurales de los
 sumideros (td, strong, h3, comillas «») salen de las plantillas del informe
@@ -48,7 +48,7 @@ from pathlib import Path
 import pytest
 
 # Inyecciones de referencia: misma pareja de cadenas que define
-# tests/fixtures_informe.py (P001). Cada una vive en un grupo de sumideros
+# tests/report_fixtures.py (P001). Cada una vive en un grupo de sumideros
 # distinto y por eso llevan alert(1)/alert(2) distintos.
 ALIAS_HOSTIL: str = "<img src=x onerror=alert(1)>"
 NOMBRE_FOTO_HOSTIL: str = "<img src=x onerror=alert(2)>.png"
@@ -96,7 +96,7 @@ SUMIDEROS_NOMBRE: list[tuple[str, str, int]] = [
 def _idioma_y_logs_muertos(tmp_path):
     """Fuerza el idioma 'en' y revierte el logger del pipeline a NullHandler.
 
-    Misma mecanica que tests/test_render_reporte_benigno.py: i18n cachea el
+    Misma mecanica que tests/test_benign_report_render.py: i18n cachea el
     idioma al importar y sin POLYX_LOCALE los conteos de este test son
     maquina-dependientes. El logger 'polyx.detector' queda cacheado por
     logger_para con un RotatingFileHandler a carpeta_logs(); si no se
@@ -145,7 +145,7 @@ def _render_hostil(tmp_path: Path) -> str:
     sobre fixtures recortados.
     """
     import polyx.gui.report_html as rh
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     salida = tmp_path / "informe.html"

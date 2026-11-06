@@ -3,14 +3,14 @@
 Both readers are pure I/O over the machine (OS, RAM, GPU) and over the model
 checkpoint, so both keep their heavy imports (``psutil``, ``torch``) lazy
 inside the body: the import-laziness gate
-(``tests/test_importes_diferidos_informe.py``) requires that importing the
+(``tests/test_report_deferred_imports.py``) requires that importing the
 report package does not pay for them.
 
 They were re-exported from ``polyx.gui.report._common`` (removed in refactor) on purpose: the
 section builders read ``_team`` and ``_training_of`` through that module at
 call time, which is what lets the byte-identity fixtures pin the live
-equipment table to canonical rows (``tools/audit/capturar_fixtures_informe.py``
-and ``tests/test_render_reporte_benigno.py`` patch exactly that attribute).
+equipment table to canonical rows (``tools/audit/capture_report_fixtures.py``
+and ``tests/test_benign_report_render.py`` patch exactly that attribute).
 """
 
 from __future__ import annotations
