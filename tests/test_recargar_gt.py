@@ -13,8 +13,10 @@ Nothing here touches ultralytics or the real ``runs/`` folder.
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -101,3 +103,112 @@ def test_reload_sizes_each_gt_with_its_own_photo_scale(qapp, tmp_path):
         assert r.gt[0].diam_um == pytest.approx(expected, rel=1e-3), (
             f"{name}: reloaded GT must be sized with its own photo's calibration"
         )
+
+
+def _reload_state(tmp_path: Path, gt_text: str | None) -> tuple[DetectorState, ImageResult]:
+    """One-image state with a loaded model, ready for an end-to-end reload.
+
+    The model is a duck-typed stand-in: ``reload_gt`` reads only ``.names``
+    from the first loaded slot (to label the boxes the ``.txt`` stores as an
+    index). A stale GT box is left on the result so the reload has something
+    to replace and therefore actually redraws.
+    """
+    plate = _plate(tmp_path / "photos" / "plate.png")
+    gt_dir = tmp_path / "gt"
+    gt_dir.mkdir()
+    if gt_text is not None:
+        (gt_dir / "plate.txt").write_text(gt_text, encoding="utf-8")
+
+    st = DetectorState()
+    slot = st.model_slots[0]
+    slot.alias = "m0"
+    slot.path = tmp_path / "best.pt"
+    slot.loaded = SimpleNamespace(names={0: "PET"})
+    st.gt_folder = gt_dir
+    st.run_dir = tmp_path / "run"
+    st.run_dir.mkdir()
+    st.images = [plate]
+    # The scale is per photo; {} falls back to params.um_per_px (0 -> None),
+    # which leaves the reloaded sizes uncalibrated but does not stop the redraw.
+    st.calibrations = {}
+
+    prediction = Detection(class_id=0, class_name="PET", conf=0.9, x1=20, y1=20, x2=80, y2=80)
+    prediction.number = 1
+    stale_gt = Detection(class_id=0, class_name="PET", conf=1.0, x1=5, y1=5, x2=25, y2=25)
+    result = ImageResult(
+        model_idx=0,
+        image_path=plate,
+        predictions=[prediction],
+        gt=[stale_gt],
+        has_gt=True,
+    )
+    st.results = {0: [result]}
+    return st, result
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_reload_redraw_golden_combined_and_gt_views(qapp, tmp_path):
+    """Characterization golden of the GT reload's redrawn views.
+
+    Reloading a corrected ground truth redraws the combined (``_annot``) and
+    GT-only (``_gt``) views of the run. Pins the run-view file names and the
+    SHA-256 of both PNGs, captured before the triptych migration (#38): the
+    test fails if either the drawing or the naming drifts. The predictions
+    view is not rewritten -- the predictions did not change -- so
+    ``pred_path`` stays ``None``. No production code is changed here.
+    """
+    st, result = _reload_state(tmp_path, _TXT_BOX)
+
+    summary = reload_gt(st)
+
+    assert summary["cambiadas"] == ["plate.png"]
+    assert summary["recalculadas"] == 1
+    assert result.has_gt is True
+
+    # Naming convention: {index:04d}_{stem}{suffix}.png, under the run's model alias.
+    assert result.annotated_path is not None
+    assert result.annotated_path.name == "0000_plate_annot.png"
+    assert result.gt_path is not None
+    assert result.gt_path.name == "0000_plate_gt.png"
+    assert result.pred_path is None
+    model_dir = st.run_dir / "m0"
+    assert result.annotated_path.parent == result.gt_path.parent == model_dir
+
+    # Golden hashes of the reload's current drawing path
+    # (_draw_annotated / _color_bgr_for_class). Captured before #38.
+    assert (
+        _sha(result.annotated_path)
+        == "419d7f0ed6cdf164f29588bb7c3fff398af4c2bf85f5d29dbaeddad8e68f17a7"
+    )
+    assert (
+        _sha(result.gt_path) == "ca4332b0858cb674a2ca43d6c0f0d966f9ba9e93f58ff359a0f67a8bbcf91505"
+    )
+
+
+def test_reload_without_gt_redraws_only_combined_view(qapp, tmp_path):
+    """A stale GT that no longer has a ``.txt`` drops the ``_gt`` view.
+
+    With no ground-truth file the reload draws the predictions alone into
+    ``_annot`` and leaves ``gt_path`` (and ``pred_path``) ``None``.
+    """
+    st, result = _reload_state(tmp_path, gt_text=None)
+
+    summary = reload_gt(st)
+
+    assert summary["sin_gt"] == ["plate.png"]
+    assert summary["cambiadas"] == ["plate.png"]
+    assert result.has_gt is False
+    assert result.gt == []
+
+    assert result.annotated_path is not None
+    assert result.annotated_path.name == "0000_plate_annot.png"
+    assert result.gt_path is None
+    assert result.pred_path is None
+    assert result.annotated_path.parent == st.run_dir / "m0"
+    assert (
+        _sha(result.annotated_path)
+        == "f683e1d1268a40eae62a6d67de6f6ca608bdc1b9c3edea06108601329af42866"
+    )
