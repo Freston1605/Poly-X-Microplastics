@@ -53,7 +53,8 @@ class Replacement:
 
     test: str
     label: str
-    line: int
+    assertion_line: int
+    literal_line: int
     old: str
     new: str
     span: tuple[int, int]
@@ -185,21 +186,19 @@ def _map_failure(
         return None, (f"expected exactly one actual hash, found {len(failure.hashes)}")
 
     asserts = [node for node in ast.walk(tree) if isinstance(node, ast.Assert)]
-    referencing: list[tuple[ast.Assert, dict[int, tuple[str, ast.Constant]]]] = []
-    for _path, line, _test in failure.frames:
-        node = _assertion_at(asserts, line)
-        if node is None:
-            continue
-        refs = _golden_refs(node, constants)
-        if refs:
-            referencing.append((node, refs))
+    # The innermost assertion frame is the one that raised; an outer assertion
+    # that merely called it must not be rewritten in its place.
+    assertion: ast.Assert | None = None
+    for _path, line, _test in reversed(failure.frames):
+        assertion = _assertion_at(asserts, line)
+        if assertion is not None:
+            break
 
-    if not referencing:
+    if assertion is None:
+        return None, "no assertion statement found at the failure location"
+    refs = _golden_refs(assertion, constants)
+    if not refs:
         return None, "assertion references no golden literal"
-    if len(referencing) > 1:
-        labels = ", ".join(label for _node, refs in referencing for label, _ in refs.values())
-        return None, f"ambiguous assertion chain references {labels}"
-    node, refs = referencing[0]
     if len(refs) != 1:
         labels = ", ".join(sorted(label for label, _ in refs.values()))
         return None, f"assertion references {len(refs)} goldens: {labels}"
@@ -214,7 +213,8 @@ def _map_failure(
         Replacement(
             test=failure.test,
             label=label,
-            line=literal.lineno,
+            assertion_line=assertion.lineno,
+            literal_line=literal.lineno,
             old=literal.value,
             new=failure.hashes[0],
             span=(start, end),
@@ -223,7 +223,7 @@ def _map_failure(
     )
 
 
-def _rereport(
+def _plan_replacements(
     failures: list[Failure], source: bytes, tree: ast.Module
 ) -> tuple[list[Replacement], list[str]]:
     """Map every failure, refusing the whole batch on any ambiguity."""
@@ -268,7 +268,8 @@ def _print_mapping(test_file: Path, replacements: list[Replacement]) -> None:
     print(f"{test_file}: {len(replacements)} golden mismatch(es)")
     for replacement in replacements:
         print(
-            f"  {replacement.test} (line {replacement.line}, {replacement.label}): "
+            f"  {replacement.test} (assertion at line {replacement.assertion_line}, "
+            f"{replacement.label} on line {replacement.literal_line}): "
             f"{replacement.old} -> {replacement.new}"
         )
 
@@ -326,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
 
     source = test_file.read_bytes()
     tree = ast.parse(source.decode("utf-8"), filename=str(test_file))
-    replacements, errors = _rereport(failures, source, tree)
+    replacements, errors = _plan_replacements(failures, source, tree)
     if errors:
         print(
             f"Refusing to update {test_file}: {len(errors)} failure(s) cannot be "
