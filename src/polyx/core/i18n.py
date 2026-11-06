@@ -164,7 +164,8 @@ def _display_name(tag: str) -> str:
     except ImportError:
         return tag
     try:
-        return Locale.parse(tag).get_display_name(tag).capitalize() or tag
+        name = Locale.parse(tag).get_display_name(tag)
+        return name.capitalize() if name else tag
     except (UnknownLocaleError, ValueError):
         return tag
 
