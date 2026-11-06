@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QSlider,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.gui import theme as T
 
 from ..state import AUG_LEVELS
@@ -46,8 +46,8 @@ def _slider_row(
 
 class AugmentationPage(TrainerPage):
     PAGE_ICON = "augmentacion"
-    PAGE_TITLE = _("Data augmentation")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Data augmentation")
+    PAGE_DESCRIPTION = lazy(
         "Artificially increases the variety of the dataset. Useful for small datasets (< 500 images). Too much augmentation and the model will not converge; too little and it overfits."
     )
 

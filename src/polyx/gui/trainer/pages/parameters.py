@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -55,8 +55,8 @@ def _hint(text: str) -> QLabel:
 
 class ParametersPage(TrainerPage):
     PAGE_ICON = "ajustes"
-    PAGE_TITLE = _("Training parameters")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Training parameters")
+    PAGE_DESCRIPTION = lazy(
         "Every parameter has a hint explaining it. The defaults are sensible for microplastics. If you change anything, the preset switches to 'Custom'."
     )
 

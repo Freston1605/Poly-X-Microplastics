@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import _
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge
 
@@ -57,12 +57,13 @@ _CLS_COLORS = [
 class LabelerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "etiquetador")
         self.resize(1400, 880)
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = LabelerState()
         self._pre_model = None  # YoloModel loaded on demand
+        self._pre_model_name = ""
 
         # Thumbnails in the background: generating them all at once froze the
         # window for ~9 s with 552 crops, because each one decodes the full
@@ -70,6 +71,45 @@ class LabelerWindow(QMainWindow):
         self._queue_thumbs: list[int] = []
         self._thumb_timer = QTimer(self)
         self._thumb_timer.timeout.connect(self._process_thumbs)
+
+        self._build_ui()
+
+        self._connect_signals()
+        self._install_shortcuts()
+        self._apply_preset("Microplásticos Nile Red")
+
+        # ── Auto-save every 60 s ──
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_timer.start(60_000)
+
+    # ── Language ───────────────────────────────────────────────
+    def changeEvent(self, event):
+        if event.type() == QEvent.LanguageChange:
+            self.retranslate()
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+        index = self.state.current_idx
+        keep_zoom = self.canvas.keep_zoom
+        self._build_ui()
+        marca.titular(self, "etiquetador")
+        self.chk_zoom.setChecked(keep_zoom)
+        self.canvas.keep_zoom = keep_zoom
+        if self._pre_model_name:
+            self.lbl_model.setText(self._pre_model_name)
+        if self.state.images:
+            self._on_images_loaded(self.state.images)
+        self._rebuild_class_buttons(self.state.class_names)
+        self._on_active_class_changed(self.state.active_class)
+        if 0 <= index < len(self.state.images):
+            self.state.image_changed.emit(index)
+        self._on_annotations_changed()
+        self._update_progress()
+
+    def _build_ui(self) -> None:
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -81,15 +121,6 @@ class LabelerWindow(QMainWindow):
         self.canvas = BboxCanvas(self.state)
         root.addWidget(self.canvas, 1)
         root.addWidget(self._build_right())
-
-        self._connect_signals()
-        self._install_shortcuts()
-        self._apply_preset("Microplásticos Nile Red")
-
-        # ── Auto-save every 60 s ──
-        self._autosave_timer = QTimer(self)
-        self._autosave_timer.timeout.connect(self._autosave)
-        self._autosave_timer.start(60_000)
 
     # ── Left panel ────────────────────────────────────────────
     def _build_left(self) -> QFrame:
@@ -399,7 +430,8 @@ class LabelerWindow(QMainWindow):
             from polyx.core.detect.yolo import YoloModel
 
             self._pre_model = YoloModel(path)
-            self.lbl_model.setText(Path(path).name)
+            self._pre_model_name = Path(path).name
+            self.lbl_model.setText(self._pre_model_name)
             self._set_status("● Modelo cargado", T.OK)
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))

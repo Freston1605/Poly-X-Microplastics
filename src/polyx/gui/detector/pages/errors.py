@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
 from polyx.gui import theme as T
@@ -28,8 +28,8 @@ from ._base import DetectorPage
 
 class ErrorsPage(DetectorPage):
     STEP_N = 7
-    STEP_TITLE = _("Errors")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Errors")
+    STEP_DESCRIPTION = lazy(
         "List of problematic boxes (only with Ground Truth). False Positives: detection with no nearby GT. False Negatives: GT not detected. Misclassified: located correctly, wrong class."
     )
 

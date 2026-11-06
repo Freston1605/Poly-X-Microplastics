@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 from polyx.gui.widgets import KPICard
@@ -59,8 +59,8 @@ class _EvalWorker(QThread):
 
 class EvaluatePage(TrainerPage):
     PAGE_ICON = "evaluar"
-    PAGE_TITLE = _("Evaluate")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Evaluate")
+    PAGE_DESCRIPTION = lazy(
         "Validates any .pt model against a YOLO dataset (data.yaml). Useful for checking the quality of a best.pt on a test set other than the training one."
     )
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QEvent, QSize, Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -16,8 +16,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.i18n import _
-from polyx.gui import iconos, marca
+from polyx.core.i18n import _, lazy
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import LogoBadge
 
@@ -26,15 +26,15 @@ from .state import DetectorState
 # ────────────────────────────────────────────────────────────────────
 SIDEBAR_ITEMS = [
     # (icon name in polyx/gui/iconos.py, label)
-    ("modelo", _("Models")),
-    ("imagenes", _("Images")),
-    ("editar", _("Manual GT")),
-    ("ajustes", _("Parameters")),
-    ("ejecutar", _("Run")),
-    ("resultados", _("Results")),
-    ("errores", _("Errors")),
-    ("comparar", _("Compare")),
-    ("reporte", _("Report")),
+    ("modelo", lazy("Models")),
+    ("imagenes", lazy("Images")),
+    ("editar", lazy("Manual GT")),
+    ("ajustes", lazy("Parameters")),
+    ("ejecutar", lazy("Run")),
+    ("resultados", lazy("Results")),
+    ("errores", lazy("Errors")),
+    ("comparar", lazy("Compare")),
+    ("reporte", lazy("Report")),
 ]
 
 
@@ -83,11 +83,51 @@ class SidebarButton(QPushButton):
 class DetectorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "detector")
         self.resize(1280, 820)
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = DetectorState()
+        self._retranslation_pending = False
+
+        self._build_ui()
+
+        # Connect global signals to reflect state in the footer. Connected once:
+        # a language change rebuilds the widgets, not the window object.
+        self.state.run_started.connect(lambda: self._set_status("● Ejecutando…", T.ACCENT))
+        self.state.run_finished.connect(lambda: self._set_status("● Finalizado", T.OK))
+        self.state.run_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
+        self.state.run_finished.connect(self._apply_pending_retranslation)
+        self.state.run_aborted.connect(self._apply_pending_retranslation)
+
+    # ── Language ───────────────────────────────────────────────
+    def changeEvent(self, event):
+        if event.type() == QEvent.LanguageChange:
+            self.retranslate()
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the pages so every text comes from the new catalog.
+
+        A detection in progress owns a worker thread and the page that
+        listens to it, so the rebuild waits for it to finish instead of
+        orphaning the thread mid-run.
+        """
+        if self.state.is_running():
+            self._retranslation_pending = True
+            return
+        index = self.stack.currentIndex()
+        self._build_ui(index)
+        marca.titular(self, "detector")
+        self._refresh_pages()
+
+    def _apply_pending_retranslation(self) -> None:
+        if self._retranslation_pending:
+            self._retranslation_pending = False
+            self.retranslate()
+
+    def _build_ui(self, index: int = 0) -> None:
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -149,13 +189,18 @@ class DetectorWindow(QMainWindow):
 
         # Connect navigation
         self.btn_group.idClicked.connect(self._on_sidebar_clicked)
-        self.sidebar_buttons[0].setChecked(True)
-        self.stack.setCurrentIndex(0)
+        index = max(0, min(index, len(self.sidebar_buttons) - 1))
+        self.sidebar_buttons[index].setChecked(True)
+        self.stack.setCurrentIndex(index)
 
-        # Connect global signals to reflect state in the footer
-        self.state.run_started.connect(lambda: self._set_status("● Ejecutando…", T.ACCENT))
-        self.state.run_finished.connect(lambda: self._set_status("● Finalizado", T.OK))
-        self.state.run_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
+    def _refresh_pages(self) -> None:
+        """Re-read the state so dynamic text is not left in the old language."""
+        for position in range(self.stack.count()):
+            page = self.stack.widget(position).widget()
+            for name in ("refresh", "_refresh_table"):
+                method = getattr(page, name, None)
+                if callable(method):
+                    method()
 
     def _build_pages(self):
         # Late import to avoid cycles

@@ -1694,9 +1694,9 @@ msgstr "Modelos cargados"
 msgid "Models:"
 msgstr "Modelos:"
 
-#: src/polyx/gui/preferencias.py:176
-msgid "Modules you open from now on come up in the new language."
-msgstr "Los módulos que abras a partir de ahora salen en el idioma nuevo."
+#: src/polyx/gui/preferencias.py:190
+msgid "Applies to every open window straight away. Your loaded images, models and current run are kept."
+msgstr "Se aplica al instante a todas las ventanas abiertas. Tus imágenes y modelos cargados y la ejecución actual se conservan."
 
 #: src/polyx/gui/trainer/pages/parameters.py:207
 msgid "Momentum:"
@@ -2568,9 +2568,8 @@ msgstr "Se muestran las primeras %(n)s imágenes, cada una con todos los modelos
 msgid "The full report is long. Untick whatever you do not need: sections renumber themselves and the table of contents adjusts. A ticked section with no data — error analysis without ground truth, for instance — is left out anyway."
 msgstr "El informe completo es largo. Desmarca lo que no necesites: las secciones se renumeran solas y el índice se ajusta. Una sección marcada que no tenga datos —errores sin ground truth, por ejemplo— se omite igualmente."
 
-#: src/polyx/gui/launcher.py:569
-msgid "The language will be applied when you reopen Poly-X. Modules you open from now on already use the new language."
-msgstr "El idioma se aplicará al reabrir Poly-X. Los módulos que abras desde ahora ya salen en el idioma nuevo."
+#~ msgid "The language will be applied when you reopen Poly-X. Modules you open from now on already use the new language."
+#~ msgstr "El idioma se aplicará al reabrir Poly-X. Los módulos que abras desde ahora ya salen en el idioma nuevo."
 
 #: src/polyx/gui/report/particle.py:109
 msgid "The larger of the first two is reported"

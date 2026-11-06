@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 
 from ._base import DetectorPage
@@ -21,8 +21,8 @@ def _safe_div(a, b):
 
 class ComparePage(DetectorPage):
     STEP_N = 8
-    STEP_TITLE = _("Compare")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Compare")
+    STEP_DESCRIPTION = lazy(
         "If you loaded more than one model, here is a summary table with every metric side by side and how many detections each one made per image."
     )
 

@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from polyx.core.annotate import find_run_labels
 from polyx.core.i18n import _
 from polyx.core.paths import RUNS_DIR
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge
 
@@ -59,13 +59,77 @@ class ViewerWindow(QMainWindow):
 
         super().__init__()
 
+        i18n_qt.activate()
+
         marca.titular(self, "visor")
 
         self.resize(1420, 900)
 
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
-
         self.state = ViewerState()
+        self._model_name = ""
+
+        self._build_ui()
+
+        self._connect_signals()
+
+        self._install_shortcuts()
+
+        self.setAcceptDrops(True)
+
+    # ── Language ───────────────────────────────────────────────
+
+    def changeEvent(self, event):
+
+        if event.type() == QEvent.LanguageChange:
+            self.retranslate()
+
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+
+        conf = self.spin_conf.value()
+
+        imgsz = self.spin_imgsz.value()
+
+        gpu = self.chk_gpu.isChecked()
+
+        self._build_ui()
+
+        marca.titular(self, "visor")
+
+        self.spin_conf.setValue(conf)
+
+        self.spin_imgsz.setValue(imgsz)
+
+        self.chk_gpu.setChecked(gpu)
+
+        if self._model_name:
+            self.lbl_model.setText(self._model_name)
+
+        self.nav_frame.setVisible(len(self.state.images) > 1)
+
+        if self.state.current_image is not None:
+            self._on_image_loaded(self.state.current_image)
+
+        else:
+            self._update_status_bar()
+
+        if self.state.detections:
+            self._on_detections_changed(self.state.detections)
+
+        if self.state.um_per_px > 0:
+            self.lbl_calib_result.setText(f"{self.state.um_per_px:.4f} μm/px")
+
+            self.lbl_calib_result.setStyleSheet(
+                f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;"
+            )
+
+            self._update_status_bar()
+
+    def _build_ui(self) -> None:
+
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         central = QWidget()
 
@@ -135,12 +199,6 @@ class ViewerWindow(QMainWindow):
         root.addWidget(right_scroll)
 
         self._build_right_panel()
-
-        self._connect_signals()
-
-        self._install_shortcuts()
-
-        self.setAcceptDrops(True)
 
     # ── Right panel ─────────────────────────────────────────
 
@@ -597,7 +655,9 @@ class ViewerWindow(QMainWindow):
 
             self.state.model = YoloModel(path)
 
-            self.lbl_model.setText(Path(path).name)
+            self._model_name = Path(path).name
+
+            self.lbl_model.setText(self._model_name)
 
             self._set_status("● Modelo listo", T.OK)
 

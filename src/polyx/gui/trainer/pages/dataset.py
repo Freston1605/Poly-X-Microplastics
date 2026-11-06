@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.paths import IMAGE_EXTS
 from polyx.core.quality.dataset_audit import (
     LEVEL_ERROR,
@@ -132,8 +132,8 @@ class _PreviewTile(QLabel):
 
 class DatasetPage(TrainerPage):
     PAGE_ICON = "dataset"
-    PAGE_TITLE = _("Dataset")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Dataset")
+    PAGE_DESCRIPTION = lazy(
         "Load your data.yaml. We validate the structure, count images and show a preview with boxes. If your dataset is not divided, use Auto-split."
     )
 
@@ -314,6 +314,13 @@ class DatasetPage(TrainerPage):
         self.state.dataset_changed.connect(self._on_dataset_changed)
 
     # ──────────────────────────────────────────
+    def refresh(self) -> None:
+        """Re-read the loaded dataset after a language change rebuilds the page."""
+        yaml_path = self.state.dataset.yaml_path
+        if yaml_path is not None:
+            self.ed_yaml.setText(str(yaml_path))
+            self._reload_yaml()
+
     def _browse(self):
         f, _unused = QFileDialog.getOpenFileName(
             self, "Seleccionar data.yaml", "", "YAML (*.yaml *.yml)"

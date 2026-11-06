@@ -6,14 +6,15 @@ instead of leaving the user to find out:
 * **Theme** — visible instantly in the launcher, which rebuilds itself.
   Modules already open keep theirs, because they are separate processes
   and their stylesheet carries the colors already embedded.
-* **Language** — cannot be applied hot: the texts are fixed when each
-  widget is built. Modules opened afterwards come out translated.
+* **Language** — applies immediately to every open window; each one
+  re-reads the active catalog. Loaded images, models and the current run
+  are kept. Modules opened afterwards start in the new language.
 * **Motion** — immediate everywhere; only a repaint is needed.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -29,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.i18n import LANGUAGES, _, language, set_language
 
+from . import i18n_qt
 from . import theme as T
 
 
@@ -132,20 +134,38 @@ class _CardTheme(QFrame):
 
 # ──────────────────────────────────────────────────────────────────────
 class PreferencesDialog(QDialog):
-    """Appearance preferences. The theme applies live when picked."""
+    """Appearance preferences. Every option applies live when picked."""
 
     theme_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        i18n_qt.activate()
         self.setWindowTitle(_("Preferences"))
         self.setMinimumWidth(520)
         self._build()
 
+    # ── Language ───────────────────────────────────────────────────
+    def changeEvent(self, event):
+        if event.type() == QEvent.LanguageChange:
+            self.retranslate()
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild after the event, never inside the click that caused it.
+
+        The language buttons trigger this from their own ``clicked`` signal,
+        and ``_build`` destroys them. Deleting the sender while it is
+        emitting is undefined, so the rebuild is queued.
+        """
+        QTimer.singleShot(0, self._build)
+
     # ── Build ──────────────────────────────────────────────────────
     def _build(self) -> None:
-        # It is rebuilt entirely when the theme changes: it is a small dialog and
-        # rebuilding it is cheaper than touching every stylesheet.
+        # It is rebuilt entirely when the theme or the language changes: it is
+        # a small dialog and rebuilding it is cheaper than touching every
+        # stylesheet or every label.
+        self.setWindowTitle(_("Preferences"))
         previous = self.layout()
         if previous is not None:
             QWidget().setLayout(previous)
@@ -173,7 +193,13 @@ class PreferencesDialog(QDialog):
         root.addSpacing(14)
 
         root.addWidget(self._title(_("Language")))
-        root.addWidget(self._clue(_("Modules you open from now on come up in the new language.")))
+        root.addWidget(
+            self._clue(
+                _(
+                    "Applies to every open window straight away. Your loaded images, models and current run are kept."
+                )
+            )
+        )
         row = QHBoxLayout()
         row.setSpacing(8)
         self._buttons_language: dict[str, QPushButton] = {}

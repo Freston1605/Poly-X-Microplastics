@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.platform import IS_MAC, architecture_mac, label_devices
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -68,8 +68,8 @@ class _ProbeThread(QThread):
 
 class ParametersPage(DetectorPage):
     STEP_N = 4
-    STEP_TITLE = _("Parameters")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Parameters")
+    STEP_DESCRIPTION = lazy(
         "Set confidence, IoU, optical calibration and filters. The μm/px calibration is optional but recommended for scientific reports."
     )
 

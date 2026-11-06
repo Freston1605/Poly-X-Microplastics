@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
 from polyx.gui import iconos
@@ -41,8 +41,8 @@ def histogram_backgrounds() -> tuple[str, str]:
 
 class ResultsPage(DetectorPage):
     STEP_N = 6
-    STEP_TITLE = _("Results")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Results")
+    STEP_DESCRIPTION = lazy(
         "Quantitative summary of the analysis. For full charts and a per-image gallery, generate the HTML report in the Report tab."
     )
 

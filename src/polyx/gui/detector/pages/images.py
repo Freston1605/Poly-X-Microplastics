@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detect.protocol import find_gt_for_image
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -28,8 +28,8 @@ from ._base import DetectorPage
 
 class ImagesPage(DetectorPage):
     STEP_N = 2
-    STEP_TITLE = _("Images")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Images")
+    STEP_DESCRIPTION = lazy(
         "Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in the same folder or in a sibling 'labels/' folder, they are loaded and enable error analysis."
     )
 

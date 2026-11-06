@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
@@ -136,8 +136,8 @@ class _LiveCurves(QFrame):
 
 class TrainPage(TrainerPage):
     PAGE_ICON = "ejecutar"
-    PAGE_TITLE = _("Train")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Train")
+    PAGE_DESCRIPTION = lazy(
         "Starts training the model with the configured parameters. You will see live curves, metrics and the log. You can stop it at any time."
     )
 

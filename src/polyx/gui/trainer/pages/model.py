@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import N_, _
+from polyx.core.i18n import N_, _, lazy
 from polyx.gui import theme as T
 
 from ..state import PRESETS
@@ -32,8 +32,8 @@ SIZE_DESCRIPTIONS = [
 
 class ModelPage(TrainerPage):
     PAGE_ICON = "modelo"
-    PAGE_TITLE = _("Select model")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Select model")
+    PAGE_DESCRIPTION = lazy(
         "Pick the preset that fits your case, or customize family and size. The 'Balanced' preset is recommended for most projects."
     )
 
