@@ -125,6 +125,23 @@ class Sam2Segmenter(DetectionSource):
     ) -> list[Instance]:
         raise NotImplementedError("SAM2 does not support sliced prediction directly")
 
+    def predict_auto(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        """Delegate to the single-pass entry point, which requires prompts."""
+        return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
+
     @property
     def names(self) -> dict[int, str]:
         return self._names

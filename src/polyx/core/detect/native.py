@@ -87,6 +87,23 @@ class NativeDetector(DetectionSource):
         # For now, just call the regular predict
         return self.predict(image_path, conf=conf, iou=iou, **kwargs)
 
+    def predict_auto(
+        self,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        """Run the single-pass detector; thresholding has no tiling policy."""
+        return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
+
     @property
     def names(self) -> dict[int, str]:
         return self._names
