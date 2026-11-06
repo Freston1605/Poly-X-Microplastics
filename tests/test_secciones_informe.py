@@ -126,7 +126,7 @@ def _precomputados(st) -> SimpleNamespace:
     import polyx.gui.report_html as rh
 
     resultados = dict(st.results)
-    active = st.active_models()
+    active = list(st.models)
     all_results = [r for rs in resultados.values() for r in rs]
     total_imgs = len({r.image_path for r in all_results})
     total_dets = sum(len(r.predictions) for r in all_results)

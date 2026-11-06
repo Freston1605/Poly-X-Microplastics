@@ -28,27 +28,38 @@ from polyx.core.detect.protocol import Instance as Detection
 
 
 def _estado_minimo(tmp_path):
-    """Un DetectorState con una deteccion medida sobre una foto sintetica."""
+    """A RunResult with one measured detection on a synthetic photo."""
     import cv2
 
     import polyx.core.measure as measure
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (160, 130), 22, (60, 210, 240), -1)
-    ruta = tmp_path / "placa.png"
-    cv2.imwrite(str(ruta), img)
+    image_path = tmp_path / "placa.png"
+    cv2.imwrite(str(image_path), img)
 
     d = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
     measure.apply_to_detection(d, img, 30.0)
     d.number = 1
 
-    st = DetectorState()
-    st.model_slots[0] = ModelSlot(alias="m1", path=Path("fake.pt"))
-    st.results = {
-        0: [ImageResult(image_path=ruta, model_idx=0, predictions=[d], gt=[], has_gt=False)]
-    }
-    return st
+    return RunResult(
+        run_dir=tmp_path / "run",
+        images=[image_path],
+        models=[ModelInfo(alias="m1", path=Path("fake.pt"))],
+        params=RunParams(),
+        results={
+            0: [
+                ImageResult(
+                    image_path=image_path,
+                    model_idx=0,
+                    predictions=[d],
+                    gt=[],
+                    has_gt=False,
+                )
+            ]
+        },
+    )
 
 
 def _informe(tmp_path, lang):
@@ -233,13 +244,10 @@ def _estado_completo(tmp_path):
     import cv2
 
     import polyx.core.measure as measure
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
+    from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
 
     clases = ["PET", "PP", "LDPE"]
-    st = DetectorState()
-    st.model_slots[0] = ModelSlot(alias="yolov8n", path=Path("a.pt"))
-    st.model_slots[1] = ModelSlot(alias="yolo11n", path=Path("b.pt"))
-    st.results = {0: [], 1: []}
+    results: dict[int, list[ImageResult]] = {0: [], 1: []}
 
     n = 0
     for carpeta in ("Chiu Chiu", "Desembocadura"):
@@ -297,12 +305,20 @@ def _estado_completo(tmp_path):
                             y2=y2,
                         )
                     )
-                st.results[mi].append(
+                results[mi].append(
                     ImageResult(
                         image_path=ruta, model_idx=mi, predictions=preds, gt=gt, has_gt=True
                     )
                 )
-    return st
+    return RunResult(
+        run_dir=tmp_path / "run",
+        models=[
+            ModelInfo(alias="yolov8n", path=Path("a.pt")),
+            ModelInfo(alias="yolo11n", path=Path("b.pt")),
+        ],
+        params=RunParams(),
+        results=results,
+    )
 
 
 def _informe_completo(tmp_path, lang):

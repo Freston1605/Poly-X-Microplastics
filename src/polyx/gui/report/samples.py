@@ -109,7 +109,7 @@ def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
     return chosen
 
 
-def _lot_forms(state, all_results):
+def _lot_forms(run, all_results):
     """Detections with a measured shape, minus the ones over the plate ring.
 
     Returns ``(formas, n_en_el_aro, n_sin_forma)``: the (detection, image
@@ -133,7 +133,7 @@ def _lot_forms(state, all_results):
     # report generator's. What is done is to declare how many were set apart.
     from polyx.core.measure.calibration import about_the_ring
 
-    _cals = getattr(state, "calibrations", None) or {}
+    _cals = run.calibrations_by_name
 
     def _en_el_aro(det, path_2) -> bool:
         return about_the_ring(_cals.get(Path(path_2).name), det.x1, det.y1, det.x2, det.y2)
@@ -153,7 +153,7 @@ def _lot_forms(state, all_results):
     return shapes, n_en_el_aro, n_formless
 
 
-def _batch_metrics(state, solo_images):
+def _batch_metrics(run, solo_images):
     """Compute the batch-wide inputs every section builder consumes.
 
     Verbatim hoist (S03/T01) of the precomputation block that used to live
@@ -165,11 +165,11 @@ def _batch_metrics(state, solo_images):
     gets touched at module level.
     """
     if solo_images is None:
-        results_2 = dict(state.results)
+        results_2 = dict(run.results)
     else:
         chosen = {Path(p) for p in solo_images}
         results_2 = {
-            mi: [r for r in rs if Path(r.image_path) in chosen] for mi, rs in state.results.items()
+            mi: [r for r in rs if Path(r.image_path) in chosen] for mi, rs in run.results.items()
         }
 
     all_results = [r for rs in results_2.values() for r in rs]

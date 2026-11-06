@@ -218,7 +218,7 @@ def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_p
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = rh._section_count(st.results, st, st.active_models(), classes=["PET"])
+    html = rh._section_count(st.results, st, st.models, classes=["PET"])
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -242,7 +242,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
 
     nombre_pauta = "2.3x__A&amp;B<img src=x onerror=alert(2)>.png"
     st = estado_hostil(directorio=tmp_path / "fotos", nombres=[nombre_pauta])
-    html = rh._section_count(st.results, st, st.active_models(), classes=["PET"])
+    html = rh._section_count(st.results, st, st.models, classes=["PET"])
 
     assert nombre_pauta not in html
     assert _e(nombre_pauta) in html
@@ -279,9 +279,9 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
 
     monkeypatch.setattr("polyx.gui.report.machine._training_of", lambda peso: entrenamiento)
 
-    from polyx.gui.detector.state import ModelSlot
+    from polyx.core.detection_run import ModelInfo
 
-    slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("peso_falso.pt"))
+    slot = ModelInfo(alias=ALIAS_HOSTIL, path=Path("peso_falso.pt"))
     html = _section_team([slot])
 
     assert ALIAS_HOSTIL not in html, "sink de entrenamiento con markup crudo"
@@ -295,9 +295,9 @@ def test_seccion_equipo_escapa_el_alias_y_lo_que_viene_del_checkpoint(rh, tmp_pa
 
 def test_seccion_equipo_sin_checkpoint_no_nombra_al_modelo():
     """Sin datos de .pt el sink de entrenamiento no se emite en absoluto."""
-    from polyx.gui.detector.state import ModelSlot
+    from polyx.core.detection_run import ModelInfo
 
-    slot = ModelSlot(alias=ALIAS_HOSTIL, path=Path("vacio.pt"))
+    slot = ModelInfo(alias=ALIAS_HOSTIL, path=Path("vacio.pt"))
     html = _section_team([slot])
     assert ALIAS_HOSTIL not in html
     assert ALIAS_ESCAPADO not in html
@@ -317,7 +317,7 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    st.calibrations[NOMBRE_FOTO_HOSTIL] = Calibration(
+    st.calibrations[st.images[0]] = Calibration(
         um_por_px=30.0, origin=ORIGIN_PLATE, cx=160.0, cy=130.0, radius_px=22.0, n_points=12
     )
 
@@ -457,11 +457,6 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
     de clase del checkpoint cargado)."""
     from tests.fixtures_informe import deteccion_medida, estado_hostil, foto_sintetica
 
-    class _NombresFicticios:
-        """Complemento minimo del modelo: solo el dict ``names`` que lee el impl."""
-
-        names = {0: "PET", 5: CLASE_HOSTIL}
-
     st = estado_hostil(directorio=tmp_path / "fotos")
     # GT con clase ajena (id 3) para que entreste miscls y sirva de datos;
     # el name del nombre ausente (id 5, del checkpoint) es quien salta
@@ -473,7 +468,7 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
             gt.class_name = "GT_NEG"
             r.gt = [gt]
             r.has_gt = True
-    st.model_slots[0].loaded = _NombresFicticios()
+    st.models[0].names = {0: "PET", 5: "<img src=x onerror=alert(3)>"}
 
     html = _render_de("errores", st, tmp_path)
 

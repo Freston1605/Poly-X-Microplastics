@@ -412,7 +412,7 @@ def _fig_profile_depth(profiles: dict) -> str:
 # import time and would keep the language of that moment.
 
 
-def _figure_calibration(state) -> str:
+def _figure_calibration(run) -> str:
     """Photo of a plate with the fitted circle drawn on top.
 
     The report used to declare the scale —
@@ -435,7 +435,7 @@ def _figure_calibration(state) -> str:
     """
     from polyx.core.measure.calibration import DIAMETER_PLATE_MM, ORIGIN_PLATE
 
-    cals = getattr(state, "calibrations", None) or {}
+    cals = run.calibrations_by_name
     measurements = [
         (name_2, c)
         for name_2, c in cals.items()
@@ -453,7 +453,7 @@ def _figure_calibration(state) -> str:
     # It is necessary to go back to the original photo: the calibration stores cx/cy/radius but
     # not the pixels. It is searched among the analysed images by name.
     path_2 = None
-    for r in [x for rs in state.results.values() for x in rs]:
+    for r in [x for rs in run.results.values() for x in rs]:
         if Path(r.image_path).name == name_2:
             path_2 = Path(r.image_path)
             break

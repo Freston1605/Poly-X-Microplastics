@@ -397,7 +397,7 @@ def test_compact_report_reads_the_canonical_folder_first(tmp_path, monkeypatch):
     assert "Detections: 4" in text
 
 
-def test_full_report_runs_through_the_transitional_adapter(tmp_path, monkeypatch, capsys):
+def test_full_report_renders_the_engine_result_directly(tmp_path, monkeypatch, capsys):
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [FakeDetector(boxes=(TOP_BOX, BOTTOM_BOX))])
     out = tmp_path / "run"
@@ -420,6 +420,6 @@ def test_full_report_runs_through_the_transitional_adapter(tmp_path, monkeypatch
     assert "Full report unavailable" not in captured.out
     report = (out / "report.html").read_text(encoding="utf-8")
     assert "Informe de detección" in report
-    # The cover names the canonical model alias, which proves the adapter
-    # populated the report state from the RunResult.
+    # The cover names the canonical model alias, which proves the report
+    # consumed the engine's RunResult directly (no DetectorState rebuild).
     assert "best" in report

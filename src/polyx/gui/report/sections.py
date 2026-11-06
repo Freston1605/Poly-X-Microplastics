@@ -91,7 +91,7 @@ def _section_team(active) -> str:
     return html
 
 
-def _section_count(results_2: dict[int, list], state, active, classes: list[str]) -> str:
+def _section_count(results_2: dict[int, list], run, active, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
     It is the table requested for the manuscript: count by plastic type
@@ -106,7 +106,7 @@ def _section_count(results_2: dict[int, list], state, active, classes: list[str]
     """
     if not active:
         return ""
-    main_mi = state.model_slots.index(active[0])
+    main_mi = run.models.index(active[0])
     rs = results_2.get(main_mi, [])
     if not rs:
         return ""
@@ -276,7 +276,7 @@ def _section_summary(
 </p>"""
 
 
-def _section_errors(state, results_2, active, any_gt: bool) -> str:
+def _section_errors(run, results_2, active, any_gt: bool) -> str:
     """Body of the 'errores' section: confusion matrix plus per-class metrics.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when there is no
@@ -285,7 +285,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     """
     if not (any_gt and active):
         return ""
-    main_mi = state.model_slots.index(active[0])
+    main_mi = run.models.index(active[0])
     rs = results_2.get(main_mi, [])
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]
@@ -297,9 +297,9 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
             str(cid),
         )
         cls_names.append(name)
-    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp)
+    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp)
     per_class_metrics = aggregate_per_class(
-        preds_only, gts_only, cls_ids, iou_thr=state.params.iou_tp
+        preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp
     )
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
@@ -317,7 +317,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
     # to compute. They are declared anyway: a report that announces PET/PP/LDPE and
     # then shows two rows looks broken, and the reader cannot distinguish
     # `absent from the batch` from `lost along the way`.
-    known = dict(getattr(getattr(active[0], "loaded", None), "names", {}) or {})
+    known = dict(active[0].names or {})
     missing = [n for cid, n in sorted(known.items()) if cid not in set(cls_ids)]
     note_missing = ""
     if missing:
@@ -335,7 +335,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
         
         <h3>@@N@@.1 {tr("Matriz de confusión")}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{tr("Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).").format(modelo=_esc(active[0].alias), iou=state.params.iou_tp)}</div></div>
+            <div class='caption'>{tr("Figura. Matriz de confusión (modelo principal: {modelo}, IoU = {iou}).").format(modelo=_esc(active[0].alias), iou=run.params.iou_tp)}</div></div>
         <h3>@@N@@.2 {tr("Precisión / Recall / F1 por clase")}</h3>
         <table class='data'><tr>{tr("<th>Clase</th>")}<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
         {tr("<th>Precisión</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
@@ -343,7 +343,7 @@ def _section_errors(state, results_2, active, any_gt: bool) -> str:
         """
 
 
-def _section_models(state, results_2, all_results, any_gt: bool) -> str:
+def _section_models(run, results_2, all_results, any_gt: bool) -> str:
     """Body of the 'modelos' section: per-model comparison table plus F1 note.
 
     Returns the HTML body WITHOUT its ``<h2>`` title (header table included:
@@ -361,9 +361,7 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
     # per-class table, which does penalize confusion. Both are declared.
     rows_models = ""
     total_mc = 0
-    for mi, slot in enumerate(state.model_slots):
-        if slot.path is None:
-            continue
+    for mi, slot in enumerate(run.models):
         rs = results_2.get(mi, [])
         n_img = len({r.image_path for r in rs})
         n_det = sum(len(r.predictions) for r in rs)
@@ -425,13 +423,13 @@ def _section_models(state, results_2, all_results, any_gt: bool) -> str:
 {note_miscls}"""
 
 
-def _section_verdict(results_2, state) -> str:
+def _section_verdict(results_2, run) -> str:
     """Body of the 'veredicto' section: best model by F1-with-class, from the
     confidence sweep. Arguments are the precomputed locals the inline block
     consumed before extraction."""
     text_2 = ""
     if any(r.has_gt for rs in results_2.values() for r in rs):
-        sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
+        sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
         if sweep:
             summary = []
             for alias, rows_2 in sweep.items():
@@ -467,7 +465,7 @@ def _section_verdict(results_2, state) -> str:
     return text_2
 
 
-def _section_comparison(state, results_2) -> str:
+def _section_comparison(run, results_2) -> str:
     """Body of the 'comparacion' section: per-photo model table, the F1 of
     localization note and the comparison figures. Arguments are the
     precomputed locals the inline block consumed before extraction."""
@@ -477,7 +475,7 @@ def _section_comparison(state, results_2) -> str:
     # concentrates most of the particles, the total is decided by that stretch and
     # can hide that in the rest the other model does better.
     compare_html = ""
-    active_2 = [mi for mi, s in enumerate(state.model_slots) if s.path is not None]
+    active_2 = list(range(len(run.models)))
     if len(active_2) > 1:
         by_photo = {}
         for mi in active_2:
@@ -487,7 +485,7 @@ def _section_comparison(state, results_2) -> str:
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
         header_line = "<tr><th>Image</th>"
         for mi in active_2:
-            alias = state.model_slots[mi].alias
+            alias = run.models[mi].alias
             header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
             if there_is_gt:
                 header_line += (
@@ -524,9 +522,7 @@ def _section_comparison(state, results_2) -> str:
                 fn = sum(r.fn for r in rs)
                 pr = tp / (tp + fp) if (tp + fp) else 0
                 rc = tp / (tp + fn) if (tp + fn) else 0
-                marker_2.append(
-                    (2 * pr * rc / (pr + rc) if (pr + rc) else 0, state.model_slots[mi].alias)
-                )
+                marker_2.append((2 * pr * rc / (pr + rc) if (pr + rc) else 0, run.models[mi].alias))
             marker_2.sort(reverse=True)
             best_f1, best = marker_2[0]
             # This F1 is the permissive one (localization). It used to say only `F1 global` and
@@ -555,7 +551,7 @@ def _section_comparison(state, results_2) -> str:
             data_bars = []
             by_model_class: dict[str, dict[str, tuple]] = {}
             for mi in active_2:
-                alias = state.model_slots[mi].alias
+                alias = run.models[mi].alias
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
                 tp = sum(r.tp for r in rs)
                 fp = sum(r.fp for r in rs)
@@ -569,7 +565,7 @@ def _section_comparison(state, results_2) -> str:
                 preds_m = [r.predictions for r in rs]
                 ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
                 if ids:
-                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=state.params.iou_tp)
+                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=run.params.iou_tp)
                     names_cls = {
                         cid: next(
                             (
@@ -600,7 +596,7 @@ def _section_comparison(state, results_2) -> str:
                         "Figura. Precisión, Recall y F1 de cada modelo al umbral "
                         "{umbral}, en los dos criterios. La distancia entre paneles es "
                         "la confusión entre polímeros."
-                    ).format(umbral=f"{state.params.conf:g}")
+                    ).format(umbral=f"{run.params.conf:g}")
                     + "</div></div>"
                 )
 
@@ -625,7 +621,7 @@ def _section_comparison(state, results_2) -> str:
                     if ra is not None and rb is not None:
                         pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
                 f_agreement = _fig_agreement_by_image(
-                    state.model_slots[a].alias, state.model_slots[b].alias, pares
+                    run.models[a].alias, run.models[b].alias, pares
                 )
                 if f_agreement:
                     figures_cmp += (
@@ -642,7 +638,7 @@ def _section_comparison(state, results_2) -> str:
 
             # F1 curve against the threshold: it supports the choice of the operating
             # point with evidence, instead of asserting it.
-            sweep = _sweep_confidence(results_2, state, state.params.iou_tp, state.params.conf)
+            sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
             f_sweep = _fig_sweep(sweep)
             if f_sweep:
                 figures_cmp += (
@@ -653,7 +649,7 @@ def _section_comparison(state, results_2) -> str:
                         "estrella marca el máximo de cada modelo. La curva arranca en "
                         "{umbral}, el umbral con que se ejecutó: por debajo las "
                         "detecciones no se calcularon."
-                    ).format(umbral=f"{state.params.conf:g}")
+                    ).format(umbral=f"{run.params.conf:g}")
                     + "</div></div>"
                 )
 
@@ -682,7 +678,7 @@ def _section_comparison(state, results_2) -> str:
 
 def _section_gallery(
     results_2: dict[int, list],
-    state,
+    run,
     classes_batch,
     max_gallery: int = 60,
     include_gallery: bool = True,
@@ -718,7 +714,7 @@ def _section_gallery(
             candidates.extend(per_image[path_2])
         omitted = max(0, len(per_image) - max_gallery)
         for mi, r in candidates:
-            slot = state.model_slots[mi]
+            slot = run.models[mi]
             if True:
                 # Prediction image (we prefer pred_png; otherwise the combined one)
                 pred_bytes = getattr(r, "pred_png", None) or r.annotated_png
@@ -831,7 +827,7 @@ def _section_results(per_class: dict[str, int], confs: list[float], sizes: list[
 
 
 def _section_methods(
-    state, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
+    run, active, all_results, total_imgs: int, total_dets: int, any_gt: bool
 ) -> tuple:
     """Body of the 'metodos' section: parameters table, team and redacted paragraph.
 
@@ -841,7 +837,7 @@ def _section_methods(
     at module import time (S01 laziness gate).
     """
     # ── Methods ──
-    p = state.params
+    p = run.params
     # When calibration is per photo (medir_placa) there is no SINGLE um_per_px
     # value to report here -- p.um_per_px stays at 0 on purpose.
     # Instead of an `—` that says nothing, the batch mean is given with its
@@ -853,9 +849,7 @@ def _section_methods(
         um_px_txt = f"{p.um_per_px:g}"
     else:
         _ums_methods = [
-            c.um_por_px
-            for c in (getattr(state, "calibrations", None) or {}).values()
-            if getattr(c, "valid", False)
+            c.um_por_px for c in run.calibrations_by_name.values() if getattr(c, "valid", False)
         ]
         _mic = _average_ic95(_ums_methods)
         if _mic:
@@ -973,11 +967,11 @@ def _section_references(include_refs: bool = True) -> str:
     return refs_html
 
 
-def _section_calibration(state) -> str:
+def _section_calibration(run) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
-    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the state has
-    no calibraciones and no manual scale, so the assembler drops the section
+    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the run has
+    no calibrations and no manual scale, so the assembler drops the section
     like it does today. The ``polyx.core.calibration`` import stays lazy
     inside this body: it must not load at module import time (S01 laziness
     gate).
@@ -986,9 +980,9 @@ def _section_calibration(state) -> str:
     # The provenance is reported, not only the number: a size in µm without saying
     # against which standard it was measured is not verifiable. If there is no calibration the
     # section is not emitted, instead of showing an `—` that looks like data.
-    p = state.params
+    p = run.params
     calib_html = ""
-    cals = getattr(state, "calibrations", None) or {}
+    cals = run.calibrations_by_name
     if cals:
         from polyx.core.measure.calibration import (
             BIAS_MAXIMUM_WALL_PCT,
@@ -1040,7 +1034,7 @@ def _section_calibration(state) -> str:
 
 <p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;background:var(--bg_soft)'>
 {tr("<strong>Incertidumbre de la escala, y en qué dirección.</strong> El anillo de la placa tiene una pared de unos <strong>{pared:g}&nbsp;mm</strong> (medido sobre las fotos de este estudio: el borde interno cae en 0,960 del radio ajustado y el externo en 1,000). El diámetro nominal de una placa Petri es ambiguo a ese nivel: puede referirse al diámetro <em>externo</em> o al <em>útil interior</em>. Aquí se toma el <strong>externo</strong>, que es el borde al que ajusta el círculo. Si el nominal se refiriera al interior, la escala correcta sería un <strong>{sesgo:g}&nbsp;% mayor</strong> y todas las tallas de este informe estarían <strong>subestimadas</strong> en esa cifra. El sesgo solo puede ir en ese sentido, porque el externo es el mayor de los dos bordes posibles.").format(pared=THICKNESS_WALL_MM, sesgo=BIAS_MAXIMUM_WALL_PCT)}</p>
-{_figure_calibration(state)}"""
+{_figure_calibration(run)}"""
             if res["avisos"]:
                 items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
                 if items:
@@ -1058,7 +1052,7 @@ def _section_calibration(state) -> str:
     return calib_html
 
 
-def _section_shape(state, shapes, n_en_el_aro, n_formless):
+def _section_shape(run, shapes, n_en_el_aro, n_formless):
     """Body of the 'forma' section, plus the companion 'talla_carpetas' body.
 
     Returns ``(forma_html, por_carpeta_html)``, both WITHOUT their ``<h2>``
@@ -1220,7 +1214,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             # The example card is drawn further below, AFTER explaining the
             # method: showing the crop with a yellow line on top before
             # saying that this line is the Feret diameter explains nothing.
-            cal_elderly = (getattr(state, "calibrations", {}) or {}).get(Path(path_elderly).name)
+            cal_elderly = run.calibrations_by_name.get(Path(path_elderly).name)
             um_elderly = cal_elderly.um_por_px if cal_elderly and cal_elderly.valid else None
             record_elderly = (elderly, path_elderly, um_elderly)
 
@@ -1228,7 +1222,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
             # without a photo cannot be distinguished from noise, or the shape card
             # and a reader has no way to check that there really is a
             # particle there and not a background speck that was badly segmented.
-            cal_minor = (getattr(state, "calibrations", {}) or {}).get(Path(path_minor).name)
+            cal_minor = run.calibrations_by_name.get(Path(path_minor).name)
             um_minor = cal_minor.um_por_px if cal_minor and cal_minor.valid else None
             record_minor = (minor_2, path_minor, um_minor)
             by_html_folder = _size_per_folder(with_size)
@@ -1358,7 +1352,7 @@ def _section_shape(state, shapes, n_en_el_aro, n_formless):
     return shape_html, by_html_folder
 
 
-def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
+def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
     """Body of the 'fichas' section: one annotated card per sampled particle.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
@@ -1393,7 +1387,7 @@ def _section_records(state, shapes: list[tuple], max_records: int = 12) -> str:
                 bgr = None
             if bgr is None:
                 continue
-            cal = (getattr(state, "calibrations", {}) or {}).get(Path(path_2).name)
+            cal = run.calibrations_by_name.get(Path(path_2).name)
             um = cal.um_por_px if cal and cal.valid else None
             cards = ""
             for d in sorted(por_img_f[path_2], key=lambda z: z.number or 0):
