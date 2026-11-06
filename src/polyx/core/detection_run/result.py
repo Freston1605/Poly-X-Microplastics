@@ -8,10 +8,12 @@ backend. Review verdicts are GUI state and deliberately do not live here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
 from polyx.core.detect.yolo import Detection
+from polyx.core.measure.calibration import Calibration
 from polyx.core.platform import device_available
 
 
@@ -155,4 +157,73 @@ class ModelInfo:
     sha256: str = ""
 
 
-__all__ = ["ImageResult", "ModelInfo", "RunParams"]
+@dataclass
+class ModelExecution:
+    """What one model actually did during a run.
+
+    ``imgsz_used`` and ``memory_fallback`` describe the inference that really
+    happened, not what was requested: a GPU out of memory may have lowered the
+    resolution, and the report must be able to declare it. ``shapeless`` counts
+    the particles whose shape could not be segmented and kept the box fallback.
+    """
+
+    images: int = 0
+    detections: int = 0
+    tiled_images: int = 0
+    imgsz_used: list[int] = field(default_factory=list)
+    memory_fallback: list[str] = field(default_factory=list)
+    shapeless: int = 0
+
+    def record_imgsz(self, imgsz: int) -> None:
+        """Keep the list sorted and unique without making callers dedupe."""
+        value = int(imgsz)
+        if value > 0 and value not in self.imgsz_used:
+            self.imgsz_used = sorted([*self.imgsz_used, value])
+
+
+@dataclass
+class RunResult:
+    """Everything a finished (or partial) detection run produced.
+
+    ``results`` is keyed by the dense active-model index (``0..N-1``); the
+    engine never leaks GUI slot indices. The rest is plain data so the CLI, the
+    report and ``load_run`` can consume it without Qt.
+    """
+
+    run_dir: Path
+    images: list[Path] = field(default_factory=list)
+    models: list[ModelInfo] = field(default_factory=list)
+    params: RunParams = field(default_factory=RunParams)
+    calibrations: dict[Path, Calibration] = field(default_factory=dict)
+    results: dict[int, list[ImageResult]] = field(default_factory=dict)
+    status: str = "completed"
+    error: str | None = None
+    skipped_images: list[Path] = field(default_factory=list)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    execution: dict[int, ModelExecution] = field(default_factory=dict)
+    metrics: dict[int, dict[str, int]] = field(default_factory=dict)
+
+    @property
+    def has_gt(self) -> bool:
+        """Whether any image in the run carried ground truth."""
+        return any(result.has_gt for results in self.results.values() for result in results)
+
+    @property
+    def shapeless(self) -> dict[int, int]:
+        """Particles that kept the box fallback, per active model index."""
+        return {index: execution.shapeless for index, execution in self.execution.items()}
+
+    @property
+    def calibrations_by_name(self) -> dict[str, Calibration]:
+        """Filename-keyed view for callers that already worked that way."""
+        return {path.name: calibration for path, calibration in self.calibrations.items()}
+
+
+__all__ = [
+    "ImageResult",
+    "ModelExecution",
+    "ModelInfo",
+    "RunParams",
+    "RunResult",
+]
