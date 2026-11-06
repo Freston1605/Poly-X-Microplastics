@@ -30,9 +30,19 @@ The whole gate — suite, ruff and ty — in one command, from any checkout or
 git worktree:
 
 ```bash
-python tools/check.py            # full suite
-python tools/check.py tests/test_annotate.py -q
+python tools/check.py                              # full suite, serial
+python tools/check.py tests/test_annotate.py -q    # one file, serial
+python tools/check.py --parallel                   # full suite, one worker per core
+python tools/check.py tests/test_annotate.py --parallel=4 -q
 ```
+
+Tests run **serially by default**. CI always runs serially and remains the
+reproducibility reference. `--parallel` (bare: `-n auto`) or `--parallel=N`
+(`-n N`) is an explicit local convenience; the gate never enables it on its
+own. A failure under `--parallel` must be re-run without the flag before it is
+treated as real: xdist can surface ordering or shared-state problems that a
+serial run does not. Every other argument (`tests/...`, `-k`, `-q`, …) is
+forwarded to pytest untouched.
 
 ## Running the same tests locally
 
