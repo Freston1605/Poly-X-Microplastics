@@ -52,7 +52,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
-from polyx.core.i18n import _, lazy
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.image_io import read_image
 from polyx.core.labels import (
     STUDY_CLASSES,
@@ -833,16 +833,22 @@ class GTManualPage(DetectorPage):
 
     def _on_boxes_changed(self):
         n = len(self.canvas.boxes)
-        self.lbl_count.setText(f"{n} caja{'s' if n != 1 else ''}")
+        self.lbl_count.setText(ngettext("%(count)d box", "%(count)d boxes", n) % {"count": n})
 
     def _clear_with_confirm(self):
         if not self.canvas.boxes:
             return
+        count = len(self.canvas.boxes)
+        message = ngettext(
+            "Delete the %(count)d box on this image?",
+            "Delete the %(count)d boxes on this image?",
+            count,
+        ) % {"count": count}
+        message += "\n" + _("(You can undo with Ctrl+Z)")
         r = QMessageBox.question(
             self,
             _("Clear all"),
-            f"¿Borrar las {len(self.canvas.boxes)} cajas de esta imagen?\n"
-            "(se puede deshacer con Ctrl+Z)",
+            message,
             QMessageBox.Yes | QMessageBox.No,
         )
         if r == QMessageBox.Yes:
@@ -873,7 +879,7 @@ class GTManualPage(DetectorPage):
         try:
             self._save_to_txt(path, dets)
             if not silent:
-                self.lbl_canvas_status.setText("Auto-guardado.")
+                self.lbl_canvas_status.setText(_("Autosaved."))
         except Exception as e:  # noqa: BLE001
             if not silent:
                 QMessageBox.warning(self, _("Error while saving"), str(e))
@@ -910,5 +916,7 @@ class GTManualPage(DetectorPage):
             warning_2 = _(
                 "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
             )
-        self.lbl_canvas_status.setText(f"✓ Guardado en: {out_path}{warning_2}")
+        self.lbl_canvas_status.setText(
+            _("✓ Saved to: %(path)s%(warning)s") % {"path": out_path, "warning": warning_2}
+        )
         self._refresh_list()

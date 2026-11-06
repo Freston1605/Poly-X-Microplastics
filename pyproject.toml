@@ -84,9 +84,22 @@ polyx-report = "polyx.cli.report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/polyx"]
+# The pseudo-locale is a developer aid; a mangled catalog must never ship.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+# Never package a generated development pseudo-locale, even from a dirty tree.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
 

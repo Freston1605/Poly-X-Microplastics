@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _, lazy
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
 from polyx.gui import theme as T
@@ -86,7 +86,7 @@ class ErrorsPage(DetectorPage):
     def _refresh_model_combo(self):
         self.combo_model.blockSignals(True)
         self.combo_model.clear()
-        self.combo_model.addItem("Todos", -1)
+        self.combo_model.addItem(_("All"), -1)
         for i, slot in enumerate(self.state.model_slots):
             if slot.path is not None:
                 self.combo_model.addItem(slot.alias, i)
@@ -134,7 +134,9 @@ class ErrorsPage(DetectorPage):
                             )
                         )
 
-        self.lbl_count.setText(f"{len(rows)} error{'es' if len(rows) != 1 else ''}")
+        self.lbl_count.setText(
+            ngettext("%(count)d error", "%(count)d errors", len(rows)) % {"count": len(rows)}
+        )
         self.table.setRowCount(len(rows))
         badge_colors = {"FP": T.WARN, "FN": T.ERR, "MISCLS": T.VIO}
         label_by_code = {"FP": LABEL_FP, "FN": LABEL_FN, "MISCLS": LABEL_MISCLS}

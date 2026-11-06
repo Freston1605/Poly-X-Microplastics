@@ -132,7 +132,7 @@ class EvaluatePage(TrainerPage):
         l2.addLayout(g)
         self.body.addWidget(c2)
 
-        c3, l3 = self.card("Log", "registro")
+        c3, l3 = self.card(_("Log"), "registro")
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setStyleSheet(
@@ -144,13 +144,13 @@ class EvaluatePage(TrainerPage):
         self.body.addWidget(c3)
 
     def _browse_w(self):
-        f, _unused = QFileDialog.getOpenFileName(self, "Seleccionar .pt", "", "Pesos (*.pt)")
+        f, _unused = QFileDialog.getOpenFileName(self, _("Select .pt"), "", _("Weights (*.pt)"))
         if f:
             self.ed_w.setText(f)
 
     def _browse_y(self):
         f, _unused = QFileDialog.getOpenFileName(
-            self, "Seleccionar data.yaml", "", "YAML (*.yaml *.yml)"
+            self, _("Select data.yaml"), "", _("YAML (*.yaml *.yml)")
         )
         if f:
             self.ed_y.setText(f)

@@ -215,7 +215,7 @@ class ModelPage(TrainerPage):
 
     def _browse_custom(self):
         f, _unused = QFileDialog.getOpenFileName(
-            self, "Seleccionar pesos .pt", "", "Pesos PyTorch (*.pt)"
+            self, _("Select .pt weights"), "", _("PyTorch weights (*.pt)")
         )
         if f:
             self.ed_custom.setText(f)

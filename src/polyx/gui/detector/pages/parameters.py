@@ -470,7 +470,9 @@ class ParametersPage(DetectorPage):
         self.btn_probe.setEnabled(False)
         self.btn_probe.setText(_("Testing…"))
         self._probe = _ProbeThread(slot.loaded, str(self.state.images[0]), device, self)
-        self._probe.progress.connect(lambda sz: self.btn_probe.setText(f"⏳ Probando {sz}px…"))
+        self._probe.progress.connect(
+            lambda size: self.btn_probe.setText(_("⏳ Testing %(size)d px…") % {"size": size})
+        )
         self._probe.done.connect(self._on_probe_done)
         self._probe.failed.connect(self._on_probe_failed)
         self._probe.start()
@@ -544,8 +546,11 @@ class ParametersPage(DetectorPage):
             return
         if p.tiling == "nunca":
             self.lbl_plan.setText(
-                f"Primera imagen {wh[0]}×{wh[1]} px → un solo pase a imgsz {p.imgsz} "
-                f"(troceado desactivado)."
+                _(
+                    "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d "
+                    "(tiling off)."
+                )
+                % {"width": wh[0], "height": wh[1], "imgsz": p.imgsz}
             )
             return
         plan = policy_tiling(
@@ -558,14 +563,27 @@ class ParametersPage(DetectorPage):
         )
         if plan is None:
             self.lbl_plan.setText(
-                f"Primera imagen {wh[0]}×{wh[1]} px → un solo pase: no llega al "
-                f"umbral de {p.tiling_threshold_px} px."
+                _(
+                    "First image %(width)d×%(height)d px → single pass: below the "
+                    "%(threshold)d px threshold."
+                )
+                % {"width": wh[0], "height": wh[1], "threshold": p.tiling_threshold_px}
             )
         else:
             scale = p.imgsz / plan["tile"]
             self.lbl_plan.setText(
-                f"Primera imagen {wh[0]}×{wh[1]} px → {plan['n_tiles']} tiles de "
-                f"{plan['tile']} px con {int(plan['overlap'] * 100)}% de solape, cada "
-                f"uno a imgsz {p.imgsz} ({scale:.2f}× la resolución nativa del tile). "
-                f"Tarda ~{plan['n_tiles']}× más que un pase único."
+                _(
+                    "First image %(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px "
+                    "with %(overlap)d%% overlap, each at imgsz %(imgsz)d (%(scale).2f× the "
+                    "tile's native resolution). Takes ~%(tiles)d× longer than a single pass."
+                )
+                % {
+                    "width": wh[0],
+                    "height": wh[1],
+                    "tiles": plan["n_tiles"],
+                    "tile": plan["tile"],
+                    "overlap": int(plan["overlap"] * 100),
+                    "imgsz": p.imgsz,
+                    "scale": scale,
+                }
             )

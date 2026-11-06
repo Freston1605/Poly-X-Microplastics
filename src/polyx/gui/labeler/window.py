@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, ngettext
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
@@ -354,11 +354,11 @@ class LabelerWindow(QMainWindow):
 
     def _on_box_rejected(self, side: float):
         self._set_status(
-            f"⚠ Caja de {side:.1f} px descartada (mínimo "
-            f"{self.canvas.SIDE_MINIMUM_PX:.0f} px) — acerca el zoom",
+            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
+            % {"side": side, "minimum": self.canvas.SIDE_MINIMUM_PX},
             T.WARN,
         )
-        QTimer.singleShot(3500, lambda: self._set_status("● Listo", T.OK))
+        QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):
         QShortcut(QKeySequence("Ctrl+S"), self, self._save)
@@ -404,27 +404,27 @@ class LabelerWindow(QMainWindow):
             self.state.set_class_names(names)
 
     def _add_class(self):
-        name, ok = QInputDialog.getText(self, "Nueva clase", "Nombre de la clase:")
+        name, ok = QInputDialog.getText(self, _("New class"), _("Class name:"))
         if ok and name.strip():
             self.state.set_class_names(list(self.state.class_names) + [name.strip()])  # noqa: RUF005
 
     # ── Files ────────────────────────────────────────────────
     def _open_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta de imágenes")
+        folder = QFileDialog.getExistingDirectory(self, _("Select an image folder"))
         if folder:
             self.state.load_images(Path(folder))
             self.state.save_classes_txt()
-            self._set_status("● Carpeta cargada", T.OK)
+            self._set_status(_("● Folder loaded"), T.OK)
 
     def _save(self):
         self.state.save_current()
         self.state.save_classes_txt()
-        self._set_status("● Guardado", T.OK)
+        self._set_status(_("● Saved"), T.OK)
 
     # ── Pre-annotation ────────────────────────────────────────
     def _load_model(self):
         path, _unused = QFileDialog.getOpenFileName(
-            self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)"
+            self, _("Load YOLO model"), "", _("YOLO model (*.pt)")
         )
         if not path:
             return
@@ -434,7 +434,7 @@ class LabelerWindow(QMainWindow):
             self._pre_model = YoloModel(path)
             self._pre_model_name = Path(path).name
             self.lbl_model.setText(self._pre_model_name)
-            self._set_status("● Modelo cargado", T.OK)
+            self._set_status(_("● Model loaded"), T.OK)
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))
 
@@ -457,7 +457,15 @@ class LabelerWindow(QMainWindow):
             dets = self._pre_model.predict_auto(str(img), **self._pre_annotation_params())
             boxes = self._dets_to_boxes(dets, img)
             self.state.set_current_boxes(boxes)
-            self._set_status(f"● Pre-anotadas {len(boxes)} cajas", T.OK)
+            self._set_status(
+                ngettext(
+                    "● Pre-annotated %(count)d box",
+                    "● Pre-annotated %(count)d boxes",
+                    len(boxes),
+                )
+                % {"count": len(boxes)},
+                T.OK,
+            )
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Pre-annotation error"), str(e))
 
@@ -469,7 +477,7 @@ class LabelerWindow(QMainWindow):
             return
 
         total = len(self.state.images)
-        pd = QProgressDialog("Pre-anotando imágenes…", "Cancelar", 0, total, self)
+        pd = QProgressDialog(_("Pre-annotating images…"), _("Cancel"), 0, total, self)
         pd.setWindowTitle(_("Pre-annotating"))
         pd.setMinimumDuration(0)
         pd.setValue(0)
@@ -494,7 +502,7 @@ class LabelerWindow(QMainWindow):
 
         pd.setValue(total)
         self.state.annotations_changed.emit()
-        self._set_status("● Pre-anotación completa", T.OK)
+        self._set_status(_("● Pre-annotation complete"), T.OK)
 
     def _pre_annotation_params(self) -> dict:
         """Inference parameters for the pre-annotation.
@@ -549,7 +557,9 @@ class LabelerWindow(QMainWindow):
         for img in imgs:
             item = QListWidgetItem(self._text_item(img, count_2=True))
             self.img_list.addItem(item)
-        self.lbl_count.setText(f"{len(imgs)} imagen(es)")
+        self.lbl_count.setText(
+            ngettext("%(count)d image", "%(count)d images", len(imgs)) % {"count": len(imgs)}
+        )
         # Thumbnails are generated later, in batches, so as not to freeze the
         # window: each one decodes the full image and there are hundreds.
         self._queue_thumbs = list(range(len(imgs)))
@@ -603,7 +613,13 @@ class LabelerWindow(QMainWindow):
         self.bar.setMaximum(total)
         self.bar.setValue(made)
         self.lbl_progress.setText(
-            f"{made} / {total} revisadas  ({100 * made / total:.0f}%)   faltan {total - made}"
+            _("%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left")
+            % {
+                "done": made,
+                "total": total,
+                "percent": 100 * made / total,
+                "remaining": total - made,
+            }
         )
 
     def _go_next_pending(self):
@@ -661,8 +677,8 @@ class LabelerWindow(QMainWindow):
             return
         self.state.save_current()
         self.state.save_classes_txt()
-        self._set_status("● Autoguardado", T.INK3)
-        QTimer.singleShot(2500, lambda: self._set_status("● Listo", T.OK))
+        self._set_status(_("● Autosaved"), T.INK3)
+        QTimer.singleShot(2500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _set_status(self, text: str, color: str = T.OK):
         self.lbl_status.setText(text)

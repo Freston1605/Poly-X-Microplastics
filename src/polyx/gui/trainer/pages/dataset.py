@@ -323,14 +323,14 @@ class DatasetPage(TrainerPage):
 
     def _browse(self):
         f, _unused = QFileDialog.getOpenFileName(
-            self, "Seleccionar data.yaml", "", "YAML (*.yaml *.yml)"
+            self, _("Select data.yaml"), "", _("YAML (*.yaml *.yml)")
         )
         if f:
             self.ed_yaml.setText(f)
             self._reload_yaml()
 
     def _browse_split_src(self):
-        d = QFileDialog.getExistingDirectory(self, "Carpeta raíz con images/ y labels/")
+        d = QFileDialog.getExistingDirectory(self, _("Root folder with images/ and labels/"))
         if d:
             self.ed_split_src.setText(d)
 
@@ -346,7 +346,7 @@ class DatasetPage(TrainerPage):
         try:
             d = _load_yaml(p)
         except Exception as e:  # noqa: BLE001
-            self.lbl_yaml_status.setText(f"✗ Error parseando YAML: {e}")
+            self.lbl_yaml_status.setText(_("✗ Error parsing YAML: %(error)s") % {"error": e})
             self.lbl_yaml_status.setStyleSheet(f"color: {T.ERR_TX}; font-size: 10pt; border: none;")
             return
 
@@ -371,12 +371,15 @@ class DatasetPage(TrainerPage):
 
         self.lbl_yaml_status.setText(f"✓ {p}")
         self.lbl_yaml_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 10pt; border: none;")
-        self.lbl_train.setText(f"Train: {n_train}")
-        self.lbl_val.setText(f"Val: {n_val}")
-        self.lbl_test.setText(f"Test: {n_test}")
+        self.lbl_train.setText(_("Train: %(count)d") % {"count": n_train})
+        self.lbl_val.setText(_("Val: %(count)d") % {"count": n_val})
+        self.lbl_test.setText(_("Test: %(count)d") % {"count": n_test})
         self.lbl_classes.setText(
-            f"Clases ({len(self.state.dataset.class_names)}): "
-            + ", ".join(self.state.dataset.class_names[:20])
+            _("Classes (%(count)d): %(names)s")
+            % {
+                "count": len(self.state.dataset.class_names),
+                "names": ", ".join(self.state.dataset.class_names[:20]),
+            }
         )
         self._refresh_preview()
 
@@ -592,7 +595,7 @@ class DatasetPage(TrainerPage):
             audit = audit_dataset(yaml_path)
         except Exception as e:  # noqa: BLE001
             self.lbl_dist.setText("")
-            it = QListWidgetItem(f"No se pudo analizar: {e}")
+            it = QListWidgetItem(_("Could not analyse: %(error)s") % {"error": e})
             it.setForeground(QColor(T.ERR))
             self.audit_list.addItem(it)
             return
@@ -605,10 +608,10 @@ class DatasetPage(TrainerPage):
             for c in audit.class_names:
                 t = tr.get(c, 0)
                 v = vl.get(c, 0)
-                marker = "  ⚠️sin val" if (t > 0 and v == 0) else ""
+                marker = _("  ⚠️ no val") if (t > 0 and v == 0) else ""
                 parts_2.append(f"<b>{c}</b>: train {t} / val {v}{marker}")
             self.lbl_dist.setText(
-                "Distribución por clase &nbsp; — &nbsp; " + " &nbsp;•&nbsp; ".join(parts_2)
+                _("Distribution per class &nbsp; — &nbsp; ") + " &nbsp;•&nbsp; ".join(parts_2)
             )
         else:
             self.lbl_dist.setText("")
@@ -635,7 +638,8 @@ class DatasetPage(TrainerPage):
             QMessageBox.warning(
                 self,
                 _("Auto-split"),
-                f"No existe {imgs_dir}. Necesitas images/ y labels/ dentro de la carpeta.",
+                _("Does not exist: %(path)s. You need images/ and labels/ inside the folder.")
+                % {"path": imgs_dir},
             )
             return
         # collect images
@@ -699,8 +703,13 @@ class DatasetPage(TrainerPage):
         QMessageBox.information(
             self,
             _("Auto-split"),
-            f"Listo:\n• Train: {len(train_list)}\n• Val: {len(val_list)}\n"
-            f"• Test: {len(test_list)}\n\nGenerado: {yaml_out}",
+            _("Ready:\n• Train: %(train)d\n• Val: %(val)d\n• Test: %(test)d\n\nGenerated: %(path)s")
+            % {
+                "train": len(train_list),
+                "val": len(val_list),
+                "test": len(test_list),
+                "path": yaml_out,
+            },
         )
         self.ed_yaml.setText(str(yaml_out))
         self._reload_yaml()

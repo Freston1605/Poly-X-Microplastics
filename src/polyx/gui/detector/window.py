@@ -93,9 +93,9 @@ class DetectorWindow(QMainWindow):
 
         # Connect global signals to reflect state in the footer. Connected once:
         # a language change rebuilds the widgets, not the window object.
-        self.state.run_started.connect(lambda: self._set_status("● Ejecutando…", T.ACCENT))
-        self.state.run_finished.connect(lambda: self._set_status("● Finalizado", T.OK))
-        self.state.run_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
+        self.state.run_started.connect(lambda: self._set_status(_("● Running…"), T.ACCENT))
+        self.state.run_finished.connect(lambda: self._set_status(_("● Finished"), T.OK))
+        self.state.run_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
         self.state.run_finished.connect(self._apply_pending_retranslation)
         self.state.run_aborted.connect(self._apply_pending_retranslation)
 

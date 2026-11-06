@@ -103,7 +103,7 @@ class _LiveCurves(QFrame):
             self._lay.addWidget(self.canvas)
             self._ok = True
         except Exception as e:  # noqa: BLE001
-            self._placeholder.setText(f"matplotlib no disponible: {e}")
+            self._placeholder.setText(_("matplotlib is not available: %(error)s") % {"error": e})
         return self._ok
 
     def update_curves(self, history):
@@ -281,7 +281,7 @@ class TrainPage(TrainerPage):
             f"font-size: 9.5pt; border: 1px solid {T.RULE}; border-radius: 6px;"
         )
         self.log.setMinimumHeight(420)
-        self.tabs.addTab(self.log, "Log")
+        self.tabs.addTab(self.log, _("Log"))
 
         self.body.addWidget(self.tabs)
 
@@ -304,38 +304,51 @@ class TrainPage(TrainerPage):
 
     def _on_hw_probe(self, d: dict):
         if d.get("ok"):
+            backend = "ROCm" if d.get("is_rocm") else "CUDA"
+            build = d.get("hip_build") if d.get("is_rocm") else d.get("cuda_build", "?")
             self.lbl_hw.setText(
-                f"<b style='color:{T.OK_TX};'>● ENTRENARÁ EN GPU</b> &nbsp; · &nbsp; "
-                f"<b>{d.get('device_name', '?')}</b> &nbsp; · &nbsp; "
-                f"VRAM libre {d.get('vram_free_gb', 0):.1f} / {d.get('vram_total_gb', 0):.1f} GB "
-                f"&nbsp; · &nbsp; torch {d.get('torch_version', '?')} "
-                f"({'ROCm' if d.get('is_rocm') else 'CUDA'} {d.get('hip_build') if d.get('is_rocm') else d.get('cuda_build', '?')})"
+                f"<b style='color:{T.OK_TX};'>"
+                + _("● WILL TRAIN ON GPU")
+                + "</b> &nbsp; · &nbsp; "
+                + f"<b>{d.get('device_name', '?')}</b> &nbsp; · &nbsp; "
+                + _("free VRAM %(free).1f / %(total).1f GB")
+                % {"free": d.get("vram_free_gb", 0), "total": d.get("vram_total_gb", 0)}
+                + " &nbsp; · &nbsp; "
+                + _("torch %(version)s (%(backend)s %(build)s)")
+                % {"version": d.get("torch_version", "?"), "backend": backend, "build": build}
             )
         elif "error" in d:
             self.lbl_hw.setText(
-                f"<b style='color:{T.ERR_TX};'>● ERROR</b> al sondear hardware: {d['error']}"
+                f"<b style='color:{T.ERR_TX};'>"
+                + _("● ERROR probing hardware: %(error)s") % {"error": d["error"]}
+                + "</b>"
             )
         else:
             tv = d.get("torch_version", "?")
             cb = d.get("cuda_build")
             hb = d.get("hip_build")
             if cb is None and hb is None:
-                msg = (
-                    f"PyTorch {tv} fue instalado <b>SIN CUDA/ROCm</b> — entrenará en CPU "
-                    f"(muy lento). Reinstala con SETUP.bat detectando GPU."
-                )
+                msg = _(
+                    "PyTorch %(version)s was installed <b>WITHOUT CUDA/ROCm</b> — it will "
+                    "train on CPU (very slow). Reinstall with SETUP.bat detecting the GPU."
+                ) % {"version": tv}
             elif hb is not None and cb is None:
-                msg = (
-                    f"PyTorch {tv} con ROCm {hb} pero <code>torch.cuda.is_available()</code> "
-                    f"= False — revisa drivers AMD / reinicia el equipo."
-                )
+                msg = _(
+                    "PyTorch %(version)s with ROCm %(build)s but "
+                    "<code>torch.cuda.is_available()</code> = False — check the AMD "
+                    "drivers / restart the machine."
+                ) % {"version": tv, "build": hb}
             else:
-                msg = (
-                    f"PyTorch {tv} con CUDA {cb} pero <code>torch.cuda.is_available()</code> "
-                    f"= False — revisa drivers NVIDIA / reinicia el equipo."
-                )
+                msg = _(
+                    "PyTorch %(version)s with CUDA %(build)s but "
+                    "<code>torch.cuda.is_available()</code> = False — check the NVIDIA "
+                    "drivers / restart the machine."
+                ) % {"version": tv, "build": cb}
             self.lbl_hw.setText(
-                f"<b style='color:{T.WARN_TX};'>● ENTRENARÁ EN CPU</b> &nbsp; · &nbsp; {msg}"
+                f"<b style='color:{T.WARN_TX};'>"
+                + _("● WILL TRAIN ON CPU")
+                + "</b> &nbsp; · &nbsp; "
+                + msg
             )
 
     # ──────────────────────────────────────────

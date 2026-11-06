@@ -90,10 +90,10 @@ class TrainerWindow(QMainWindow):
 
         # Status according to training state. Connected once: a language
         # change rebuilds the widgets, not the window object.
-        self.state.train_started.connect(lambda: self._set_status("● Entrenando…", T.ACCENT))
-        self.state.train_finished.connect(lambda _unused: self._set_status("● Finalizado", T.OK))
-        self.state.train_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
-        self.state.train_failed.connect(lambda _unused: self._set_status("● Error", T.ERR))
+        self.state.train_started.connect(lambda: self._set_status(_("● Training…"), T.ACCENT))
+        self.state.train_finished.connect(lambda _unused: self._set_status(_("● Finished"), T.OK))
+        self.state.train_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
+        self.state.train_failed.connect(lambda _unused: self._set_status(_("● Error"), T.ERR))
         self.state.train_finished.connect(lambda _unused: self._apply_pending_retranslation())
         self.state.train_aborted.connect(self._apply_pending_retranslation)
         self.state.train_failed.connect(lambda _unused: self._apply_pending_retranslation())

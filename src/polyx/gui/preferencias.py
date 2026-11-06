@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.i18n import LANGUAGES, _, language, set_language
+from polyx.core.i18n import _, available_languages, language, set_language
 
 from . import i18n_qt
 from . import theme as T
@@ -207,7 +207,7 @@ class PreferencesDialog(QDialog):
         row = QHBoxLayout()
         row.setSpacing(8)
         self._buttons_language: dict[str, QPushButton] = {}
-        for cod, label_2 in LANGUAGES.items():
+        for cod, label_2 in available_languages().items():
             b = QPushButton(label_2)
             b.setCheckable(True)
             b.setChecked(cod == language())

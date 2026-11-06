@@ -73,7 +73,7 @@ class _ModelSlotCard(QFrame):
         # Path .pt
         row2 = QHBoxLayout()
         row2.setSpacing(8)
-        lbl2 = QLabel(".pt:")
+        lbl2 = QLabel(_(".pt:"))
         lbl2.setStyleSheet(f"color: {T.INK2}; border: none; min-width: 40px;")
         self.ed_path = QLineEdit("")
         self.ed_path.setPlaceholderText(_("Path to the trained model's .pt file…"))
@@ -92,7 +92,10 @@ class _ModelSlotCard(QFrame):
 
     def _browse(self):
         f, _unused = QFileDialog.getOpenFileName(
-            self, "Seleccionar modelo YOLO (.pt)", "", "Pesos PyTorch (*.pt);;Todos (*.*)"
+            self,
+            _("Select a YOLO model (.pt)"),
+            "",
+            _("PyTorch weights (*.pt);;All files (*.*)"),
         )
         if f:
             self.ed_path.setText(f)
@@ -144,7 +147,7 @@ class _ModelSlotCard(QFrame):
         self.ed_alias.setText(slot.alias)
         self.ed_path.setText(str(slot.path) if slot.path else "")
         if slot.path is not None:
-            self.set_loaded_status("✓ archivo válido", T.OK)
+            self.set_loaded_status(_("✓ valid file"), T.OK)
         else:
             self.set_loaded_status("", T.INK3)
 
@@ -195,7 +198,7 @@ class ModelsPage(DetectorPage):
 
         # Initial state
         if DEFAULT_MODEL.exists():
-            self.lbl_default.setText(f"Encontrado en {DEFAULT_MODEL.name}")
+            self.lbl_default.setText(_("Found in %(name)s") % {"name": DEFAULT_MODEL.name})
         else:
             self.lbl_default.setText(_("Not found in the project root."))
 
@@ -220,11 +223,11 @@ class ModelsPage(DetectorPage):
             if p.exists() and p.suffix.lower() == ".pt":
                 slot.path = p
                 slot.loaded = None  # it will be loaded lazily on run
-                self.slot_cards[idx].set_loaded_status("✓ archivo válido", T.OK)
+                self.slot_cards[idx].set_loaded_status(_("✓ valid file"), T.OK)
             else:
                 slot.path = None
                 slot.loaded = None
-                self.slot_cards[idx].set_loaded_status("✗ archivo no encontrado", T.ERR)
+                self.slot_cards[idx].set_loaded_status(_("✗ file not found"), T.ERR)
         else:
             slot.path = None
             slot.loaded = None
@@ -236,8 +239,8 @@ class ModelsPage(DetectorPage):
             QMessageBox.warning(
                 self,
                 _("Not found"),
-                f"No se encontró {DEFAULT_MODEL}.\n"
-                "Cópialo a la raíz del proyecto e intenta de nuevo.",
+                _("Could not find %(model)s.\nCopy it to the project root and try again.")
+                % {"model": DEFAULT_MODEL},
             )
             return
         # Load into slot 1

@@ -202,8 +202,12 @@ class ResultsPage(DetectorPage):
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
         any_gt = any(r.has_gt for r in all_results)
         self.kpi_f1.set_value(f"{f1:.3f}" if any_gt else None)
-        self.lbl_prec.setText(f"Precisión:  {prec:.3f}" if any_gt else "Precisión:  —")
-        self.lbl_rec.setText(f"Recall:  {rec:.3f}" if any_gt else "Recall:  —")
+        self.lbl_prec.setText(
+            _("Precision:  %(value).3f") % {"value": prec} if any_gt else _("Precision:  —")
+        )
+        self.lbl_rec.setText(
+            _("Recall:  %(value).3f") % {"value": rec} if any_gt else _("Recall:  —")
+        )
         mc = sum(r.miscls for r in all_results)
         self.lbl_mis.setText(f"{LABEL_MISCLS}:  {mc}" if any_gt else f"{LABEL_MISCLS}:  —")
 
@@ -252,7 +256,7 @@ class ResultsPage(DetectorPage):
 
         if not self.state.results:
             self.lbl_recharge.setText(
-                "No hay resultados que recalcular: ejecuta primero la detección."
+                _("There are no results to recompute: run the detection first.")
             )
             return
 
@@ -509,13 +513,15 @@ class ResultsPage(DetectorPage):
             self._hist_placeholder.setVisible(False)
             self._hist_canvas.setVisible(True)
         except Exception as e:  # noqa: BLE001
-            self._hist_placeholder.setText(f"matplotlib no disponible: {e}")
+            self._hist_placeholder.setText(
+                _("matplotlib is not available: %(error)s") % {"error": e}
+            )
             self._hist_placeholder.setVisible(True)
 
     def _export_csv(self):
         """Exports all the detections to a CSV file."""
         path, _unused = QFileDialog.getSaveFileName(
-            self, "Exportar CSV", "detecciones.csv", "CSV (*.csv)"
+            self, _("Export CSV"), "detecciones.csv", _("CSV (*.csv)")
         )
         if not path:
             return
@@ -591,7 +597,7 @@ class ResultsPage(DetectorPage):
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
 
-            QMessageBox.warning(self, _("Error"), f"No se pudo guardar: {e}")
+            QMessageBox.warning(self, _("Error"), _("Could not save: %(error)s") % {"error": e})
 
     def _open_row(self, row: int, col: int):
         if row < 0 or self.state.run_dir is None:
@@ -638,7 +644,9 @@ class ResultsPage(DetectorPage):
         try:
             from polyx.gui.viewer.window import ViewerWindow
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, _("Review"), f"No se pudo abrir el Visor: {e}")
+            QMessageBox.warning(
+                self, _("Review"), _("Could not open the Viewer: %(error)s") % {"error": e}
+            )
             return
 
         # It is stored in self so the garbage collector does not take it when
