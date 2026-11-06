@@ -76,19 +76,19 @@ def _run(command: list[str], env: dict[str, str]) -> int:
 def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
     """Separate the opt-in ``--parallel`` flag from the args pytest receives."""
     forwarded: list[str] = []
-    workers: list[str] = []
+    worker_args: list[str] = []
     for argument in argv:
         if argument == "--parallel":
-            workers = ["-n", "auto"]
+            worker_args = ["-n", "auto"]
         elif argument.startswith("--parallel="):
-            workers = ["-n", argument.partition("=")[2] or "auto"]
+            worker_args = ["-n", argument.partition("=")[2] or "auto"]
         else:
             forwarded.append(argument)
-    return forwarded, workers
+    return forwarded, worker_args
 
 
 def main(argv: list[str]) -> int:
-    pytest_args, parallel = _split_parallel(argv)
+    pytest_args, xdist_args = _split_parallel(argv)
     python = _python()
     env = os.environ.copy()
     source = str(ROOT / "src")
@@ -99,7 +99,7 @@ def main(argv: list[str]) -> int:
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
     commands = [
-        [str(python), "-m", "pytest", "-q", *parallel, *pytest_args],
+        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
         [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],

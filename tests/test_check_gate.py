@@ -86,3 +86,5 @@ def test_parallel_accepts_an_explicit_worker_count(tmp_path):
     result = _run_gate(tmp_path, "--parallel=1", parallel=True)
 
     _assert_only_selection_ran(result, expected=2)
+    assert "-n 1" in result.stdout
+    assert "-n auto" not in result.stdout
