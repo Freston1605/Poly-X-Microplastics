@@ -4,12 +4,14 @@ Issues and specs for this repo live as GitHub issues **on the fork
 `Freston1605/Poly-X-Microplastics`** (issues enabled 2026-11-05). Use the `gh`
 CLI for all operations, **always passing `-R Freston1605/Poly-X-Microplastics`**.
 
-> **Fork trap:** run from this directory, bare `gh` resolves to the upstream
-> parent `CrissFerrada/Poly-X-Microplastics` (where the legacy GSD tickets
-> live; the token has read-only access there). Every `gh` command in this
-> repo must carry `-R Freston1605/Poly-X-Microplastics`, or it will silently
-> read/write the upstream repo. Verify with
-> `gh repo view -R Freston1605/Poly-X-Microplastics --json nameWithOwner`.
+> **Fork trap:** resolution varies by subcommand in this checkout: a bare
+> `gh issue list` has resolved to the fork, while `gh repo view` resolved to
+> the upstream parent `CrissFerrada/Poly-X-Microplastics` (where the legacy
+> GSD tickets live; the token has read-only access there). Every
+> `issue`/`pr`/`api` command must carry `-R Freston1605/Poly-X-Microplastics`,
+> or it can silently read/write the upstream repo. `gh repo view` is the
+> exception: it takes the repo positionally — verify with
+> `gh repo view Freston1605/Poly-X-Microplastics --json nameWithOwner`.
 
 The tickets in the upstream repo (M008/M011…) are not this tracker's data;
 do not reference, close or label them from here.
@@ -28,7 +30,7 @@ do not reference, close or label them from here.
 
 `gh` does **not** infer this fork correctly on its own (see the fork trap above), so never rely on it: always pass `-R`.
 
-File issues only into the user's own repo. Never file into `mattpocock/skills` (the repo these skills come from) unless the user owns it. Before the first `gh issue create` of a session, check the target with `gh repo view -R Freston1605/Poly-X-Microplastics --json nameWithOwner`.
+File issues only into the user's own repo. Never file into `mattpocock/skills` (the repo these skills come from) unless the user owns it. Before the first `gh issue create` of a session, check the target with `gh repo view Freston1605/Poly-X-Microplastics --json nameWithOwner`.
 
 ## Pull requests as a triage surface
 

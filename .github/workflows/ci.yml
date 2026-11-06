@@ -47,6 +47,11 @@ jobs:
       - name: Lint
         run: uv run ruff check src/ tests/ tools/ install/
 
+      # Mechanical palette rule: the hook catches it locally, CI catches it
+      # when the hook was never installed.
+      - name: Palette fallback guardrail
+        run: python tools/check_palette_fallbacks.py
+
       - name: Install script smoke checks
         run: |
           bash -n install/*.sh install/*.command

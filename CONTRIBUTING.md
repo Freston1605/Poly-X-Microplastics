@@ -26,6 +26,14 @@ uv run ruff format --check src/ tests/ tools/ install/
 uv run ty check src/polyx/core src/polyx/cli
 ```
 
+The whole gate — suite, ruff and ty — in one command, from any checkout or
+git worktree:
+
+```bash
+python tools/check.py            # full suite
+python tools/check.py tests/test_annotate.py -q
+```
+
 ## Running the same tests locally
 
 ### Windows (the development machine)

@@ -17,7 +17,7 @@ repos:
     hooks:
       - id: no-hardcoded-fallback
         name: No hardcoded fallback colours
-        entry: bash -c 'if grep -rn "CLASS_COLOR_HEX.get" src/ | grep -v "T.FALLBACK_COLOR_HEX\|FALLBACK_COLOR_HEX" | grep -qE "get\([a-zA-Z_][a-zA-Z0-9_]*,"; then echo "Hardcoded fallback colour in CLASS_COLOR_HEX.get(var, ...) — use T.FALLBACK_COLOR_HEX"; exit 1; fi'
+        entry: python tools/check_palette_fallbacks.py
         language: system
         pass_filenames: false
         files: \.py$
