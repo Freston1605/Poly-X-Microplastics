@@ -252,7 +252,7 @@ class MicroscopePanel(QWidget):
         x = field.left() + x_rel * side
         y = field.top() + y_rel * side
         r = part["r"] * (side / 250.0)
-        base = QColor(T.CLASS_COLOR_HEX[part["clase"]])
+        base = T.class_qcolor(part["clase"])
 
         # Halo: a radial that fades out, not a constant-alpha disc. It is the
         # difference between looking like fluorescence and looking like a sticker.
@@ -332,7 +332,7 @@ class MicroscopePanel(QWidget):
         margin = r * (2.0 if part["forma"] == 1 else 1.55)
         box = QRectF(x - margin, y - margin * 0.85, margin * 2, margin * 1.7)
 
-        color = QColor(T.CLASS_COLOR_HEX[part["clase"]])
+        color = T.class_qcolor(part["clase"])
         p.setBrush(Qt.NoBrush)
         p.setPen(QPen(T.with_alpha(color.name(), int(215 * alpha)), 1.5))
         p.drawRect(box)

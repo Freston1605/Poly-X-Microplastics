@@ -230,6 +230,8 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 
 - **`CLASS_COLOR_HEX`** (PET/PP/LDPE) — these are domain data. If they changed with
   the theme, two screenshots of the same analysis would not be comparable.
+  Qt paint sites obtain a class `QColor` through `T.class_qcolor(name)`; an
+  unknown class gets `FALLBACK_COLOR_HEX` instead of raising.
 - **`T.DOC`** — frozen palette (the light one) for the **HTML reports**. A report
   gets printed, attached and archived: if it came out dark because whoever generated
   it works at night, it would waste ink and two reports of the same analysis would
