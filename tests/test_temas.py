@@ -17,6 +17,11 @@ from polyx.gui import theme as T
 # ────────────────────────────────────────────────────────────────────
 #  Contraste
 # ────────────────────────────────────────────────────────────────────
+def test_theme_saves_stay_in_the_test_sandbox(tmp_path):
+    assert T._FILE.parent == tmp_path
+    assert T._FILE.name == "polyx_tema.json"
+
+
 def _luminancia(hex_color: str) -> float:
     """Luminancia relativa segun WCAG 2.1."""
     h = hex_color.lstrip("#")

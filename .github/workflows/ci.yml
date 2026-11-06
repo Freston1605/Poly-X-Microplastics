@@ -41,6 +41,9 @@ jobs:
 
       # uv gestiona el entorno y las dependencias desde uv.lock (reproducible).
       # requirements.txt se mantiene como manifiesto de usuario final (SETUP.bat).
+      - name: Lockfile is current
+        run: uv lock --check
+
       - name: Sync dependencies
         run: uv sync --python ${{ matrix.python-version }} --extra gui
 

@@ -61,6 +61,22 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
     ob.clear_run_id()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_theme_saves(tmp_path, monkeypatch):
+    """Keep theme changes out of the developer's home directory.
+
+    ``theme.set_theme`` persists the choice to ``~/.polyx_tema.json``. Point
+    that file at the test's ``tmp_path`` for every test and restore the active
+    palette afterwards, so the suite is hermetic.
+    """
+    from polyx.gui import theme
+
+    original = theme.theme()
+    monkeypatch.setattr(theme, "_FILE", tmp_path / "polyx_tema.json")
+    yield
+    theme._apply(original)
+
+
 @pytest.fixture
 def qapp():
     """Una sola QApplication por módulo: PySide6 no permite recrearla."""
