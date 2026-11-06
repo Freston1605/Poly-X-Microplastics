@@ -110,11 +110,5 @@ class RunWriter:
             self._csv_closed = True
         self.write_run_json()
 
-    def close(self) -> None:
-        """Release the CSV handle without rewriting ``run.json``."""
-        if not self._csv_closed:
-            self._csv_handle.close()
-            self._csv_closed = True
-
 
 __all__ = ["RunWriter"]

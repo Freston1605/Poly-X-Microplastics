@@ -316,7 +316,7 @@ class ParametersPage(DetectorPage):
         self.sb_umpx.setRange(0.0, 1000.0)
         self.sb_umpx.setSingleStep(0.01)
         self.sb_umpx.setDecimals(4)
-        self.sb_umpx.setValue(state.params.um_per_px)
+        self.sb_umpx.setValue(state.calibration.um_per_px)
         self.sb_umpx.valueChanged.connect(self._on_change)
         g3.addWidget(self.sb_umpx, 0, 1)
         g3.addWidget(
@@ -328,7 +328,7 @@ class ParametersPage(DetectorPage):
 
         # ── Automatic calibration against the dish ──
         self.chk_plate = QCheckBox(tr("Medir la placa en cada foto y usar su escala (recomendado)"))
-        self.chk_plate.setChecked(state.params.measure_plate)
+        self.chk_plate.setChecked(state.calibration.measure_plate)
         self.chk_plate.setStyleSheet(f"color: {T.INK2}; border: none;")
         self.chk_plate.toggled.connect(self._on_change)
         l3.addWidget(self.chk_plate)
@@ -340,7 +340,7 @@ class ParametersPage(DetectorPage):
         self.sb_plate_mm = QDoubleSpinBox()
         self.sb_plate_mm.setRange(1.0, 1000.0)
         self.sb_plate_mm.setDecimals(2)
-        self.sb_plate_mm.setValue(state.params.diameter_plate_mm)
+        self.sb_plate_mm.setValue(state.calibration.diameter_plate_mm)
         self.sb_plate_mm.valueChanged.connect(self._on_change)
         g4.addWidget(self.sb_plate_mm, 0, 1)
         g4.addWidget(
@@ -351,7 +351,7 @@ class ParametersPage(DetectorPage):
         self.sb_height = QDoubleSpinBox()
         self.sb_height.setRange(0.0, 100.0)
         self.sb_height.setDecimals(1)
-        self.sb_height.setValue(state.params.height_plate_mm)
+        self.sb_height.setValue(state.calibration.height_plate_mm)
         self.sb_height.valueChanged.connect(self._on_change)
         g4.addWidget(self.sb_height, 1, 1)
         g4.addWidget(
@@ -362,7 +362,7 @@ class ParametersPage(DetectorPage):
         self.sb_distance = QDoubleSpinBox()
         self.sb_distance.setRange(0.0, 5000.0)
         self.sb_distance.setDecimals(0)
-        self.sb_distance.setValue(state.params.distance_camera_mm)
+        self.sb_distance.setValue(state.calibration.distance_camera_mm)
         self.sb_distance.valueChanged.connect(self._on_change)
         g4.addWidget(self.sb_distance, 2, 1)
         g4.addWidget(
@@ -535,11 +535,12 @@ class ParametersPage(DetectorPage):
         p.iou_tp = float(self.sb_iou_tp.value())
         p.imgsz = int(self.sb_imgsz.value())
         p.device = self.ed_device.text().strip() or "0"
-        p.um_per_px = float(self.sb_umpx.value())
-        p.measure_plate = self.chk_plate.isChecked()
-        p.diameter_plate_mm = float(self.sb_plate_mm.value())
-        p.height_plate_mm = float(self.sb_height.value())
-        p.distance_camera_mm = float(self.sb_distance.value())
+        c = self.state.calibration
+        c.um_per_px = float(self.sb_umpx.value())
+        c.measure_plate = self.chk_plate.isChecked()
+        c.diameter_plate_mm = float(self.sb_plate_mm.value())
+        c.height_plate_mm = float(self.sb_height.value())
+        c.distance_camera_mm = float(self.sb_distance.value())
         p.size_min_um = float(self.sb_min.value())
         p.size_max_um = float(self.sb_max.value())
         p.conf_assignment = float(self.sb_assignment.value())

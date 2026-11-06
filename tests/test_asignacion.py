@@ -97,7 +97,9 @@ def test_el_informe_declara_lo_que_no_pudo_asignar(tmp_path):
     cv2.circle(img, (110, 130), 20, (60, 210, 240), -1)
     cv2.circle(img, (210, 130), 20, (60, 210, 240), -1)
     image_path = tmp_path / "placa.png"
-    cv2.imwrite(str(image_path), img)
+    ok, buffer = cv2.imencode(".png", img)
+    assert ok
+    image_path.write_bytes(buffer.tobytes())
 
     confident = Detection(class_id=0, class_name="PET", conf=0.90, x1=90, y1=110, x2=130, y2=150)
     uncertain = Detection(class_id=2, class_name="LDPE", conf=0.28, x1=190, y1=110, x2=230, y2=150)

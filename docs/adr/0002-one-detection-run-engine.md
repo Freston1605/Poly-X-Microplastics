@@ -54,8 +54,11 @@ the counts and predictions the old writer did record. Old GUI run folders keep
 their per-model `labels/*.txt` and stay readable in the Viewer. The compact
 report keeps its `summary.json`/`centroids.csv` fallback.
 
-`run_batch`, the old headless writer and the GUI `run_state` loader are
-deleted. `polyx.core` exposes the canonical engine surface only.
+`run_batch` and the old headless writer are deleted. The old GUI
+`run_state` loader no longer rebuilds a `DetectorState`: a thin compatibility
+module keeps the `build_state_from_run` name and delegates to
+`load_legacy_run`, returning the same `RunResult` the report consumes.
+`polyx.core` exposes the canonical engine surface only.
 
 ## Considered options
 

@@ -41,8 +41,13 @@ def test_legacy_headless_folder_becomes_a_run_result():
     assert run.params.iou_nms == pytest.approx(0.45)
     assert run.params.imgsz == 640
     assert run.params.device == "cpu"
-    assert run.params.um_per_px == pytest.approx(2.5)
+    assert not hasattr(run.params, "um_per_px")
     assert run.params.measure_shape is False
+    # The old batch-wide manual scale becomes the effective per-image record.
+    assert {calibration.origin for calibration in run.calibrations.values()} == {"manual"}
+    assert all(
+        calibration.um_por_px == pytest.approx(2.5) for calibration in run.calibrations.values()
+    )
 
     by_name = {result.image_path.name: result for result in run.results[0]}
     assert set(by_name) == {"plate1.png", "plate2.png"}
@@ -177,17 +182,35 @@ def test_core_exposes_the_canonical_engine_and_not_the_old_batch():
     assert core.load_run is detection_run.load_run
 
 
-def test_the_old_headless_writer_and_gui_state_loader_are_deleted():
-    """No dead second engine survives anywhere in the production tree."""
+def test_the_old_headless_writer_is_deleted_and_run_state_is_only_a_shim():
+    """No dead second engine survives; the old name only delegates to core."""
     source = Path(__file__).resolve().parents[1] / "src" / "polyx"
     assert not (source / "core" / "detection_run" / "legacy.py").exists()
-    assert not (source / "gui" / "detector" / "run_state.py").exists()
     offenders = [
         str(path.relative_to(source))
         for path in source.rglob("*.py")
         if "run_batch" in path.read_text(encoding="utf-8")
     ]
     assert offenders == []
+    shim = source / "gui" / "detector" / "run_state.py"
+    assert shim.is_file()
+    text = shim.read_text(encoding="utf-8")
+    assert "load_legacy_run" in text
+    assert "from polyx.gui.detector.state" not in text
+    assert "class DetectorState" not in text
+
+
+def test_run_state_build_state_from_run_delegates_to_the_core_loader():
+    """The compatibility name returns the canonical RunResult, not Qt state."""
+    from polyx.core.detection_run import RunResult
+    from polyx.gui.detector.run_state import build_state_from_run
+
+    run = build_state_from_run(HEADLESS_RUN, HEADLESS_PHOTOS)
+
+    assert isinstance(run, RunResult)
+    assert run.run_dir == HEADLESS_RUN
+    assert [path.name for path in run.images] == ["plate1.png", "plate2.png"]
+    assert run.results[0][0].image_path == HEADLESS_PHOTOS / "plate1.png"
 
 
 def test_canonical_folder_loads_and_renders_the_full_report(tmp_path):

@@ -34,23 +34,31 @@ from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image
 
 from .config import CALIBRATION_MODES, CalibrationPolicy, RunConfig
-from .result import ImageResult, ModelExecution, ModelInfo, RunResult
+from .result import ImageResult, ModelExecution, ModelInfo, RunResult, RunStatus
 from .schema import aggregate_metrics, utcnow
 from .writer import RunWriter
 
-_STATUS_RUNNING = "running"
-_STATUS_COMPLETED = "completed"
-_STATUS_ABORTED = "aborted"
-_STATUS_FAILED = "failed"
+
+class RunOutputError(RuntimeError):
+    """The chosen output path cannot safely receive a run folder."""
+
+    def __init__(self, path: Path, message: str):
+        self.path = Path(path)
+        super().__init__(message)
 
 
-class RunDirNotEmpty(RuntimeError):
+class RunDirNotEmpty(RunOutputError):
     """The caller chose an output folder that already has content."""
 
     def __init__(self, path: Path):
-        self.path = Path(path)
-        self.run_dir = self.path
-        super().__init__(f"output directory is not empty: {self.path}")
+        super().__init__(path, f"output directory is not empty: {Path(path)}")
+
+
+class RunOutputNotADirectory(RunOutputError):
+    """The output path exists but it is a file, not a folder."""
+
+    def __init__(self, path: Path):
+        super().__init__(path, f"output path is not a directory: {Path(path)}")
 
 
 class RunFailed(RuntimeError):
@@ -58,7 +66,6 @@ class RunFailed(RuntimeError):
 
     def __init__(self, result: RunResult, message: str | None = None):
         self.result = result
-        self.run_result = result
         super().__init__(message or result.error or "detection run failed")
 
 
@@ -66,7 +73,7 @@ def _prepare_output_dir(output_dir: Path, force: bool) -> None:
     """Create the run folder, refusing content chosen by someone else."""
     if output_dir.exists():
         if not output_dir.is_dir():
-            raise RunDirNotEmpty(output_dir)
+            raise RunOutputNotADirectory(output_dir)
         if any(output_dir.iterdir()) and not force:
             raise RunDirNotEmpty(output_dir)
         return
@@ -122,16 +129,22 @@ def _calibration_index(
 ) -> dict[str, float]:
     """Load the filename-to-scale map once for the whole run.
 
-    An explicit path is authoritative: it is used alone, even if the file
-    happens to be incomplete. Without one, the known index names are searched
-    from the image root. That is the run-level half of the agreed order; the
-    per-image half (index, then plate, then manual) lives in ``resolver``.
+    ``index`` uses the explicit CSV when given, otherwise searches the known
+    index names from the image root. ``auto`` merges both: the explicit values
+    win for the images they list, and the searched index still covers the
+    images the explicit file lacks before the plate/manual fallback. That is
+    the run-level half of the agreed order; the per-image half (index, then
+    plate, then manual) lives in ``resolver``.
     """
     if mode not in ("auto", "index"):
         return {}
-    if policy.index_path is not None:
-        return carry_index(policy.index_path)
-    return search_index(images[0]) if images else {}
+    searched = search_index(images[0]) if images else {}
+    if policy.index_path is None:
+        return searched
+    explicit = carry_index(policy.index_path)
+    if mode == "index":
+        return explicit
+    return {**searched, **explicit}
 
 
 def _resolve_calibration(
@@ -320,7 +333,7 @@ def run_detection(
         images=images,
         models=models,
         params=config.params,
-        status=_STATUS_RUNNING,
+        status=RunStatus.RUNNING,
         started_at=started_at,
         results={index: [] for index in range(len(models))},
         execution={index: ModelExecution() for index in range(len(models))},
@@ -343,7 +356,7 @@ def run_detection(
     try:
         for image_index, image_path in enumerate(images):
             if should_abort is not None and should_abort():
-                result.status = _STATUS_ABORTED
+                result.status = RunStatus.ABORTED
                 break
 
             bgr = read_image(image_path)
@@ -437,14 +450,14 @@ def run_detection(
                 if on_progress is not None:
                     on_progress(done, total, image_path)
 
-        if result.status != _STATUS_ABORTED:
-            result.status = _STATUS_COMPLETED
+        if result.status is not RunStatus.ABORTED:
+            result.status = RunStatus.COMPLETED
         result.finished_at = utcnow()
         result.metrics = aggregate_metrics(result)
         writer.finish()
         return result
     except Exception as exc:
-        result.status = _STATUS_FAILED
+        result.status = RunStatus.FAILED
         result.error = f"{type(exc).__name__}: {exc}"
         result.finished_at = utcnow()
         result.metrics = aggregate_metrics(result)
@@ -455,4 +468,10 @@ def run_detection(
         raise RunFailed(result, result.error) from exc
 
 
-__all__ = ["RunDirNotEmpty", "RunFailed", "run_detection"]
+__all__ = [
+    "RunDirNotEmpty",
+    "RunFailed",
+    "RunOutputError",
+    "RunOutputNotADirectory",
+    "run_detection",
+]

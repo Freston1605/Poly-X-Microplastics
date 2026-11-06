@@ -38,18 +38,19 @@ def _same_boxes(a, b, tol: float = 0.5) -> bool:
     return True
 
 
-def _um_px_de(state, path_2, params):
+def _um_px_de(state, path_2):
     """Scale of that image as used by the run, with the manual fallback value.
 
-    It is read from ``state.calibraciones`` and not from ``params.um_per_px``
-    because the scale is per photo: re-reading the GT must not recompute the
-    sizes with a factor different from the one the run used, or the report
+    It is read from ``state.calibrations`` and not from the policy's typed
+    scale because the scale is per photo: re-reading the GT must not recompute
+    the sizes with a factor different from the one the run used, or the report
     would say one thing and the boxes another.
     """
     cal = (getattr(state, "calibrations", None) or {}).get(Path(path_2).name)
     if cal is not None and getattr(cal, "valid", False):
         return cal.um_por_px
-    return params.um_per_px if params.um_per_px > 0 else None
+    fallback = state.calibration.um_per_px
+    return fallback if fallback > 0 else None
 
 
 def reload_gt(state, progress=None) -> dict:
@@ -108,7 +109,7 @@ def reload_gt(state, progress=None) -> dict:
                 # The scale of THIS image -- not the ImageResult left over
                 # from the grouping loop: scales are per photo (31-49 um/px
                 # in this study) and the wrong one corrupts the reloaded sizes.
-                compute_box_size_um(d, _um_px_de(state, path_2, params))
+                compute_box_size_um(d, _um_px_de(state, path_2))
 
         first = cluster[0][1]
         if has_gt == first.has_gt and _same_boxes(gts, first.gt):

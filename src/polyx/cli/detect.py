@@ -37,11 +37,13 @@ from polyx.core.detection_run import (
     RunConfig,
     RunDirNotEmpty,
     RunFailed,
+    RunOutputError,
     RunParams,
     RunResult,
+    RunStatus,
     run_detection,
 )
-from polyx.core.paths import IMAGE_EXTS
+from polyx.core.paths import find_images
 
 # Exit codes: one for a failed run, one for bad usage, one for refusing to
 # overwrite, one for an aborted run. The compact report path never touches Qt.
@@ -112,7 +114,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-measure-shape", action="store_true")
     parser.add_argument(
         "--tiling",
-        choices=("auto", "siempre", "nunca"),
+        choices=("auto", "always", "never"),
         default="auto",
         help="tiling policy: auto by photo size, always, or never (default: auto)",
     )
@@ -165,11 +167,6 @@ def _resolve_model_types(requested: list[str], model_count: int) -> list[str]:
     return types
 
 
-def _find_images(image_dir: Path) -> list[Path]:
-    """The same recursive, sorted image selection the legacy batch used."""
-    return sorted(path for path in image_dir.rglob("*") if path.suffix.lower() in IMAGE_EXTS)
-
-
 def _load_models(weights: list[str], model_types: list[str]) -> list[ModelSpec]:
     """Build one loaded model per weights path; the engine never calls load()."""
     specs: list[ModelSpec] = []
@@ -193,17 +190,26 @@ def _calibration_mode(args) -> str:
     return str(args.calibrate)
 
 
+def _backend_tiling(choice: str) -> str:
+    """Translate the English CLI choice to the detector backend's values.
+
+    ``predict_auto`` and ``RunParams`` keep the historical ``siempre`` /
+    ``nunca`` values; only the developer-facing flag is English. This is a
+    translation at the boundary, not a second tiling policy.
+    """
+    return {"always": "siempre", "never": "nunca"}.get(choice, "auto")
+
+
 def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     params = RunParams(
         conf=args.conf,
         iou_nms=args.iou,
         imgsz=args.imgsz,
-        um_per_px=args.um_per_px,
         measure_shape=not args.no_measure_shape,
         size_min_um=args.size_min_um,
         size_max_um=args.size_max_um,
         conf_assignment=args.conf_assignment,
-        tiling=args.tiling,
+        tiling=_backend_tiling(args.tiling),
         tiling_threshold_px=args.tiling_threshold_px,
         tiling_tile=args.tiling_tile,
         tiling_overlap=args.tiling_overlap,
@@ -216,7 +222,7 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
         index_path=Path(args.index_calibration) if args.index_calibration else None,
     )
     return RunConfig(
-        images=_find_images(Path(args.images)),
+        images=find_images(Path(args.images)),
         models=specs,
         output_dir=Path(args.out),
         params=params,
@@ -243,8 +249,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         result = run_detection(_build_config(args, specs))
-    except RunDirNotEmpty as exc:
-        print(f"ERROR: {exc}. Use --force to overwrite the canonical files.", file=sys.stderr)
+    except RunOutputError as exc:
+        hint = (
+            "Use --force to overwrite the canonical files."
+            if isinstance(exc, RunDirNotEmpty)
+            else "Choose a folder path for --out."
+        )
+        print(f"ERROR: {exc}. {hint}", file=sys.stderr)
         return EXIT_OUTPUT_EXISTS
     except RunFailed as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -254,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    if result.status == "aborted":
+    if result.status is RunStatus.ABORTED:
         print(f"ABORTED: {result.run_dir}", file=sys.stderr)
         return EXIT_ABORTED
 

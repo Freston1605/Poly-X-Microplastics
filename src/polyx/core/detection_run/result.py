@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,9 +18,35 @@ from polyx.core.measure.calibration import Calibration, summary_batch
 from polyx.core.platform import device_available
 
 
+class RunStatus(StrEnum):
+    """Lifecycle state of one detection run.
+
+    A ``str`` enum so ``json.dumps`` keeps writing ``"completed"`` instead of
+    an object, and old folders keep loading without a schema change.
+    """
+
+    RUNNING = "running"
+    COMPLETED = "completed"
+    ABORTED = "aborted"
+    FAILED = "failed"
+
+    @classmethod
+    def parse(cls, value: object, default: RunStatus | None = None) -> RunStatus:
+        """Read a persisted value, tolerating unknown strings for forward compatibility."""
+        try:
+            return cls(str(value))
+        except ValueError:
+            return default or cls.COMPLETED
+
+
 @dataclass
 class RunParams:
-    """Parameters of one detection run (formerly ``InferenceParams``)."""
+    """Parameters of one detection run (formerly ``InferenceParams``).
+
+    Calibration deliberately does not live here: how each photo gets its
+    micrometres-per-pixel scale is a run-level policy (``CalibrationPolicy``),
+    and the effective values are recorded per image in ``RunResult``.
+    """
 
     conf: float = 0.25
     iou_nms: float = 0.45
@@ -32,7 +59,6 @@ class RunParams:
     # analysis failed at startup. It is resolved when creating the parameters
     # by choosing the best available -- CUDA, then MPS (Mac GPU), then CPU.
     device: str = field(default_factory=device_available)
-    um_per_px: float = 0.0  # 0 = calibration disabled; manual fallback
     size_min_um: float = 0.0  # 0 = lower filter disabled
     size_max_um: float = 0.0  # 0 = upper filter disabled
     # -- Abstention: how far the polymer holds --
@@ -40,28 +66,6 @@ class RunParams:
     # particle is still counted but reported as "not assignable", instead of
     # inventing a class for it. 0 = disabled, which is the usual behavior.
     conf_assignment: float = 0.0
-    # -- Automatic calibration against the Petri dish --
-    # With this enabled each photo gets ITS scale by measuring the dish ring,
-    # without marking anything by hand. It matters because the shooting
-    # distance varies between shots: in this material the scale ranges from
-    # 31 to 49 um/px, a factor of 1.5, and a single value for the whole batch
-    # would give sizes with up to 50 % error.
-    #
-    # Failing here is cheap: if the dish is absent from the photo (crops, for
-    # example) the calibration is declared invalid, inherited from index.csv if
-    # present, and the analysis continues. It costs ~1-2 s per photo.
-    measure_plate: bool = True
-    diameter_plate_mm: float = 100.0
-    # The dish rim is CLOSER to the camera than the background where the
-    # particles rest, so it projects larger and the scale comes out small:
-    # sizes are underestimated. With these two values it is corrected to the
-    # plane of the base. At 0 no correction is applied and the report states so.
-    height_plate_mm: float = 0.0
-    distance_camera_mm: float = 0.0
-    # CSV associating image name with already-calibrated um/px. It is the only
-    # path for crops, where the dish edge does not appear and therefore cannot
-    # be re-measured: the scale is inherited from the photo they came from.
-    index_calibration: str = ""
     # -- Particle shape --
     # It segments inside each box to measure real area, length and width instead
     # of the box's. Without this the area comes out 1.87x too large and a fibre
@@ -196,13 +200,17 @@ class RunResult:
     params: RunParams = field(default_factory=RunParams)
     calibrations: dict[Path, Calibration] = field(default_factory=dict)
     results: dict[int, list[ImageResult]] = field(default_factory=dict)
-    status: str = "completed"
+    status: RunStatus = RunStatus.COMPLETED
     error: str | None = None
     skipped_images: list[Path] = field(default_factory=list)
     started_at: datetime | None = None
     finished_at: datetime | None = None
     execution: dict[int, ModelExecution] = field(default_factory=dict)
     metrics: dict[int, dict[str, int]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Callers written before the enum may still pass the plain JSON string.
+        self.status = RunStatus.parse(self.status)
 
     @property
     def has_gt(self) -> bool:
@@ -236,4 +244,5 @@ __all__ = [
     "ModelInfo",
     "RunParams",
     "RunResult",
+    "RunStatus",
 ]

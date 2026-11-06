@@ -11,7 +11,13 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from polyx.core.detect import DetectionSource
-from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
+from polyx.core.detection_run import (
+    CalibrationPolicy,
+    ImageResult,
+    ModelInfo,
+    RunParams,
+    RunResult,
+)
 from polyx.core.i18n import tr
 
 # Compatibility name used by the pages and by old headless folder readers.
@@ -48,6 +54,10 @@ class DetectorState(QObject):
         self.images: list[Path] = []
         self.gt_folder: Path | None = None
         self.params = InferenceParams()
+        # Calibration has one owner and it is not RunParams: the pages edit
+        # this policy, the runner hands it to the engine and the run records
+        # the effective per-photo values it produced.
+        self.calibration = CalibrationPolicy()
         # results[real_model_slot_idx] -> List[ImageResult]. The engine numbers
         # its active models densely; the runner maps those back to these slots.
         self.results: dict[int, list[ImageResult]] = {}

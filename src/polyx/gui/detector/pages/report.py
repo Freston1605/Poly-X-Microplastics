@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QRadioButton,
 )
 
+from polyx.core.detection_run import RunStatus
 from polyx.core.i18n import tr
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos, pdf_export
@@ -406,16 +407,17 @@ class ReportPage(DetectorPage):
             self.lbl_sel.setText(tr("{} de {} marcadas").format(n, total))
 
     def _check_results(self) -> bool:
-        """Warns unless the current run is completed or aborted."""
+        """Warns unless the current run finished (completed, aborted or failed).
+
+        A failed batch is reportable: the document marks it as partial, so the
+        results written before the error are not thrown away.
+        """
         run = self.state.run_result
-        if run is not None and run.status in ("completed", "aborted"):
+        if run is not None and RunStatus.parse(run.status) is not RunStatus.RUNNING:
             return True
         message = (
-            tr(
-                "El último análisis falló, así que no hay un lote completo "
-                "que informar.\nVuelve a ejecutar la detección."
-            )
-            if run is not None and run.status == "failed"
+            tr("La detección aún está en curso; espera a que termine antes de generar el informe.")
+            if run is not None
             else tr(
                 "Aún no has ejecutado ninguna detección.\n"
                 "Ve a la pestaña Ejecutar e inicia el análisis primero."

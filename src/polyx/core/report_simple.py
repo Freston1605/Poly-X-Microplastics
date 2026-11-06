@@ -9,27 +9,10 @@ readable without migration.
 
 from __future__ import annotations
 
-import csv
 import html
-import json
 from pathlib import Path
 
-
-def _read_json(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _read_csv(path: Path) -> list[dict]:
-    if not path.is_file():
-        return []
-    with open(path, newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+from polyx.core.detection_run.schema import read_csv_rows, read_json_object
 
 
 def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
@@ -46,7 +29,7 @@ def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
 
 def generate(run_dir: Path, output: Path | None = None) -> Path:
     run_dir = Path(run_dir)
-    canonical = _read_json(run_dir / "run.json")
+    canonical = read_json_object(run_dir / "run.json")
     rows: list[dict] = []
     summary: dict = {}
     metrics: dict = {}
@@ -55,11 +38,11 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
 
     if canonical:
         images, detected, metrics = _canonical_totals(canonical)
-        rows = _read_csv(run_dir / "detections.csv")
+        rows = read_csv_rows(run_dir / "detections.csv")
         detections = len(rows) if rows else detected
     else:
-        summary = _read_json(run_dir / "summary.json")
-        rows = _read_csv(run_dir / "centroids.csv")
+        summary = read_json_object(run_dir / "summary.json")
+        rows = read_csv_rows(run_dir / "centroids.csv")
         images = summary.get("images", "?")
         detections = summary.get("detections", len(rows))
         metrics = summary.get("metrics") or {}

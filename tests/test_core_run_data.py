@@ -29,7 +29,14 @@ from polyx.core.detect import (  # noqa: E402
     YoloSegModel,
 )
 from polyx.core.detect.protocol import Instance  # noqa: E402
-from polyx.core.detection_run import ImageResult, ModelInfo, RunParams  # noqa: E402
+from polyx.core.detection_run import (  # noqa: E402
+    CalibrationPolicy,
+    ImageResult,
+    ModelInfo,
+    RunParams,
+    RunResult,
+    RunStatus,
+)
 
 # ── Core shapes are Qt-free ─────────────────────────────────────────────
 
@@ -72,20 +79,50 @@ def test_run_params_keep_the_inference_defaults():
     assert params.iou_tp == 0.50
     assert params.imgsz == 1280
     assert isinstance(params.device, str) and params.device
-    assert params.um_per_px == 0.0
     assert params.size_min_um == 0.0
     assert params.size_max_um == 0.0
     assert params.conf_assignment == 0.0
-    assert params.measure_plate is True
-    assert params.diameter_plate_mm == 100.0
-    assert params.height_plate_mm == 0.0
-    assert params.distance_camera_mm == 0.0
-    assert params.index_calibration == ""
     assert params.measure_shape is True
     assert params.tiling == "auto"
     assert params.tiling_threshold_px == 2000
     assert params.tiling_tile == 0
     assert params.tiling_overlap == 0.25
+    # Calibration has one owner: the policy, not the inference parameters.
+    for field in (
+        "um_per_px",
+        "measure_plate",
+        "diameter_plate_mm",
+        "height_plate_mm",
+        "distance_camera_mm",
+        "index_calibration",
+    ):
+        assert not hasattr(params, field), f"RunParams must not own {field}"
+
+
+def test_calibration_policy_owns_the_calibration_defaults():
+    """The policy is the only place a run's calibration configuration lives."""
+    policy = CalibrationPolicy()
+    assert policy.mode == "auto"
+    assert policy.um_per_px == 0.0
+    assert policy.index_path is None
+    assert policy.measure_plate is True
+    assert policy.diameter_plate_mm == 100.0
+    assert policy.height_plate_mm == 0.0
+    assert policy.distance_camera_mm == 0.0
+
+
+def test_run_status_is_an_enum_that_json_writes_as_a_string():
+    """Status stays a JSON string, so old readers and run.json keep working."""
+    import json
+
+    assert RunStatus("completed") is RunStatus.COMPLETED
+    assert RunStatus("aborted") is RunStatus.ABORTED
+    assert RunStatus("failed") is RunStatus.FAILED
+    assert json.dumps({"status": RunStatus.COMPLETED}) == '{"status": "completed"}'
+    assert json.dumps({"status": RunStatus.FAILED}) == '{"status": "failed"}'
+    assert RunStatus.COMPLETED == "completed"
+    # A caller written before the enum (or load_run's old value) still works.
+    assert RunResult(run_dir=Path("run"), status="failed").status is RunStatus.FAILED
 
 
 def test_core_image_result_has_no_review_verdict():
@@ -161,6 +198,13 @@ def test_gui_state_reuses_the_core_shapes():
     assert GuiImageResult is CoreImageResult
     assert issubclass(ModelSlot, CoreModelInfo)
 
+    from polyx.core.detection_run import CalibrationPolicy as CoreCalibrationPolicy
+    from polyx.gui.detector.state import DetectorState
+
+    state = DetectorState()
+    assert isinstance(state.calibration, CoreCalibrationPolicy)
+    assert not hasattr(state.params, "um_per_px")
+
     result = GuiImageResult(image_path=Path("photo.png"), model_idx=0)
     assert not hasattr(result, "verdict")
 
@@ -196,6 +240,12 @@ def test_detection_source_declares_predict_auto():
 def test_every_detector_implements_predict_auto(detector_class):
     """Every backend can be driven through the same tiling entry point."""
     assert callable(getattr(detector_class, "predict_auto", None))
+
+
+def test_non_tiling_backends_share_one_predict_auto_implementation():
+    """One shared delegation, not three copies that can drift apart."""
+    assert NativeDetector.predict_auto is Sam2Segmenter.predict_auto
+    assert NativeDetector.predict_auto is TwoStageDetector.predict_auto
 
 
 def _sentinel_detections() -> list[Instance]:

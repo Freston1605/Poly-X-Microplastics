@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from polyx.core.detection_run import RunStatus
 from polyx.core.i18n import tr
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
@@ -91,7 +92,33 @@ def _section_team(active) -> str:
     return html
 
 
-def _section_count(results_2: dict[int, list], run, active, classes: list[str]) -> str:
+def _run_status_note(run) -> str:
+    """A visible banner for a run that did not finish, or empty when it did.
+
+    A failed or aborted batch is still reportable -- its partial results are
+    real data -- but the document must never present it as a complete run.
+    """
+    status = RunStatus.parse(run.status)
+    if status is RunStatus.FAILED:
+        title = tr("Lote incompleto (ejecución fallida).")
+        detail = tr(
+            "El informe describe solo los resultados escritos antes del error: {error}"
+        ).format(error=_esc(run.error or "—"))
+        colour = T.DOC.ERR
+    elif status is RunStatus.ABORTED:
+        title = tr("Lote parcial (ejecución interrumpida).")
+        detail = tr("El informe describe solo las imágenes procesadas antes de la interrupción.")
+        colour = T.DOC.WARN
+    else:
+        return ""
+    return (
+        f"<p class='run-status' style='border-left:4px solid {colour};"
+        "padding:6px 12px;background:var(--bg_soft)'>"
+        f"<strong>{title}</strong> {detail} <code>{status.value}</code></p>"
+    )
+
+
+def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
     """Section 8: how many particles of each polymer there are per sample.
 
     It is the table requested for the manuscript: count by plastic type
@@ -100,14 +127,13 @@ def _section_count(results_2: dict[int, list], run, active, classes: list[str]) 
     of its detections, without discounting false positives. That reading
     lives in the error section.
 
-    With several models loaded the first active one is used. Putting two
-    models in the same cell would make the table illegible, and the
-    report already compares models in its own section.
+    With several models loaded the first one is used. Putting two models in
+    the same cell would make the table illegible, and the report already
+    compares models in its own section.
     """
-    if not active:
+    if not run.models:
         return ""
-    main_mi = run.models.index(active[0])
-    rs = results_2.get(main_mi, [])
+    rs = results_2.get(0, [])
     if not rs:
         return ""
 
@@ -208,14 +234,14 @@ def _section_count(results_2: dict[int, list], run, active, classes: list[str]) 
                 + "</p>"
             )
 
-    tagline = tr(", el primer modelo activo.") if len(active) > 1 else "."
+    tagline = tr(", el primer modelo activo.") if len(run.models) > 1 else "."
     intro = (
         tr(
             "<p>Partículas contadas en cada muestra, desglosadas por polímero. "
             "La columna <em>manual</em> es la anotación humana (Ground Truth) y la "
             "columna <em>modelo</em> son todas las detecciones de "
             "<strong>{alias}</strong>{coletilla}</p>"
-        ).format(alias=_esc(active[0].alias), coletilla=tagline)
+        ).format(alias=_esc(run.models[0].alias), coletilla=tagline)
         + tr(
             "<p><strong>Léase como conteo, no como evaluación.</strong> La "
             "columna del modelo no descuenta falsos positivos ni empareja caja a caja: "
@@ -276,17 +302,17 @@ def _section_summary(
 </p>"""
 
 
-def _section_errors(run, results_2, active, any_gt: bool) -> str:
+def _section_errors(run, results_2, any_gt: bool) -> str:
     """Body of the 'errores' section: confusion matrix plus per-class metrics.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when there is no
-    ground truth or no active model: the assembler omits a section with no
-    content rather than inventing data.
+    ground truth or no model: the assembler omits a section with no content
+    rather than inventing data.
     """
-    if not (any_gt and active):
+    if not (any_gt and run.models):
         return ""
-    main_mi = run.models.index(active[0])
-    rs = results_2.get(main_mi, [])
+    active = run.models
+    rs = results_2.get(0, [])
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]
     cls_ids = sorted({d.class_id for lst in gts_only + preds_only for d in lst})
@@ -838,27 +864,22 @@ def _section_methods(
     """
     # ── Methods ──
     p = run.params
-    # When calibration is per photo (medir_placa) there is no SINGLE um_per_px
-    # value to report here -- p.um_per_px stays at 0 on purpose.
-    # Instead of an `—` that says nothing, the batch mean is given with its
-    # 95% confidence interval: a number that can be cited in a
-    # method even if the real calibration is photo by photo (that is explained in
-    # detail in the `Calibracion de escala` section, with the minimum and
-    # maximum that show how much it varies).
-    if p.um_per_px > 0:
-        um_px_txt = f"{p.um_per_px:g}"
+    # Calibration is per photo: there is no single run parameter to quote.
+    # The effective scales live in ``run.calibrations``, so the batch mean is
+    # given with its 95% confidence interval -- a number that can be cited in
+    # a method even when every photo has its own factor (the calibration
+    # section expands the minimum, median and maximum).
+    _ums_methods = [
+        c.um_por_px for c in run.calibrations_by_name.values() if getattr(c, "valid", False)
+    ]
+    _mic = _average_ic95(_ums_methods)
+    if _mic:
+        _average_m, _margin_m, _n_m = _mic
+        um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
+    elif _ums_methods:
+        um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
     else:
-        _ums_methods = [
-            c.um_por_px for c in run.calibrations_by_name.values() if getattr(c, "valid", False)
-        ]
-        _mic = _average_ic95(_ums_methods)
-        if _mic:
-            _average_m, _margin_m, _n_m = _mic
-            um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
-        elif _ums_methods:
-            um_px_txt = f"{_ums_methods[0]:.4f} " + tr("(una sola foto calibrada, sin IC)")
-        else:
-            um_px_txt = "—"
+        um_px_txt = "—"
     methods_rows = [
         (tr("Modelos cargados"), _esc(", ".join(s.alias for s in active)) or "—"),
         (tr("Confianza mínima"), f"{p.conf:g}"),
@@ -929,8 +950,8 @@ def _section_methods(
             else ""
         )
         + (
-            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=f"{p.um_per_px:g}")
-            if p.um_per_px > 0
+            tr("La calibración óptica fue de {um} μm/píxel. ").format(um=um_px_txt)
+            if _ums_methods
             else ""
         )
         + tr("Se procesaron {imgs} imágenes con un total de {dets} detecciones.").format(
@@ -971,16 +992,14 @@ def _section_calibration(run) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the run has
-    no calibrations and no manual scale, so the assembler drops the section
-    like it does today. The ``polyx.core.calibration`` import stays lazy
-    inside this body: it must not load at module import time (S01 laziness
-    gate).
+    no effective calibrations, so the assembler drops the section like it does
+    today. The ``polyx.core.calibration`` import stays lazy inside this body:
+    it must not load at module import time (S01 laziness gate).
     """
     # ── Scale calibration ──
     # The provenance is reported, not only the number: a size in µm without saying
     # against which standard it was measured is not verifiable. If there is no calibration the
     # section is not emitted, instead of showing an `—` that looks like data.
-    p = run.params
     calib_html = ""
     cals = run.calibrations_by_name
     if cals:
@@ -1041,14 +1060,6 @@ def _section_calibration(run) -> str:
                     calib_html += (
                         f"<p>{tr('Incidencias durante la calibración:')}</p><ul>{items}</ul>"
                     )
-    elif p.um_per_px > 0:
-        calib_html = tr(
-            "<p>Escala única para todo el lote, introducida a mano: "
-            "<strong>{um} µm/píxel</strong>. No se midió ninguna placa, "
-            "de modo que este factor no está trazado a un patrón de longitud y "
-            "cualquier variación en la distancia de disparo entre fotos queda sin "
-            "corregir.</p>"
-        ).format(um=f"{p.um_per_px:g}")
     return calib_html
 
 

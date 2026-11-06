@@ -152,6 +152,32 @@ class DetectionSource(Protocol):
         ...
 
 
+class SinglePassDetectionSource:
+    """Mixin for backends that only run a single pass over the full image.
+
+    The engine always calls ``predict_auto``; a backend without a tiling
+    policy must not copy the same delegation three times. The shared
+    implementation drops the tiling arguments and forwards the inference
+    parameters to ``predict``.
+    """
+
+    def predict_auto(
+        self: DetectionSource,
+        image_path: str | Path,
+        conf: float = 0.25,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+        device: str = "0",
+        tiling: str = "auto",
+        threshold_px: int = 2000,
+        tile: int = 0,
+        overlap: float = 0.25,
+        record: dict | None = None,
+        **kwargs,
+    ) -> list[Instance]:
+        return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
+
+
 # Convenience type alias
 Detections = list[Instance]
 

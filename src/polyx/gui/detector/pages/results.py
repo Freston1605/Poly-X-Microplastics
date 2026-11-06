@@ -459,7 +459,7 @@ class ResultsPage(DetectorPage):
 
     def _update_histogram(self):
         """Draws a histogram of diam_um per class; only when there is calibration."""
-        um_per_px = getattr(self.state.params, "um_per_px", 0.0)
+        um_per_px = self.state.calibration.um_per_px
         all_results = [r for rs in self.state.results.values() for r in rs]
         sizes_by_class: dict[str, list[float]] = {}
         for r in all_results:
@@ -660,8 +660,8 @@ class ResultsPage(DetectorPage):
         cal = (getattr(self.state, "calibrations", None) or {}).get(img.name)
         if cal is not None and getattr(cal, "valid", False):
             self._viewer.state.um_per_px = cal.um_por_px
-        elif self.state.params.um_per_px > 0:
-            self._viewer.state.um_per_px = self.state.params.um_per_px
+        elif self.state.calibration.um_per_px > 0:
+            self._viewer.state.um_per_px = self.state.calibration.um_per_px
         self._viewer.state.detections = dets
         self._viewer.state.detections_changed.emit(dets)
         self._viewer.show()

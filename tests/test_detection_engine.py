@@ -27,7 +27,10 @@ from polyx.core.detection_run import (
     RunConfig,
     RunDirNotEmpty,
     RunFailed,
+    RunOutputError,
+    RunOutputNotADirectory,
     RunParams,
+    RunStatus,
     load_run,
     run_detection,
 )
@@ -123,7 +126,7 @@ def test_two_models_write_the_canonical_folder_and_round_trip(tmp_path):
 
     result = run_detection(make_config(images, [model_a, model_b], run_dir))
 
-    assert result.status == "completed"
+    assert result.status is RunStatus.COMPLETED
     assert result.run_dir == run_dir
     assert result.images == images
     assert [model.alias for model in result.models] == ["model_a", "model_b"]
@@ -185,8 +188,10 @@ def test_two_models_write_the_canonical_folder_and_round_trip(tmp_path):
         "morphotype",
         "size_source",
         "has_mask",
+        "assignable",
     }
     assert {row["model"] for row in rows} == {"model_a", "model_b"}
+    assert {row["assignable"] for row in rows} == {"True"}
     assert {row["image"] for row in rows} == {str(path) for path in images}
 
     # load_run rebuilds the same result from the folder alone.
@@ -389,10 +394,25 @@ def test_non_empty_output_folder_is_refused_unless_forced(tmp_path):
 
     forced = make_config([image], [FakeDetector()], run_dir, force=True)
     result = run_detection(forced)
-    assert result.status == "completed"
+    assert result.status is RunStatus.COMPLETED
     assert (run_dir / "run.json").is_file()
     # Force overwrites the canonical files but never deletes unrelated content.
     assert (run_dir / "someone-else.txt").read_text(encoding="utf-8") == "keep me"
+
+
+def test_output_path_that_is_a_file_is_refused_with_its_own_error(tmp_path):
+    image = write_plate(tmp_path / "photos" / "plate.png")
+    output = tmp_path / "not-a-folder.txt"
+    output.write_text("someone else's file", encoding="utf-8")
+    config = make_config([image], [FakeDetector()], output)
+
+    with pytest.raises(RunOutputNotADirectory) as error:
+        run_detection(config)
+
+    assert isinstance(error.value, RunOutputError)
+    assert Path(error.value.path) == output
+    assert not hasattr(error.value, "run_dir")
+    assert output.read_text(encoding="utf-8") == "someone else's file"
 
 
 def test_unexpected_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
@@ -413,8 +433,8 @@ def test_unexpected_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
         run_detection(config)
 
     partial = error.value.result
-    assert error.value.run_result is partial
-    assert partial.status == "failed"
+    assert not hasattr(error.value, "run_result")
+    assert partial.status is RunStatus.FAILED
     assert partial.error and "inference exploded" in partial.error
     assert [item.image_path for item in partial.results[0]] == [images[0]]
     payload = json.loads((partial.run_dir / "run.json").read_text(encoding="utf-8"))

@@ -218,7 +218,7 @@ def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_p
     from tests.fixtures_informe import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = rh._section_count(st.results, st, st.models, classes=["PET"])
+    html = rh._section_count(st.results, st, classes=["PET"])
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -242,7 +242,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
 
     nombre_pauta = "2.3x__A&amp;B<img src=x onerror=alert(2)>.png"
     st = estado_hostil(directorio=tmp_path / "fotos", nombres=[nombre_pauta])
-    html = rh._section_count(st.results, st, st.models, classes=["PET"])
+    html = rh._section_count(st.results, st, classes=["PET"])
 
     assert nombre_pauta not in html
     assert _e(nombre_pauta) in html
