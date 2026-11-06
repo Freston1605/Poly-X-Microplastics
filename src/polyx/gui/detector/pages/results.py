@@ -30,6 +30,15 @@ from polyx.gui.widgets import KPICard
 from ._base import DetectorPage
 
 
+def histogram_backgrounds() -> tuple[str, str]:
+    """Axes (sunken) and figure (raised) backgrounds for the size histogram.
+
+    Read from the active theme at call time so the chart follows it instead of
+    staying a white card on a dark window.
+    """
+    return T.BG_SOFT, T.BG
+
+
 class ResultsPage(DetectorPage):
     STEP_N = 6
     STEP_TITLE = tr("Resultados")
@@ -484,8 +493,9 @@ class ResultsPage(DetectorPage):
 
             ax = self._hist_ax
             ax.clear()
-            ax.set_facecolor("#f6f8fa")
-            ax.figure.set_facecolor("#ffffff")
+            axes_bg, figure_bg = histogram_backgrounds()
+            ax.set_facecolor(axes_bg)
+            ax.figure.set_facecolor(figure_bg)
 
             for cls_name, vals in sizes_by_class.items():
                 color = T.CLASS_COLOR_HEX.get(cls_name, T.FALLBACK_COLOR_HEX)
