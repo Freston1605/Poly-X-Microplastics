@@ -599,11 +599,10 @@ run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
                   measure, match, draw, persist)
     ↓
 RunResult  (dense active-model indices, partial on abort/failure)
-    ↓
-DetectorRunner: map indices onto model_slots → Qt signals
-    ↓
-<user data dir>/runs/detect_YYYYMMDD_HHMMSS/
-    run.json · detections.csv · <alias>/PNGs + labels + classes.txt
+    ├→ DetectorRunner: map indices onto model_slots → Qt signals
+    ├→ generate_report(RunResult) (GUI report page and polyx-detect --full-report)
+    └→ <user data dir>/runs/detect_YYYYMMDD_HHMMSS/
+         run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
 
 ### Trainer

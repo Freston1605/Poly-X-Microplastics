@@ -37,7 +37,7 @@ __all__ = ["_generate_report_impl", "generate_report"]
 
 
 def _generate_report_impl(
-    state,
+    run,
     output_path: Path,
     include_refs: bool = True,
     include_gallery: bool = True,
@@ -46,7 +46,7 @@ def _generate_report_impl(
     solo_images=None,
     sections=None,
 ) -> Path:
-    """Generates the HTML report. `state` is a ``DetectorState`` with results.
+    """Generates the HTML report from a canonical ``RunResult``.
 
     ``max_gallery`` limits how many images are embedded in the gallery.
     Images go into the HTML itself in base64, so without a cap a large
@@ -75,7 +75,7 @@ def _generate_report_impl(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: F841
-    active = state.active_models()
+    active = list(run.models)
 
     # ── Batch metrics ──
     # The precomputation block now lives in _metricas_de_lote; the impl only
@@ -94,20 +94,20 @@ def _generate_report_impl(
         any_gt,
         classes_batch,
         per_class,
-    ) = _batch_metrics(state, solo_images)
+    ) = _batch_metrics(run, solo_images)
 
     # ── Error analysis: matrix + per-class metrics (main model) ──
-    err_section = _section_errors(state, results_2, active, any_gt)
+    err_section = _section_errors(run, results_2, active, any_gt)
 
     # ── Verdict and confidence sweep ──
-    verdict_html = _section_verdict(results_2, state)
+    verdict_html = _section_verdict(results_2, run)
 
     # ── Models side by side, photo by photo ──
-    compare_html = _section_comparison(state, results_2)
+    compare_html = _section_comparison(run, results_2)
 
     # ── Side-by-side gallery: Prediction vs Ground Truth ──
     gallery_html = _section_gallery(
-        results_2, state, classes_batch, max_gallery=max_gallery, include_gallery=include_gallery
+        results_2, run, classes_batch, max_gallery=max_gallery, include_gallery=include_gallery
     )
 
     # ── Aggregate figures ──
@@ -115,15 +115,15 @@ def _generate_report_impl(
 
     # ── Methods ──
     methods_html, team_html, methods_for = _section_methods(
-        state, active, all_results, total_imgs, total_dets, any_gt
+        run, active, all_results, total_imgs, total_dets, any_gt
     )
 
-    count_html = _section_count(results_2, state, active, classes_batch)
+    count_html = _section_count(results_2, run, active, classes_batch)
 
     refs_html = _section_references(include_refs)
 
     # ── Scale calibration ──
-    calib_html = _section_calibration(state)
+    calib_html = _section_calibration(run)
 
     # ── Shape and size ──
     # It is separated from `Resultados` because it answers another question: not how many
@@ -131,12 +131,12 @@ def _generate_report_impl(
     # variables that the microplastics literature reports and that the detector
     # box cannot give. `formas` is computed once because the depth profile
     # and the cards also consume it.
-    shapes, n_en_el_aro, n_formless = _lot_forms(state, all_results)
+    shapes, n_en_el_aro, n_formless = _lot_forms(run, all_results)
     # The depth profile only exists if the names carry the stretch.
     depth_html = section_depth(shapes, all_results) if shapes else ""
-    shape_html, by_html_folder = _section_shape(state, shapes, n_en_el_aro, n_formless)
+    shape_html, by_html_folder = _section_shape(run, shapes, n_en_el_aro, n_formless)
     # ── Card for each particle ──
-    records_html = _section_records(state, shapes, max_records)
+    records_html = _section_records(run, shapes, max_records)
 
     # ── Assemble HTML ──
     # Each block is (id, body). The body does NOT carry its <h2>: the title and
@@ -154,7 +154,7 @@ def _generate_report_impl(
         "profundidad": depth_html,
         "fichas": records_html,
         "resultados": figures_html,
-        "modelos": _section_models(state, results_2, all_results, any_gt),
+        "modelos": _section_models(run, results_2, all_results, any_gt),
         "errores": err_section,
         "comparacion": f"{verdict_html}\n{compare_html}",
         "galeria": gallery_html,
@@ -181,7 +181,7 @@ def _generate_report_impl(
 
 
 def generate_report(
-    state,
+    run,
     output_path: Path,
     include_refs: bool = True,
     include_gallery: bool = True,
@@ -190,15 +190,19 @@ def generate_report(
     solo_images=None,
     sections=None,
 ) -> Path:
-    """Generates the HTML report with an observability wrapper.
+    """Generates the HTML report from a canonical ``RunResult``.
 
+    Only a completed or aborted run is reportable: a failed run has no full
+    batch to describe, and a running one has not finished writing its results.
     Generates the HTML report, measuring it and recording report.generate /
     report.finish / report.error in the detector JSONL. Re-throws failures:
     the caller decides what to do, the log keeps the diagnosis.
     """
     from polyx.core.provenance import logger_for, timer
 
-    n_results = sum(len(rs) for rs in (state.results or {}).values())
+    if run.status not in ("completed", "aborted"):
+        raise ValueError(f"report requires a completed or aborted run, not {run.status!r}")
+    n_results = sum(len(rs) for rs in (run.results or {}).values())
     with timer(
         logger_for("detector"),
         "report",
@@ -208,7 +212,7 @@ def generate_report(
         solo_images=(len(solo_images) if solo_images is not None else None),
     ):
         return _generate_report_impl(
-            state,
+            run,
             output_path,
             include_refs=include_refs,
             include_gallery=include_gallery,

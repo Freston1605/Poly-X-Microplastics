@@ -90,33 +90,40 @@ def test_el_informe_declara_lo_que_no_pudo_asignar(tmp_path):
     import cv2
     import numpy as np
 
+    from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
     from polyx.gui import report_html as rh
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
 
     img = np.full((260, 320, 3), 18, np.uint8)
     cv2.circle(img, (110, 130), 20, (60, 210, 240), -1)
     cv2.circle(img, (210, 130), 20, (60, 210, 240), -1)
-    ruta = tmp_path / "placa.png"
-    cv2.imwrite(str(ruta), img)
+    image_path = tmp_path / "placa.png"
+    cv2.imwrite(str(image_path), img)
 
-    segura = Detection(class_id=0, class_name="PET", conf=0.90, x1=90, y1=110, x2=130, y2=150)
-    dudosa = Detection(class_id=2, class_name="LDPE", conf=0.28, x1=190, y1=110, x2=230, y2=150)
-    mark_assignables([segura, dudosa], 0.50)
+    confident = Detection(class_id=0, class_name="PET", conf=0.90, x1=90, y1=110, x2=130, y2=150)
+    uncertain = Detection(class_id=2, class_name="LDPE", conf=0.28, x1=190, y1=110, x2=230, y2=150)
+    mark_assignables([confident, uncertain], 0.50)
 
-    st = DetectorState()
-    st.params.conf_assignment = 0.50
-    st.model_slots[0] = ModelSlot(alias="m1", path=tmp_path / "fake.pt")
-    st.results = {
-        0: [
-            ImageResult(
-                image_path=ruta, model_idx=0, predictions=[segura, dudosa], gt=[], has_gt=False
-            )
-        ]
-    }
+    st = RunResult(
+        run_dir=tmp_path / "run",
+        images=[image_path],
+        models=[ModelInfo(alias="m1", path=tmp_path / "fake.pt")],
+        params=RunParams(conf_assignment=0.50),
+        results={
+            0: [
+                ImageResult(
+                    image_path=image_path,
+                    model_idx=0,
+                    predictions=[confident, uncertain],
+                    gt=[],
+                    has_gt=False,
+                )
+            ]
+        },
+    )
 
-    salida = tmp_path / "informe.html"
-    rh.generate_report(st, salida, sections=list(rh.IDS_SECTIONS))
-    html = salida.read_text(encoding="utf-8")
+    output = tmp_path / "informe.html"
+    rh.generate_report(st, output, sections=list(rh.IDS_SECTIONS))
+    html = output.read_text(encoding="utf-8")
 
     assert NO_ASSIGNABLE in html
     # La partícula dudosa cuenta igual: dos detecciones, no una.

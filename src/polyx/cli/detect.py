@@ -286,11 +286,11 @@ def _write_reports(args, result: RunResult) -> None:
 
 
 def _write_full_report(result: RunResult, report_path: Path) -> None:
-    """Render the paper-quality report through the transitional adapter.
+    """Render the paper-quality report from the engine result.
 
-    Qt and the report package are imported only on this path. The adapter from
-    ``RunResult`` to ``DetectorState`` is ticket #59's bridge; ticket #63 makes
-    the report consume ``RunResult`` directly and deletes it.
+    Qt and the report package are imported only on this path. The report
+    consumes the ``RunResult`` the engine just produced; no ``DetectorState``
+    is reconstructed for a new run.
     """
     import importlib
 
@@ -298,9 +298,7 @@ def _write_full_report(result: RunResult, report_path: Path) -> None:
     qt.require_qt()
     from polyx.gui.report_html import generate_report
 
-    run_state = importlib.import_module("polyx.gui.detector.run_state")
-    state = run_state.build_state_from_result(result)
-    generate_report(state, report_path)
+    generate_report(result, report_path)
 
 
 def _write_compact(run_dir: Path) -> Path:

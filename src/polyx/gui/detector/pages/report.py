@@ -406,18 +406,23 @@ class ReportPage(DetectorPage):
             self.lbl_sel.setText(tr("{} de {} marcadas").format(n, total))
 
     def _check_results(self) -> bool:
-        """Warns when no detections have been run yet."""
-        if not self.state.results:
-            QMessageBox.warning(
-                self,
-                tr("Sin resultados"),
-                tr(
-                    "Aún no has ejecutado ninguna detección.\n"
-                    "Ve a la pestaña Ejecutar e inicia el análisis primero."
-                ),
+        """Warns unless the current run is completed or aborted."""
+        run = self.state.run_result
+        if run is not None and run.status in ("completed", "aborted"):
+            return True
+        message = (
+            tr(
+                "El último análisis falló, así que no hay un lote completo "
+                "que informar.\nVuelve a ejecutar la detección."
             )
-            return False
-        return True
+            if run is not None and run.status == "failed"
+            else tr(
+                "Aún no has ejecutado ninguna detección.\n"
+                "Ve a la pestaña Ejecutar e inicia el análisis primero."
+            )
+        )
+        QMessageBox.warning(self, tr("Sin resultados"), message)
+        return False
 
     def _card_sections(self):
         """Checkboxes to choose which sections go into the report.
@@ -487,9 +492,16 @@ class ReportPage(DetectorPage):
         return [sid for sid, chk in self.chk_sections.items() if chk.isChecked()]
 
     def _write_html(self, out_path: Path, solo_images_2=None) -> Path:
-        """Generates the self-contained HTML (images in base64) at `out_path`."""
+        """Generates the self-contained HTML (images in base64) at `out_path`.
+
+        The report consumes the canonical ``RunResult`` of the current run;
+        the GUI's ``results`` view is only for the pages, not for rendering.
+        """
+        run = self.state.run_result
+        if run is None:
+            raise RuntimeError("no run result to report")
         generate_report(
-            self.state,
+            run,
             out_path,
             sections=self._sections_marked(),
             solo_images=solo_images_2,

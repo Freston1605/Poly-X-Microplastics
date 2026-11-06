@@ -1,4 +1,4 @@
-"""Estados DetectorState reutilizables para los fixtures del informe.
+"""Canonical ``RunResult`` fixtures shared by the report tests.
 
 La captura del baseline pre-fix (tools/audit/capturar_fixtures_informe.py, T03) y
 los tests de identidad de bytes e inyeccion muerta (T04-T07) necesitan todos
@@ -10,11 +10,12 @@ aqui esta la fuente comun.
 La receta de construccion es la del lote minimo de tests/test_informe_biling
 ue (_estado_minimo): una foto sintetica de 320x260 con un disco de r=22, una
 Detection (x1=138, y1=108, x2=182, y2=152) medida con morphology y el
-ImageResult publicado en el slot 0 de results. La variante hostil reutiliza
-EXACTAMENTE los mismos datos medidos: solo cambia donde vive la inyeccion,
-el alias del modelo y el nombre de archivo de la foto. Con la foto identica,
-cualquier divergencia del render solo puede venir de esas dos cadenas hosti-
-les, que es justo lo que el slice quiere aislar.
+ImageResult published under dense model index 0 of results. Since ticket #63
+the report consumes the canonical RunResult, not a DetectorState. The hostile
+variant reuses EXACTLY the same measured data: only the injection site, the
+model alias and the image filename change. With an identical photo, any render
+divergence can only come from those two hostile strings, which is exactly what
+the slice isolates.
 
 OJO: la foto se escribe via cv2.imencode + Path.write_bytes, nunca
 cv2.imwrite. En Windows imwrite/imread fallan en silencio con rutas fuera
@@ -39,6 +40,7 @@ import cv2
 import numpy as np
 
 from polyx.core.detect.protocol import Instance as Detection
+from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
 
 # ---------------------------------------------------------------------------
 # Constantes de los datos sinteticos
@@ -105,28 +107,26 @@ def _normalizar(valor: str | Sequence[str]) -> list[str]:
 def _construir_estado(
     directorio: Path, nombres: Sequence[str], aliases: Sequence[str], escribir_foto: bool = True
 ):
-    """Build the DetectorState shared by every fixture variant.
+    """Build the canonical RunResult shared by every fixture variant.
 
     Identical recipe to test_informe_bilingue._estado_minimo: one synthetic
     frame written to directorio/nombre, one predicted Detection measured by
-    morfologia at 30.0 um/px, and one ImageResult published on each model
-    slot. Multiple versions only differ in the injected strings.
+    morfologia at 30.0 um/px, and one ImageResult published under each dense
+    model index. Multiple versions only differ in the injected strings.
     """
-    from polyx.gui.detector.state import DetectorState, ImageResult, ModelSlot
-
     directorio.mkdir(parents=True, exist_ok=True)
     if escribir_foto:
         for nombre in nombres:
             _escribir_foto(directorio / nombre)
 
-    st = DetectorState()
-    # model_slots es una LISTA (ver state.py, active_models itera sobre ella);
-    # no se reemplaza el contenedor, solo se llenan los indices pedidos.
-    assert len(st.model_slots) >= len(aliases), "DetectorState no tiene slots para tantos modelos"
+    st = RunResult(
+        run_dir=directorio.parent / "run",
+        models=[ModelInfo(alias=alias, path=Path("fake.pt")) for alias in aliases],
+        params=RunParams(),
+    )
     st.results = {}
     numero = 1
-    for idx, alias in enumerate(aliases):
-        st.model_slots[idx] = ModelSlot(alias=alias, path=Path("fake.pt"))
+    for idx in range(len(aliases)):
         filas = []
         for nombre in nombres:
             ruta = directorio / nombre
@@ -137,11 +137,12 @@ def _construir_estado(
                 ImageResult(image_path=ruta, model_idx=idx, predictions=[d], gt=[], has_gt=False)
             )
         st.results[idx] = filas
+    st.images = [row.image_path for rows in st.results.values() for row in rows]
     return st
 
 
 def estado_benigno(directorio: Path | None = None):
-    """Return a clean, benign DetectorState for the report fixtures.
+    """Return a clean, benign RunResult for the report fixtures.
 
     The photo written is also benign (``placa_muestra_a.png``), so downstream
     renders must reproduce the baseline byte-for-byte.
@@ -155,7 +156,7 @@ def estado_hostil(
     alias: str | Sequence[str] | None = None,
     directorio: Path | None = None,
 ):
-    """Return a DetectorState carrying HTML injection in its strings.
+    """Return a RunResult carrying HTML injection in its strings.
 
     Injection lives in two sinks of the report: the model alias ("m1" beco-
     mes ``<img src=x onerror=alert(1)>``) and the image file name (becomes
