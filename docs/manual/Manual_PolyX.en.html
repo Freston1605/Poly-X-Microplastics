@@ -1867,14 +1867,47 @@ uninstaller does not reach.</p>
 <table>
   <thead><tr><th>File</th><th>Contents</th></tr></thead>
   <tbody>
-    <tr><td><code>images/*.png</code></td><td>the photographs with the boxes drawn on</td></tr>
-    <tr><td><code>centroids.csv</code></td><td>one row per particle: class, position, confidence, size</td></tr>
-    <tr><td><code>metrics.json</code></td><td>hits, false positives and false negatives by class</td></tr>
+    <tr><td><code>run.json</code></td><td>the run record: status, parameters, models, calibrations, metrics and image paths</td></tr>
+    <tr><td><code>detections.csv</code></td><td>one row per particle: model, class, confidence, box, calibration and measured sizes</td></tr>
+    <tr><td><code>&lt;model&gt;/</code></td><td>the PNG views (<code>_annot</code>, <code>_pred</code>, <code>_gt</code>), <code>labels/</code> and <code>classes.txt</code></td></tr>
     <tr><td><code>report.html</code></td><td>the self-contained report</td></tr>
-    <tr><td><code>annotations/</code></td><td>the YOLO <code>.txt</code> files, if ground truth existed</td></tr>
   </tbody>
 </table>
 </div>
+<p>Runs from before this format still open without migration: old Detector
+folders keep their per-model <code>labels/</code>, and the compact report
+reads <code>summary.json</code> + <code>centroids.csv</code>.</p>
+
+<h3>Headless commands (CLI)</h3>
+<p>The detector also runs without opening the interface and writes exactly
+the same canonical folder:</p>
+<pre><code><span class="p">polyx-detect</span> --model best.pt --images ./photos --out ./run
+<span class="p">polyx-detect</span> --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
+    --images ./photos --out ./run --force
+<span class="p">polyx-detect</span> --model best.pt --images ./photos --out ./run \
+    --calibrate auto --index-calibration ./index.csv --gt-folder ./labels</code></pre>
+<div class="tabla-env">
+<table>
+  <thead><tr><th>Option</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model</code>, <code>--model-type</code></td><td>repeat once per model; the alias comes from the file stem. One type applies to all models; with no type, <code>yolo</code> is used.</td></tr>
+    <tr><td><code>--out</code>, <code>--force</code></td><td>the exact run folder. A non-empty folder is refused unless <code>--force</code> is given.</td></tr>
+    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code> and <code>--index-calibration</code> supplies the explicit CSV.</td></tr>
+    <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>thresholds and inference.</td></tr>
+    <tr><td><code>--gt-folder</code>, <code>--no-measure-shape</code></td><td>ground truth and shape measurement.</td></tr>
+    <tr><td><code>--tiling</code>, <code>--tiling-threshold-px</code>, <code>--tiling-tile</code>, <code>--tiling-overlap</code></td><td>tiling of large photographs.</td></tr>
+    <tr><td><code>--size-min-um</code>, <code>--size-max-um</code>, <code>--conf-assignment</code></td><td>size filter and confidence abstention.</td></tr>
+    <tr><td><code>--full-report</code></td><td>paper-quality report; without it the compact report is written.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>To regenerate an existing report:
+<code>polyx-report --run ./run [--output report.html] [--full-report] [--images ./photos]</code>.
+A canonical folder is read with <code>load_run</code>; an old headless folder
+(<code>summary.json</code> + <code>centroids.csv</code>) with
+<code>load_legacy_run</code>, and <code>--images</code> tells it where the
+original photographs are. Without <code>--full-report</code> the compact
+report is written.</p>
 
 <div class="aviso">
   <span class="et">The differences between systems live in a single file</span>

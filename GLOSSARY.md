@@ -31,6 +31,33 @@ its folder conventions for the whole program: parse, serialize, locate
 the EXIF-safe image size. One contract, one owner — no module
 re-implements the format.
 
+## Detection run
+
+One execution of the canonical engine (`polyx/core/detection_run`) over a set
+of images and one or more loaded models. It decodes, calibrates, reads GT,
+predicts, measures, matches, draws and persists; its output is a `RunResult`
+and a canonical run folder. There is no second "headless" or "GUI" detection
+engine: the GUI runs this one on a thread and the CLI runs it synchronously.
+
+## RunResult
+
+The Qt-free record of a detection run (`polyx/core/detection_run/result.py`):
+`run_dir`, the selected images, the active models in dense engine order, the
+`RunParams`, per-image calibrations, the per-model `ImageResult` lists,
+aggregate metrics, status (`completed` / `aborted` / `failed`), error,
+skipped images and timestamps. Reports, the CLI and `load_run` consume it;
+the GUI adds signals and review verdicts on top but does not extend it.
+
+## Canonical run folder
+
+The folder a detection run owns, written by the canonical engine:
+`run.json` (schema version, status, params, models, calibrations, metrics and
+image records) plus `detections.csv` (predictions only) and one folder per
+model alias with the triptych PNGs, `labels/*.txt` and `classes.txt`. Read it
+with `load_run`; do not add a second schema. Pre-canonical folders
+(`summary.json` + `centroids.csv`, or the old GUI per-model labels) are legacy
+inputs, readable without migration.
+
 ## GT (ground truth)
 
 The manual annotation of an image, stored as a YOLO `.txt`. An existing

@@ -1644,14 +1644,46 @@ desinstalación no llega.</p>
 <table>
   <thead><tr><th>Archivo</th><th>Contenido</th></tr></thead>
   <tbody>
-    <tr><td><code>images/*.png</code></td><td>las fotografías con las cajas dibujadas</td></tr>
-    <tr><td><code>centroids.csv</code></td><td>una fila por partícula: clase, posición, confianza, talla</td></tr>
-    <tr><td><code>metrics.json</code></td><td>aciertos, falsos positivos y falsos negativos por clase</td></tr>
+    <tr><td><code>run.json</code></td><td>el registro de la corrida: estado, parámetros, modelos, calibraciones, métricas y rutas de las imágenes</td></tr>
+    <tr><td><code>detections.csv</code></td><td>una fila por partícula: modelo, clase, confianza, caja, calibración y tallas medidas</td></tr>
+    <tr><td><code>&lt;modelo&gt;/</code></td><td>las vistas PNG (<code>_annot</code>, <code>_pred</code>, <code>_gt</code>), <code>labels/</code> y <code>classes.txt</code></td></tr>
     <tr><td><code>report.html</code></td><td>el informe autocontenido</td></tr>
-    <tr><td><code>annotations/</code></td><td>los <code>.txt</code> YOLO, si había ground truth</td></tr>
   </tbody>
 </table>
 </div>
+<p>Las corridas anteriores a este formato se siguen abriendo sin migrarlas:
+las carpetas del Detector antiguo conservan sus <code>labels/</code> por modelo
+y el informe compacto lee <code>summary.json</code> + <code>centroids.csv</code>.</p>
+
+<h3>Comandos sin ventana (CLI)</h3>
+<p>El detector también corre sin abrir la interfaz y escribe exactamente la
+misma carpeta canónica:</p>
+<pre><code><span class="p">polyx-detect</span> --model best.pt --images ./fotos --out ./corrida
+<span class="p">polyx-detect</span> --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
+    --images ./fotos --out ./corrida --force
+<span class="p">polyx-detect</span> --model best.pt --images ./fotos --out ./corrida \
+    --calibrate auto --index-calibration ./indice.csv --gt-folder ./etiquetas</code></pre>
+<div class="tabla-env">
+<table>
+  <thead><tr><th>Opción</th><th>Efecto</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model</code>, <code>--model-type</code></td><td>se repiten una vez por modelo; el alias sale del nombre del archivo. Un solo tipo se aplica a todos; sin tipo se usa <code>yolo</code>.</td></tr>
+    <tr><td><code>--out</code>, <code>--force</code></td><td>la carpeta exacta de la corrida. Si ya tiene contenido se rechaza, salvo con <code>--force</code>.</td></tr>
+    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>calibración por foto; por defecto <code>auto</code>. <code>--um-per-px</code> solo implica <code>manual</code> y <code>--index-calibration</code> da el CSV explícito.</td></tr>
+    <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>umbrales e inferencia.</td></tr>
+    <tr><td><code>--gt-folder</code>, <code>--no-measure-shape</code></td><td>ground truth y medición de forma.</td></tr>
+    <tr><td><code>--tiling</code>, <code>--tiling-threshold-px</code>, <code>--tiling-tile</code>, <code>--tiling-overlap</code></td><td>troceado de fotos grandes.</td></tr>
+    <tr><td><code>--size-min-um</code>, <code>--size-max-um</code>, <code>--conf-assignment</code></td><td>filtro por talla y abstención por confianza.</td></tr>
+    <tr><td><code>--full-report</code></td><td>informe de calidad de artículo; sin esta opción se escribe el informe compacto.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Para regenerar un informe ya existente:
+<code>polyx-report --run ./corrida [--output informe.html] [--full-report] [--images ./fotos]</code>.
+Una carpeta canónica se lee con <code>load_run</code>; una carpeta headless
+antigua (<code>summary.json</code> + <code>centroids.csv</code>) con
+<code>load_legacy_run</code>, y <code>--images</code> le indica dónde están las
+fotos originales. Sin <code>--full-report</code> se escribe el informe compacto.</p>
 
 <div class="aviso">
   <span class="et">Las diferencias entre sistemas están en un solo archivo</span>
