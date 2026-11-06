@@ -124,6 +124,9 @@ The same checks are listed in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 - Comments, docstrings and identifiers are in English; Spanish survives only as
   the runtime UI source inside the `tr()` layer (see `AGENTS.md` and
   `CLAUDE.md`).
+- The PR body names its originating spec on its own line: `Spec: #N` (or
+  `Spec: none` when there is no spec). Review tooling resolves the spec
+  source from that line before falling back to commit-message references.
 
 ---
 
