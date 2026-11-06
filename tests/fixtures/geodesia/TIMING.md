@@ -1,6 +1,6 @@
 # TIMING de _propagar_geodesico: referencia vs reescrita
 
-Generado por `tests/bench_geodesia.py` (correrlo a mano: no es un test). Numeros reales medidos en esta maquina, no placeholders.
+Generado por `tests/bench_geodesy.py` (correrlo a mano: no es un test). Numeros reales medidos en esta maquina, no placeholders.
 
 ## Contexto de la maquina
 

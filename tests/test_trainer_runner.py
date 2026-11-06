@@ -213,7 +213,7 @@ def _eventos(tmp_path: Path) -> list[dict]:
 
 # ── Camino feliz: secuencia completa del ciclo de vida ───────────────
 class TestCicloDeVidaFeliz:
-    def test_secuencia_completa_y_esquema_ingles(self, qapp, tmp_path, deps_falsos):
+    def test_secuencia_completa_y_esquema_english(self, qapp, tmp_path, deps_falsos):
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz")
         _correr(st, tmp_path)
 

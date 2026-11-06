@@ -73,7 +73,7 @@ Walkthrough:
 | E2 | T001 | tests/test_model_discovery.py |
 | E4 | T002 | tests/test_pyinstaller_entry.py |
 | E5 | T007 | tests/test_hpcc_templates.py |
-| E6 | T008 | tests/test_identifiers_ingles.py |
+| E6 | T008 | tests/test_identifiers_english.py |
 
 ## Dependency notes
 

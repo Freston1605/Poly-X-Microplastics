@@ -1,4 +1,4 @@
-# tests/test_reporte_sumideros_escapados.py
+# tests/test_report_escape_sinks.py
 """Test unitario por sumidero de escape del informe (T07).
 
 T06 demuestra por el render completo que la inyeccion queda muerta; cada sumidero
@@ -12,7 +12,7 @@ con una entrada hostil por sumidero, y en cada assert comprueba:
   2. que SI contiene su forma escapada por _esc (html.escape, quote=False):
      ``&lt;img src=x onerror=alert(N)&gt;``.
 
-La pareja hostil de referencia viene de tests/fixtures_informe.py (P001): el ALIAS
+La pareja hostil de referencia viene de tests/report_fixtures.py (P001): el ALIAS
 del modelo lleva alert(1) y el NOMBRE de archivo alert(2), sin '/' embebida en el
 nombre para que la cadena completa sobreviva a ``Path.name``. Para el CLASS_NAME
 de particula (sumidero de fichas) se usa una tercera cadena con alert(3) y para el
@@ -34,10 +34,10 @@ the gallery) have NO dedicated hostile test: the text that can reach them is
 bounded by the naming regex (_RE_PLACA only accepts digits and 'x'),
 so no hostile string crosses ``_muestra_de`` into them. The escaping is layered
 armour, verified by the byte-identity test of the benign render
-(tests/test_render_reporte_benigno.py), not by injection.
+(tests/test_benign_report_render.py), not by injection.
 
 The language is pinned to 'en' and the pipeline logger to a NullHandler with
-the same mechanics as tests/test_render_reporte_benigno.py: polyx.core.i18n
+the same mechanics as tests/test_benign_report_render.py: polyx.core.i18n
 caches the language on import and without POLYX_LOCALE the anchors in this file
 depend on the machine; the 'polyx.detector' logger is cached by logger_para with a
 RotatingFileHandler a carpeta_logs() y sin POLYX_LOG_DIR la suite escribiria en
@@ -96,7 +96,7 @@ TITULO_ESCAPADO = _e(TITULO_HOSTIL)
 def rh(tmp_path, monkeypatch):
     """Fuerza 'en' y revierte el logger del pipeline a NullHandler.
 
-    Misma mecanica de tests/test_render_reporte_benigno.py: i18n cachea el
+    Misma mecanica de tests/test_benign_report_render.py: i18n cachea el
     idioma al importar y los anclajes de este archivo son literales de
     plantilla en el idioma del render; sin fuerza, el resultado dependia de
     la maquina. POLYX_LOG_DIR va a tmp_path antes del primer logger_para.
@@ -215,7 +215,7 @@ def test_tabla_ancha_escapa_titulo_y_clases_y_mantiene_las_etiquetas_compuestas(
 def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_path):
     """alert(1) escapa solo en la etiqueta intro de la seccion; alert(2)
     escapa solo en la celda de fila por imagen (_tabla_ancha)."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     html = rh._section_count(st.results, st, classes=["PET"])
@@ -238,7 +238,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
     """Con nombre parseable por _muestra_de la etiqueta compone estacion y
     tramo: ambos viven acotados por el regex, y el segmento hostil solo
     aparece via r.image_path.name escapado."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     nombre_pauta = "2.3x__A&amp;B<img src=x onerror=alert(2)>.png"
     st = estado_hostil(directorio=tmp_path / "fotos", nombres=[nombre_pauta])
@@ -314,7 +314,7 @@ def test_figura_calibracion_escapa_el_nombre_de_la_placa(rh, tmp_path):
     La clave de calibracion ES el nombre de archivo; el fix lo renderiza en
     la brecha monoespaciada del rotulo, escapado."""
     from polyx.core.measure.calibration import ORIGIN_PLATE, Calibration
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     st.calibrations[st.images[0]] = Calibration(
@@ -339,7 +339,7 @@ def test_metodos_declara_el_alias_escapado_en_los_tres_sitios(rh, tmp_path):
     """Cabecera Models: + fila Modelos cargados + blockquote «{modelos}».
 
     Conteo exacto = 3: cabecera global 1, methods_rows 1, methods_para 1."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     html = _render_de("metodos", st, tmp_path)
@@ -356,7 +356,7 @@ def test_forma_muestra_el_nombre_escapado_en_fichas_y_recuento(rh, tmp_path):
     """tabla mayor/menor ``font-size:9pt`` x2 + recuento por foto x1.
 
     Conteo exacto = 3 en la seccion de forma."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     html = _render_de("forma", st, tmp_path)
@@ -372,7 +372,7 @@ def test_forma_muestra_el_nombre_escapado_en_fichas_y_recuento(rh, tmp_path):
 
 def test_forma_sufre_el_nombre_en_el_recuento_por_foto(rh, tmp_path):
     """En el recuento de STRINGS de datos crudos: el nombre ``barra`` no vive."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     html = _render_de("forma", st, tmp_path)
@@ -384,7 +384,7 @@ def test_forma_sufre_el_nombre_en_el_recuento_por_foto(rh, tmp_path):
 
 def test_fichas_escapan_la_clase_y_el_titulo_de_la_imagen(rh, tmp_path):
     """alert(3) del sink de clase de fichas + alert(2) del h3 de imagen."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     for rs in st.results.values():
@@ -406,7 +406,7 @@ def test_resultados_no_suelta_texto_hostil_fotos_solamente(rh, tmp_path):
     El eje y leyenda del histograma entran en los PNG (raster): el escape
     alli es el _esc de matplotlib, no html. La seccion HTML no debe soltar
     ninguna cadena hostil cruda (ni escapada: sin sinks HTML)."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     for rs in st.results.values():
@@ -429,7 +429,7 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
     los sub-successes pred_portas escriben PNG de la misma sintetica."""
     import cv2
 
-    from tests.fixtures_informe import estado_hostil, foto_sintetica
+    from tests.report_fixtures import estado_hostil, foto_sintetica
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     for rs in st.results.values():
@@ -455,7 +455,7 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
 def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path):
     """Con GT: caption de la matriz (active[0].alias) y nota_ausentes (nombres
     de clase del checkpoint cargado)."""
-    from tests.fixtures_informe import deteccion_medida, estado_hostil, foto_sintetica
+    from tests.report_fixtures import deteccion_medida, estado_hostil, foto_sintetica
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     # GT con clase ajena (id 3) para que entreste miscls y sirva de datos;
@@ -483,7 +483,7 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
 def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_path):
     """alert(1) x3: veredicto estricto (Best performance), th de comparacion
     tabla veredicto localizable... &gt; arriba y abajo."""
-    from tests.fixtures_informe import deteccion_medida, estado_hostil, foto_sintetica
+    from tests.report_fixtures import deteccion_medida, estado_hostil, foto_sintetica
 
     st = estado_hostil(directorio=tmp_path / "fotos", alias=[ALIAS_HOSTIL, "m2"])
     for rs in st.results.values():
@@ -504,7 +504,7 @@ def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_pa
 
 def test_comparacion_sin_gt_no_nombra_ganador_ni_alias(rh, tmp_path):
     """Sin GT, el veredicto estricto no existe: el sink no se emite."""
-    from tests.fixtures_informe import estado_hostil
+    from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
     html = _render_de("comparacion", st, tmp_path)

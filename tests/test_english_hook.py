@@ -171,6 +171,40 @@ def test_committed_spanish_test_file_passes_without_staged_diff(tmp_path):
     assert result.stdout == ""
 
 
+def test_pure_rename_of_a_spanish_test_helper_adds_no_lines(tmp_path):
+    """A rename with unchanged content must not rescan grandfathered Spanish."""
+    repo = _repo(tmp_path)
+    _write(repo, "tests/old_helper.py", "def calcular_ruta():\n    return 1\n")
+    _stage(repo, "tests/old_helper.py")
+    _git(repo, "commit", "-q", "-m", "seed")
+
+    _git(repo, "mv", "tests/old_helper.py", "tests/new_helper.py")
+    result = _run_hook(repo, "tests/new_helper.py")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == ""
+
+
+def test_rename_with_a_new_spanish_line_is_reported(tmp_path):
+    """Rename detection must not hide a Spanish line the rename introduces."""
+    repo = _repo(tmp_path)
+    _write(repo, "tests/old_helper.py", "VALUE = 1\n")
+    _stage(repo, "tests/old_helper.py")
+    _git(repo, "commit", "-q", "-m", "seed")
+
+    _git(repo, "mv", "tests/old_helper.py", "tests/new_helper.py")
+    _write(
+        repo,
+        "tests/new_helper.py",
+        "VALUE = 1\ndef calcular_ruta():\n    return VALUE\n",
+    )
+    _stage(repo, "tests/new_helper.py")
+    result = _run_hook(repo, "tests/new_helper.py")
+
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "tests/new_helper.py:2:" in result.stdout
+
+
 def test_scan_python_source_full_scan_reports_every_matcher():
     found = scan_python_source(SPANISH_SOURCE)
 

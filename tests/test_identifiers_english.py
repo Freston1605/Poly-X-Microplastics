@@ -5,11 +5,12 @@ review discipline. The scanner lives in ``tests/english_scan.py`` and is plain
 ``ast``/``tokenize``, so the gate no longer depends on the one-time LibCST
 rename codemod.
 
-Scope rules: only symbol identifiers in ``polyx/**/*.py`` are checked. Module
-filenames and import paths are excluded by construction, and an imported name
-that is itself a module stem is skipped because the symbol is defined and
-scanned in its own module. String literals, JSONL data keys and the runtime
-``tr()`` layer are out of scope.
+Scope rules: symbol identifiers in ``polyx/**/*.py`` are checked, and a
+companion gate covers the module filenames of ``tests/`` and ``tools/`` (the
+test suite and the development toolchain). Import paths are excluded by
+construction, and an imported name that is itself a module stem is skipped
+because the symbol is defined and scanned in its own module. String literals,
+JSONL data keys and the runtime translation layer are out of scope.
 
 The scanner cannot see every Spanish word, so the language closeout also
 included a manual survivor sweep of the complete unflagged identifier
@@ -45,6 +46,25 @@ _KNOWN_MODULES = [
     "src/polyx/gui/report_html.py",
     "src/polyx/gui/detector/state.py",
 ]
+
+# Roots whose module filenames must read English: the test suite and the
+# development toolchain. ``legacy/`` and ``agent/`` are excluded by project
+# policy, and the packaged ``src/polyx`` modules are English already.
+_MODULE_ROOTS = ("tests", "tools")
+
+# Two-letter ISO 639-1 tags are legitimate filename suffixes: ``manual_text_es``
+# is the Spanish manual text, not a Spanish word. Extend only with locale tags.
+MODULE_NAME_ALLOWLIST: frozenset = frozenset({"es"})
+
+# Known real test/tool modules the filename walk must see (anti-vacuity).
+_KNOWN_TEST_TOOL_MODULES = [
+    "tests/conftest.py",
+    "tests/english_scan.py",
+    "tools/check.py",
+]
+
+# Floor measured when the filename sweep landed.
+_TEST_TOOL_MODULE_FLOOR = 80
 
 # Floors measured when the convention was adopted. The module floor may grow;
 # it must never shrink below the 72 modules the package had then.
@@ -95,6 +115,20 @@ _PUBLIC_SURFACE = [
 def _polyx_files() -> list[Path]:
     """Every ``*.py`` file under the polyx package, sorted for stability."""
     return sorted((REPO_ROOT / "src" / "polyx").rglob("*.py"))
+
+
+def _test_tool_files() -> list[Path]:
+    """Every ``*.py`` module under the test suite and the toolchain, sorted."""
+    return sorted(path for root in _MODULE_ROOTS for path in (REPO_ROOT / root).rglob("*.py"))
+
+
+def _module_name_findings(stem: str) -> list[str]:
+    """Spanish markers in a module stem, minus the ISO locale tags."""
+    return [
+        finding
+        for finding in spanish_identifier_findings(stem)
+        if finding.partition(":")[2] not in MODULE_NAME_ALLOWLIST
+    ]
 
 
 def _read_source(path: Path) -> str:
@@ -225,6 +259,34 @@ def test_scanner_flags_synthetic_spanish_identifiers(name: str) -> None:
     """Anti-vacuity: the Spanish scanner must flag real Spanish words."""
     findings = _allowed(spanish_identifier_findings(name))
     assert findings, f"scanner failed to flag synthetic Spanish identifier {name!r}"
+
+
+def test_test_and_tool_module_names_read_english() -> None:
+    """Contract: no Spanish module filename survives in tests/ or tools/."""
+    offenders: list[str] = []
+    for path in _test_tool_files():
+        findings = _module_name_findings(path.stem)
+        if findings:
+            offenders.append(f"{path.relative_to(REPO_ROOT).as_posix()} -> {findings}")
+    assert not offenders, "Spanish module names in tests/tools:\n" + "\n".join(offenders)
+
+
+def test_module_name_walk_exceeds_floor_and_covers_known_modules() -> None:
+    """Anti-vacuity: the filename walk must see the real suite and toolchain."""
+    relative_paths = {path.relative_to(REPO_ROOT).as_posix() for path in _test_tool_files()}
+    assert len(relative_paths) >= _TEST_TOOL_MODULE_FLOOR, (
+        f"only {len(relative_paths)} test/tool modules walked"
+    )
+    for known in _KNOWN_TEST_TOOL_MODULES:
+        assert known in relative_paths, f"known module missing from the walk: {known}"
+
+
+def test_module_name_scanner_flags_spanish_and_spares_locale_tags() -> None:
+    """Anti-vacuity: real Spanish stems fail, ISO locale suffixes pass."""
+    for stem in ("test_morfologia", "capturar_fixtures_geodesia", "test_comments_ingles"):
+        assert _module_name_findings(stem), f"scanner failed to flag module stem {stem!r}"
+    for stem in ("manual_text_es", "manual_text_en", "test_themes", "conftest"):
+        assert _module_name_findings(stem) == [], f"scanner flagged English stem {stem!r}"
 
 
 @pytest.mark.parametrize(

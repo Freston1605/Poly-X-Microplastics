@@ -1,7 +1,7 @@
 """Captura de fixtures reales para el harness de geodesia (S02-T03).
 
 Serializa mascaras uint8 desde una corrida real del detector, para que
-``tests/test_geodesia.py`` las recubra automaticamente en su comparacion
+``tests/test_geodesy.py`` las recubra automaticamente en su comparacion
 bit a bit de ``_propagar_geodesico`` pre/post reescritura.
 
 La mascara NO se re-inventa: se reproduce con ``morfologia.segmentar()``
@@ -25,7 +25,7 @@ donde viven estos datos.
 
 Uso (en el equipo que tenga la corrida y sus fotos)::
 
-    python tests/capturar_fixtures_geodesia.py \\
+    python tests/capture_geodesy_fixtures.py \\
         --runs runs/detect_20260812_1030 \\
         --fotos F:/Poly-X/fotos_origen \\
         [--destino tests/fixtures/geodesia] \\
@@ -277,7 +277,7 @@ def imprimir_resumen(resumen: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Serializa mascaras de particulas reales "
-        "(runs/detect_*/) para tests/test_geodesia.py.",
+        "(runs/detect_*/) para tests/test_geodesy.py.",
     )
     parser.add_argument(
         "--runs", type=Path, required=True, help="carpeta del run (p.ej. runs/detect_20260812_1030)"

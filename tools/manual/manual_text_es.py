@@ -1,6 +1,6 @@
 """Texto del manual de Poly-X en español.
 
-Solo contenido: el motor que lo convierte en HTML está en generar_manual.py.
+Solo contenido: el motor que lo convierte en HTML está en generate_manual.py.
 
 Tokens disponibles dentro de cada sección:
     [[fig:ui/01_launcher|Pie de figura]]      captura de la interfaz (por idioma)
@@ -1161,7 +1161,7 @@ que se quería eliminar.</p>
   <p>Contra formas sintéticas de talla conocida —rectas, rectas giradas, arcos de
   60°, 120° y 180°, un círculo, una recta de borde dentado y un grumo con
   muesca— el largo así medido da <b>0,6 % de error mediano y 4,7 % en el peor
-  caso</b>. Está fijado en <code>tests/test_morfologia.py</code>, de modo que un
+  caso</b>. Está fijado en <code>tests/test_morphology.py</code>, de modo que un
   cambio bienintencionado que lo empeore hace fallar la suite.</p>
 </div>
 
@@ -1218,7 +1218,7 @@ alargada, ni se pasa por el separador de partículas pegadas: las dos cosas
 cortaban fibras reales. En la que lo destapó se perdía un <b>53 % del largo</b>
 —369 px de componente conexa quedaban en 174—, y una talla subestimada no se nota
 en las cifras, solo en la imagen. Está fijado en
-<code>tests/test_fibra_no_se_trunca.py</code>.</p>
+<code>tests/test_fiber_is_not_truncated.py</code>.</p>
 
 <div class="aviso err">
   <span class="et">Limitaciones declaradas</span>

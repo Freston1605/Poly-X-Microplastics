@@ -2,7 +2,7 @@
 """Reject Spanish in the added lines of Python files, and in all of ``src/``.
 
 This is the command-line layer over :mod:`tests.english_scan`, the single
-vocabulary the ``*_ingles`` pytest gates use. Pre-commit passes the staged
+vocabulary the ``*_english`` pytest gates use. Pre-commit passes the staged
 files; this script asks ``git diff --cached`` which of their lines are new and
 prints every finding as ``path:line: finding``.
 
@@ -21,6 +21,7 @@ shell, no absolute path and no regex vocabulary of its own.
 
 from __future__ import annotations
 
+import functools
 import re
 import shutil
 import subprocess
@@ -47,28 +48,48 @@ def _git() -> str:
 
 def added_lines(path: str) -> set[int]:
     """Return the line numbers ``path`` adds to the staged tree."""
+    return set(_staged_additions().get(Path(path).as_posix(), set()))
+
+
+@functools.lru_cache(maxsize=1)
+def _staged_additions() -> dict[str, set[int]]:
+    """Map each staged path to the line numbers it adds.
+
+    The whole diff is read once, without a pathspec. Limiting the diff to one
+    path disables rename detection against the old path, so a pure rename is
+    reported as a brand-new file and every grandfathered Spanish line in a
+    renamed test helper would be scanned. ``git diff`` prints no hunks for a
+    rename whose content did not change, which is exactly what the hook wants.
+    """
     git_cmd = _git()
     result = subprocess.run(
-        [git_cmd, "diff", "--cached", "--unified=0", "--no-color", "--", path],
+        [git_cmd, "diff", "--cached", "--unified=0", "--no-color", "--find-renames"],
         capture_output=True,
         text=True,
         encoding="utf-8",
         check=False,
     )
     if result.returncode != 0:
-        raise SystemExit(f"{path}: git diff failed: {result.stderr.strip()}")
+        raise SystemExit(f"git diff failed: {result.stderr.strip()}")
 
-    added: set[int] = set()
+    additions: dict[str, set[int]] = {}
+    current: str | None = None
     line = 0
     for raw in result.stdout.splitlines():
+        if raw.startswith("+++ "):
+            target = raw[4:]
+            current = None if target == "/dev/null" else target.removeprefix("b/")
+            if current is not None:
+                additions.setdefault(current, set())
+            continue
         match = _HUNK.match(raw)
         if match is not None:
             line = int(match.group(1))
             continue
-        if raw.startswith("+") and not raw.startswith("+++"):
-            added.add(line)
+        if current is not None and raw.startswith("+") and not raw.startswith("+++"):
+            additions[current].add(line)
             line += 1
-    return added
+    return additions
 
 
 def _scope(path: Path, added: set[int]) -> set[int] | None:
