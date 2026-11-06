@@ -57,9 +57,9 @@ class ResultsPage(DetectorPage):
         self.kpi_dets = KPICard(_("Detections"), T.ACCENT)
         self.kpi_conf = KPICard(_("Mean confidence"), T.VIO)
         self.kpi_size = KPICard(_("Mean size (μm)"), T.WARN)
-        self.kpi_tp = KPICard(LABEL_TP, T.OK)
-        self.kpi_fp = KPICard(LABEL_FP, T.WARN)
-        self.kpi_fn = KPICard(LABEL_FN, T.ERR)
+        self.kpi_tp = KPICard(str(LABEL_TP), T.OK)
+        self.kpi_fp = KPICard(str(LABEL_FP), T.WARN)
+        self.kpi_fn = KPICard(str(LABEL_FN), T.ERR)
         self.kpi_f1 = KPICard("F1", T.ACCENT_D)
         grid.addWidget(self.kpi_imgs, 0, 0)
         grid.addWidget(self.kpi_dets, 0, 1)
@@ -146,7 +146,16 @@ class ResultsPage(DetectorPage):
         c3, l3 = self.card(_("Per image"), "imagenes")
         self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels(
-            ["Modelo", "Imagen", "Pred", "GT", LABEL_TP, LABEL_FP, LABEL_FN, "Conf media"]
+            [
+                _("Model"),
+                _("Image"),
+                _("Pred"),
+                "GT",
+                str(LABEL_TP),
+                str(LABEL_FP),
+                str(LABEL_FN),
+                _("Mean conf."),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)

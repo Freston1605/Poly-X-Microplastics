@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 19:55-0300\n"
+"POT-Creation-Date: 2026-11-06 20:01-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -82,6 +82,22 @@ msgstr "<strong>%(que)s %(sentido)s con la profundidad</strong>"
 msgid "No trend in %(que)s with depth is detected"
 msgstr "No se detecta tendencia en %(que)s con la profundidad"
 
+#: src/polyx/core/quality/metrics.py:23
+msgid "True positives"
+msgstr "Verdaderos Positivos"
+
+#: src/polyx/core/quality/metrics.py:24
+msgid "False positives"
+msgstr "Falsos Positivos"
+
+#: src/polyx/core/quality/metrics.py:25
+msgid "False negatives"
+msgstr "Falsos Negativos"
+
+#: src/polyx/core/quality/metrics.py:26
+msgid "Misclassified"
+msgstr "Mal Clasificados"
+
 #: src/polyx/gui/launcher.py:203 src/polyx/gui/launcher.py:278
 msgid "Open  →"
 msgstr "Abrir  →"
@@ -138,7 +154,7 @@ msgstr "MÓDULOS"
 #: src/polyx/gui/detector/window.py:169 src/polyx/gui/labeler/window.py:332
 #: src/polyx/gui/labeler/window.py:361 src/polyx/gui/labeler/window.py:683
 #: src/polyx/gui/launcher.py:552 src/polyx/gui/trainer/window.py:165
-#: src/polyx/gui/viewer/window.py:566
+#: src/polyx/gui/viewer/window.py:568
 msgid "● Ready"
 msgstr "● Listo"
 
@@ -336,9 +352,10 @@ msgstr "Revisión de detecciones — Poly-X"
 msgid "Fit (F)"
 msgstr "Ajustar (F)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:677 src/polyx/gui/detector/pages/images.py:31
-#: src/polyx/gui/detector/pages/results.py:56 src/polyx/gui/detector/review_dialog.py:93
-#: src/polyx/gui/detector/window.py:29 src/polyx/gui/report/sections.py:280
+#: src/polyx/gui/detector/pages/compare.py:37 src/polyx/gui/detector/pages/gt_manual.py:677
+#: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:56
+#: src/polyx/gui/detector/review_dialog.py:93 src/polyx/gui/detector/window.py:29
+#: src/polyx/gui/report/sections.py:280
 msgid "Images"
 msgstr "Imágenes"
 
@@ -398,12 +415,12 @@ msgstr "Modelo:"
 msgid "Class (for new boxes):"
 msgstr "Clase (para nuevas cajas):"
 
-#: src/polyx/gui/detector/pages/results.py:600 src/polyx/gui/detector/review_dialog.py:293
-#: src/polyx/gui/viewer/window.py:862 src/polyx/gui/viewer/window.py:922
+#: src/polyx/gui/detector/pages/results.py:609 src/polyx/gui/detector/review_dialog.py:293
+#: src/polyx/gui/viewer/window.py:864 src/polyx/gui/viewer/window.py:924
 msgid "Error"
 msgstr "Error"
 
-#: src/polyx/gui/detector/review_dialog.py:293 src/polyx/gui/viewer/window.py:922
+#: src/polyx/gui/detector/review_dialog.py:293 src/polyx/gui/viewer/window.py:924
 msgid "Could not read the image."
 msgstr "No se pudo leer la imagen."
 
@@ -461,6 +478,7 @@ msgid "Parameters"
 msgstr "Parámetros"
 
 #: src/polyx/gui/detector/pages/execute.py:74 src/polyx/gui/detector/window.py:32
+#: src/polyx/gui/trainer/pages/compare.py:85
 msgid "Run"
 msgstr "Ejecutar"
 
@@ -520,9 +538,31 @@ msgstr ""
 msgid "Per-model summary"
 msgstr "Resumen por modelo"
 
-#: src/polyx/gui/detector/pages/compare.py:45
+#: src/polyx/gui/detector/pages/compare.py:54
 msgid "Detections per image"
 msgstr "Detecciones por imagen"
+
+#: src/polyx/gui/detector/pages/compare.py:36 src/polyx/gui/detector/pages/errors.py:71
+#: src/polyx/gui/detector/pages/results.py:150 src/polyx/gui/trainer/window.py:27
+#: src/polyx/gui/viewer/window.py:292
+msgid "Model"
+msgstr "Modelo"
+
+#: src/polyx/gui/detector/pages/compare.py:38 src/polyx/gui/detector/pages/results.py:57
+#: src/polyx/gui/report/figures.py:206 src/polyx/gui/report/sections.py:281
+msgid "Detections"
+msgstr "Detecciones"
+
+#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/results.py:157
+#: src/polyx/gui/report/sections.py:282
+msgid "Mean conf."
+msgstr "Conf. media"
+
+#: src/polyx/gui/detector/pages/compare.py:110 src/polyx/gui/detector/pages/errors.py:72
+#: src/polyx/gui/detector/pages/images.py:93 src/polyx/gui/detector/pages/results.py:151
+#: src/polyx/gui/viewer/window.py:218 src/polyx/gui/viewer/window.py:226
+msgid "Image"
+msgstr "Imagen"
 
 #: src/polyx/gui/detector/pages/errors.py:32
 msgid ""
@@ -537,7 +577,7 @@ msgid "Filters"
 msgstr "Filtros"
 
 #: src/polyx/gui/detector/pages/errors.py:46 src/polyx/gui/detector/pages/errors.py:55
-#: src/polyx/gui/detector/pages/errors.py:89
+#: src/polyx/gui/detector/pages/errors.py:96
 msgid "All"
 msgstr "Todos"
 
@@ -553,7 +593,23 @@ msgstr "Cajas con error"
 msgid "Type:"
 msgstr "Tipo:"
 
-#: src/polyx/gui/detector/pages/errors.py:138
+#: src/polyx/gui/detector/pages/errors.py:73 src/polyx/gui/viewer/window.py:494
+msgid "Type"
+msgstr "Tipo"
+
+#: src/polyx/gui/detector/pages/errors.py:74
+msgid "GT class"
+msgstr "Clase GT"
+
+#: src/polyx/gui/detector/pages/errors.py:75
+msgid "Pred class"
+msgstr "Clase Pred"
+
+#: src/polyx/gui/detector/pages/errors.py:76
+msgid "Conf"
+msgstr "Conf"
+
+#: src/polyx/gui/detector/pages/errors.py:145
 #, python-format
 msgid "%(count)d error"
 msgid_plural "%(count)d errors"
@@ -795,7 +851,7 @@ msgstr "✓ Guardado en: %(path)s%(warning)s"
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:885 src/polyx/gui/viewer/window.py:1354
+#: src/polyx/gui/detector/pages/gt_manual.py:885 src/polyx/gui/viewer/window.py:1356
 msgid "Error while saving"
 msgstr "Error guardando"
 
@@ -866,6 +922,10 @@ msgstr "Seleccionar carpeta con imágenes"
 #: src/polyx/gui/detector/pages/images.py:130
 msgid "Select the GT folder"
 msgstr "Seleccionar carpeta GT"
+
+#: src/polyx/gui/detector/pages/images.py:93 src/polyx/gui/viewer/window.py:229
+msgid "Folder"
+msgstr "Carpeta"
 
 #: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:561
 #, python-format
@@ -1244,7 +1304,7 @@ msgstr ""
 
 #: src/polyx/gui/detector/pages/parameters.py:454 src/polyx/gui/labeler/window.py:259
 #: src/polyx/gui/labeler/window.py:443 src/polyx/gui/labeler/window.py:474
-#: src/polyx/gui/viewer/window.py:298 src/polyx/gui/viewer/window.py:673
+#: src/polyx/gui/viewer/window.py:298 src/polyx/gui/viewer/window.py:675
 msgid "No model"
 msgstr "Sin modelo"
 
@@ -1674,11 +1734,6 @@ msgstr ""
 msgid "General metrics"
 msgstr "Métricas generales"
 
-#: src/polyx/gui/detector/pages/results.py:57 src/polyx/gui/report/figures.py:206
-#: src/polyx/gui/report/sections.py:281
-msgid "Detections"
-msgstr "Detecciones"
-
 #: src/polyx/gui/detector/pages/results.py:58
 msgid "Mean confidence"
 msgstr "Confianza media"
@@ -1691,11 +1746,11 @@ msgstr "Tamaño medio (μm)"
 msgid "Detailed metrics (summed over all models)"
 msgstr "Métricas detalladas (suma de todos los modelos)"
 
-#: src/polyx/gui/detector/pages/results.py:79 src/polyx/gui/detector/pages/results.py:206
+#: src/polyx/gui/detector/pages/results.py:79 src/polyx/gui/detector/pages/results.py:215
 msgid "Precision:  —"
 msgstr "Precisión:  —"
 
-#: src/polyx/gui/detector/pages/results.py:80 src/polyx/gui/detector/pages/results.py:209
+#: src/polyx/gui/detector/pages/results.py:80 src/polyx/gui/detector/pages/results.py:218
 msgid "Recall:  —"
 msgstr "Recall:  —"
 
@@ -1739,11 +1794,11 @@ msgstr "Exportar CSV de detecciones"
 msgid "Per image"
 msgstr "Por imagen"
 
-#: src/polyx/gui/detector/pages/results.py:160
+#: src/polyx/gui/detector/pages/results.py:169
 msgid "Review particle by particle in the Viewer"
 msgstr "Revisar partícula a partícula en el Visor"
 
-#: src/polyx/gui/detector/pages/results.py:167
+#: src/polyx/gui/detector/pages/results.py:176
 msgid ""
 "Opens the selected image in the Viewer with these very detections, numbered. There each particle"
 " shows what it was measured on and whether it is a fibre or a fragment — without running the "
@@ -1752,64 +1807,68 @@ msgstr ""
 "Abre la imagen seleccionada en el Visor con estas mismas detecciones, numeradas. Allí cada "
 "partícula muestra sobre qué se midió y si es fibra o fragmento — sin volver a pasar el modelo."
 
-#: src/polyx/gui/detector/pages/results.py:263
+#: src/polyx/gui/detector/pages/results.py:272
 msgid "Re-reading ground truth…"
 msgstr "Releyendo ground truth…"
 
-#: src/polyx/gui/detector/pages/results.py:263 src/polyx/gui/labeler/window.py:480
+#: src/polyx/gui/detector/pages/results.py:272 src/polyx/gui/labeler/window.py:480
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: src/polyx/gui/detector/pages/results.py:264 src/polyx/gui/detector/pages/results.py:285
+#: src/polyx/gui/detector/pages/results.py:273 src/polyx/gui/detector/pages/results.py:294
 msgid "Reload GT"
 msgstr "Recargar GT"
 
-#: src/polyx/gui/detector/pages/results.py:524
+#: src/polyx/gui/detector/pages/results.py:533
 msgid "Export CSV"
 msgstr "Exportar CSV"
 
-#: src/polyx/gui/detector/pages/results.py:524
+#: src/polyx/gui/detector/pages/results.py:533
 msgid "CSV (*.csv)"
 msgstr "CSV (*.csv)"
 
-#: src/polyx/gui/detector/pages/results.py:259
+#: src/polyx/gui/detector/pages/results.py:152
+msgid "Pred"
+msgstr "Pred"
+
+#: src/polyx/gui/detector/pages/results.py:268
 msgid "There are no results to recompute: run the detection first."
 msgstr "No hay resultados que recalcular: ejecuta primero la detección."
 
-#: src/polyx/gui/detector/pages/results.py:624 src/polyx/gui/detector/pages/results.py:641
-#: src/polyx/gui/detector/pages/results.py:648
+#: src/polyx/gui/detector/pages/results.py:633 src/polyx/gui/detector/pages/results.py:650
+#: src/polyx/gui/detector/pages/results.py:657
 msgid "Review"
 msgstr "Revisar"
 
-#: src/polyx/gui/detector/pages/results.py:624
+#: src/polyx/gui/detector/pages/results.py:633
 msgid "Select a row from the table below first."
 msgstr "Selecciona primero una fila de la tabla de abajo."
 
-#: src/polyx/gui/detector/pages/results.py:641
+#: src/polyx/gui/detector/pages/results.py:650
 msgid "That image has no detections to review."
 msgstr "Esa imagen no tiene detecciones que revisar."
 
-#: src/polyx/gui/detector/pages/results.py:206
+#: src/polyx/gui/detector/pages/results.py:215
 #, python-format
 msgid "Precision:  %(value).3f"
 msgstr "Precisión:  %(value).3f"
 
-#: src/polyx/gui/detector/pages/results.py:209
+#: src/polyx/gui/detector/pages/results.py:218
 #, python-format
 msgid "Recall:  %(value).3f"
 msgstr "Recall:  %(value).3f"
 
-#: src/polyx/gui/detector/pages/results.py:517 src/polyx/gui/trainer/pages/train.py:106
+#: src/polyx/gui/detector/pages/results.py:526 src/polyx/gui/trainer/pages/train.py:106
 #, python-format
 msgid "matplotlib is not available: %(error)s"
 msgstr "matplotlib no disponible: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:600
+#: src/polyx/gui/detector/pages/results.py:609
 #, python-format
 msgid "Could not save: %(error)s"
 msgstr "No se pudo guardar: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:648
+#: src/polyx/gui/detector/pages/results.py:657
 #, python-format
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
@@ -1912,11 +1971,11 @@ msgstr "Seleccionar carpeta de imágenes"
 msgid "● Saved"
 msgstr "● Guardado"
 
-#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:650
+#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:652
 msgid "Load YOLO model"
 msgstr "Cargar modelo YOLO"
 
-#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:650
+#: src/polyx/gui/labeler/window.py:427 src/polyx/gui/viewer/window.py:652
 msgid "YOLO model (*.pt)"
 msgstr "Modelo YOLO (*.pt)"
 
@@ -1966,12 +2025,12 @@ msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acer
 msgid "● Folder loaded"
 msgstr "● Carpeta cargada"
 
-#: src/polyx/gui/labeler/window.py:437 src/polyx/gui/viewer/window.py:1446
+#: src/polyx/gui/labeler/window.py:437 src/polyx/gui/viewer/window.py:1448
 msgid "● Model loaded"
 msgstr "● Modelo cargado"
 
 #: src/polyx/gui/labeler/window.py:443 src/polyx/gui/labeler/window.py:474
-#: src/polyx/gui/viewer/window.py:673
+#: src/polyx/gui/viewer/window.py:675
 msgid "Load a .pt model first."
 msgstr "Carga un modelo .pt primero."
 
@@ -2000,7 +2059,7 @@ msgstr "No quedan imágenes sin revisar."
 msgid "No annotations"
 msgstr "Sin anotaciones"
 
-#: src/polyx/gui/labeler/window.py:439 src/polyx/gui/viewer/window.py:668
+#: src/polyx/gui/labeler/window.py:439 src/polyx/gui/viewer/window.py:670
 msgid "Error loading the model"
 msgstr "Error al cargar modelo"
 
@@ -2023,7 +2082,7 @@ msgstr "Umbral de confianza"
 msgid "F1 (with class)"
 msgstr "F1 (con clase)"
 
-#: src/polyx/gui/report/figures.py:79
+#: src/polyx/gui/report/figures.py:79 src/polyx/gui/trainer/pages/compare.py:89
 msgid "Precision"
 msgstr "Precisión"
 
@@ -2329,10 +2388,6 @@ msgstr "Lote parcial (ejecución interrumpida)."
 #: src/polyx/gui/report/sections.py:107
 msgid "The report describes only the images processed before the interruption."
 msgstr "El informe describe solo las imágenes procesadas antes de la interrupción."
-
-#: src/polyx/gui/report/sections.py:282
-msgid "Mean conf."
-msgstr "Conf. media"
 
 #: src/polyx/gui/report/sections.py:377
 msgid "Precision / recall / F1 per class"
@@ -3243,10 +3298,6 @@ msgstr ""
 "que sí va por dentro es el geodésico, en magenta, y se usa cuando la partícula es delgada y está"
 " doblada.</p>"
 
-#: src/polyx/gui/trainer/window.py:27 src/polyx/gui/viewer/window.py:292
-msgid "Model"
-msgstr "Modelo"
-
 #: src/polyx/gui/trainer/window.py:30
 msgid "Augmentation"
 msgstr "Augmentación"
@@ -3348,6 +3399,18 @@ msgstr "Refrescar lista"
 #: src/polyx/gui/trainer/pages/compare.py:75
 msgid "Open the runs_train/ folder"
 msgstr "Abrir carpeta runs_train/"
+
+#: src/polyx/gui/trainer/pages/compare.py:86
+msgid "Epochs"
+msgstr "Épocas"
+
+#: src/polyx/gui/trainer/pages/compare.py:90
+msgid "Recall"
+msgstr "Recall"
+
+#: src/polyx/gui/trainer/pages/compare.py:91
+msgid "Box loss"
+msgstr "Box loss"
 
 #: src/polyx/gui/trainer/pages/dataset.py:136
 msgid ""
@@ -4255,17 +4318,9 @@ msgstr "● ENTRENARÁ EN GPU"
 msgid "  No image  —  Not calibrated"
 msgstr "  Sin imagen  —  Sin calibración"
 
-#: src/polyx/gui/viewer/window.py:218 src/polyx/gui/viewer/window.py:226
-msgid "Image"
-msgstr "Imagen"
-
-#: src/polyx/gui/viewer/window.py:229
-msgid "Folder"
-msgstr "Carpeta"
-
-#: src/polyx/gui/viewer/window.py:242 src/polyx/gui/viewer/window.py:680
-#: src/polyx/gui/viewer/window.py:786 src/polyx/gui/viewer/window.py:897
-#: src/polyx/gui/viewer/window.py:1323
+#: src/polyx/gui/viewer/window.py:242 src/polyx/gui/viewer/window.py:682
+#: src/polyx/gui/viewer/window.py:788 src/polyx/gui/viewer/window.py:899
+#: src/polyx/gui/viewer/window.py:1325
 msgid "No image"
 msgstr "Sin imagen"
 
@@ -4341,7 +4396,7 @@ msgstr "✕  Cancelar calibración"
 msgid "Not calibrated"
 msgstr "Sin calibrar"
 
-#: src/polyx/gui/viewer/window.py:469 src/polyx/gui/viewer/window.py:1161
+#: src/polyx/gui/viewer/window.py:469 src/polyx/gui/viewer/window.py:1163
 msgid "All classes"
 msgstr "Todas las clases"
 
@@ -4349,39 +4404,39 @@ msgstr "Todas las clases"
 msgid "0 detections"
 msgstr "0 detecciones"
 
-#: src/polyx/gui/viewer/window.py:523
+#: src/polyx/gui/viewer/window.py:525
 msgid "Select a particle to see how it was measured"
 msgstr "Selecciona una partícula para ver su medición"
 
-#: src/polyx/gui/viewer/window.py:557
+#: src/polyx/gui/viewer/window.py:559
 msgid "Save current info"
 msgstr "Guardar info actual"
 
-#: src/polyx/gui/viewer/window.py:605
+#: src/polyx/gui/viewer/window.py:607
 msgid "Open image"
 msgstr "Abrir imagen"
 
-#: src/polyx/gui/viewer/window.py:605
+#: src/polyx/gui/viewer/window.py:607
 msgid "Images (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)"
 msgstr "Imágenes (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)"
 
-#: src/polyx/gui/viewer/window.py:615
+#: src/polyx/gui/viewer/window.py:617
 msgid "Open image folder"
 msgstr "Abrir carpeta de imágenes"
 
-#: src/polyx/gui/viewer/window.py:635
+#: src/polyx/gui/viewer/window.py:637
 msgid "● Image loaded"
 msgstr "● Imagen cargada"
 
-#: src/polyx/gui/viewer/window.py:792
+#: src/polyx/gui/viewer/window.py:794
 msgid "Run folder (runs/detect_...)"
 msgstr "Carpeta de la corrida (runs/detect_...)"
 
-#: src/polyx/gui/viewer/window.py:1205
+#: src/polyx/gui/viewer/window.py:1207
 msgid "● Calibration mode active"
 msgstr "● Modo calibración activo"
 
-#: src/polyx/gui/viewer/window.py:1329
+#: src/polyx/gui/viewer/window.py:1331
 msgid "Output folder"
 msgstr "Carpeta de salida"
 
@@ -4397,69 +4452,85 @@ msgstr "Resolución de inferencia (px):"
 msgid "Filter by class:"
 msgstr "Filtrar por clase:"
 
-#: src/polyx/gui/viewer/window.py:665
+#: src/polyx/gui/viewer/window.py:494
+msgid "Class"
+msgstr "Clase"
+
+#: src/polyx/gui/viewer/window.py:494
+msgid "Length μm"
+msgstr "Largo μm"
+
+#: src/polyx/gui/viewer/window.py:494
+msgid "Width μm"
+msgstr "Ancho μm"
+
+#: src/polyx/gui/viewer/window.py:494
+msgid "Asp."
+msgstr "Asp."
+
+#: src/polyx/gui/viewer/window.py:667
 msgid "● Model ready"
 msgstr "● Modelo listo"
 
-#: src/polyx/gui/viewer/window.py:680 src/polyx/gui/viewer/window.py:897
+#: src/polyx/gui/viewer/window.py:682 src/polyx/gui/viewer/window.py:899
 msgid "Open an image first."
 msgstr "Abre una imagen primero."
 
-#: src/polyx/gui/viewer/window.py:786
+#: src/polyx/gui/viewer/window.py:788
 msgid "Open the original photo first."
 msgstr "Abre primero la foto original."
 
-#: src/polyx/gui/viewer/window.py:812 src/polyx/gui/viewer/window.py:871
+#: src/polyx/gui/viewer/window.py:814 src/polyx/gui/viewer/window.py:873
 msgid "No predictions"
 msgstr "Sin predicciones"
 
-#: src/polyx/gui/viewer/window.py:830
+#: src/polyx/gui/viewer/window.py:832
 msgid "Several models"
 msgstr "Varios modelos"
 
-#: src/polyx/gui/viewer/window.py:831
+#: src/polyx/gui/viewer/window.py:833
 msgid "This photo was analysed with several models. Which one do you want to review?"
 msgstr "Esta foto se analizó con varios modelos. ¿Cuál revisar?"
 
-#: src/polyx/gui/viewer/window.py:872
+#: src/polyx/gui/viewer/window.py:874
 msgid "The file is empty: that photo had no detections."
 msgstr "El archivo está vacío: esa foto no tuvo detecciones."
 
-#: src/polyx/gui/viewer/window.py:882
+#: src/polyx/gui/viewer/window.py:884
 #, python-format
 msgid "● %(n)s predictions loaded from %(c)s"
 msgstr "● %(n)s predicciones cargadas de %(c)s"
 
-#: src/polyx/gui/viewer/window.py:908
+#: src/polyx/gui/viewer/window.py:910
 msgid "No labels"
 msgstr "Sin etiquetas"
 
-#: src/polyx/gui/viewer/window.py:931
+#: src/polyx/gui/viewer/window.py:933
 #, python-format
 msgid "  (%(count)d unreadable line)"
 msgid_plural "  (%(count)d unreadable lines)"
 msgstr[0] "  (%(count)d línea ilegible)"
 msgstr[1] "  (%(count)d líneas ilegibles)"
 
-#: src/polyx/gui/viewer/window.py:942
+#: src/polyx/gui/viewer/window.py:944
 #, python-format
 msgid "● %(count)d label loaded from %(file)s%(warning)s"
 msgid_plural "● %(count)d labels loaded from %(file)s%(warning)s"
 msgstr[0] "● %(count)d etiqueta cargada de %(file)s%(warning)s"
 msgstr[1] "● %(count)d etiquetas cargadas de %(file)s%(warning)s"
 
-#: src/polyx/gui/viewer/window.py:974
+#: src/polyx/gui/viewer/window.py:976
 #, python-format
 msgid "%(count)d detection"
 msgid_plural "%(count)d detections"
 msgstr[0] "%(count)d detección"
 msgstr[1] "%(count)d detecciones"
 
-#: src/polyx/gui/viewer/window.py:1101
+#: src/polyx/gui/viewer/window.py:1103
 msgid "This particle could not be separated from the background"
 msgstr "No se pudo aislar esta partícula del fondo"
 
-#: src/polyx/gui/viewer/window.py:1123
+#: src/polyx/gui/viewer/window.py:1125
 #, python-format
 msgid ""
 "Particle #%(number)s · %(class)s · %(morphotype)s   —   left: no marks · right: green = measured"
@@ -4468,7 +4539,7 @@ msgstr ""
 "Partícula #%(number)s · %(class)s · %(morphotype)s   —   izquierda: sin marcas · derecha: verde "
 "= contorno medido, amarillo = Feret, magenta = geodésico"
 
-#: src/polyx/gui/viewer/window.py:1198
+#: src/polyx/gui/viewer/window.py:1200
 msgid ""
 "Click 2 points on\n"
 "a known reference."
@@ -4476,7 +4547,7 @@ msgstr ""
 "Haz clic en 2 puntos sobre\n"
 "una referencia conocida."
 
-#: src/polyx/gui/viewer/window.py:1202
+#: src/polyx/gui/viewer/window.py:1204
 msgid ""
 "Click 3 points on the edge\n"
 "of a circular object of known size."
@@ -4484,29 +4555,29 @@ msgstr ""
 "Haz clic en 3 puntos del borde\n"
 "de un objeto circular conocido."
 
-#: src/polyx/gui/viewer/window.py:1246
+#: src/polyx/gui/viewer/window.py:1248
 msgid "Calibration — Line"
 msgstr "Calibración — Línea"
 
-#: src/polyx/gui/viewer/window.py:1247
+#: src/polyx/gui/viewer/window.py:1249
 msgid "Real length of the marked line (μm):"
 msgstr "Tamaño real de la línea marcada (μm):"
 
-#: src/polyx/gui/viewer/window.py:1282
+#: src/polyx/gui/viewer/window.py:1284
 #, python-format
 msgid "%(value).4f μm/px  (%(mode)s)"
 msgstr "%(value).4f μm/px  (%(mode)s)"
 
-#: src/polyx/gui/viewer/window.py:1289
+#: src/polyx/gui/viewer/window.py:1291
 #, python-format
 msgid "● Calibration applied: %(value).4f μm/px"
 msgstr "● Calibración aplicada: %(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:1323
+#: src/polyx/gui/viewer/window.py:1325
 msgid "No image is open."
 msgstr "No hay imagen abierta."
 
-#: src/polyx/gui/viewer/window.py:1350
+#: src/polyx/gui/viewer/window.py:1352
 msgid "Saved"
 msgstr "Guardado"
 
@@ -4515,20 +4586,20 @@ msgstr "Guardado"
 msgid "%(value).4f μm/px"
 msgstr "%(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:690
+#: src/polyx/gui/viewer/window.py:692
 #, python-format
 msgid "● Detecting (imgsz %(imgsz)d, %(device)s)…"
 msgstr "● Detectando (imgsz %(imgsz)d, %(device)s)…"
 
-#: src/polyx/gui/viewer/window.py:763
+#: src/polyx/gui/viewer/window.py:765
 msgid "Detection error"
 msgstr "Error en detección"
 
-#: src/polyx/gui/viewer/window.py:765
+#: src/polyx/gui/viewer/window.py:767
 msgid "● Detection error"
 msgstr "● Error en detección"
 
-#: src/polyx/gui/viewer/window.py:813
+#: src/polyx/gui/viewer/window.py:815
 #, python-format
 msgid ""
 "That run has no predictions for %(n)s.\n"
@@ -4539,7 +4610,7 @@ msgstr ""
 "\n"
 "Se buscó en las subcarpetas 'labels'."
 
-#: src/polyx/gui/viewer/window.py:909
+#: src/polyx/gui/viewer/window.py:911
 #, python-format
 msgid ""
 "There is no label file next to the image:\n"
@@ -4548,18 +4619,18 @@ msgstr ""
 "No hay archivo de etiquetas junto a la imagen:\n"
 "%(name)s"
 
-#: src/polyx/gui/viewer/window.py:1223
+#: src/polyx/gui/viewer/window.py:1225
 #, python-format
 msgid "Click %(count)d more point."
 msgid_plural "Click %(count)d more points."
 msgstr[0] "Haz clic en %(count)d punto más."
 msgstr[1] "Haz clic en %(count)d puntos más."
 
-#: src/polyx/gui/viewer/window.py:1265
+#: src/polyx/gui/viewer/window.py:1267
 msgid "Calibration — Circle"
 msgstr "Calibración — Círculo"
 
-#: src/polyx/gui/viewer/window.py:1266
+#: src/polyx/gui/viewer/window.py:1268
 msgid ""
 "Real diameter of the circular object (μm):\n"
 "100 mm Petri dish → 100000"
@@ -4567,12 +4638,12 @@ msgstr ""
 "Diámetro real del objeto circular (μm):\n"
 "Placa Petri de 100 mm → 100000"
 
-#: src/polyx/gui/viewer/window.py:1347
+#: src/polyx/gui/viewer/window.py:1349
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr "● Guardado en %(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1350
+#: src/polyx/gui/viewer/window.py:1352
 #, python-format
 msgid ""
 "Files saved to:\n"
@@ -4581,25 +4652,25 @@ msgstr ""
 "Archivos guardados en:\n"
 "%(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1356
+#: src/polyx/gui/viewer/window.py:1358
 msgid "● Error while saving"
 msgstr "● Error al guardar"
 
-#: src/polyx/gui/viewer/window.py:723
+#: src/polyx/gui/viewer/window.py:725
 #, python-format
 msgid "● %(count)d detection (tiled into %(tiles)d tiles of %(tile)d px, imgsz %(imgsz)d)"
 msgid_plural "● %(count)d detections (tiled into %(tiles)d tiles of %(tile)d px, imgsz %(imgsz)d)"
 msgstr[0] "● %(count)d detección (troceada en %(tiles)d tiles de %(tile)d px, imgsz %(imgsz)d)"
 msgstr[1] "● %(count)d detecciones (troceada en %(tiles)d tiles de %(tile)d px, imgsz %(imgsz)d)"
 
-#: src/polyx/gui/viewer/window.py:741
+#: src/polyx/gui/viewer/window.py:743
 #, python-format
 msgid "● %(count)d detection (imgsz %(imgsz)d)"
 msgid_plural "● %(count)d detections (imgsz %(imgsz)d)"
 msgstr[0] "● %(count)d detección (imgsz %(imgsz)d)"
 msgstr[1] "● %(count)d detecciones (imgsz %(imgsz)d)"
 
-#: src/polyx/gui/viewer/window.py:758
+#: src/polyx/gui/viewer/window.py:760
 #, python-format
 msgid ""
 "Out of GPU memory at imgsz %(imgsz)d.\n"
@@ -4610,12 +4681,12 @@ msgstr ""
 "\n"
 "Baja la resolución de inferencia o desmarca «Usar GPU»."
 
-#: src/polyx/gui/viewer/window.py:863
+#: src/polyx/gui/viewer/window.py:865
 #, python-format
 msgid "Could not read the predictions: %(error)s"
 msgstr "No se pudieron leer las predicciones: %(error)s"
 
-#: src/polyx/gui/viewer/window.py:1449
+#: src/polyx/gui/viewer/window.py:1451
 #, python-format
 msgid "● Error: %(error)s"
 msgstr "● Error: %(error)s"

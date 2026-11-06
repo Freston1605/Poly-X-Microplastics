@@ -32,7 +32,16 @@ class ComparePage(DetectorPage):
         c1, l1 = self.card(_("Per-model summary"), "resultados")
         self.tbl_summary = QTableWidget(0, 8)
         self.tbl_summary.setHorizontalHeaderLabels(
-            ["Modelo", "Imágenes", "Detecciones", "Conf media", LABEL_TP, LABEL_FP, LABEL_FN, "F1"]
+            [
+                _("Model"),
+                _("Images"),
+                _("Detections"),
+                _("Mean conf."),
+                str(LABEL_TP),
+                str(LABEL_FP),
+                str(LABEL_FN),
+                "F1",
+            ]
         )
         self.tbl_summary.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tbl_summary.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -98,7 +107,7 @@ class ComparePage(DetectorPage):
         image_set = sorted(
             {x.image_path for mi in active_indices for x in state.results.get(mi, [])}
         )
-        cols = ["Imagen"] + [state.model_slots[mi].alias for mi in active_indices]
+        cols = [_("Image")] + [state.model_slots[mi].alias for mi in active_indices]
         self.tbl_per_image.setColumnCount(len(cols))
         self.tbl_per_image.setHorizontalHeaderLabels(cols)
         self.tbl_per_image.setRowCount(len(image_set))

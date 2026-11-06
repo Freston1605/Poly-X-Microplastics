@@ -490,7 +490,9 @@ class ViewerWindow(QMainWindow):
 
         self.table = QTableWidget(0, 6)
 
-        self.table.setHorizontalHeaderLabels(["#", "Clase", "Tipo", "Largo μm", "Ancho μm", "Asp."])
+        self.table.setHorizontalHeaderLabels(
+            ["#", _("Class"), _("Type"), _("Length μm"), _("Width μm"), _("Asp.")]
+        )
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 

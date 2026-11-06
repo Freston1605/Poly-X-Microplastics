@@ -81,7 +81,15 @@ class ComparePage(TrainerPage):
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
-            ["Run", "Épocas", "mAP@50", "mAP@50-95", "Precision", "Recall", "Box loss"]
+            [
+                _("Run"),
+                _("Epochs"),
+                "mAP@50",
+                "mAP@50-95",
+                _("Precision"),
+                _("Recall"),
+                _("Box loss"),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)

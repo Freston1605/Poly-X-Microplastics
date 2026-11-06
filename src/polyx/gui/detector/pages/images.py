@@ -90,7 +90,7 @@ class ImagesPage(DetectorPage):
         l2.addWidget(self.lbl_count)
 
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["Imagen", "Carpeta", "GT"])
+        self.table.setHorizontalHeaderLabels([_("Image"), _("Folder"), "GT"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
