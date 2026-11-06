@@ -50,11 +50,11 @@ Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHAN
 
 
 [dependency-groups]
-dev = ["pytest", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
+dev = ["pytest", "pytest-xdist", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
 
 [project.optional-dependencies]
 gui = ["PySide6==6.7.2"]
-dev = ["pytest", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
+dev = ["pytest", "pytest-xdist", "ruff>=0.17", "ty>=0.0.9", "types-PyYAML"]
 sam2 = ["sam2"]
 legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
