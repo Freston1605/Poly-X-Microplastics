@@ -23,7 +23,7 @@ from pathlib import Path
 from PySide6.QtCore import QCoreApplication, QEvent, QLibraryInfo, QTranslator
 from PySide6.QtWidgets import QApplication
 
-from polyx.core.i18n import language, when_changing
+from polyx.core import i18n
 
 _log = logging.getLogger(__name__)
 
@@ -34,6 +34,17 @@ _installed_tag: str | None = None
 def translations_dir() -> Path:
     """Directory where the PySide6 wheel ships Qt's compiled catalogs."""
     return Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath))
+
+
+def is_alive(widget) -> bool:
+    """Whether the Qt object behind ``widget`` still exists.
+
+    A window scheduled for deletion can still receive the language-change
+    event; rebuilding it afterwards would touch a destroyed object.
+    """
+    import shiboken6
+
+    return shiboken6.isValid(widget)
 
 
 def install_qt_translations(tag: str) -> bool:
@@ -98,11 +109,13 @@ def activate() -> None:
 
     Called by every window when it is created, so a module launched in
     Spanish has Spanish native dialogs from its first frame. It is cheap and
-    idempotent.
+    idempotent; it also re-registers the subscriber when a test has reloaded
+    the translation module.
     """
-    tag = language()
+    i18n.when_changing(_on_language_change)
+    tag = i18n.language()
     if _installed_tag != tag:
         install_qt_translations(tag)
 
 
-when_changing(_on_language_change)
+activate()

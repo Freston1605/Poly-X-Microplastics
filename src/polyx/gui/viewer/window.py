@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -35,7 +35,7 @@ from polyx.core.i18n import _
 from polyx.core.paths import RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
@@ -81,12 +81,17 @@ class ViewerWindow(QMainWindow):
     def changeEvent(self, event):
 
         if event.type() == QEvent.LanguageChange:
-            self.retranslate()
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+
+            QTimer.singleShot(0, self.retranslate)
 
         super().changeEvent(event)
 
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
 
         conf = self.spin_conf.value()
 
@@ -131,9 +136,7 @@ class ViewerWindow(QMainWindow):
 
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
-        central = QWidget()
-
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
 
         root = QHBoxLayout(central)
 

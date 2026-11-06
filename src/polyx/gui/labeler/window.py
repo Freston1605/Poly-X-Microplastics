@@ -24,13 +24,12 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
 )
 
 from polyx.core.i18n import _
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import BboxCanvas
 from .state import LabelerState
@@ -86,11 +85,15 @@ class LabelerWindow(QMainWindow):
     # ── Language ───────────────────────────────────────────────
     def changeEvent(self, event):
         if event.type() == QEvent.LanguageChange:
-            self.retranslate()
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+            QTimer.singleShot(0, self.retranslate)
         super().changeEvent(event)
 
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
         index = self.state.current_idx
         keep_zoom = self.canvas.keep_zoom
         self._build_ui()
@@ -111,8 +114,7 @@ class LabelerWindow(QMainWindow):
     def _build_ui(self) -> None:
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)

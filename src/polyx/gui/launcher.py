@@ -40,7 +40,7 @@ from polyx.gui import theme as T
 from polyx.gui.microscope_panel import MicroscopePanel
 from polyx.gui.preferencias import PreferencesDialog
 from polyx.gui.updates import UPDATER, SearchUpdates, can_update
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 # ──────────────────────────────────────────────────────────────────────
 # Instrumented startup: the launcher leaves a JSONL trace in `app.jsonl`.
@@ -314,11 +314,15 @@ class LauncherWindow(QMainWindow):
     # ── Language ───────────────────────────────────────────────
     def changeEvent(self, event):
         if event.type() == QEvent.LanguageChange:
-            self.retranslate()
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+            QTimer.singleShot(0, self.retranslate)
         super().changeEvent(event)
 
     def retranslate(self) -> None:
         """Rebuild the window so every text is read from the new catalog."""
+        if not i18n_qt.is_alive(self):
+            return
         self._build_ui()
         marca.titular(self, "launcher")
 
@@ -344,8 +348,7 @@ class LauncherWindow(QMainWindow):
         """
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG}; }}")
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)

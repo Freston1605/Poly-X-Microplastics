@@ -158,6 +158,8 @@ class PreferencesDialog(QDialog):
         and ``_build`` destroys them. Deleting the sender while it is
         emitting is undefined, so the rebuild is queued.
         """
+        if not i18n_qt.is_alive(self):
+            return
         QTimer.singleShot(0, self._build)
 
     # ── Build ──────────────────────────────────────────────────────
@@ -165,6 +167,8 @@ class PreferencesDialog(QDialog):
         # It is rebuilt entirely when the theme or the language changes: it is
         # a small dialog and rebuilding it is cheaper than touching every
         # stylesheet or every label.
+        if not i18n_qt.is_alive(self):
+            return
         self.setWindowTitle(_("Preferences"))
         previous = self.layout()
         if previous is not None:

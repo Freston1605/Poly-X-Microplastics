@@ -62,14 +62,22 @@ def _models_page(window):
     raise AssertionError("models page not found")
 
 
+def _results_page(window):
+    for index in range(window.stack.count()):
+        page = window.stack.widget(index).widget()
+        if type(page).__name__ == "ResultsPage":
+            return page
+    raise AssertionError("results page not found")
+
+
 @pytest.fixture(autouse=True)
-def _restore_language():
-    """Leave the suite in the language it found, even when a test fails."""
+def _restore_language(qapp):
+    """Leave the suite in the language it pins and flush destroyed windows."""
     from polyx.core import i18n
 
-    original = i18n.language()
     yield
-    i18n.set_language(original)
+    qapp.processEvents()
+    i18n.carry()
 
 
 # ── The switch itself ────────────────────────────────────────────────
@@ -324,15 +332,19 @@ def test_displayed_report_view_rerenders_in_the_new_language(qapp, tmp_path):
     window = DetectorWindow()
     window.state.run_result = run
     page = _report_page(window)
+    results = _results_page(window)
     assert page.btn_gen.text() == "Generar reporte HTML"
-    assert page.STEP_TITLE == "Informe de detección"
+    assert "Informe de detección" in _texts(page)
+    assert results.kpi_imgs.lbl_title.text() == "Imágenes"
 
     i18n.set_language("en")
     qapp.processEvents()
 
     page = _report_page(window)
+    results = _results_page(window)
     assert page.btn_gen.text() == "Generate HTML report"
-    assert page.STEP_TITLE == "Detection report"
+    assert "Detection report" in _texts(page)
+    assert results.kpi_imgs.lbl_title.text() == "Images"
 
     # Rendering again after the switch produces the new language.
     after = tmp_path / "informe_en.html"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QSize, Qt
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -13,13 +13,12 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QStackedWidget,
     QVBoxLayout,
-    QWidget,
 )
 
 from polyx.core.i18n import _, lazy
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import LogoBadge
+from polyx.gui.widgets import LogoBadge, reset_central_widget
 
 from .state import DetectorState
 
@@ -103,7 +102,9 @@ class DetectorWindow(QMainWindow):
     # ── Language ───────────────────────────────────────────────
     def changeEvent(self, event):
         if event.type() == QEvent.LanguageChange:
-            self.retranslate()
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+            QTimer.singleShot(0, self.retranslate)
         super().changeEvent(event)
 
     def retranslate(self) -> None:
@@ -113,6 +114,8 @@ class DetectorWindow(QMainWindow):
         listens to it, so the rebuild waits for it to finish instead of
         orphaning the thread mid-run.
         """
+        if not i18n_qt.is_alive(self):
+            return
         if self.state.is_running():
             self._retranslation_pending = True
             return
@@ -129,8 +132,7 @@ class DetectorWindow(QMainWindow):
     def _build_ui(self, index: int = 0) -> None:
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
