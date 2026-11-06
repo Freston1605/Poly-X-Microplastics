@@ -4,8 +4,9 @@
 the callbacks into Qt signals. Callers load the models and pass the loaded
 ``DetectionSource`` objects in; the engine never calls ``load()``. It decodes
 each photo once, reads ground truth once with the first model's class names,
-measures predictions and GT, matches them, draws the triptych and writes the
-canonical folder as each result appears.
+measures predictions and GT (mask-aware), filters and numbers the predictions,
+marks abstentions, matches them (mask IoU when either side carries a mask),
+draws the triptych and writes the canonical folder as each result appears.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration, resolver
 from polyx.core.measure.shape import measure_detections
 from polyx.core.provenance import logger_for, provenance, sha256_file
+from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image
 
 from .config import CALIBRATION_MODES, CalibrationPolicy, RunConfig
@@ -137,7 +139,62 @@ def _measure(detections: list[Instance], bgr: np.ndarray, um_per_px: float | Non
         bgr,
         um_per_px if um_per_px and um_per_px > 0 else None,
         measure_shape=params.measure_shape,
+        masks=[getattr(det, "mask", None) for det in detections],
     )
+
+
+def _uses_mask_iou(predictions: list[Instance], gts: list[Instance]) -> bool:
+    """Whether either side carries a mask for this image.
+
+    ``match_image`` still falls back to box IoU per pair, so one particle with
+    a failed segmentation does not turn mask matching off for the whole image.
+    """
+    return any(getattr(det, "mask", None) is not None for det in predictions) or any(
+        getattr(det, "mask", None) is not None for det in gts
+    )
+
+
+def _filter_by_size(detections: list[Instance], um_per_px: float | None, params) -> list[Instance]:
+    """Drop particles outside the configured micrometre range.
+
+    Both bounds at 0 mean no filter. An unmeasured particle is kept: losing it
+    from the count is worse than reporting it without a size. The GT is never
+    filtered; it is a property of the image, not of the model's threshold.
+    """
+    if not um_per_px or (params.size_min_um <= 0 and params.size_max_um <= 0):
+        return detections
+    kept: list[Instance] = []
+    for det in detections:
+        if det.diam_um is None:
+            kept.append(det)
+            continue
+        if params.size_min_um > 0 and det.diam_um < params.size_min_um:
+            continue
+        if params.size_max_um > 0 and det.diam_um > params.size_max_um:
+            continue
+        kept.append(det)
+    return kept
+
+
+def _number_detections(detections: list[Instance]) -> None:
+    """Number from top to bottom and left to right, not in model output order."""
+    for number, det in enumerate(
+        sorted(detections, key=lambda det: (round(det.y1 / 40), det.x1)), 1
+    ):
+        det.number = number
+
+
+def _tiling_description(record: dict) -> str:
+    """Human-readable tiling decision for one image; empty when it stayed whole."""
+    if not record.get("troceado"):
+        return ""
+    plan = record.get("plan") or {}
+    width = int(record.get("ancho", 0) or 0)
+    height = int(record.get("alto", 0) or 0)
+    tile = int(plan.get("tile", 0) or 0)
+    tiles = int(plan.get("n_tiles", 0) or 0)
+    overlap = float(plan.get("overlap", 0.0) or 0.0)
+    return f"{width}×{height} px → {tiles} tiles of {tile} px, {int(overlap * 100)}% overlap"
 
 
 def _predict(
@@ -145,8 +202,8 @@ def _predict(
     image_path: Path,
     params,
     execution: ModelExecution,
-) -> list[Instance]:
-    """Call the single canonical inference entry point; tiling stays off here."""
+) -> tuple[list[Instance], str]:
+    """Run the shared tiling entry point and record what it decided."""
     record: dict = {}
     predictions = detector.predict_auto(
         str(image_path),
@@ -154,19 +211,23 @@ def _predict(
         iou=params.iou_nms,
         imgsz=params.imgsz,
         device=params.device,
-        # Ticket #61 owns the canonical tiling policy and its record keys. This
-        # ticket calls the shared entry point with tiling explicitly disabled.
-        tiling="nunca",
+        tiling=params.tiling,
         threshold_px=params.tiling_threshold_px,
         tile=params.tiling_tile,
         overlap=params.tiling_overlap,
         record=record,
     )
-    used_imgsz = int(getattr(detector, "last_imgsz", 0) or 0)
-    execution.record_imgsz(used_imgsz or int(params.imgsz))
+    if record.get("troceado"):
+        execution.tiled_images += 1
+        plan = record.get("plan") or {}
+        # Each tile enters the network at its native tile side, not at imgsz.
+        execution.record_imgsz(int(plan.get("tile", 0) or 0))
+    else:
+        used_imgsz = int(getattr(detector, "last_imgsz", 0) or 0)
+        execution.record_imgsz(used_imgsz or int(params.imgsz))
     if getattr(detector, "last_fallback", False):
         execution.memory_fallback.append(image_path.name)
-    return list(predictions)
+    return list(predictions), _tiling_description(record)
 
 
 def run_detection(
@@ -215,6 +276,15 @@ def run_detection(
     done = 0
     first_names = models[0].names if models else {}
 
+    disagreeing = [model.alias for model in models[1:] if model.names != first_names]
+    if disagreeing:
+        log.warning(
+            "GT class maps disagree with the first model %s; ground truth uses its names, "
+            "differing models: %s",
+            models[0].alias,
+            ", ".join(disagreeing),
+        )
+
     try:
         for image_index, image_path in enumerate(images):
             if should_abort is not None and should_abort():
@@ -249,12 +319,22 @@ def run_detection(
 
             for model_index, spec in enumerate(config.models):
                 execution = result.execution[model_index]
-                predictions = _predict(spec.detector, image_path, config.params, execution)
+                predictions, tiling = _predict(spec.detector, image_path, config.params, execution)
                 shapeless = _measure(predictions, bgr, um_per_px, config.params)
                 execution.shapeless += shapeless
+                # Same order as the GUI runner: measure, filter, abstain, number,
+                # then match. Abstention never drops a particle.
+                predictions = _filter_by_size(predictions, um_per_px, config.params)
+                mark_assignables(predictions, config.params.conf_assignment)
+                _number_detections(predictions)
 
                 if has_gt:
-                    match = match_image(predictions, gts, iou_thr=config.params.iou_tp)
+                    match = match_image(
+                        predictions,
+                        gts,
+                        iou_thr=config.params.iou_tp,
+                        use_mask_iou=_uses_mask_iou(predictions, gts),
+                    )
                     tp, fp, fn, miscls = match.tp, match.fp, match.fn, match.miscls
                 else:
                     tp = fp = fn = miscls = 0
@@ -276,6 +356,7 @@ def run_detection(
                     fp=fp,
                     fn=fn,
                     miscls=miscls,
+                    tiling=tiling,
                 )
                 result.results.setdefault(model_index, []).append(image_result)
                 execution.images += 1

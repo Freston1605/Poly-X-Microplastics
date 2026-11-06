@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 from polyx.core.annotate import Triptych, run_label_path, save_view
-from polyx.core.labels import bbox_from, write_lines
+from polyx.core.labels import bbox_from, write_classes, write_lines
 from polyx.core.measure.calibration import Calibration
 
 from .result import ImageResult, RunResult
@@ -33,6 +33,14 @@ class RunWriter:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self._result = result
         self._provenance = provenance_data or {}
+        # One class list per model folder: the run can hold models trained on
+        # different class sets, and the prediction labels next to it need the
+        # right order to reopen as pre-annotation.
+        for info in result.models:
+            folder = self.run_dir / info.alias
+            folder.mkdir(parents=True, exist_ok=True)
+            if info.names:
+                write_classes(folder, [info.names[key] for key in sorted(info.names)])
         self.csv_path = self.run_dir / "detections.csv"
         self._csv_handle = self.csv_path.open("w", newline="", encoding="utf-8")
         self._csv = csv.DictWriter(
