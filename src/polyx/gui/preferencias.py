@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.i18n import LANGUAGES, language, set_language, tr
+from polyx.core.i18n import LANGUAGES, _, language, set_language
 
 from . import theme as T
 
@@ -138,7 +138,7 @@ class PreferencesDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(tr("Preferencias"))
+        self.setWindowTitle(_("Preferences"))
         self.setMinimumWidth(520)
         self._build()
 
@@ -156,25 +156,24 @@ class PreferencesDialog(QDialog):
         root.setContentsMargins(22, 20, 22, 18)
         root.setSpacing(6)
 
-        root.addWidget(self._title(tr("Tema")))
+        root.addWidget(self._title(_("Theme")))
         root.addWidget(
-            self._clue(tr("Se aplica al instante aquí. Los módulos ya abiertos conservan el suyo."))
+            self._clue(_("Applied here straight away. Modules already open keep theirs."))
         )
 
         grid = QGridLayout()
         grid.setSpacing(10)
         current = T.theme()
         for i, name_2 in enumerate(T.PALETTES):
-            card = _CardTheme(name_2, tr(T.NAMES_THEME[name_2]), name_2 == current)
+            label = T.NAMES_THEME[name_2]
+            card = _CardTheme(name_2, _(label), name_2 == current)
             card.chosen.connect(self._choose_theme)
             grid.addWidget(card, i // 4, i % 4)
         root.addLayout(grid)
         root.addSpacing(14)
 
-        root.addWidget(self._title(tr("Idioma")))
-        root.addWidget(
-            self._clue(tr("Los módulos que abras a partir de ahora salen en el idioma nuevo."))
-        )
+        root.addWidget(self._title(_("Language")))
+        root.addWidget(self._clue(_("Modules you open from now on come up in the new language.")))
         row = QHBoxLayout()
         row.setSpacing(8)
         self._buttons_language: dict[str, QPushButton] = {}
@@ -185,15 +184,15 @@ class PreferencesDialog(QDialog):
             b.setCursor(Qt.PointingHandCursor)
             b.setMinimumWidth(112)
             b.setStyleSheet(self._qss_toggle())
-            b.clicked.connect(lambda _=False, c=cod: self._choose_language(c))
+            b.clicked.connect(lambda _unused=False, c=cod: self._choose_language(c))
             self._buttons_language[cod] = b
             row.addWidget(b)
         row.addStretch(1)
         root.addLayout(row)
         root.addSpacing(16)
 
-        root.addWidget(self._title(tr("Movimiento")))
-        self._chk_anim = QCheckBox(tr("Animar el panel del microscopio"))
+        root.addWidget(self._title(_("Motion")))
+        self._chk_anim = QCheckBox(_("Animate the microscope panel"))
         self._chk_anim.setChecked(T.animations())
         self._chk_anim.setCursor(Qt.PointingHandCursor)
         self._chk_anim.setStyleSheet(
@@ -203,9 +202,8 @@ class PreferencesDialog(QDialog):
         root.addWidget(self._chk_anim)
         root.addWidget(
             self._clue(
-                tr(
-                    "Apágalo si el movimiento te molesta o si el equipo va justo. "
-                    "El panel queda en un fotograma fijo."
+                _(
+                    "Turn it off if the motion bothers you or the machine is struggling. The panel settles on a still frame."
                 )
             )
         )
@@ -213,7 +211,7 @@ class PreferencesDialog(QDialog):
         root.addSpacing(18)
         pie = QHBoxLayout()
         pie.addStretch(1)
-        close = QPushButton(tr("Cerrar"))
+        close = QPushButton(_("Close"))
         close.setObjectName("primary")
         close.setCursor(Qt.PointingHandCursor)
         close.setDefault(True)

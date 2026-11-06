@@ -29,17 +29,17 @@ pruebas no pasan por el), con el ancho de datos minimo que hace que esa seccion
 tenga cuerpo vacio no lo caiga el ensamblador ("vivas") y el sink nunca salga a
 impresion.
 
-Estacion, tramo y placa (sumideros listados en T05 dentro de _seccion_conteo y
-la galeria) NO llevan prueba hostil dedicada: el texto que puede llegarles esta
-acotado por el regex de la nomenclatura (_RE_PLACA solo acepta digitos y 'x'),
-de modo que no hay cadena hostil que atraviese ``_muestra_de`` hasta ellos. Su
-_escape es blindaje por capas, verificado por el test de identidad de bytes del
-render benigno (tests/test_render_reporte_benigno.py), no por inyeccion.
+Station, core and plate (the sinks listed under T05 inside _seccion_conteo and
+the gallery) have NO dedicated hostile test: the text that can reach them is
+bounded by the naming regex (_RE_PLACA only accepts digits and 'x'),
+so no hostile string crosses ``_muestra_de`` into them. The escaping is layered
+armour, verified by the byte-identity test of the benign render
+(tests/test_render_reporte_benigno.py), not by injection.
 
-El idioma se fija a 'en' y el logger del pipeline a NullHandler con la misma
-mecanica de tests/test_render_reporte_benigno.py: polyx.core.i18n cachea el
-idioma al importar y sin POLYX_IDIOMA los anclajes de este archivo dependen de
-la maquina; el logger 'polyx.detector' queda cacheado por logger_para con un
+The language is pinned to 'en' and the pipeline logger to a NullHandler with
+the same mechanics as tests/test_render_reporte_benigno.py: polyx.core.i18n
+caches the language on import and without POLYX_LOCALE the anchors in this file
+depend on the machine; the 'polyx.detector' logger is cached by logger_para with a
 RotatingFileHandler a carpeta_logs() y sin POLYX_LOG_DIR la suite escribiria en
 el HOME real. Los estados de fixture no usan QObjects y no emiten eventos: no
 se pierde nada al silenciar.
@@ -104,9 +104,9 @@ def rh(tmp_path, monkeypatch):
     import polyx.core.i18n as i18n
     import polyx.core.observability as obs
 
-    previo_idioma = os.environ.get("POLYX_IDIOMA")
-    previo_log_dir = os.environ.get("POLYX_LOG_DIR")
-    monkeypatch.setenv("POLYX_IDIOMA", "en")
+    previous_locale = os.environ.get("POLYX_LOCALE")
+    previous_log_dir = os.environ.get("POLYX_LOG_DIR")
+    monkeypatch.setenv("POLYX_LOCALE", "en")
     monkeypatch.setenv("POLYX_LOG_DIR", str(tmp_path / "logs"))
 
     importlib.reload(i18n)
@@ -115,20 +115,20 @@ def rh(tmp_path, monkeypatch):
     importlib.reload(rh)
 
     logger = obs.logger_for("detector")
-    handlers_previos = logger.handlers[:]
+    handlers_previous = logger.handlers[:]
     logger.handlers = [logging.NullHandler()]
 
     yield rh
 
-    logger.handlers = handlers_previos
-    if previo_idioma is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    logger.handlers = handlers_previous
+    if previous_locale is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo_idioma
-    if previo_log_dir is None:
+        os.environ["POLYX_LOCALE"] = previous_locale
+    if previous_log_dir is None:
         os.environ.pop("POLYX_LOG_DIR", None)
     else:
-        os.environ["POLYX_LOG_DIR"] = previo_log_dir
+        os.environ["POLYX_LOG_DIR"] = previous_log_dir
     importlib.reload(i18n)
     importlib.reload(rh)
 

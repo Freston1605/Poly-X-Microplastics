@@ -719,7 +719,7 @@ is remembered between sessions; the first time it follows the system language.</
   <code>lang</code> attribute is set, so the browser's spell-checker and screen
   readers handle it properly.</p>
   <p>To force it without touching the interface, the environment variable
-  <code>POLYX_IDIOMA=en</code>.</p>
+  <code>POLYX_LOCALE=en</code>.</p>
 </div>
 
 <h3>The new-version notice</h3>

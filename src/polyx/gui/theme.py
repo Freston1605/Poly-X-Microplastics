@@ -24,15 +24,12 @@ tokens. No window has to be touched.
 
 from __future__ import annotations
 
-import json
 import os
 from collections.abc import Callable
-from pathlib import Path
 
 from PySide6.QtGui import QColor
 
-_FILE = Path.home() / ".polyx_tema.json"
-
+from polyx.core.i18n import N_
 
 # ════════════════════════════════════════════════════════════════════
 #  Palettes
@@ -206,10 +203,10 @@ DOC = _PaletteFixed(PALETTES["claro"])
 # this module cannot import i18n without creating a cycle (i18n does not depend on
 # theme, but widgets.py depends on both and the order would stop being clear).
 NAMES_THEME: dict[str, str] = {
-    "claro": "Claro",
-    "oscuro": "Oscuro",
-    "azul": "Azul nocturno",
-    "contraste": "Alto contraste",
+    "claro": N_("Light"),
+    "oscuro": N_("Dark"),
+    "azul": N_("Midnight blue"),
+    "contraste": N_("High contrast"),
 }
 
 # A dark theme needs different decisions in some places (shadows,
@@ -226,6 +223,7 @@ DEFAULT_THEME = "claro"
 # (polyx.core.annotate) with the drawing that uses it; it is re-exported
 # here so every consumer keeps its import path. The fallback is the same
 # one the drawing uses — unknown classes look the same everywhere.
+from polyx.core import preferences  # noqa: E402
 from polyx.core.annotate import CLASS_COLOR_HEX, FALLBACK_COLOR_HEX  # noqa: E402
 
 
@@ -273,10 +271,7 @@ def set_animations(active: bool) -> None:
 
 
 def _save() -> None:
-    try:  # noqa: SIM105
-        _FILE.write_text(json.dumps({"tema": _theme, "animaciones": _animations}), encoding="utf-8")
-    except Exception:  # noqa: BLE001, S110
-        pass
+    preferences.write(theme=_theme, animations=_animations)
 
 
 def is_dark() -> bool:
@@ -604,25 +599,18 @@ def on_background(color: str, t: float = 0.08) -> str:
 def carry() -> str:
     """Resolves the theme once, in precedence order."""
     global _theme, _animations  # noqa: PLW0603
-    saved: dict = {}
-    try:
-        if _FILE.exists():
-            saved = json.loads(_FILE.read_text(encoding="utf-8")) or {}
-    except Exception:  # noqa: BLE001
-        # A corrupt JSON cannot prevent the program from starting: it falls back to
-        # the default values and continues.
-        saved = {}
+    saved: dict = preferences.read()
 
     env = os.environ.get("POLYX_TEMA", "").strip().lower()
     if env in PALETTES:
         _theme = env
-    elif saved.get("tema") in PALETTES:
-        _theme = saved["tema"]
+    elif saved.get("theme") in PALETTES:
+        _theme = saved["theme"]
 
     if os.environ.get("POLYX_SIN_ANIMACION", "").strip():
         _animations = False
-    elif isinstance(saved.get("animaciones"), bool):
-        _animations = saved["animaciones"]
+    elif isinstance(saved.get("animations"), bool):
+        _animations = saved["animations"]
 
     _apply(_theme)
     return _theme

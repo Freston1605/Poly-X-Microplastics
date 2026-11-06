@@ -22,10 +22,10 @@ is out of scope for M004. The test therefore asserts yolo_wrap IS importable
 (keeping the waiver honest if the import topology moves) instead of asserting
 cv2's absence.
 
-Nota de idioma: el subproceso fuerza POLYX_IDIOMA=en (mismo contrato que el
-baseline del render, ver tests/test_render_reporte_benigno.py) y
-QT_QPA_PLATFORM=offscreen para hermeticidad; ninguno de los dos afecta la
-topologia de imports, solo evitan dependencia del locale/entorno de la
+Language note: the subprocess forces POLYX_LOCALE=en (the same contract as the
+render baseline, see tests/test_render_reporte_benigno.py) plus
+QT_QPA_PLATFORM=offscreen for hermeticity; neither affects the import topology,
+they only remove the dependency on the machine's locale and environment of the
 maquina.
 """
 
@@ -67,7 +67,7 @@ def test_importar_informe_no_carga_los_pesados():
     # hermeticidad: el interprete hijo necesita PATH/locales del sistema.
     env = os.environ | {
         "QT_QPA_PLATFORM": "offscreen",
-        "POLYX_IDIOMA": "en",
+        "POLYX_LOCALE": "en",
         "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")
         + os.pathsep
         + os.environ.get("PYTHONPATH", ""),

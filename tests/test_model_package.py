@@ -79,8 +79,8 @@ MODULOS_ESPERADOS = frozenset(
         "labels",
         # root modules
         "i18n",
-        "translations_en",
         "paths",
+        "preferences",
         "platform",
     }
 )

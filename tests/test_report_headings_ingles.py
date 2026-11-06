@@ -99,7 +99,7 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
     """Render a state through the real pipeline in the requested language.
 
     Mirrors the isolation of ``tests/test_render_reporte_benigno.py``: the
-    language is pinned through ``POLYX_IDIOMA`` because i18n caches it at
+    language is pinned through ``POLYX_LOCALE`` because i18n caches it at
     import time, ``POLYX_LOG_DIR`` keeps the rotating detector handler inside
     ``tmp_path``, and the detector logger is silenced with a ``NullHandler``
     for the duration of the render. Environment and modules are restored
@@ -108,9 +108,9 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
     import polyx.core.i18n as i18n
     import polyx.core.observability as obs
 
-    previous_language = os.environ.get("POLYX_IDIOMA")
+    previous_language = os.environ.get("POLYX_LOCALE")
     previous_log_dir = os.environ.get("POLYX_LOG_DIR")
-    os.environ["POLYX_IDIOMA"] = lang
+    os.environ["POLYX_LOCALE"] = lang
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
     importlib.reload(i18n)
@@ -129,9 +129,9 @@ def _render(tmp_path: Path, factory, lang: str, label: str) -> str:
     finally:
         logger.handlers = previous_handlers
         if previous_language is None:
-            os.environ.pop("POLYX_IDIOMA", None)
+            os.environ.pop("POLYX_LOCALE", None)
         else:
-            os.environ["POLYX_IDIOMA"] = previous_language
+            os.environ["POLYX_LOCALE"] = previous_language
         if previous_log_dir is None:
             os.environ.pop("POLYX_LOG_DIR", None)
         else:

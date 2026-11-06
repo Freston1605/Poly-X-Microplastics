@@ -66,7 +66,7 @@ def _estado_minimo(tmp_path):
 
 def _informe(tmp_path, lang):
     """Genera el informe con el idioma pedido y devuelve su HTML."""
-    os.environ["POLYX_IDIOMA"] = lang
+    os.environ["POLYX_LOCALE"] = lang
     import polyx.core.i18n as i18n
 
     importlib.reload(i18n)
@@ -80,12 +80,12 @@ def _informe(tmp_path, lang):
 
 @pytest.fixture(autouse=True)
 def _restaurar_idioma():
-    previo = os.environ.get("POLYX_IDIOMA")
+    previous = os.environ.get("POLYX_LOCALE")
     yield
-    if previo is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    if previous is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo
+        os.environ["POLYX_LOCALE"] = previous
     import polyx.core.i18n as i18n
 
     importlib.reload(i18n)
@@ -209,21 +209,21 @@ def test_ninguna_traduccion_se_congela_al_importar():
         llamadas = [
             n
             for n in ast.walk(arbol)
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "tr"
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_"
         ]
         vistas += len(llamadas)
         congeladas += [
             f"{ruta.name}:{n.lineno}" for n in llamadas if id(n) not in dentro_de_funcion
         ]
 
-    # Anti-vacuidad: el informe traduce mas de 200 tr() repartidos en tres
-    # ficheros; por debajo de este suelo el barrido no esta leyendo el codigo.
+    # Anti-vacuity: the report translates more than 200 strings across three
+    # files; below this floor the scan is not reading the code.
     assert vistas >= 150, (
-        f"el barrido encontro solo {vistas} tr() en {len(fuentes)} ficheros: "
+        f"el barrido encontro solo {vistas} llamadas en {len(fuentes)} ficheros: "
         f"el camino de las fuentes del informe quedo desactualizado"
     )
     assert not congeladas, (
-        f"tr() en el cuerpo del modulo ({', '.join(congeladas)}): se resuelve al "
+        f"_() en el cuerpo del modulo ({', '.join(congeladas)}): se resuelve al "
         f"importar y no sigue al idioma elegido"
     )
 
@@ -326,7 +326,7 @@ def _estado_completo(tmp_path):
 
 
 def _informe_completo(tmp_path, lang):
-    os.environ["POLYX_IDIOMA"] = lang
+    os.environ["POLYX_LOCALE"] = lang
     import polyx.core.i18n as i18n
 
     importlib.reload(i18n)

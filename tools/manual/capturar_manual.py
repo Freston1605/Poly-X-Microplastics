@@ -7,7 +7,7 @@ antiguo se saltaba).
 
 Uso (desde la raiz del proyecto):
     .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-    POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+    POLYX_LOCALE=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def main():
     out = (
         Path(args.salida) if args.salida else raiz / "docs" / "assets" / "manual_screenshots" / "es"
     )
-    print(f"Idioma UI : {os.environ.get('POLYX_IDIOMA', '(preferencia guardada)')}")
+    print(f"Idioma UI : {os.environ.get('POLYX_LOCALE', '(preferencia guardada)')}")
     print(f"Salida    : {out}")
 
     app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841

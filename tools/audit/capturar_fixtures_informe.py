@@ -7,7 +7,7 @@ as the app does (all sections, real pipeline, cronometro wrapper included).
 The resulting HTML files are the M006/S05 English baseline used by the
 byte-identity tests of the benign render and the injection tests.
 
-The language is forced to English (``POLYX_IDIOMA=en``) before any polyx or
+The language is forced to English (``POLYX_LOCALE=en``) before any polyx or
 fixture module is imported, so the capture does not depend on the machine
 locale or ``~/.polyx_idioma.json``. This is the same language the tests pin;
 M006/S05 recaptured the snapshots after the twelve raw Spanish report
@@ -30,7 +30,7 @@ from pathlib import Path
 # The baseline is the English render (M006/S05): pin the language BEFORE
 # importing tests.fixtures_informe or any polyx module, because i18n
 # resolves and caches the language at import time.
-os.environ["POLYX_IDIOMA"] = "en"
+os.environ["POLYX_LOCALE"] = "en"
 
 # Run as a raw file from tools/audit/, sys.path[0] points there: the repo
 # root must go first so `import tests.fixtures_informe` and `import polyx`

@@ -19,6 +19,8 @@ a = Analysis(
     datas=[
         # Bundled (read-only) assets only. Weights live in USER_DATA_DIR.
         (str(ROOT / "assets"), "assets"),
+        # Translation sources; the compiled catalogs are generated on first use.
+        (str(SRC / "polyx" / "locales"), "polyx/locales"),
     ],
     hiddenimports=[
         "polyx.core",

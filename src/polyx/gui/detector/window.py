@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.gui import iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import LogoBadge
@@ -26,15 +26,15 @@ from .state import DetectorState
 # ────────────────────────────────────────────────────────────────────
 SIDEBAR_ITEMS = [
     # (icon name in polyx/gui/iconos.py, label)
-    ("modelo", tr("Modelos")),
-    ("imagenes", tr("Imágenes")),
-    ("editar", tr("GT manual")),
-    ("ajustes", tr("Parámetros")),
-    ("ejecutar", tr("Ejecutar")),
-    ("resultados", tr("Resultados")),
-    ("errores", tr("Errores")),
-    ("comparar", tr("Comparar")),
-    ("reporte", tr("Reporte")),
+    ("modelo", _("Models")),
+    ("imagenes", _("Images")),
+    ("editar", _("Manual GT")),
+    ("ajustes", _("Parameters")),
+    ("ejecutar", _("Run")),
+    ("resultados", _("Results")),
+    ("errores", _("Errors")),
+    ("comparar", _("Compare")),
+    ("reporte", _("Report")),
 ]
 
 
@@ -124,12 +124,12 @@ class DetectorWindow(QMainWindow):
         sb.addStretch(1)
 
         # Sidebar footer: run status
-        self.lbl_status = QLabel(tr("● Listo"))
+        self.lbl_status = QLabel(_("● Ready"))
         self.lbl_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 9pt; padding: 4px 8px;")
         sb.addWidget(self.lbl_status)
 
         # Authorship credit
-        author = QLabel(tr("Diseñado por\nCristofher Ferrada\n2026"))
+        author = QLabel(_("Designed by\nCristofher Ferrada\n2026"))
         author.setAlignment(Qt.AlignCenter)
         author.setStyleSheet(
             f"color: {T.INK3}; font-size: 8.5pt; padding: 8px; "

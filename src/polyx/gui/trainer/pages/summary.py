@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -203,20 +203,19 @@ class _ReportWorker(QThread):
 
 class ReportPage(TrainerPage):
     PAGE_ICON = "reporte"
-    PAGE_TITLE = tr("Informe del entrenamiento")
-    PAGE_DESCRIPTION = tr(
-        "Genera un informe HTML autocontenido con las curvas y métricas del run "
-        "elegido. Listo para convertir a PDF (Ctrl+P en el navegador)."
+    PAGE_TITLE = _("Training report")
+    PAGE_DESCRIPTION = _(
+        "Generates a self-contained HTML report with the curves and metrics of the chosen run. Ready to convert to PDF (Ctrl+P in the browser)."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
         self.worker: _ReportWorker | None = None
 
-        c1, l1 = self.card(tr("Selección de run"), "dataset")
+        c1, l1 = self.card(_("Run selection"), "dataset")
         row = QHBoxLayout()
         row.setSpacing(8)
-        row.addWidget(QLabel(tr("Run:")))
+        row.addWidget(QLabel(_("Run:")))
         self.combo = QComboBox()
         self.combo.setMinimumWidth(360)
         row.addWidget(self.combo, 1)
@@ -225,15 +224,15 @@ class ReportPage(TrainerPage):
         btn.clicked.connect(self._refresh)
         row.addWidget(btn)
         l1.addLayout(row)
-        self.chk_refs = QCheckBox(tr("Incluir referencias bibliográficas"))
+        self.chk_refs = QCheckBox(_("Include bibliographic references"))
         self.chk_refs.setChecked(True)
         l1.addWidget(self.chk_refs)
         self.body.addWidget(c1)
 
-        c2, l2 = self.card(tr("Generar"), "texto")
+        c2, l2 = self.card(_("Generate"), "texto")
         rr = QHBoxLayout()
         rr.setSpacing(8)
-        b1 = QPushButton(tr("Generar reporte HTML"))
+        b1 = QPushButton(_("Generate HTML report"))
         b1.setIcon(iconos.icon("reporte", 15, T.ON_ACCENT))
         b1.setStyleSheet(
             f"background: {T.DOC.ACCENT}; color: white; border: none; "
@@ -242,7 +241,7 @@ class ReportPage(TrainerPage):
         b1.setCursor(Qt.PointingHandCursor)
         b1.clicked.connect(self._generate)
         rr.addWidget(b1)
-        b2 = QPushButton(tr("Guardar como…"))
+        b2 = QPushButton(_("Save as…"))
         b2.setIcon(iconos.icon("guardar", 15, T.INK2))
         b2.clicked.connect(self._save_as)
         rr.addWidget(b2)
@@ -278,7 +277,7 @@ class ReportPage(TrainerPage):
     def _generate(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            QMessageBox.warning(self, _("No run"), _("No runs available."))
             return
         out = run / "reporte_entrenamiento.html"
         self._run_worker(run, out)
@@ -286,16 +285,16 @@ class ReportPage(TrainerPage):
     def _save_as(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            QMessageBox.warning(self, _("No run"), _("No runs available."))
             return
-        f, _ = QFileDialog.getSaveFileName(
+        f, _unused = QFileDialog.getSaveFileName(
             self, "Guardar reporte", str(run / "reporte_entrenamiento.html"), "HTML (*.html)"
         )
         if f:
             self._run_worker(run, Path(f))
 
     def _run_worker(self, run: Path, out: Path):
-        self.lbl_status.setText(tr("Generando informe…"))
+        self.lbl_status.setText(_("Generating report…"))
         self.worker = _ReportWorker(run, out, self.chk_refs.isChecked())
         self.worker.finished_ok.connect(self._on_ok)
         self.worker.failed.connect(self._on_fail)
@@ -309,5 +308,5 @@ class ReportPage(TrainerPage):
             pass
 
     def _on_fail(self, msg: str):
-        self.lbl_status.setText(tr("✗ Error"))
-        QMessageBox.critical(self, tr("Falló"), msg)
+        self.lbl_status.setText(_("✗ Error"))
+        QMessageBox.critical(self, _("Failed"), msg)

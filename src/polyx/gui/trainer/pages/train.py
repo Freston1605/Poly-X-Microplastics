@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
@@ -70,7 +70,7 @@ class _LiveCurves(QFrame):
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(8, 8, 8, 8)
         self._placeholder = QLabel(
-            tr("Las curvas aparecerán aquí en cuanto el entrenamiento avance la primera época.")
+            _("The curves appear here as soon as training completes its first epoch.")
         )
         self._placeholder.setAlignment(Qt.AlignCenter)
         self._placeholder.setStyleSheet(
@@ -136,10 +136,9 @@ class _LiveCurves(QFrame):
 
 class TrainPage(TrainerPage):
     PAGE_ICON = "ejecutar"
-    PAGE_TITLE = tr("Entrenar")
-    PAGE_DESCRIPTION = tr(
-        "Inicia el entrenamiento del modelo con los parámetros configurados. Verás "
-        "curvas en vivo, métricas y log. Puedes detenerlo en cualquier momento."
+    PAGE_TITLE = _("Train")
+    PAGE_DESCRIPTION = _(
+        "Starts training the model with the configured parameters. You will see live curves, metrics and the log. You can stop it at any time."
     )
 
     def __init__(self, state, parent=None):
@@ -154,14 +153,14 @@ class TrainPage(TrainerPage):
         hwl = QHBoxLayout(hw_frame)
         hwl.setContentsMargins(14, 8, 14, 8)
         hwl.setSpacing(12)
-        self.lbl_hw = QLabel(tr("⌛  Detectando hardware…"))
+        self.lbl_hw = QLabel(_("⌛  Detecting hardware…"))
         self.lbl_hw.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none;")
         self.lbl_hw.setTextFormat(Qt.RichText)
         hwl.addWidget(self.lbl_hw, 1)
         btn_recheck = QPushButton()
         btn_recheck.setIcon(iconos.icon("recargar", 15, T.INK2))
         btn_recheck.setFixedWidth(36)
-        btn_recheck.setToolTip(tr("Re-detectar"))
+        btn_recheck.setToolTip(_("Detect again"))
         btn_recheck.clicked.connect(self._refresh_hw)
         hwl.addWidget(btn_recheck)
         self.body.addWidget(hw_frame)
@@ -171,10 +170,10 @@ class TrainPage(TrainerPage):
         QTimer.singleShot(150, self._refresh_hw)
 
         # ── Control ──
-        c1, l1 = self.card(tr("Control"), "ajustes")
+        c1, l1 = self.card(_("Control"), "ajustes")
         row = QHBoxLayout()
         row.setSpacing(8)
-        self.btn_start = QPushButton(tr("Iniciar entrenamiento"))
+        self.btn_start = QPushButton(_("Start training"))
         self.btn_start.setIcon(iconos.icon("ejecutar", 15, T.ON_ACCENT))
         self.btn_start.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -184,7 +183,7 @@ class TrainPage(TrainerPage):
         self.btn_start.clicked.connect(self._start)
         row.addWidget(self.btn_start)
 
-        self.btn_stop = QPushButton(tr("Detener"))
+        self.btn_stop = QPushButton(_("Stop"))
         self.btn_stop.setIcon(iconos.icon("detener", 15, T.ON_ACCENT))
         self.btn_stop.setStyleSheet(
             f"background: {T.ERR}; color: white; border: none; "
@@ -194,7 +193,7 @@ class TrainPage(TrainerPage):
         self.btn_stop.clicked.connect(self._stop)
         row.addWidget(self.btn_stop)
 
-        self.btn_open = QPushButton(tr("Abrir carpeta de resultados"))
+        self.btn_open = QPushButton(_("Open results folder"))
         self.btn_open.setIcon(iconos.icon("dataset", 15, T.INK2))
         self.btn_open.clicked.connect(self._open_results)
         row.addWidget(self.btn_open)
@@ -205,7 +204,7 @@ class TrainPage(TrainerPage):
         self.progress = QProgressBar()
         self.progress.setRange(0, 1)
         self.progress.setValue(0)
-        self.progress.setFormat(tr("%v / %m épocas"))
+        self.progress.setFormat(_("%v / %m epochs"))
         l1.addWidget(self.progress)
         self.body.addWidget(c1)
 
@@ -229,14 +228,14 @@ class TrainPage(TrainerPage):
         ml = QGridLayout(metrics)
         ml.setContentsMargins(16, 16, 16, 16)
         ml.setSpacing(12)
-        self.kpi_epoch = KPICard(tr("Época actual"), T.ACCENT)
+        self.kpi_epoch = KPICard(_("Current epoch"), T.ACCENT)
         self.kpi_map50 = KPICard("mAP@50", T.OK)
         self.kpi_map95 = KPICard("mAP@50-95", T.VIO)
         self.kpi_box = KPICard("Box loss", T.WARN)
         self.kpi_prec = KPICard("Precision", T.ACCENT_D)
         self.kpi_rec = KPICard("Recall", T.ACCENT)
         self.kpi_best = KPICard("Mejor mAP@50", T.OK)
-        self.kpi_nomp = KPICard(tr("Sin mejora"), T.WARN)
+        self.kpi_nomp = KPICard(_("No improvement"), T.WARN)
         for w, pos in [
             (self.kpi_epoch, (0, 0)),
             (self.kpi_map50, (0, 1)),
@@ -255,14 +254,12 @@ class TrainPage(TrainerPage):
         )
         wl = QVBoxLayout(watch)
         wl.setContentsMargins(16, 12, 16, 14)
-        title = QLabel(tr("¿Qué mirar?"))
+        title = QLabel(_("What to look at"))
         title.setStyleSheet(f"color: {T.INK}; font-weight: 600; font-size: 11pt; border: none;")
         wl.addWidget(title)
         tips = QLabel(
-            tr(
-                "• <b>mAP@50</b> debe SUBIR y estabilizarse cerca del 80–95 % para un buen modelo.<br>"
-                "• <b>Box loss</b> debe BAJAR de forma sostenida. Si oscila o sube, baja el lr0.<br>"
-                "• Si <b>Sin mejora</b> llega a <b>Patience</b>, el entrenamiento se detendrá solo."
+            _(
+                "• <b>mAP@50</b> should RISE and settle near 80–95% for a good model.<br>• <b>Box loss</b> should FALL steadily. If it oscillates or rises, lower lr0.<br>• If <b>No improvement</b> reaches <b>Patience</b>, training stops on its own."
             )
         )
         tips.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none; line-height: 1.6;")
@@ -270,11 +267,11 @@ class TrainPage(TrainerPage):
         tips.setWordWrap(True)
         wl.addWidget(tips)
         ml.addWidget(watch, 2, 0, 1, 4)
-        self.tabs.addTab(metrics, tr("Métricas en vivo"))
+        self.tabs.addTab(metrics, _("Live metrics"))
 
         # Tab 2: `Curvas`
         self.curves = _LiveCurves()
-        self.tabs.addTab(self.curves, tr("Curvas"))
+        self.tabs.addTab(self.curves, _("Curves"))
 
         # Tab 3: Log
         self.log = QPlainTextEdit()
@@ -300,7 +297,7 @@ class TrainPage(TrainerPage):
     def _refresh_hw(self):
         if self._hw_worker is not None and self._hw_worker.isRunning():
             return
-        self.lbl_hw.setText(tr("⌛  Detectando hardware…"))
+        self.lbl_hw.setText(_("⌛  Detecting hardware…"))
         self._hw_worker = _HwProbeWorker()
         self._hw_worker.done.connect(self._on_hw_probe)
         self._hw_worker.start()
@@ -355,8 +352,8 @@ class TrainPage(TrainerPage):
             detail = "\n".join(f"• {m}" for m in problems)
             QMessageBox.warning(
                 self,
-                tr("No se puede entrenar"),
-                tr("Corrige estos problemas antes de iniciar el entrenamiento:\n\n") + detail,
+                _("Cannot train"),
+                _("Fix these problems before starting training:\n\n") + detail,
             )
             return
         # Reset
@@ -411,7 +408,7 @@ class TrainPage(TrainerPage):
                 open_in_system(str(root))
             else:
                 QMessageBox.information(
-                    self, tr("Sin resultados"), tr("Aún no se han generado runs.")
+                    self, _("No results"), _("No runs have been generated yet.")
                 )
 
     # ── Slots ────────────────────────────────────────────────
@@ -445,4 +442,4 @@ class TrainPage(TrainerPage):
         self.state.set_running(False)
         self.btn_start.setEnabled(True)
         self.btn_stop.setEnabled(False)
-        QMessageBox.critical(self, tr("Falló el entrenamiento"), msg)
+        QMessageBox.critical(self, _("Training failed"), msg)

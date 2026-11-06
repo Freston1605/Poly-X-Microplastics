@@ -7,10 +7,9 @@ acaban dependiendo del locale de la maquina donde corra pytest. Con un
 locale en ingles el informe sale en ingles y la prueba falla; en CI el
 locale suele estar vacio y pasa por casualidad.
 
-Aqui fijamos espanol como idioma de la suite, explicito y reproducible. Las
-pruebas que si prueban idiomas --``test_informe_bilingue``-- fijan el suyo
-mediante ``POLYX_IDIOMA`` directamente, y ``setdefault`` respeta lo que alguien
-pida a mano.
+The suite pins Spanish explicitly and reproducibly. Tests that exercise the
+language itself -- ``test_informe_bilingue`` -- set theirs through
+``POLYX_LOCALE`` directly, and ``setdefault`` leaves an explicit choice alone.
 
 Aislamiento de observabilidad y logs (Decision D007):
 Varios modulos de prueba (como ``test_asignacion`` o ``test_informe_bilingue``)
@@ -36,7 +35,7 @@ _SRC = _RAIZ / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-os.environ.setdefault("POLYX_IDIOMA", "es")
+os.environ.setdefault("POLYX_LOCALE", "es")
 
 
 @pytest.fixture(autouse=True)
@@ -63,21 +62,25 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _isolate_theme_saves(tmp_path, monkeypatch):
-    """Keep theme changes out of the developer's home directory.
+    """Keep saved preferences out of the developer's home directory.
 
-    ``theme.set_theme`` persists the choice to ``~/.polyx_tema.json``. Point
-    that file at the test's ``tmp_path`` and restore the active palette
-    afterwards, so the suite is hermetic. The patch is lazy: a test module
-    that never imported the theme does not acquire a PySide6 dependency, so
-    headless suites such as the install smoke tests stay headless.
+    ``theme.set_theme`` and ``i18n.set_language`` persist through
+    ``polyx.core.preferences``. Point that file at the test's ``tmp_path``
+    and restore the active palette afterwards, so the suite is hermetic. The
+    theme part is lazy: a test module that never imported the theme does not
+    acquire a PySide6 dependency, so headless suites such as the install
+    smoke tests stay headless.
     """
+    from polyx.core import preferences
+
+    monkeypatch.setattr(preferences, "FILE", tmp_path / "polyx_preferences.json")
+
     theme = sys.modules.get("polyx.gui.theme")
     if theme is None:
         yield
         return
 
     original = theme.theme()
-    monkeypatch.setattr(theme, "_FILE", tmp_path / "polyx_tema.json")
     yield
     theme._apply(original)
 

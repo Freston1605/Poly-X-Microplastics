@@ -18,20 +18,20 @@ from __future__ import annotations
 import platform
 from pathlib import Path
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 
 
 def _team() -> list[tuple]:
     """Machine components, so the report can state where it was run."""
 
     rows_2 = [
-        (tr("Sistema operativo"), f"{platform.system()} {platform.release()}"),
-        (tr("Procesador"), platform.processor() or "—"),
+        (_("Operating system"), f"{platform.system()} {platform.release()}"),
+        (_("Processor"), platform.processor() or "—"),
     ]
     try:
         import psutil
 
-        rows_2.append((tr("Memoria RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
+        rows_2.append((_("RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
     except Exception:  # noqa: BLE001, S110
         pass
     try:
@@ -49,7 +49,7 @@ def _team() -> list[tuple]:
                 ),
             ]
         else:
-            rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]
+            rows_2 += [("GPU", _("not available")), ("PyTorch", torch.__version__)]
     except Exception:  # noqa: BLE001, S110
         pass
     return rows_2

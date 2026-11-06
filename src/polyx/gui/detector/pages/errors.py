@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
 from polyx.gui import theme as T
@@ -28,45 +28,43 @@ from ._base import DetectorPage
 
 class ErrorsPage(DetectorPage):
     STEP_N = 7
-    STEP_TITLE = tr("Errores")
-    STEP_DESCRIPTION = tr(
-        "Lista de cajas problemáticas (solo si hay Ground Truth). "
-        "Falsos Positivos: detección sin GT cercano. Falsos Negativos: GT no detectado. "
-        "Mal Clasificados: bien localizado, mala clase."
+    STEP_TITLE = _("Errors")
+    STEP_DESCRIPTION = _(
+        "List of problematic boxes (only with Ground Truth). False Positives: detection with no nearby GT. False Negatives: GT not detected. Misclassified: located correctly, wrong class."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Filters ──
-        c1, l1 = self.card(tr("Filtros"), "buscar")
+        c1, l1 = self.card(_("Filters"), "buscar")
         row = QHBoxLayout()
         row.setSpacing(12)
-        row.addWidget(QLabel(tr("Tipo:")))
+        row.addWidget(QLabel(_("Type:")))
         self.combo_type = QComboBox()
         # Displayed text (full name) + internal data (short code)
-        self.combo_type.addItem(tr("Todos"), "ALL")
+        self.combo_type.addItem(_("All"), "ALL")
         self.combo_type.addItem(LABEL_FP, "FP")
         self.combo_type.addItem(LABEL_FN, "FN")
         self.combo_type.addItem(LABEL_MISCLS, "MISCLS")
         self.combo_type.currentIndexChanged.connect(self.refresh)
         row.addWidget(self.combo_type)
 
-        row.addWidget(QLabel(tr("Modelo:")))
+        row.addWidget(QLabel(_("Model:")))
         self.combo_model = QComboBox()
-        self.combo_model.addItem(tr("Todos"), -1)
+        self.combo_model.addItem(_("All"), -1)
         self.combo_model.currentIndexChanged.connect(self.refresh)
         row.addWidget(self.combo_model)
 
         row.addStretch(1)
-        self.lbl_count = QLabel(tr("0 errores"))
+        self.lbl_count = QLabel(_("0 errors"))
         self.lbl_count.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         row.addWidget(self.lbl_count)
         l1.addLayout(row)
         self.body.addWidget(c1)
 
         # ── Error table ──
-        c2, l2 = self.card(tr("Cajas con error"), "errores")
+        c2, l2 = self.card(_("Boxes with errors"), "errores")
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(
             ["Modelo", "Imagen", "Tipo", "Clase GT", "Clase Pred", "Conf"]

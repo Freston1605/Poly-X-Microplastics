@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 
 from ._base import DetectorPage
@@ -21,16 +21,15 @@ def _safe_div(a, b):
 
 class ComparePage(DetectorPage):
     STEP_N = 8
-    STEP_TITLE = tr("Comparar")
-    STEP_DESCRIPTION = tr(
-        "Si cargaste más de un modelo, aquí ves tabla resumen con todas las métricas "
-        "lado a lado y cuántas detecciones hizo cada uno por imagen."
+    STEP_TITLE = _("Compare")
+    STEP_DESCRIPTION = _(
+        "If you loaded more than one model, here is a summary table with every metric side by side and how many detections each one made per image."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
-        c1, l1 = self.card(tr("Resumen por modelo"), "resultados")
+        c1, l1 = self.card(_("Per-model summary"), "resultados")
         self.tbl_summary = QTableWidget(0, 8)
         self.tbl_summary.setHorizontalHeaderLabels(
             ["Modelo", "Imágenes", "Detecciones", "Conf media", LABEL_TP, LABEL_FP, LABEL_FN, "F1"]
@@ -43,7 +42,7 @@ class ComparePage(DetectorPage):
         l1.addWidget(self.tbl_summary)
         self.body.addWidget(c1)
 
-        c2, l2 = self.card(tr("Detecciones por imagen"), "imagenes")
+        c2, l2 = self.card(_("Detections per image"), "imagenes")
         self.tbl_per_image = QTableWidget(0, 1)
         self.tbl_per_image.setMinimumHeight(280)
         self.tbl_per_image.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)

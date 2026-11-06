@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
 from polyx.gui import iconos
@@ -41,23 +41,22 @@ def histogram_backgrounds() -> tuple[str, str]:
 
 class ResultsPage(DetectorPage):
     STEP_N = 6
-    STEP_TITLE = tr("Resultados")
-    STEP_DESCRIPTION = tr(
-        "Resumen cuantitativo del análisis. Para gráficos completos y galería por imagen, "
-        "genera el reporte HTML en la pestaña Reporte."
+    STEP_TITLE = _("Results")
+    STEP_DESCRIPTION = _(
+        "Quantitative summary of the analysis. For full charts and a per-image gallery, generate the HTML report in the Report tab."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── KPIs ──
-        c1, l1 = self.card(tr("Métricas generales"), "resultados")
+        c1, l1 = self.card(_("General metrics"), "resultados")
         grid = QGridLayout()
         grid.setSpacing(12)
-        self.kpi_imgs = KPICard(tr("Imágenes"), T.ACCENT)
-        self.kpi_dets = KPICard(tr("Detecciones"), T.ACCENT)
-        self.kpi_conf = KPICard(tr("Confianza media"), T.VIO)
-        self.kpi_size = KPICard(tr("Tamaño medio (μm)"), T.WARN)
+        self.kpi_imgs = KPICard(_("Images"), T.ACCENT)
+        self.kpi_dets = KPICard(_("Detections"), T.ACCENT)
+        self.kpi_conf = KPICard(_("Mean confidence"), T.VIO)
+        self.kpi_size = KPICard(_("Mean size (μm)"), T.WARN)
         self.kpi_tp = KPICard(LABEL_TP, T.OK)
         self.kpi_fp = KPICard(LABEL_FP, T.WARN)
         self.kpi_fn = KPICard(LABEL_FN, T.ERR)
@@ -74,11 +73,11 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c1)
 
         # ── Detailed metrics ──
-        c2, l2 = self.card(tr("Métricas detalladas (suma de todos los modelos)"), "lista")
+        c2, l2 = self.card(_("Detailed metrics (summed over all models)"), "lista")
         row = QHBoxLayout()
         row.setSpacing(20)
-        self.lbl_prec = QLabel(tr("Precisión:  —"))
-        self.lbl_rec = QLabel(tr("Recall:  —"))
+        self.lbl_prec = QLabel(_("Precision:  —"))
+        self.lbl_rec = QLabel(_("Recall:  —"))
         self.lbl_mis = QLabel(f"{LABEL_MISCLS}:  —")
         for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):  # noqa: E741
             l.setStyleSheet(f"color: {T.INK2}; font-size: 10.5pt; font-weight: 500; border: none;")
@@ -96,11 +95,9 @@ class ResultsPage(DetectorPage):
 
         # ── Size histogram (calibration only) ──
         self.c_hist, l_hist = self.card(
-            tr("Distribución de tamaños (μm) — solo con calibración activa"), "visor"
+            _("Size distribution (μm) — only with calibration active"), "visor"
         )
-        self._hist_placeholder = QLabel(
-            tr("Configura μm/px en Parámetros para ver la distribución de tamaños.")
-        )
+        self._hist_placeholder = QLabel(_("Set µm/px in Parameters to see the size distribution."))
         self._hist_placeholder.setAlignment(Qt.AlignCenter)
         self._hist_placeholder.setStyleSheet(
             f"color: {T.INK3}; font-size: 10pt; border: none; padding: 24px;"
@@ -110,15 +107,10 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(self.c_hist)
 
         # ── Reload GT from disk ──
-        c_gt, l_gt = self.card(tr("Ground truth"), "recargar")
+        c_gt, l_gt = self.card(_("Ground truth"), "recargar")
         note_gt = QLabel(
-            tr(
-                "No pide ninguna carpeta: relee los .txt que están junto a cada "
-                "foto, los mismos que ves en GT manual. Hace falta porque la corrida "
-                "guarda el ground truth que leyó, así que corregir una anotación "
-                "después no cambia por sí solo estas métricas ni el informe. "
-                "Recalcula sin pasar el modelo otra vez y solo redibuja las imágenes "
-                "cuyo .txt cambió."
+            _(
+                "It asks for no folder: it re-reads the .txt files sitting next to each photo, the same ones you see under Manual GT. This is needed because a run freezes the ground truth it read, so fixing an annotation afterwards does not by itself change these metrics or the report. It recalculates without running the model again, and only redraws the images whose .txt actually changed."
             )
         )
         note_gt.setWordWrap(True)
@@ -130,7 +122,7 @@ class ResultsPage(DetectorPage):
             f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;"
         )
         row_gt = QHBoxLayout()
-        self.btn_reload = QPushButton(tr("Releer los .txt del disco y recalcular"))
+        self.btn_reload = QPushButton(_("Re-read the .txt files from disk and recalculate"))
         self.btn_reload.setIcon(iconos.icon("recargar", 15, T.INK2))
         self.btn_reload.clicked.connect(self._reload_gt)
         row_gt.addWidget(self.btn_reload)
@@ -140,9 +132,9 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c_gt)
 
         # ── Export CSV ──
-        c_csv, l_csv = self.card(tr("Exportar datos"), "guardar")
+        c_csv, l_csv = self.card(_("Export data"), "guardar")
         row_csv = QHBoxLayout()
-        btn_csv = QPushButton(tr("Exportar CSV de detecciones"))
+        btn_csv = QPushButton(_("Export detections CSV"))
         btn_csv.setIcon(iconos.icon("texto", 15, T.INK2))
         btn_csv.clicked.connect(self._export_csv)
         row_csv.addWidget(btn_csv)
@@ -151,7 +143,7 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c_csv)
 
         # ── Per-image table ──
-        c3, l3 = self.card(tr("Por imagen"), "imagenes")
+        c3, l3 = self.card(_("Per image"), "imagenes")
         self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels(
             ["Modelo", "Imagen", "Pred", "GT", LABEL_TP, LABEL_FP, LABEL_FN, "Conf media"]
@@ -165,17 +157,15 @@ class ResultsPage(DetectorPage):
         self.table.setMinimumHeight(280)
         l3.addWidget(self.table)
         row_rev = QHBoxLayout()
-        btn_rev = QPushButton(tr("Revisar partícula a partícula en el Visor"))
+        btn_rev = QPushButton(_("Review particle by particle in the Viewer"))
         btn_rev.setIcon(iconos.icon("buscar", 15, T.INK2))
         btn_rev.clicked.connect(self._review_in_viewer)
         row_rev.addWidget(btn_rev)
         row_rev.addStretch(1)
         l3.addLayout(row_rev)
         note_rev = QLabel(
-            tr(
-                "Abre la imagen seleccionada en el Visor con estas mismas detecciones, "
-                "numeradas. Allí cada partícula muestra sobre qué se midió y si es "
-                "fibra o fragmento — sin volver a pasar el modelo."
+            _(
+                "Opens the selected image in the Viewer with these very detections, numbered. There each particle shows what it was measured on and whether it is a fibre or a fragment — without running the model again."
             )
         )
         note_rev.setWordWrap(True)
@@ -266,8 +256,8 @@ class ResultsPage(DetectorPage):
             )
             return
 
-        dlg = QProgressDialog(tr("Releyendo ground truth…"), tr("Cancelar"), 0, 0, self)
-        dlg.setWindowTitle(tr("Recargar GT"))
+        dlg = QProgressDialog(_("Re-reading ground truth…"), _("Cancel"), 0, 0, self)
+        dlg.setWindowTitle(_("Reload GT"))
         dlg.setMinimumDuration(0)
         dlg.setValue(0)
 
@@ -288,7 +278,7 @@ class ResultsPage(DetectorPage):
         except Exception as e:  # noqa: BLE001
             dlg.close()
             self.btn_reload.setEnabled(True)
-            QMessageBox.warning(self, tr("Recargar GT"), f"{type(e).__name__}: {e}")
+            QMessageBox.warning(self, _("Reload GT"), f"{type(e).__name__}: {e}")
             return
         finally:
             dlg.close()
@@ -339,14 +329,14 @@ class ResultsPage(DetectorPage):
         if len(by_model) < 2:
             return None
         candidates = sorted(
-            {round(p.conf, 2) for _, rs in by_model for r in rs for p in r.predictions}
+            {round(p.conf, 2) for _unused, rs in by_model for r in rs for p in r.predictions}
         )
         if not candidates:
             return None
         paso = max(1, len(candidates) // 25)
         best = None
         for t in candidates[::paso]:
-            f1s = [self._metrics_to(rs, t)[0] for _, rs in by_model]
+            f1s = [self._metrics_to(rs, t)[0] for _unused, rs in by_model]
             half = sum(f1s) / len(f1s)
             if best is None or half > best[1]:
                 best = (t, half)
@@ -524,7 +514,7 @@ class ResultsPage(DetectorPage):
 
     def _export_csv(self):
         """Exports all the detections to a CSV file."""
-        path, _ = QFileDialog.getSaveFileName(
+        path, _unused = QFileDialog.getSaveFileName(
             self, "Exportar CSV", "detecciones.csv", "CSV (*.csv)"
         )
         if not path:
@@ -601,7 +591,7 @@ class ResultsPage(DetectorPage):
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
 
-            QMessageBox.warning(self, tr("Error"), f"No se pudo guardar: {e}")
+            QMessageBox.warning(self, _("Error"), f"No se pudo guardar: {e}")
 
     def _open_row(self, row: int, col: int):
         if row < 0 or self.state.run_dir is None:
@@ -625,7 +615,7 @@ class ResultsPage(DetectorPage):
         rows_2 = self.table.selectionModel().selectedRows()
         if not rows_2:
             QMessageBox.information(
-                self, tr("Revisar"), tr("Selecciona primero una fila de la tabla de abajo.")
+                self, _("Review"), _("Select a row from the table below first.")
             )
             return
         row = rows_2[0].row()
@@ -642,15 +632,13 @@ class ResultsPage(DetectorPage):
                     dets = list(r.predictions)
                     break
         if not dets:
-            QMessageBox.information(
-                self, tr("Revisar"), tr("Esa imagen no tiene detecciones que revisar.")
-            )
+            QMessageBox.information(self, _("Review"), _("That image has no detections to review."))
             return
 
         try:
             from polyx.gui.viewer.window import ViewerWindow
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Revisar"), f"No se pudo abrir el Visor: {e}")
+            QMessageBox.warning(self, _("Review"), f"No se pudo abrir el Visor: {e}")
             return
 
         # It is stored in self so the garbage collector does not take it when

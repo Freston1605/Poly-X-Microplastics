@@ -16,7 +16,7 @@ Uso (desde la raiz del proyecto):
 
 Para regenerar las capturas de la interfaz antes de armar el manual:
     .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/es
-    POLYX_IDIOMA=en .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/en
+    POLYX_LOCALE=en .venv\\Scripts\\python.exe tools\\manual\\capturar_manual.py --salida docs/assets/manual_screenshots/en
 """
 
 from __future__ import annotations

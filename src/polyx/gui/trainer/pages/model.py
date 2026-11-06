@@ -15,38 +15,36 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import N_, _
 from polyx.gui import theme as T
 
 from ..state import PRESETS
 from ._base import TrainerPage
 
 SIZE_DESCRIPTIONS = [
-    ("n", "Nano", "El más liviano y rápido. Útil para probar.", T.OK),
-    ("s", "Small", "Buen balance velocidad/precisión.", T.OK),
-    ("m", "Medium", "RECOMENDADO. Precisión sólida en GPU media.", T.ACCENT),
-    ("l", "Large", "Más preciso, requiere GPU potente.", T.WARN),
-    ("x", "Extra", "El más preciso, muy lento sin GPU buena.", T.ERR),
+    ("n", "Nano", N_("The lightest and fastest. Useful for testing."), T.OK),
+    ("s", "Small", N_("A good speed/accuracy balance."), T.OK),
+    ("m", "Medium", N_("RECOMMENDED. Solid accuracy on a mid-range GPU."), T.ACCENT),
+    ("l", "Large", N_("More accurate, needs a powerful GPU."), T.WARN),
+    ("x", "Extra", N_("The most accurate, very slow without a good GPU."), T.ERR),
 ]
 
 
 class ModelPage(TrainerPage):
     PAGE_ICON = "modelo"
-    PAGE_TITLE = tr("Seleccionar modelo")
-    PAGE_DESCRIPTION = tr(
-        "Elige el preset según el caso, o personaliza familia y tamaño. El preset "
-        "'Balanceado' es el recomendado para la mayoría de proyectos."
+    PAGE_TITLE = _("Select model")
+    PAGE_DESCRIPTION = _(
+        "Pick the preset that fits your case, or customize family and size. The 'Balanced' preset is recommended for most projects."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Quick preset ──
-        c1, l1 = self.card(tr("Preset rápido"), "rayo")
+        c1, l1 = self.card(_("Quick preset"), "rayo")
         info = QLabel(
-            tr(
-                "Aplica un conjunto de parámetros probados con un clic. Cambiarlo después "
-                "en 'Parámetros' marca como Personalizado."
+            _(
+                "Applies a tested set of parameters in one click. Changing it afterwards in 'Parameters' marks it as Custom."
             )
         )
         info.setWordWrap(True)
@@ -55,7 +53,7 @@ class ModelPage(TrainerPage):
 
         row = QHBoxLayout()
         row.setSpacing(8)
-        row.addWidget(QLabel(tr("Preset:")))
+        row.addWidget(QLabel(_("Preset:")))
         self.combo_preset = QComboBox()
         self.combo_preset.addItems(list(PRESETS.keys()))
         self.combo_preset.setCurrentText(self.state.model.preset_name)
@@ -67,10 +65,10 @@ class ModelPage(TrainerPage):
         self.body.addWidget(c1)
 
         # ── Family and size ──
-        c2, l2 = self.card(tr("Familia y tamaño"), "modelo")
+        c2, l2 = self.card(_("Family and size"), "modelo")
         row2 = QHBoxLayout()
         row2.setSpacing(20)
-        row2.addWidget(QLabel(tr("Familia:")))
+        row2.addWidget(QLabel(_("Family:")))
         self.combo_family = QComboBox()
         self.combo_family.addItems(["YOLOv8", "YOLOv11"])
         self.combo_family.setCurrentText(
@@ -79,9 +77,9 @@ class ModelPage(TrainerPage):
         self.combo_family.currentTextChanged.connect(self._on_family)
         row2.addWidget(self.combo_family)
 
-        row2.addWidget(QLabel(tr("Tamaño:")))
+        row2.addWidget(QLabel(_("Size:")))
         self.combo_size = QComboBox()
-        for code, _, _, _ in SIZE_DESCRIPTIONS:
+        for code, _unused, _unused, _unused in SIZE_DESCRIPTIONS:
             self.combo_size.addItem(code)
         self.combo_size.setCurrentText(self.state.model.size)
         self.combo_size.currentTextChanged.connect(self._on_size)
@@ -95,7 +93,7 @@ class ModelPage(TrainerPage):
             bullet = QLabel("•")
             bullet.setStyleSheet(f"color: {color}; font-weight: 700; border: none;")
             line.addWidget(bullet)
-            text = QLabel(f"<b>{code}</b> → <b>{name}</b> — {tr(desc)}")
+            text = QLabel(f"<b>{code}</b> → <b>{name}</b> — {_(desc)}")
             text.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none;")
             text.setTextFormat(Qt.RichText)
             line.addWidget(text, 1)
@@ -103,7 +101,7 @@ class ModelPage(TrainerPage):
 
         # ── Architecture check ──
         self.chk_compare = QCheckBox(
-            tr("Entrenar ambas arquitecturas (v8 y v11) con la misma configuración")
+            _("Train both architectures (v8 and v11) with the same configuration")
         )
         self.chk_compare.setChecked(self.state.model.compare_families)
         self.chk_compare.stateChanged.connect(self._on_compare)
@@ -119,7 +117,7 @@ class ModelPage(TrainerPage):
         self._update_compare_notice()
 
         # ── Weights produced by training ──
-        self.chk_domain = QCheckBox(tr("Guardar también el mejor peso para el conjunto real"))
+        self.chk_domain = QCheckBox(_("Also save the best weights for the real dataset"))
         self.chk_domain.setChecked(self.state.params.choose_by_real_domain)
         self.chk_domain.stateChanged.connect(self._on_domain)
         self.chk_domain.setStyleSheet(
@@ -128,10 +126,8 @@ class ModelPage(TrainerPage):
         l2.addWidget(self.chk_domain)
 
         warning = QLabel(
-            tr(
-                "Al terminar quedan tres pesos en la carpeta del run: "
-                "<b>best_sintetico.pt</b>, <b>best_real.pt</b> y <b>last.pt</b> "
-                "(este último sirve para reanudar el entrenamiento)."
+            _(
+                "When it finishes there are three sets of weights in the run folder: <b>best_sintetico.pt</b>, <b>best_real.pt</b> and <b>last.pt</b> (this last one is what you use to resume training)."
             )
         )
         warning.setWordWrap(True)
@@ -141,11 +137,10 @@ class ModelPage(TrainerPage):
         self.body.addWidget(c2)
 
         # ── Custom weights ──
-        c3, l3 = self.card(tr("Pesos personalizados (opcional)"), "paquete")
+        c3, l3 = self.card(_("Custom weights (optional)"), "paquete")
         info3 = QLabel(
-            tr(
-                "Si tienes un .pt ya entrenado y quieres seguir desde ahí, selecciónalo. "
-                "Deja vacío para usar el modelo base de la familia/tamaño elegidos."
+            _(
+                "If you have an already-trained .pt and want to continue from it, select it. Leave empty to use the base model of the chosen family/size."
             )
         )
         info3.setWordWrap(True)
@@ -155,7 +150,7 @@ class ModelPage(TrainerPage):
         row3 = QHBoxLayout()
         row3.setSpacing(8)
         self.ed_custom = QLineEdit()
-        self.ed_custom.setPlaceholderText(tr("Ruta a un .pt para continuar el entrenamiento…"))
+        self.ed_custom.setPlaceholderText(_("Path to a .pt file to continue training from…"))
         self.ed_custom.editingFinished.connect(self._on_custom)
         row3.addWidget(self.ed_custom, 1)
         btn = QPushButton("…")
@@ -200,23 +195,17 @@ class ModelPage(TrainerPage):
         if self.chk_compare.isChecked():
             weights = " y ".join(mdl.weight_of(f) for f in ("v8", "v11"))
             self.lbl_compare.setText(
-                tr(
-                    "Se entrenarán <b>{}</b> uno tras otro, con idénticos "
-                    "imgsz, batch, épocas, semilla y augmentación. Así la "
-                    "diferencia de métricas se puede atribuir a la arquitectura "
-                    "y no a los hiperparámetros.<br>"
-                    "Tarda <b>el doble</b>: van en secuencia porque comparten GPU. "
-                    "Al terminar, la comparación sale en el log y en la pestaña "
-                    "Comparar."
-                ).format(weights)
+                _(
+                    "<b>%(weights)s</b> will be trained one after the other, with identical imgsz, batch, epochs, seed and augmentation. That way any difference in metrics can be attributed to the architecture rather than the hyperparameters.<br>It takes <b>twice as long</b>: they run in sequence because they share the GPU. When finished, the comparison appears in the log and in the Compare tab."
+                )
+                % {"weights": weights}
             )
         else:
             self.lbl_compare.setText(
-                tr(
-                    "Se entrenará solo <b>{}</b>. "
-                    "Marca la casilla para entrenar también la otra familia y "
-                    "compararlas en igualdad de condiciones."
-                ).format(mdl.base_weights_name)
+                _(
+                    "Only <b>%(model)s</b> will be trained. Tick the box to also train the other family and compare them on equal terms."
+                )
+                % {"model": mdl.base_weights_name}
             )
 
     def _on_custom(self):
@@ -225,7 +214,7 @@ class ModelPage(TrainerPage):
         self.state.model_changed.emit()
 
     def _browse_custom(self):
-        f, _ = QFileDialog.getOpenFileName(
+        f, _unused = QFileDialog.getOpenFileName(
             self, "Seleccionar pesos .pt", "", "Pesos PyTorch (*.pt)"
         )
         if f:

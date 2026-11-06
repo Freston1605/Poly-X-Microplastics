@@ -9,10 +9,10 @@ salida para el estado benigno coincide con lo que el baseline benigno
 (tests/fixtures/baseline_informe/benigna/informe.html) realmente contiene.
 Ese baseline es el gate actual, recapturado en M006/S05 en ingles.
 
-El contrato de idioma es el de tests/test_render_reporte_benigno.py
-(POLYX_IDIOMA=en): el baseline se capturo en ingles y cualquier aserto sobre
-texto del cuerpo necesita el mismo idioma, fijado y recargado en el fixture
-autouse -- ver la NOTA DE IDIOMA de ese modulo para la procedencia completa.
+The language contract is the one in tests/test_render_reporte_benigno.py
+(POLYX_LOCALE=en): the baseline was captured in English and any assertion about
+body text needs the same language, pinned and reloaded in the autouse fixture --
+see the language note in that module for the full provenance.
 
 Los cuerpos vacios NO son fallos: para el lote benigno (una foto, un modelo,
 sin ground truth, sin calibraciones, sin tramo de profundidad en el nombre)
@@ -97,8 +97,8 @@ def _idioma_del_baseline(tmp_path):
     """
     import polyx.core.i18n as i18n
 
-    previo_idioma = os.environ.get("POLYX_IDIOMA")
-    os.environ["POLYX_IDIOMA"] = "en"
+    previous_locale = os.environ.get("POLYX_LOCALE")
+    os.environ["POLYX_LOCALE"] = "en"
 
     importlib.reload(i18n)
     import polyx.gui.report_html as rh
@@ -107,10 +107,10 @@ def _idioma_del_baseline(tmp_path):
 
     yield
 
-    if previo_idioma is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    if previous_locale is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo_idioma
+        os.environ["POLYX_LOCALE"] = previous_locale
     importlib.reload(i18n)
     importlib.reload(rh)
 

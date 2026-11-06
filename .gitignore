@@ -175,3 +175,6 @@ tmp/
 
 # CodeGraph local index cache (agent tooling)
 .codegraph/
+
+# Compiled gettext catalogs are generated, never committed.
+*.mo

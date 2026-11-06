@@ -13,11 +13,10 @@ cronometro y la fecha de generacion nunca entran al HTML.
 
 NOTA DE IDIOMA (contrato desde M006/S05): el baseline es el render en INGLES.
 La recaptura de M006/S05 corre tools/audit/capturar_fixtures_informe.py, que fija
-POLYX_IDIOMA=en antes de importar cualquier modulo, y este test fija el mismo
-valor: el compare de bytes no depende del locale de la maquina ni de
-~/.polyx_idioma.json. Los snapshots M004 (es=bb2e9f…, en=bf483e…) quedaron
-superseded por la recaptura de M006/S05 tras pasar los doce rotulos crudos
-del informe a literales en ingles.
+POLYX_LOCALE=en before importing any module, and this test pins the same
+value: the byte comparison depends neither on the machine's locale nor on
+~/.polyx_preferences.json. The M004 snapshots were superseded by the M006/S05
+recapture after the twelve raw report headings became English literals.
 """
 
 from __future__ import annotations
@@ -80,14 +79,14 @@ TAMANO_BASELINE = 19980
 
 @pytest.fixture(autouse=True)
 def _idioma_del_baseline_y_logs_muertos(tmp_path):
-    """Fuerza el idioma del baseline (en) y revierte el logger a NullHandler.
+    """Pin the baseline language (en) and reset the logger to a NullHandler.
 
-    polyx.core.i18n resuelve y cachea el idioma al importar (env ->
-    ~/.polyx_idioma.json -> locale del sistema); sin forzar la variable el
-    test depende de la maquina y el compare de bytes seria una loteria. Se
-    recarga i18n con POLYX_IDIOMA=en -- el idioma con el que se capturo el
-    informe.html del baseline de M006/S05 -- y se vuelve a recargar al salir para
-    no contaminar a otros tests (ver nota de idioma en el doc del modulo).
+    polyx.core.i18n resolves and caches the language on import (env ->
+    ~/.polyx_preferences.json -> system locale); without forcing the variable
+    the test depends on the machine and the byte comparison would be a lottery.
+    i18n is reloaded with POLYX_LOCALE=en -- the language the baseline
+    HTML was captured in -- and reloaded again on exit so it cannot
+    leak into other tests (see the language note in the module doc).
 
     El logger 'polyx.detector' (report_html usa cronometro(logger_para("detec
     tor"), ...) dentro de generate_report) queda cacheado por logger_para con
@@ -105,10 +104,10 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     import polyx.core.i18n as i18n
     import polyx.core.observability as obs
 
-    previo_idioma = os.environ.get("POLYX_IDIOMA")
-    previo_log_dir = os.environ.get("POLYX_LOG_DIR")
+    previous_locale = os.environ.get("POLYX_LOCALE")
+    previous_log_dir = os.environ.get("POLYX_LOG_DIR")
     # El baseline recapturado en M006/S05 esta en ingles: ver nota de idioma.
-    os.environ["POLYX_IDIOMA"] = "en"
+    os.environ["POLYX_LOCALE"] = "en"
     # La carpeta de logs nunca puede ser el HOME real durante el test.
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
@@ -144,20 +143,20 @@ def _idioma_del_baseline_y_logs_muertos(tmp_path):
     sys.modules["ultralytics"] = _ul_stub
 
     logger = obs.logger_for("detector")
-    handlers_previos = logger.handlers[:]
+    handlers_previous = logger.handlers[:]
     logger.handlers = [logging.NullHandler()]
 
     yield
 
-    logger.handlers = handlers_previos
-    if previo_idioma is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    logger.handlers = handlers_previous
+    if previous_locale is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo_idioma
-    if previo_log_dir is None:
+        os.environ["POLYX_LOCALE"] = previous_locale
+    if previous_log_dir is None:
         os.environ.pop("POLYX_LOG_DIR", None)
     else:
-        os.environ["POLYX_LOG_DIR"] = previo_log_dir
+        os.environ["POLYX_LOG_DIR"] = previous_log_dir
     importlib.reload(i18n)
     importlib.reload(rh)
 

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
@@ -58,22 +58,21 @@ def _read_results_csv(run_dir: Path) -> dict | None:
 
 class ComparePage(TrainerPage):
     PAGE_ICON = "resultados"
-    PAGE_TITLE = tr("Comparar runs")
-    PAGE_DESCRIPTION = tr(
-        "Tabla con todos los entrenamientos anteriores en runs_train/. Útil para comparar "
-        "configuraciones y elegir el mejor modelo."
+    PAGE_TITLE = _("Compare runs")
+    PAGE_DESCRIPTION = _(
+        "A table of every previous training run in runs_train/. Useful for comparing configurations and picking the best model."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
-        c1, l1 = self.card(tr("Runs disponibles"), "dataset")
+        c1, l1 = self.card(_("Available runs"), "dataset")
         row = QHBoxLayout()
-        btn = QPushButton(tr("Refrescar lista"))
+        btn = QPushButton(_("Refresh list"))
         btn.setIcon(iconos.icon("recargar", 15, T.INK2))
         btn.clicked.connect(self.refresh)
         row.addWidget(btn)
-        btn2 = QPushButton(tr("Abrir carpeta runs_train/"))
+        btn2 = QPushButton(_("Open the runs_train/ folder"))
         btn2.setIcon(iconos.icon("dataset", 15, T.INK2))
         btn2.clicked.connect(self._open_root)
         row.addWidget(btn2)

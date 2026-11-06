@@ -97,7 +97,7 @@ def _idioma_y_logs_muertos(tmp_path):
     """Fuerza el idioma 'en' y revierte el logger del pipeline a NullHandler.
 
     Misma mecanica que tests/test_render_reporte_benigno.py: i18n cachea el
-    idioma al importar y sin POLYX_IDIOMA los conteos de este test son
+    idioma al importar y sin POLYX_LOCALE los conteos de este test son
     maquina-dependientes. El logger 'polyx.detector' queda cacheado por
     logger_para con un RotatingFileHandler a carpeta_logs(); si no se
     controla, la suite escribiria en el HOME real y variaria segun el orden
@@ -107,9 +107,9 @@ def _idioma_y_logs_muertos(tmp_path):
     """
     import polyx.core.i18n as i18n
 
-    previo_idioma = os.environ.get("POLYX_IDIOMA")
-    previo_log_dir = os.environ.get("POLYX_LOG_DIR")
-    os.environ["POLYX_IDIOMA"] = "en"
+    previous_locale = os.environ.get("POLYX_LOCALE")
+    previous_log_dir = os.environ.get("POLYX_LOG_DIR")
+    os.environ["POLYX_LOCALE"] = "en"
     os.environ["POLYX_LOG_DIR"] = str(tmp_path / "logs")
 
     importlib.reload(i18n)
@@ -119,20 +119,20 @@ def _idioma_y_logs_muertos(tmp_path):
     import polyx.core.observability as obs
 
     logger = obs.logger_for("detector")
-    handlers_previos = logger.handlers[:]
+    handlers_previous = logger.handlers[:]
     logger.handlers = [logging.NullHandler()]
 
     yield
 
-    logger.handlers = handlers_previos
-    if previo_idioma is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    logger.handlers = handlers_previous
+    if previous_locale is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo_idioma
-    if previo_log_dir is None:
+        os.environ["POLYX_LOCALE"] = previous_locale
+    if previous_log_dir is None:
         os.environ.pop("POLYX_LOG_DIR", None)
     else:
-        os.environ["POLYX_LOG_DIR"] = previo_log_dir
+        os.environ["POLYX_LOG_DIR"] = previous_log_dir
     importlib.reload(i18n)
     importlib.reload(rh)
 

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.gui import iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import LogoBadge
@@ -25,15 +25,15 @@ from .state import TrainerState
 
 SIDEBAR_ITEMS = [
     # (icon name in polyx/gui/iconos.py, label)
-    ("modelo", tr("Modelo")),
-    ("dataset", tr("Dataset")),
-    ("ajustes", tr("Parámetros")),
-    ("augmentacion", tr("Augmentación")),
-    ("ejecutar", tr("Entrenar")),
-    ("evaluar", tr("Evaluar")),
-    ("comparar", tr("Comparar")),
-    ("exportar", tr("Exportar")),
-    ("reporte", tr("Informe")),
+    ("modelo", _("Model")),
+    ("dataset", _("Dataset")),
+    ("ajustes", _("Parameters")),
+    ("augmentacion", _("Augmentation")),
+    ("ejecutar", _("Train")),
+    ("evaluar", _("Evaluate")),
+    ("comparar", _("Compare")),
+    ("exportar", _("Export")),
+    ("reporte", _("Summary")),
 ]
 
 
@@ -118,12 +118,12 @@ class TrainerWindow(QMainWindow):
             self.sidebar_buttons.append(b)
         sb.addStretch(1)
 
-        self.lbl_status = QLabel(tr("● Listo"))
+        self.lbl_status = QLabel(_("● Ready"))
         self.lbl_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 9pt; padding: 4px 8px;")
         sb.addWidget(self.lbl_status)
 
         # Authorship credit
-        author = QLabel(tr("Diseñado por\nCristofher Ferrada\n2026"))
+        author = QLabel(_("Designed by\nCristofher Ferrada\n2026"))
         author.setAlignment(Qt.AlignCenter)
         author.setStyleSheet(
             f"color: {T.INK3}; font-size: 8.5pt; padding: 8px; "
@@ -145,9 +145,9 @@ class TrainerWindow(QMainWindow):
 
         # Status according to training state
         self.state.train_started.connect(lambda: self._set_status("● Entrenando…", T.ACCENT))
-        self.state.train_finished.connect(lambda _: self._set_status("● Finalizado", T.OK))
+        self.state.train_finished.connect(lambda _unused: self._set_status("● Finalizado", T.OK))
         self.state.train_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
-        self.state.train_failed.connect(lambda _: self._set_status("● Error", T.ERR))
+        self.state.train_failed.connect(lambda _unused: self._set_status("● Error", T.ERR))
 
     def _build_pages(self):
         from .pages.augmentation import AugmentationPage

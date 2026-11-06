@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx import __version__
-from polyx.core.i18n import language, tr
+from polyx.core.i18n import _, language
 from polyx.core.paths import ROOT
 from polyx.core.platform import launch_updater, open_in_system
 from polyx.gui import iconos, marca
@@ -190,7 +190,7 @@ class ModuleCard(QFrame):
         lay.setSpacing(8)
 
         top = QHBoxLayout()
-        tag = QLabel(f"{tr('MÓDULO')} 0{number}")
+        tag = QLabel(f"{_('MODULE')} 0{number}")
         tag.setStyleSheet(
             f"color: white; background: {accent}; padding: 3px 8px; "
             f"border-radius: 4px; font-size: 8.5pt; font-weight: 700; "
@@ -200,7 +200,7 @@ class ModuleCard(QFrame):
         tag.setAlignment(Qt.AlignCenter)
         top.addWidget(tag, 0, Qt.AlignLeft | Qt.AlignVCenter)
         top.addStretch(1)
-        self._btn_open = QPushButton(tr("Abrir  →"))
+        self._btn_open = QPushButton(_("Open  →"))
         self._btn_open.setCursor(Qt.PointingHandCursor)
         self._btn_open.setStyleSheet(
             f"QPushButton {{ background: transparent; color: {accent}; "
@@ -269,13 +269,13 @@ class ModuleCard(QFrame):
         people click again, so two windows end up open.
         """
         self._btn_open.setEnabled(False)
-        self._btn_open.setText(tr("Abriendo…"))
+        self._btn_open.setText(_("Opening…"))
         QTimer.singleShot(3200, self._restore_button)
         self._on_open()
 
     def _restore_button(self):
         self._btn_open.setEnabled(True)
-        self._btn_open.setText(tr("Abrir  →"))
+        self._btn_open.setText(_("Open  →"))
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.LeftButton:
@@ -342,9 +342,9 @@ class LauncherWindow(QMainWindow):
         self.btn_prefs = QPushButton()
         self.btn_prefs.setIcon(iconos.icon("ajustes", 18, T.INK2, 2.0))
         self.btn_prefs.setIconSize(QSize(18, 18))
-        self.btn_prefs.setText(tr("Preferencias"))
+        self.btn_prefs.setText(_("Preferences"))
         self.btn_prefs.setCursor(Qt.PointingHandCursor)
-        self.btn_prefs.setToolTip(tr("Tema, idioma y movimiento"))
+        self.btn_prefs.setToolTip(_("Theme, language and motion"))
         self.btn_prefs.clicked.connect(self._open_preferences)
         tb.addWidget(self.btn_prefs)
 
@@ -354,7 +354,7 @@ class LauncherWindow(QMainWindow):
 
         # New version notice. It starts hidden and only appears if the background
         # check confirms that GitHub is ahead of what is installed.
-        self.btn_update = QPushButton(tr("Actualizar"))
+        self.btn_update = QPushButton(_("Update"))
         self.btn_update.setCursor(Qt.PointingHandCursor)
         self.btn_update.setStyleSheet(
             f"QPushButton {{ background: {T.WARN}; color: white; border: none; "
@@ -389,7 +389,7 @@ class LauncherWindow(QMainWindow):
 
         left = QVBoxLayout()
         left.setSpacing(10)
-        kicker = QLabel(tr("● PLATAFORMA DE ANÁLISIS"))
+        kicker = QLabel(_("● ANALYSIS PLATFORM"))
         kicker.setStyleSheet(
             f"color: {T.ACCENT_D_TX}; font-size: 9pt; font-weight: 700; "
             f"letter-spacing: 1.8px; border: none;"
@@ -398,23 +398,22 @@ class LauncherWindow(QMainWindow):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(10)
-        t1 = QLabel(tr("Poly-X"))
+        t1 = QLabel(_("Poly-X"))
         t1.setStyleSheet(f"color: {T.INK}; font-size: 38pt; font-weight: 700; border: none;")
-        t2 = QLabel(tr("analytics"))
+        t2 = QLabel(_("analytics"))
         t2.setStyleSheet(f"color: {T.ACCENT_TX}; font-size: 38pt; font-weight: 300; border: none;")
         title_row.addWidget(t1)
         title_row.addWidget(t2)
         title_row.addStretch(1)
         left.addLayout(title_row)
 
-        subtitle = QLabel(tr("Plataforma de detección y clasificación de microplásticos"))
+        subtitle = QLabel(_("Detection and classification platform for microplastics"))
         subtitle.setStyleSheet(f"color: {T.INK2}; font-size: 13pt; font-weight: 500; border: none;")
         left.addWidget(subtitle)
 
         descr = QLabel(
-            tr(
-                "Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) "
-                "e inteligencia artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo."
+            _(
+                "Automated detection of PET, PP and LDPE by Nile Red fluorescence (254 nm) and machine learning. Training, labeling, detection and reporting in a single workflow."
             )
         )
         descr.setWordWrap(True)
@@ -423,7 +422,7 @@ class LauncherWindow(QMainWindow):
 
         # Authorship credit (just below the descriptor)
         author = QLabel(
-            tr("Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026")
+            _("Designed and developed by <b>Cristofher Ferrada</b> · PhD (c) in Chemistry, 2026")
         )
         author.setTextFormat(Qt.RichText)
         author.setStyleSheet(
@@ -436,10 +435,10 @@ class LauncherWindow(QMainWindow):
         # 4 chips
         chips = QHBoxLayout()
         chips.setSpacing(12)
-        chips.addWidget(StatChip("3", tr("Polímeros"), "PET · PP · LDPE", T.ACCENT))
-        chips.addWidget(StatChip("254", "nm", tr("fluorescencia Nile Red"), T.OK))
+        chips.addWidget(StatChip("3", _("Polymers"), "PET · PP · LDPE", T.ACCENT))
+        chips.addWidget(StatChip("254", "nm", _("Nile Red fluorescence"), T.OK))
         chips.addWidget(StatChip("YOLO", "v8 / v11", "deep learning", T.VIO))
-        chips.addWidget(StatChip("μm", tr("medición"), tr("calibración por píxel"), T.WARN))
+        chips.addWidget(StatChip("μm", _("measurement"), _("per-pixel calibration"), T.WARN))
         left.addLayout(chips)
 
         hero.addLayout(left, 3)
@@ -447,7 +446,7 @@ class LauncherWindow(QMainWindow):
         body.addLayout(hero)
 
         # ── `MÓDULOS` section ──
-        mod_kicker = QLabel(tr("MÓDULOS"))
+        mod_kicker = QLabel(_("MODULES"))
         mod_kicker.setStyleSheet(
             f"color: {T.INK2}; font-size: 9pt; font-weight: 700; "
             f"letter-spacing: 1.8px; border: none;"
@@ -460,10 +459,9 @@ class LauncherWindow(QMainWindow):
             ModuleCard(
                 1,
                 "detector",
-                tr("Detector"),
-                tr(
-                    "Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, "
-                    "CSV con centroides y diámetros, métricas globales e informe HTML de detección."
+                _("Detector"),
+                _(
+                    "Analyzes images with a trained .pt model. Produces annotated output, a CSV of centroids and diameters, global metrics and an HTML detection report."
                 ),
                 T.ACCENT,
                 self.open_detector,
@@ -476,10 +474,9 @@ class LauncherWindow(QMainWindow):
             ModuleCard(
                 2,
                 "entrenador",
-                tr("Entrenador"),
-                tr(
-                    "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas "
-                    "de calidad y comparación con runs anteriores."
+                _("Trainer"),
+                _(
+                    "Trains YOLO v8 / v11 models. Live curves, automatic quality recommendations and comparison against earlier runs."
                 ),
                 T.OK,
                 self.open_trainer,
@@ -492,10 +489,9 @@ class LauncherWindow(QMainWindow):
             ModuleCard(
                 3,
                 "etiquetador",
-                tr("Etiquetador"),
-                tr(
-                    "Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo "
-                    "existente y atajos de teclado, ahorra ~80 % del tiempo manual."
+                _("Labeler"),
+                _(
+                    "Annotates images in YOLO format. Supports pre-annotation with an existing model plus keyboard shortcuts, saving ~80% of the manual time."
                 ),
                 T.WARN,
                 self.open_labeler,
@@ -508,10 +504,9 @@ class LauncherWindow(QMainWindow):
             ModuleCard(
                 4,
                 "visor",
-                tr("Visor"),
-                tr(
-                    "Inspección de una imagen a la vez con calibración interactiva μm/píxel "
-                    "(línea o círculo) y medición precisa por partícula."
+                _("Viewer"),
+                _(
+                    "Inspects one image at a time with interactive μm/pixel calibration (line or circle) and precise per-particle measurement."
                 ),
                 T.VIO,
                 self.open_viewer,
@@ -526,7 +521,7 @@ class LauncherWindow(QMainWindow):
         body.addStretch(1)
         body.addWidget(HLine())
         foot = QHBoxLayout()
-        st = QLabel(tr("● Listo"))
+        st = QLabel(_("● Ready"))
         st.setStyleSheet(f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;")
         foot.addWidget(st)
         foot.addSpacing(20)
@@ -534,12 +529,12 @@ class LauncherWindow(QMainWindow):
         copyr.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
         foot.addWidget(copyr)
         foot.addStretch(1)
-        readme_btn = QPushButton(tr("LÉAME"))
+        readme_btn = QPushButton(_("README"))
         readme_btn.setIcon(iconos.icon("texto", 15, T.INK2, 2.0))
         readme_btn.setCursor(Qt.PointingHandCursor)
         readme_btn.clicked.connect(self.open_readme)
         foot.addWidget(readme_btn)
-        manual_btn = QPushButton(tr("Manual de usuario"))
+        manual_btn = QPushButton(_("User manual"))
         manual_btn.setIcon(iconos.icon("manual", 15, T.INK2, 2.0))
         manual_btn.setCursor(Qt.PointingHandCursor)
         manual_btn.clicked.connect(self.open_manual)
@@ -562,7 +557,7 @@ class LauncherWindow(QMainWindow):
     def _open_preferences(self):
         language_before = language()
         dlg = PreferencesDialog(self)
-        dlg.theme_changed.connect(lambda _: self._build_ui())
+        dlg.theme_changed.connect(lambda _unused: self._build_ui())
         dlg.exec()
         if language() != language_before:
             # The language cannot be applied hot: each widget fixed its
@@ -570,10 +565,9 @@ class LauncherWindow(QMainWindow):
             # dialog click.
             QMessageBox.information(
                 self,
-                tr("Idioma"),
-                tr(
-                    "El idioma se aplicará al reabrir Poly-X. Los módulos que "
-                    "abras desde ahora ya salen en el idioma nuevo."
+                _("Language"),
+                _(
+                    "The language will be applied when you reopen Poly-X. Modules you open from now on already use the new language."
                 ),
             )
 
@@ -581,9 +575,9 @@ class LauncherWindow(QMainWindow):
     def _notify_version_new(self, sha_short: str):
         """Shows the update button when GitHub is ahead."""
         self._sha_version_new = sha_short
-        self.btn_update.setText(tr("Actualizar") + f" · {sha_short}")
+        self.btn_update.setText(_("Update") + f" · {sha_short}")
         self.btn_update.setToolTip(
-            tr("Hay una versión nueva disponible en GitHub. Pulsa para descargarla e instalarla.")
+            _("A new version is available on GitHub. Click to download and install it.")
         )
         self.btn_update.setVisible(True)
 
@@ -591,20 +585,19 @@ class LauncherWindow(QMainWindow):
         if not can_update():
             QMessageBox.information(
                 self,
-                tr("Actualizar"),
-                tr(
-                    "No se encontró {} en la carpeta de instalación. Descarga "
-                    "la versión nueva manualmente desde GitHub."
-                ).format(UPDATER.name),
+                _("Update"),
+                _(
+                    "Could not find %(name)s in the installation folder. Download the new version manually from GitHub."
+                )
+                % {"name": UPDATER.name},
             )
             return
         if (
             QMessageBox.question(
                 self,
-                tr("Actualizar"),
-                tr(
-                    "Se descargará la versión nueva y se cerrará Poly-X.\n\n"
-                    "Tus modelos, resultados y datos no se tocan. ¿Continuar?"
+                _("Update"),
+                _(
+                    "The new version will be downloaded and Poly-X will close.\n\nYour models, results and data are left untouched. Continue?"
                 ),
             )
             != QMessageBox.Yes
@@ -615,10 +608,9 @@ class LauncherWindow(QMainWindow):
         if not launch_updater(UPDATER):
             QMessageBox.warning(
                 self,
-                tr("Actualizar"),
-                tr(
-                    "No se pudo lanzar {}. Ejecútalo a mano desde la carpeta de instalación."
-                ).format(UPDATER.name),
+                _("Update"),
+                _("Could not launch %(name)s. Run it by hand from the installation folder.")
+                % {"name": UPDATER.name},
             )
             return
         self.close()
@@ -665,7 +657,7 @@ class LauncherWindow(QMainWindow):
     def _toast(self, msg: str):
         from PySide6.QtWidgets import QMessageBox
 
-        QMessageBox.information(self, tr("Poly-X"), msg)
+        QMessageBox.information(self, _("Poly-X"), msg)
 
 
 def main():

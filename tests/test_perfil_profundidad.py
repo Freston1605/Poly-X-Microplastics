@@ -30,17 +30,17 @@ def _en_español():
     import importlib
     import os
 
-    previo = os.environ.get("POLYX_IDIOMA")
-    os.environ["POLYX_IDIOMA"] = "es"
+    previous = os.environ.get("POLYX_LOCALE")
+    os.environ["POLYX_LOCALE"] = "es"
     import polyx.core.i18n as i18n
 
     importlib.reload(i18n)
     importlib.reload(R)
     yield
-    if previo is None:
-        os.environ.pop("POLYX_IDIOMA", None)
+    if previous is None:
+        os.environ.pop("POLYX_LOCALE", None)
     else:
-        os.environ["POLYX_IDIOMA"] = previo
+        os.environ["POLYX_LOCALE"] = previous
     importlib.reload(i18n)
     importlib.reload(R)
 

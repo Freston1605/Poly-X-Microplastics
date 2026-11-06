@@ -78,7 +78,7 @@ English report headings.
 ## Language contract
 
 The baseline is in **English** and must stay that way. The capture script
-forces `POLYX_IDIOMA=en` before importing any fixture or `polyx` module, and
+forces `POLYX_LOCALE=en` before importing any fixture or `polyx` module, and
 the tests pin the same value, so the capture and the comparison never depend
 on the machine locale or `~/.polyx_idioma.json`. The M004 snapshots
 (`es=bb2e9f...`, `en=bf483e...`) are superseded by this English contract;

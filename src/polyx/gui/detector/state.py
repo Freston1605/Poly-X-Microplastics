@@ -18,7 +18,7 @@ from polyx.core.detection_run import (
     RunParams,
     RunResult,
 )
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 
 # Compatibility name used by the pages and by old headless folder readers.
 InferenceParams = RunParams
@@ -49,7 +49,7 @@ class DetectorState(QObject):
     def __init__(self):
         super().__init__()
         self.model_slots: list[ModelSlot] = [
-            ModelSlot(alias=tr("Modelo {n}").format(n=i + 1)) for i in range(3)
+            ModelSlot(alias=_("Model %(n)s") % {"n": i + 1}) for i in range(3)
         ]
         self.images: list[Path] = []
         self.gt_folder: Path | None = None

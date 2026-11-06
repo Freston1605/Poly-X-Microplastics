@@ -17,7 +17,22 @@ import html
 from collections import Counter
 from pathlib import Path
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import N_, _
+
+#: A length method lives in run data as an identifier, not as prose. The
+#: stored values stay as they are — they belong to the run schema — and only
+#: the label shown in the report is translated.
+_LENGTH_METHODS: dict[str, str] = {
+    "geodesico": N_("geodesic"),
+    "Feret maximo": N_("maximum Feret"),
+}
+
+
+def method_label(method: str | None) -> str:
+    """Display name for a length method read from run data."""
+    if not method:
+        return "—"
+    return _(_LENGTH_METHODS.get(method, method))
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -62,11 +77,11 @@ def _table_count(manual: Counter | None, detected: Counter, classes: list[str]) 
             dif = det - man
             css = "dif-pos" if dif > 0 else ("dif-neg" if dif < 0 else "")
             rows_2 += (
-                f"<tr><td>{_esc(tr(c))}</td><td>{man}</td><td>{det}</td>"
+                f"<tr><td>{_esc(c)}</td><td>{man}</td><td>{det}</td>"
                 f"<td class='{css}'>{dif:+d}</td></tr>"
             )
         else:
-            rows_2 += f"<tr><td>{_esc(tr(c))}</td><td>{det}</td></tr>"
+            rows_2 += f"<tr><td>{_esc(c)}</td><td>{det}</td></tr>"
 
     tot_det = sum(detected.get(c, 0) for c in classes)
     if there_is_a_manual:
@@ -77,13 +92,12 @@ def _table_count(manual: Counter | None, detected: Counter, classes: list[str]) 
             f"<tr class='tot'><td>Total</td><td>{tot_man}</td>"
             f"<td>{tot_det}</td><td class='{css}'>{dif:+d}</td></tr>"
         )
-        cabecera = tr(
-            "<tr><th>Polímero</th><th>Conteo manual</th>"
-            "<th>Detectadas por el modelo</th><th>Diferencia</th></tr>"
+        cabecera = _(
+            "<tr><th>Polymer</th><th>Manual count</th><th>Detected by the model</th><th>Difference</th></tr>"
         )
     else:
         rows_2 += f"<tr class='tot'><td>Total</td><td>{tot_det}</td></tr>"
-        cabecera = tr("<tr><th>Polímero</th><th>Detectadas por el modelo</th></tr>")
+        cabecera = _("<tr><th>Polymer</th><th>Detected by the model</th></tr>")
 
     return f"<table class='conteo'>{cabecera}{rows_2}</table>"
 
@@ -146,19 +160,19 @@ def _table_width(
         header_line = (
             f"<tr><th rowspan='2'>{_esc(title_col)}</th>"
             + "".join(
-                f"<th colspan='2' style='text-align:center'>{_esc(tr(c))}</th>" for c in classes
+                f"<th colspan='2' style='text-align:center'>{_esc(_(c))}</th>" for c in classes
             )
             + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
             + "".join(
                 "<th class='r'>manual</th><th class='r'>modelo</th>"
-                for _ in classes + ["total"]  # noqa: RUF005
+                for _unused in classes + ["total"]  # noqa: RUF005
             )
             + "</tr>"
         )
     else:
         header_line = (
             f"<tr><th>{_esc(title_col)}</th>"
-            + "".join(f"<th class='r'>{_esc(tr(c))}</th>" for c in classes)
+            + "".join(f"<th class='r'>{_esc(_(c))}</th>" for c in classes)
             + "<th class='r'>Total</th></tr>"
         )
 

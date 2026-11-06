@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.gui import iconos
 from polyx.gui import theme as T
 from polyx.gui.widgets import KPICard
@@ -59,20 +59,19 @@ class _EvalWorker(QThread):
 
 class EvaluatePage(TrainerPage):
     PAGE_ICON = "evaluar"
-    PAGE_TITLE = tr("Evaluar")
-    PAGE_DESCRIPTION = tr(
-        "Valida cualquier modelo .pt sobre un dataset YOLO (data.yaml). Útil para "
-        "comprobar la calidad de un best.pt sobre un test set distinto al de entrenamiento."
+    PAGE_TITLE = _("Evaluate")
+    PAGE_DESCRIPTION = _(
+        "Validates any .pt model against a YOLO dataset (data.yaml). Useful for checking the quality of a best.pt on a test set other than the training one."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
         self.worker: _EvalWorker | None = None
 
-        c1, l1 = self.card(tr("Configuración"), "ajustes")
+        c1, l1 = self.card(_("Configuration"), "ajustes")
         row1 = QHBoxLayout()
         row1.setSpacing(8)
-        row1.addWidget(QLabel(tr("Modelo .pt:")))
+        row1.addWidget(QLabel(_("Model .pt:")))
         self.ed_w = QLineEdit()
         row1.addWidget(self.ed_w, 1)
         b1 = QPushButton("…")
@@ -83,7 +82,7 @@ class EvaluatePage(TrainerPage):
 
         row2 = QHBoxLayout()
         row2.setSpacing(8)
-        row2.addWidget(QLabel(tr("data.yaml:")))
+        row2.addWidget(QLabel(_("data.yaml:")))
         self.ed_y = QLineEdit()
         if state.dataset.yaml_path:
             self.ed_y.setText(str(state.dataset.yaml_path))
@@ -96,18 +95,18 @@ class EvaluatePage(TrainerPage):
 
         row3 = QHBoxLayout()
         row3.setSpacing(20)
-        row3.addWidget(QLabel(tr("imgsz:")))
+        row3.addWidget(QLabel(_("imgsz:")))
         self.ed_imgsz = QLineEdit(str(state.params.imgsz))
         self.ed_imgsz.setMaximumWidth(80)
         row3.addWidget(self.ed_imgsz)
-        row3.addWidget(QLabel(tr("device:")))
+        row3.addWidget(QLabel(_("device:")))
         self.ed_dev = QLineEdit(state.params.device)
         self.ed_dev.setMaximumWidth(80)
         row3.addWidget(self.ed_dev)
         row3.addStretch(1)
         l1.addLayout(row3)
 
-        btn = QPushButton(tr("Iniciar validación"))
+        btn = QPushButton(_("Start validation"))
         btn.setIcon(iconos.icon("ejecutar", 15, T.ON_ACCENT))
         btn.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -119,7 +118,7 @@ class EvaluatePage(TrainerPage):
         self.body.addWidget(c1)
 
         # Results
-        c2, l2 = self.card(tr("Resultados"), "resultados")
+        c2, l2 = self.card(_("Results"), "resultados")
         g = QGridLayout()
         g.setSpacing(12)
         self.kpi_map50 = KPICard("mAP@50", T.ACCENT)
@@ -145,12 +144,14 @@ class EvaluatePage(TrainerPage):
         self.body.addWidget(c3)
 
     def _browse_w(self):
-        f, _ = QFileDialog.getOpenFileName(self, "Seleccionar .pt", "", "Pesos (*.pt)")
+        f, _unused = QFileDialog.getOpenFileName(self, "Seleccionar .pt", "", "Pesos (*.pt)")
         if f:
             self.ed_w.setText(f)
 
     def _browse_y(self):
-        f, _ = QFileDialog.getOpenFileName(self, "Seleccionar data.yaml", "", "YAML (*.yaml *.yml)")
+        f, _unused = QFileDialog.getOpenFileName(
+            self, "Seleccionar data.yaml", "", "YAML (*.yaml *.yml)"
+        )
         if f:
             self.ed_y.setText(f)
 
@@ -158,10 +159,10 @@ class EvaluatePage(TrainerPage):
         w = self.ed_w.text().strip()
         y = self.ed_y.text().strip()
         if not w or not Path(w).exists():
-            QMessageBox.warning(self, tr("Falta modelo"), tr("Selecciona un .pt válido."))
+            QMessageBox.warning(self, _("Model missing"), _("Select a valid .pt file."))
             return
         if not y or not Path(y).exists():
-            QMessageBox.warning(self, tr("Falta dataset"), tr("Selecciona un data.yaml válido."))
+            QMessageBox.warning(self, _("Dataset missing"), _("Select a valid data.yaml."))
             return
         try:
             imgsz = int(self.ed_imgsz.text())
@@ -171,7 +172,7 @@ class EvaluatePage(TrainerPage):
         self.worker = _EvalWorker(w, y, imgsz, self.ed_dev.text().strip() or "0")
         self.worker.log_line.connect(self.log.appendPlainText)
         self.worker.metrics_ready.connect(self._on_metrics)
-        self.worker.failed.connect(lambda m: QMessageBox.critical(self, tr("Falló"), m))
+        self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
         self.worker.start()
 
     def _on_metrics(self, d: dict):

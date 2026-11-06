@@ -18,8 +18,10 @@ from polyx.gui import theme as T
 #  Contraste
 # ────────────────────────────────────────────────────────────────────
 def test_theme_saves_stay_in_the_test_sandbox(tmp_path):
-    assert T._FILE.parent == tmp_path
-    assert T._FILE.name == "polyx_tema.json"
+    from polyx.core import preferences
+
+    assert preferences.FILE.parent == tmp_path
+    assert preferences.FILE.name == "polyx_preferences.json"
 
 
 def _luminancia(hex_color: str) -> float:
@@ -178,14 +180,16 @@ def test_los_colores_de_polimero_no_siguen_el_tema() -> None:
 # ────────────────────────────────────────────────────────────────────
 def test_se_guarda_tema_y_animaciones_juntos(tmp_path, monkeypatch) -> None:
     """Las dos preferencias comparten archivo: son la misma decision."""
-    destino = tmp_path / "prefs.json"
-    monkeypatch.setattr(T, "_FILE", destino)
+    from polyx.core import preferences
+
+    target = tmp_path / "prefs.json"
+    monkeypatch.setattr(preferences, "FILE", target)
     original = T.theme()
     try:
         T.set_theme("azul")
         T.set_animations(False)
-        guardado = json.loads(destino.read_text(encoding="utf-8"))
-        assert guardado == {"tema": "azul", "animaciones": False}
+        saved = json.loads(target.read_text(encoding="utf-8"))
+        assert saved == {"theme": "azul", "animations": False}
     finally:
         T.set_theme(original)
         T.set_animations(True)

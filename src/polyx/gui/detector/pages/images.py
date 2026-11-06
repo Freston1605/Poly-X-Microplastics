@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detect.protocol import find_gt_for_image
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -28,11 +28,9 @@ from ._base import DetectorPage
 
 class ImagesPage(DetectorPage):
     STEP_N = 2
-    STEP_TITLE = tr("Imágenes")
-    STEP_DESCRIPTION = tr(
-        "Selecciona imágenes individuales o una carpeta. Si tienes etiquetas verdaderas en "
-        "formato YOLO (.txt) en la misma carpeta o en una hermana 'labels/', se cargarán y "
-        "activarán el análisis de errores."
+    STEP_TITLE = _("Images")
+    STEP_DESCRIPTION = _(
+        "Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in the same folder or in a sibling 'labels/' folder, they are loaded and enable error analysis."
     )
 
     def __init__(self, state, parent=None):
@@ -40,16 +38,16 @@ class ImagesPage(DetectorPage):
         self.setAcceptDrops(True)
 
         # ── Source card ──
-        c1, l1 = self.card(tr("Origen"), "dataset")
+        c1, l1 = self.card(_("Source"), "dataset")
         row = QHBoxLayout()
         row.setSpacing(8)
-        btn_files = QPushButton(tr("Seleccionar imágenes…"))
+        btn_files = QPushButton(_("Select images…"))
         btn_files.setIcon(iconos.icon("imagenes", 15, T.INK2))
         btn_files.clicked.connect(self._pick_files)
-        btn_folder = QPushButton(tr("Seleccionar carpeta…"))
+        btn_folder = QPushButton(_("Select folder…"))
         btn_folder.setIcon(iconos.icon("dataset", 15, T.INK2))
         btn_folder.clicked.connect(self._pick_folder)
-        btn_clear = QPushButton(tr("✕  Limpiar"))
+        btn_clear = QPushButton(_("✕  Clear"))
         btn_clear.clicked.connect(self._clear)
         row.addWidget(btn_files)
         row.addWidget(btn_folder)
@@ -60,11 +58,11 @@ class ImagesPage(DetectorPage):
         # Optional GT folder
         gt_row = QHBoxLayout()
         gt_row.setSpacing(8)
-        lbl_gt = QLabel(tr("Carpeta GT (opcional):"))
+        lbl_gt = QLabel(_("Ground-truth folder (optional):"))
         lbl_gt.setStyleSheet(f"color: {T.INK2}; border: none;")
         self.ed_gt = QLineEdit()
         self.ed_gt.setPlaceholderText(
-            tr("Ruta a la carpeta con .txt YOLO (si no, busca junto a la imagen)")
+            _("Path to the folder with YOLO .txt files (otherwise it looks next to the image)")
         )
         self.ed_gt.editingFinished.connect(self._gt_text_changed)
         btn_gt = QPushButton("…")
@@ -76,11 +74,8 @@ class ImagesPage(DetectorPage):
         l1.addLayout(gt_row)
 
         hint = QLabel(
-            tr(
-                "Si dejas vacío, busca .txt junto a cada imagen y en /labels/ hermana. "
-                "Si una imagen tiene GT, se incluirá en el análisis de errores "
-                "(Verdaderos Positivos, Falsos Positivos y Falsos Negativos). "
-                "Si no, solo se reportan las detecciones del modelo."
+            _(
+                "If left empty, .txt files are looked up next to each image and in a sibling /labels/ folder. An image that has ground truth is included in the error analysis (True Positives, False Positives and False Negatives); otherwise only the model's detections are reported."
             )
         )
         hint.setWordWrap(True)
@@ -89,8 +84,8 @@ class ImagesPage(DetectorPage):
         self.body.addWidget(c1)
 
         # ── Loaded images card ──
-        c2, l2 = self.card(tr("Imágenes cargadas"), "imagenes")
-        self.lbl_count = QLabel(tr("0 imágenes"))
+        c2, l2 = self.card(_("Loaded images"), "imagenes")
+        self.lbl_count = QLabel(_("0 images"))
         self.lbl_count.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
         l2.addWidget(self.lbl_count)
 
@@ -109,7 +104,7 @@ class ImagesPage(DetectorPage):
     # ──────────────────────────────────────────
     def _pick_files(self):
         ext_filter = "Imágenes (" + " ".join(f"*{e}" for e in IMAGE_EXTS) + ")"
-        files, _ = QFileDialog.getOpenFileNames(self, "Seleccionar imágenes", "", ext_filter)
+        files, _unused = QFileDialog.getOpenFileNames(self, "Seleccionar imágenes", "", ext_filter)
         if files:
             self.state.images = [Path(f) for f in files]
             self._refresh_table()

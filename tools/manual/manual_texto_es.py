@@ -733,7 +733,7 @@ se recuerda entre sesiones; la primera vez toma el idioma del sistema.</p>
   atributo <code>lang</code> del HTML se ajusta, para que el corrector del
   navegador y los lectores de pantalla lo traten bien.</p>
   <p>Para forzarlo sin tocar la interfaz, la variable de entorno
-  <code>POLYX_IDIOMA=en</code>.</p>
+  <code>POLYX_LOCALE=en</code>.</p>
 </div>
 
 <h3>El aviso de versión nueva</h3>
