@@ -1,11 +1,32 @@
-"""Headless detection: the legacy batch runner and the shared run data shapes.
+"""Headless detection: the canonical run engine, its folder and legacy support.
 
-The canonical detection engine will live in this package as it is built; the
-old ``run_batch`` stays here until its callers migrate. ``result`` is the
-Qt-free data model the engine, the CLI and the GUI share.
+The canonical engine lives in :mod:`polyx.core.detection_run.engine`; it is
+Qt-free and owns decode, ground-truth reading, measurement, matching, drawing
+and the run folder. The old ``run_batch`` stays in ``legacy`` until its callers
+migrate, and ``load_run`` reopens a canonical folder without Qt.
 """
 
+from .config import CalibrationPolicy, ModelSpec, RunConfig
+from .engine import RunDirNotEmpty, RunFailed, run_detection
 from .legacy import IMAGE_EXTS, run_batch
-from .result import ImageResult, ModelInfo, RunParams
+from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult
+from .schema import DETECTION_COLUMNS, SCHEMA_VERSION, load_run
 
-__all__ = ["IMAGE_EXTS", "ImageResult", "ModelInfo", "RunParams", "run_batch"]
+__all__ = [
+    "DETECTION_COLUMNS",
+    "IMAGE_EXTS",
+    "SCHEMA_VERSION",
+    "CalibrationPolicy",
+    "ImageResult",
+    "ModelExecution",
+    "ModelInfo",
+    "ModelSpec",
+    "RunConfig",
+    "RunDirNotEmpty",
+    "RunFailed",
+    "RunParams",
+    "RunResult",
+    "load_run",
+    "run_batch",
+    "run_detection",
+]
