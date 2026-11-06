@@ -64,7 +64,7 @@ src/                      # Source code (installable package)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
     │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
-    │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-view naming
+    │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
     │   ├── detection_run.py  # Headless detection engine
     │   ├── training.py       # Headless training engine
@@ -598,7 +598,7 @@ compute_box_size_um() → diam_um (if um_per_px calibrated)
     ↓
 ImageResult
     ↓
-cv2.rectangle() + annotation → PNG
+polyx.core.annotate (triptych + run-view naming) → PNG
     ↓
 <user data dir>/runs/YYYYMMDD_HHMMSS/
 ```

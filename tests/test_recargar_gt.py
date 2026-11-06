@@ -188,6 +188,32 @@ def test_reload_redraw_golden_combined_and_gt_views(qapp, tmp_path):
     )
 
 
+def test_reload_with_an_empty_gt_file_keeps_the_gt_view(qapp, tmp_path):
+    """A reviewed plate with zero boxes still writes its ``_gt`` view.
+
+    The GT file exists (the plate was reviewed and nothing was counted),
+    which is not the same as no GT file: the GT view is the untouched plate
+    and the combined view is the predictions alone.
+    """
+    st, result = _reload_state(tmp_path, gt_text="")
+
+    summary = reload_gt(st)
+
+    assert summary["cambiadas"] == ["plate.png"]
+    assert result.has_gt is True
+    assert result.gt == []
+    assert result.annotated_path is not None
+    assert result.annotated_path.name == "0000_plate_annot.png"
+    assert result.gt_path is not None
+    assert result.gt_path.name == "0000_plate_gt.png"
+    assert result.pred_path is None
+    # The combined view carries no GT boxes, so it is the predictions render.
+    assert (
+        _sha(result.annotated_path)
+        == "f683e1d1268a40eae62a6d67de6f6ca608bdc1b9c3edea06108601329af42866"
+    )
+
+
 def test_reload_without_gt_redraws_only_combined_view(qapp, tmp_path):
     """A stale GT that no longer has a ``.txt`` drops the ``_gt`` view.
 

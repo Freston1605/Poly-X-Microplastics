@@ -151,6 +151,21 @@ def test_triptych_without_gt_merges_the_views():
     assert views.combined is views.pred
 
 
+def test_triptych_with_an_empty_gt_file_keeps_the_gt_view():
+    # A reviewed plate with nothing to count still has a GT file. It must
+    # not look like a plate without ground truth: the GT view exists (the
+    # untouched plate) and the combined view is the predictions alone.
+    views = A.triptych(_plate(), [_pet()], [], has_gt=True)
+    assert views.gt is not None
+    assert np.array_equal(views.gt, _plate())
+    assert np.array_equal(views.combined, views.pred)
+
+
+def test_triptych_infers_has_gt_from_the_boxes_by_default():
+    assert A.triptych(_plate(), [_pet()], []).gt is None
+    assert A.triptych(_plate(), [_pet()], [_gt_below()]).gt is not None
+
+
 # ── Goldens: the style pinned, so any change is deliberate ────────────────
 
 import hashlib  # noqa: E402

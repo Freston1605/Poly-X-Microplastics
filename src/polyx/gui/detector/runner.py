@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
+from polyx.core.annotate import run_label_path, save_view, triptych
 from polyx.core.detect import make_detector
 from polyx.core.detect.yolo import Detection
 from polyx.core.image_io import read_image
@@ -30,56 +30,8 @@ from polyx.core.paths import RUNS_DIR
 from polyx.core.provenance import provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image
-from polyx.gui import theme as T
 
 from .state import DetectorState, ImageResult
-
-
-def _draw_annotated(img_bgr: np.ndarray, dets, color_for, label_for) -> np.ndarray:
-    """Draws the boxes with a line width proportional to the image size.
-
-    With a fixed 2 px width the annotations became invisible on the full
-    plates: a 4096 px photo is rescaled to 1100 to embed it in the report, so
-    that line ended up measuring half a pixel. Scaling with the longer side, a
-    plate is drawn with ~6 px (the same as paper/recomponer_placas.py) and a
-    1630 px crop keeps its 2.
-    """
-    out = img_bgr.copy()
-    side = max(out.shape[:2])
-    thickness = max(2, int(round(side / 700)))  # noqa: RUF046
-    scale_txt = max(0.5, side / 3000)
-    thickness_txt = max(1, int(round(scale_txt * 2)))  # noqa: RUF046
-
-    for d in dets:
-        c = color_for(d)
-        x1, y1, x2, y2 = int(d.x1), int(d.y1), int(d.x2), int(d.y2)
-        cv2.rectangle(out, (x1, y1), (x2, y2), c, thickness)
-        label = label_for(d)
-        # The number comes before everything else: it is what one looks for when coming
-        # from the report table.
-        if getattr(d, "number", None):
-            label = f"{d.number}. {label}" if label else str(d.number)
-        if label:
-            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, scale_txt, thickness_txt)
-            margin = max(4, thickness * 2)
-            cv2.rectangle(out, (x1, y1 - th - margin), (x1 + tw + margin, y1), c, -1)
-            cv2.putText(
-                out,
-                label,
-                (x1 + margin // 2, y1 - margin // 2),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                scale_txt,
-                (255, 255, 255),
-                thickness_txt,
-                cv2.LINE_AA,
-            )
-    return out
-
-
-def _color_bgr_for_class(name: str):
-    hex_ = T.CLASS_COLOR_HEX.get(name, T.FALLBACK_COLOR_HEX).lstrip("#")
-    r, g, b = int(hex_[0:2], 16), int(hex_[2:4], 16), int(hex_[4:6], 16)
-    return (b, g, r)
 
 
 @dataclass
@@ -155,34 +107,19 @@ class DetectorRunner(QThread):
                 reg["fallback_en"].append(img_path.name)
 
     def _annotate_images(self, img_bgr, preds, gts, has_gt):
-        """Render the three annotated views: predictions, predictions+GT, GT only."""
-        # 1) Model predictions (YOLO boxes in class color).
-        pred_img = _draw_annotated(
+        """Render the three views through the annotation module's composer.
+
+        ``has_gt`` is explicit so a reviewed plate with zero GT boxes keeps
+        its GT view, instead of looking like a plate with no GT file.
+        """
+        views = triptych(
             img_bgr,
             preds,
-            color_for=lambda d: _color_bgr_for_class(d.class_name),
-            label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
+            gts,
+            pred_label_for=lambda d: f"{d.class_name} {d.conf:.2f}",
+            has_gt=has_gt,
         )
-        # 2) Combined (prediction + GT in cyan) for preview and error inspection.
-        #    With no GT, it matches pred.
-        combined = pred_img
-        gt_img = None
-        if has_gt:
-            combined = _draw_annotated(
-                pred_img,
-                gts,
-                color_for=lambda d: (255, 200, 80),
-                label_for=lambda d: f"GT {d.class_name}",
-            )
-            # 3) Ground Truth only (real boxes in class color)
-            #    over the original image → side-by-side view.
-            gt_img = _draw_annotated(
-                img_bgr,
-                gts,
-                color_for=lambda d: _color_bgr_for_class(d.class_name),
-                label_for=lambda d: f"{d.class_name}",
-            )
-        return pred_img, combined, gt_img
+        return views.pred, views.combined, views.gt
 
     def _save_outputs(
         self, state, slot, idx_img, img_path, W, H, preds, combined, pred_img, gt_img, has_gt
@@ -198,19 +135,9 @@ class DetectorRunner(QThread):
         sub = state.run_dir / slot.alias
         sub.mkdir(parents=True, exist_ok=True)
 
-        def _encode_and_save(image, suffix: str):
-            if image is None:
-                return None
-            is_ok, buf = cv2.imencode(".png", image)
-            if not is_ok:
-                return None
-            destination = sub / f"{idx_img:04d}_{img_path.stem}{suffix}.png"
-            destination.write_bytes(bytes(buf))
-            return destination
-
-        annotated_path = _encode_and_save(combined, "_annot")
-        pred_path = _encode_and_save(pred_img, "_pred")
-        gt_path = _encode_and_save(gt_img, "_gt") if has_gt else None
+        annotated_path = save_view(combined, sub, idx_img, img_path.stem, "_annot")
+        pred_path = save_view(pred_img, sub, idx_img, img_path.stem, "_pred")
+        gt_path = save_view(gt_img, sub, idx_img, img_path.stem, "_gt") if has_gt else None
 
         # The boxes in text, not only drawn: a PNG cannot be re-analyzed or
         # reopened for correction. The confidence goes as the sixth column,
@@ -221,7 +148,7 @@ class DetectorRunner(QThread):
         # lives, and dumping predictions on top would destroy the ground
         # truth irrecoverably.
         write_lines(
-            sub / "labels" / f"{idx_img:04d}_{img_path.stem}.txt",
+            run_label_path(sub / "labels", idx_img, img_path.stem),
             [bbox_from(d, W, H) for d in preds],
             include_conf=True,
         )
