@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -24,21 +24,20 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
 )
 
 from polyx.core.i18n import _, ngettext
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import BboxCanvas
 from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
-    "Microplásticos Nile Red": ["PET", "PP", "LDPE"],
-    "General (1 clase)": ["objeto"],
-    "Personalizado": [],
+    "Nile Red microplastics": ["PET", "PP", "LDPE"],
+    "General (1 class)": ["objeto"],
+    "Custom": [],
 }
 
 # Colors matching those of the canvas
@@ -57,12 +56,13 @@ _CLS_COLORS = [
 class LabelerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "etiquetador")
         self.resize(1400, 880)
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = LabelerState()
         self._pre_model = None  # YoloModel loaded on demand
+        self._pre_model_name = ""
 
         # Thumbnails in the background: generating them all at once froze the
         # window for ~9 s with 552 crops, because each one decodes the full
@@ -71,8 +71,50 @@ class LabelerWindow(QMainWindow):
         self._thumb_timer = QTimer(self)
         self._thumb_timer.timeout.connect(self._process_thumbs)
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        self._build_ui()
+
+        self._connect_signals()
+        self._install_shortcuts()
+        self._apply_preset("Nile Red microplastics")
+
+        # ── Auto-save every 60 s ──
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_timer.start(60_000)
+
+    # ── Language ───────────────────────────────────────────────
+    def changeEvent(self, event):
+        if event.type() == QEvent.LanguageChange:
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+            QTimer.singleShot(0, self.retranslate)
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
+        index = self.state.current_idx
+        keep_zoom = self.canvas.keep_zoom
+        self._build_ui()
+        marca.titular(self, "etiquetador")
+        self.chk_zoom.setChecked(keep_zoom)
+        self.canvas.keep_zoom = keep_zoom
+        if self._pre_model_name:
+            self.lbl_model.setText(self._pre_model_name)
+        if self.state.images:
+            self._on_images_loaded(self.state.images)
+        self._rebuild_class_buttons(self.state.class_names)
+        self._on_active_class_changed(self.state.active_class)
+        if 0 <= index < len(self.state.images):
+            self.state.image_changed.emit(index)
+        self._on_annotations_changed()
+        self._update_progress()
+
+    def _build_ui(self) -> None:
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
+
+        central = reset_central_widget(self)
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -81,15 +123,6 @@ class LabelerWindow(QMainWindow):
         self.canvas = BboxCanvas(self.state)
         root.addWidget(self.canvas, 1)
         root.addWidget(self._build_right())
-
-        self._connect_signals()
-        self._install_shortcuts()
-        self._apply_preset("Microplásticos Nile Red")
-
-        # ── Auto-save every 60 s ──
-        self._autosave_timer = QTimer(self)
-        self._autosave_timer.timeout.connect(self._autosave)
-        self._autosave_timer.start(60_000)
 
     # ── Left panel ────────────────────────────────────────────
     def _build_left(self) -> QFrame:
@@ -100,7 +133,7 @@ class LabelerWindow(QMainWindow):
         lv.setContentsMargins(12, 14, 12, 12)
         lv.setSpacing(8)
 
-        lv.addWidget(LogoBadge("POLY-X", "Etiquetador"))
+        lv.addWidget(LogoBadge("POLY-X", _("Labeler")))
         lv.addSpacing(6)
 
         btn_open = QPushButton(_("Open folder…"))
@@ -180,8 +213,11 @@ class LabelerWindow(QMainWindow):
         # Preset
         rv.addWidget(QLabel(_("Class preset:")))
         self.combo_preset = QComboBox()
-        self.combo_preset.addItems(_PRESETS.keys())
-        self.combo_preset.currentTextChanged.connect(self._apply_preset)
+        for _name in _PRESETS:
+            self.combo_preset.addItem(_(_name), _name)
+        self.combo_preset.currentIndexChanged.connect(
+            lambda _index: self._apply_preset(self.combo_preset.currentData())
+        )
         rv.addWidget(self.combo_preset)
 
         rv.addWidget(HLine())
@@ -399,7 +435,8 @@ class LabelerWindow(QMainWindow):
             from polyx.core.detect.yolo import YoloModel
 
             self._pre_model = YoloModel(path)
-            self.lbl_model.setText(Path(path).name)
+            self._pre_model_name = Path(path).name
+            self.lbl_model.setText(self._pre_model_name)
             self._set_status(_("● Model loaded"), T.OK)
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))
@@ -622,7 +659,9 @@ class LabelerWindow(QMainWindow):
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:
-            lines = [f"{n} caja(s)"] + [f"  {k}: {v}" for k, v in cls_counts.items()]
+            lines = [ngettext("%(count)d box", "%(count)d boxes", n) % {"count": n}] + [
+                f"  {k}: {v}" for k, v in cls_counts.items()
+            ]
             self.lbl_box_info.setText("\n".join(lines))
         else:
             self.lbl_box_info.setText(_("No annotations"))

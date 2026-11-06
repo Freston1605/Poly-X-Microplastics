@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detection_run import RunStatus
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos, pdf_export
 from polyx.gui import theme as T
@@ -32,8 +32,8 @@ from ._base import DetectorPage
 
 class ReportPage(DetectorPage):
     STEP_N = 9
-    STEP_TITLE = _("Detection report")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Detection report")
+    STEP_DESCRIPTION = lazy(
         "Generates a self-contained HTML report (every image embedded as base64, so nothing breaks when you send it to someone else) with methods, metrics, charts, a comparison gallery, per-sample counts and error analysis. You can export it straight to PDF to send it, or save each photo separately with its labels drawn on."
     )
 

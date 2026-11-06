@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
@@ -58,8 +58,8 @@ def _read_results_csv(run_dir: Path) -> dict | None:
 
 class ComparePage(TrainerPage):
     PAGE_ICON = "resultados"
-    PAGE_TITLE = _("Compare runs")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Compare runs")
+    PAGE_DESCRIPTION = lazy(
         "A table of every previous training run in runs_train/. Useful for comparing configurations and picking the best model."
     )
 
@@ -81,7 +81,15 @@ class ComparePage(TrainerPage):
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
-            ["Run", "Épocas", "mAP@50", "mAP@50-95", "Precision", "Recall", "Box loss"]
+            [
+                _("Run"),
+                _("Epochs"),
+                "mAP@50",
+                "mAP@50-95",
+                _("Precision"),
+                _("Recall"),
+                _("Box loss"),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)

@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import _, language
+from polyx.core.i18n import _, language, lazy
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -203,8 +203,8 @@ class _ReportWorker(QThread):
 
 class ReportPage(TrainerPage):
     PAGE_ICON = "reporte"
-    PAGE_TITLE = _("Training report")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Training report")
+    PAGE_DESCRIPTION = lazy(
         "Generates a self-contained HTML report with the curves and metrics of the chosen run. Ready to convert to PDF (Ctrl+P in the browser)."
     )
 

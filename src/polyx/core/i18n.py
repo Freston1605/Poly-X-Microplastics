@@ -317,8 +317,14 @@ def set_language(tag: str) -> bool:
 
 
 def when_changing(function: Callable[[str], None]) -> None:
-    """Register a callback run after every successful language change."""
-    _subscribers.append(function)
+    """Register a callback run after every successful language change.
+
+    Registering the same callback twice is a no-op: a module reloaded by a
+    test or a window created after the registry was reset must be able to
+    ask again without the callback firing twice.
+    """
+    if function not in _subscribers:
+        _subscribers.append(function)
 
 
 def catalog_info() -> dict[str, Any]:

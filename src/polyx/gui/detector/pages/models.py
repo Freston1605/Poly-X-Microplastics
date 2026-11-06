@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.paths import DEFAULT_MODEL
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -142,11 +142,20 @@ class _ModelSlotCard(QFrame):
         self.lbl_status.setText(text)
         self.lbl_status.setStyleSheet(f"color: {color}; font-size: 9pt; border: none;")
 
+    def set_slot(self, slot) -> None:
+        """Show a slot's persisted alias and path after a rebuild."""
+        self.ed_alias.setText(slot.alias)
+        self.ed_path.setText(str(slot.path) if slot.path else "")
+        if slot.path is not None:
+            self.set_loaded_status(_("✓ valid file"), T.OK)
+        else:
+            self.set_loaded_status("", T.INK3)
+
 
 class ModelsPage(DetectorPage):
     STEP_N = 1
-    STEP_TITLE = _("Models")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Models")
+    STEP_DESCRIPTION = lazy(
         "Load up to 3 trained .pt models for microplastics detection. If you load more than one, they are compared automatically in the final report."
     )
 
@@ -193,10 +202,22 @@ class ModelsPage(DetectorPage):
         else:
             self.lbl_default.setText(_("Not found in the project root."))
 
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Re-read the slots from the state (used after a language change)."""
+        for i, card in enumerate(self.slot_cards):
+            slot = self.state.model_slots[i]
+            if slot.alias_default:
+                slot.alias = _("Model %(n)s") % {"n": i + 1}
+            card.set_slot(slot)
+
     # ──────────────────────────────────────────
     def _on_slot_changed(self, idx: int, alias: str, path_str: str):
         slot = self.state.model_slots[idx]
-        slot.alias = alias or _("Model %(n)s") % {"n": idx + 1}
+        default_alias = _("Model %(n)s") % {"n": idx + 1}
+        slot.alias = alias or default_alias
+        slot.alias_default = not alias or alias == default_alias
         if path_str:
             p = Path(path_str)
             if p.exists() and p.suffix.lower() == ".pt":

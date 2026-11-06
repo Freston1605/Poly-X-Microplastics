@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
 from polyx.gui import theme as T
@@ -28,8 +28,8 @@ from ._base import DetectorPage
 
 class ErrorsPage(DetectorPage):
     STEP_N = 7
-    STEP_TITLE = _("Errors")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Errors")
+    STEP_DESCRIPTION = lazy(
         "List of problematic boxes (only with Ground Truth). False Positives: detection with no nearby GT. False Negatives: GT not detected. Misclassified: located correctly, wrong class."
     )
 
@@ -44,9 +44,9 @@ class ErrorsPage(DetectorPage):
         self.combo_type = QComboBox()
         # Displayed text (full name) + internal data (short code)
         self.combo_type.addItem(_("All"), "ALL")
-        self.combo_type.addItem(LABEL_FP, "FP")
-        self.combo_type.addItem(LABEL_FN, "FN")
-        self.combo_type.addItem(LABEL_MISCLS, "MISCLS")
+        self.combo_type.addItem(str(LABEL_FP), "FP")
+        self.combo_type.addItem(str(LABEL_FN), "FN")
+        self.combo_type.addItem(str(LABEL_MISCLS), "MISCLS")
         self.combo_type.currentIndexChanged.connect(self.refresh)
         row.addWidget(self.combo_type)
 
@@ -67,7 +67,14 @@ class ErrorsPage(DetectorPage):
         c2, l2 = self.card(_("Boxes with errors"), "errores")
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(
-            ["Modelo", "Imagen", "Tipo", "Clase GT", "Clase Pred", "Conf"]
+            [
+                _("Model"),
+                _("Image"),
+                _("Type"),
+                _("GT class"),
+                _("Pred class"),
+                _("Conf"),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -145,7 +152,7 @@ class ErrorsPage(DetectorPage):
         for i, (alias, p, code, cgt, cpr, cf) in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(alias))
             self.table.setItem(i, 1, QTableWidgetItem(p.name))
-            it = QTableWidgetItem(label_by_code.get(code, code))
+            it = QTableWidgetItem(str(label_by_code.get(code, code)))
             it.setTextAlignment(Qt.AlignCenter)
             it.setForeground(QBrush(QColor(badge_colors.get(code, T.INK))))
             self.table.setItem(i, 2, it)

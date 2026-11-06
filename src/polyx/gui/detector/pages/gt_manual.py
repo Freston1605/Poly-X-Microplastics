@@ -52,7 +52,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.image_io import read_image
 from polyx.core.labels import (
     STUDY_CLASSES,
@@ -632,8 +632,8 @@ class AnnotCanvas(QGraphicsView):
 # ────────────────────────────────────────────────────────────────────
 class GTManualPage(DetectorPage):
     STEP_N = 3
-    STEP_TITLE = _("Manual GT")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Manual GT")
+    STEP_DESCRIPTION = lazy(
         "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · Ctrl+Z/Y: undo/redo · ←/→: previous/next image (autosaves)."
     )
 
@@ -758,7 +758,9 @@ class GTManualPage(DetectorPage):
 
     # ── Image list ──────────────────────────────────────────
     def _refresh_list(self):
-        # Preserve the selection if it exists
+        # Preserve the selection if it exists. The language change rebuilds
+        # this page, so the image the user was annotating lives in the state.
+        wanted = self.state.gt_image
         prev = self.list.currentRow()
         self.list.blockSignals(True)
         self.list.clear()
@@ -771,6 +773,11 @@ class GTManualPage(DetectorPage):
                 it.setText(f"✓ {p.name}")
             self.list.addItem(it)
         self.list.blockSignals(False)
+        if wanted is not None:
+            for row in range(self.list.count()):
+                if Path(self.list.item(row).data(Qt.UserRole)) == wanted:
+                    prev = row
+                    break
         if 0 <= prev < self.list.count():
             self.list.setCurrentRow(prev)
         elif self.list.count() > 0:
@@ -805,6 +812,7 @@ class GTManualPage(DetectorPage):
             return
         path = Path(it.data(Qt.UserRole))
         self._current_path = path
+        self.state.gt_image = path
         self.lbl_image_name.setText(path.name)
         existing: list[Detection] = []
         gt_txt = find_label_file(path, self.state.gt_folder)

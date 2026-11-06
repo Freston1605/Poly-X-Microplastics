@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -71,8 +71,8 @@ class _PreviewSlot(QFrame):
 
 class RunPage(DetectorPage):
     STEP_N = 5
-    STEP_TITLE = _("Run")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Run")
+    STEP_DESCRIPTION = lazy(
         "Starts inference. You will see live progress, previews of annotated images, and you can cancel at any time."
     )
 

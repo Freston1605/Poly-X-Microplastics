@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QKeySequence,
     QShortcut,
@@ -32,15 +32,15 @@ from PySide6.QtWidgets import (
 )
 
 from polyx import __version__
-from polyx.core.i18n import _, language
+from polyx.core.i18n import _
 from polyx.core.paths import ROOT
 from polyx.core.platform import launch_updater, open_in_system
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.microscope_panel import MicroscopePanel
 from polyx.gui.preferencias import PreferencesDialog
 from polyx.gui.updates import UPDATER, SearchUpdates, can_update
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 # ──────────────────────────────────────────────────────────────────────
 # Instrumented startup: the launcher leaves a JSONL trace in `app.jsonl`.
@@ -295,6 +295,7 @@ class ModuleCard(QFrame):
 class LauncherWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "launcher")
         self.resize(1180, 820)
 
@@ -308,6 +309,34 @@ class LauncherWindow(QMainWindow):
         QTimer.singleShot(1200, self._search.lookfor)
 
         self._build_ui()
+        self._install_shortcuts()
+
+    # ── Language ───────────────────────────────────────────────
+    def changeEvent(self, event):
+        if event.type() == QEvent.LanguageChange:
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+            QTimer.singleShot(0, self.retranslate)
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window so every text is read from the new catalog."""
+        if not i18n_qt.is_alive(self):
+            return
+        self._build_ui()
+        marca.titular(self, "launcher")
+
+    def _install_shortcuts(self) -> None:
+        # Built once: a rebuild replaces the central widget, not the window,
+        # so re-adding them on every language change would duplicate them.
+        for tecla, action in (
+            ("Alt+1", self.open_detector),
+            ("Alt+2", self.open_trainer),
+            ("Alt+3", self.open_labeler),
+            ("Alt+4", self.open_viewer),
+            ("Ctrl+,", self._open_preferences),
+        ):
+            QShortcut(QKeySequence(tecla), self, activated=action)
 
     def _build_ui(self):
         """Builds the whole window with the active palette.
@@ -319,8 +348,7 @@ class LauncherWindow(QMainWindow):
         """
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG}; }}")
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -332,7 +360,7 @@ class LauncherWindow(QMainWindow):
         tb = QHBoxLayout(topbar)
         tb.setContentsMargins(24, 0, 24, 0)
         tb.setSpacing(12)
-        tb.addWidget(LogoBadge("POLY-X", "Microplastics analytics suite"))
+        tb.addWidget(LogoBadge("POLY-X", _("Microplastics analytics suite")))
         tb.addStretch(1)
 
         # Preferences. The language used to live here as a loose dropdown; now
@@ -541,35 +569,11 @@ class LauncherWindow(QMainWindow):
         foot.addWidget(manual_btn)
         body.addLayout(foot)
 
-        # Keyboard shortcuts for the four modules. People who use the program
-        # daily always open the same one, and reaching it with Alt+1 saves the trip to the
-        # mouse every time.
-        for tecla, action in (
-            ("Alt+1", self.open_detector),
-            ("Alt+2", self.open_trainer),
-            ("Alt+3", self.open_labeler),
-            ("Alt+4", self.open_viewer),
-            ("Ctrl+,", self._open_preferences),
-        ):
-            QShortcut(QKeySequence(tecla), self, activated=action)
-
     # ── Preferences ────────────────────────────────────────────
     def _open_preferences(self):
-        language_before = language()
         dlg = PreferencesDialog(self)
         dlg.theme_changed.connect(lambda _unused: self._build_ui())
         dlg.exec()
-        if language() != language_before:
-            # The language cannot be applied hot: each widget fixed its
-            # text when it was built. The user is warned once, on close, and not on every
-            # dialog click.
-            QMessageBox.information(
-                self,
-                _("Language"),
-                _(
-                    "The language will be applied when you reopen Poly-X. Modules you open from now on already use the new language."
-                ),
-            )
 
     # ── Updates ────────────────────────────────────────────────
     def _notify_version_new(self, sha_short: str):

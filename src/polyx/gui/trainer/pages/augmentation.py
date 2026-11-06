@@ -1,4 +1,4 @@
-"""Page 4 — `Augmentación`. Presets (`Suave`/`Medio`/`Fuerte`) + manual sliders."""
+"""Page 4 — `Augmentation`. Presets (`Light`/`Medium`/`Strong`) + manual sliders."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QSlider,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.gui import theme as T
 
 from ..state import AUG_LEVELS
@@ -46,8 +46,8 @@ def _slider_row(
 
 class AugmentationPage(TrainerPage):
     PAGE_ICON = "augmentacion"
-    PAGE_TITLE = _("Data augmentation")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Data augmentation")
+    PAGE_DESCRIPTION = lazy(
         "Artificially increases the variety of the dataset. Useful for small datasets (< 500 images). Too much augmentation and the model will not converge; too little and it overfits."
     )
 
@@ -60,9 +60,11 @@ class AugmentationPage(TrainerPage):
         row.setSpacing(8)
         row.addWidget(QLabel(_("Level:")))
         self.combo = QComboBox()
-        self.combo.addItems(list(AUG_LEVELS.keys()))
-        self.combo.setCurrentText(state.aug.level)
-        self.combo.currentTextChanged.connect(self._apply_level)
+        for _name in AUG_LEVELS:
+            self.combo.addItem(_(_name), _name)
+        index = self.combo.findData(state.aug.level)
+        self.combo.setCurrentIndex(max(0, index))
+        self.combo.currentIndexChanged.connect(self._apply_level)
         self.combo.setMinimumWidth(180)
         row.addWidget(self.combo)
         row.addStretch(1)
@@ -83,13 +85,13 @@ class AugmentationPage(TrainerPage):
         c2, l2 = self.card(_("Manual sliders (advanced)"), "ajustes")
 
         sets = [
-            ("HSV-H (hue):", "hsv_h", 0.1),
-            ("HSV-S (saturación):", "hsv_s", 1.0),
-            ("HSV-V (valor):", "hsv_v", 1.0),
-            ("Fliplr (horizontal):", "fliplr", 1.0),
-            ("Mosaic:", "mosaic", 1.0),
-            ("Mixup:", "mixup", 1.0),
-            ("Copy-paste:", "copy_paste", 1.0),
+            (_("HSV-H (hue):"), "hsv_h", 0.1),
+            (_("HSV-S (saturation):"), "hsv_s", 1.0),
+            (_("HSV-V (value):"), "hsv_v", 1.0),
+            (_("Fliplr (horizontal):"), "fliplr", 1.0),
+            (_("Mosaic:"), "mosaic", 1.0),
+            (_("Mixup:"), "mixup", 1.0),
+            (_("Copy-paste:"), "copy_paste", 1.0),
         ]
         self.sliders: dict[str, QSlider] = {}
         self.value_lbls: dict[str, QLabel] = {}
@@ -121,7 +123,7 @@ class AugmentationPage(TrainerPage):
     def _reload_from_state(self):
         a = self.state.aug
         self.combo.blockSignals(True)
-        self.combo.setCurrentText(a.level)
+        self.combo.setCurrentIndex(max(0, self.combo.findData(a.level)))
         self.combo.blockSignals(False)
         for attr, slider in self.sliders.items():
             mx = 0.1 if attr == "hsv_h" else 1.0
@@ -131,7 +133,8 @@ class AugmentationPage(TrainerPage):
             slider.blockSignals(False)
             self.value_lbls[attr].setText(f"{val:.3f}")
 
-    def _apply_level(self, name: str):
+    def _apply_level(self, _index: int):
+        name = self.combo.currentData()
         if name not in AUG_LEVELS:
             return
         d = AUG_LEVELS[name]
@@ -144,5 +147,5 @@ class AugmentationPage(TrainerPage):
 
     def _on_slider(self, attr: str, value: float):
         setattr(self.state.aug, attr, value)
-        # touching a slider manually switches to `Personalizado`
+        # touching a slider manually switches to `Custom`
         # (the level is kept visually; it is not critical)

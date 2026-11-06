@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detect.protocol import find_gt_for_image
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -28,8 +28,8 @@ from ._base import DetectorPage
 
 class ImagesPage(DetectorPage):
     STEP_N = 2
-    STEP_TITLE = _("Images")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Images")
+    STEP_DESCRIPTION = lazy(
         "Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in the same folder or in a sibling 'labels/' folder, they are loaded and enable error analysis."
     )
 
@@ -90,7 +90,7 @@ class ImagesPage(DetectorPage):
         l2.addWidget(self.lbl_count)
 
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["Imagen", "Carpeta", "GT"])
+        self.table.setHorizontalHeaderLabels([_("Image"), _("Folder"), "GT"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)

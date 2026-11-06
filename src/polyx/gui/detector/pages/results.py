@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _
+from polyx.core.i18n import _, lazy
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
 from polyx.gui import iconos
@@ -41,8 +41,8 @@ def histogram_backgrounds() -> tuple[str, str]:
 
 class ResultsPage(DetectorPage):
     STEP_N = 6
-    STEP_TITLE = _("Results")
-    STEP_DESCRIPTION = _(
+    STEP_TITLE = lazy("Results")
+    STEP_DESCRIPTION = lazy(
         "Quantitative summary of the analysis. For full charts and a per-image gallery, generate the HTML report in the Report tab."
     )
 
@@ -57,9 +57,9 @@ class ResultsPage(DetectorPage):
         self.kpi_dets = KPICard(_("Detections"), T.ACCENT)
         self.kpi_conf = KPICard(_("Mean confidence"), T.VIO)
         self.kpi_size = KPICard(_("Mean size (μm)"), T.WARN)
-        self.kpi_tp = KPICard(LABEL_TP, T.OK)
-        self.kpi_fp = KPICard(LABEL_FP, T.WARN)
-        self.kpi_fn = KPICard(LABEL_FN, T.ERR)
+        self.kpi_tp = KPICard(str(LABEL_TP), T.OK)
+        self.kpi_fp = KPICard(str(LABEL_FP), T.WARN)
+        self.kpi_fn = KPICard(str(LABEL_FN), T.ERR)
         self.kpi_f1 = KPICard("F1", T.ACCENT_D)
         grid.addWidget(self.kpi_imgs, 0, 0)
         grid.addWidget(self.kpi_dets, 0, 1)
@@ -146,7 +146,16 @@ class ResultsPage(DetectorPage):
         c3, l3 = self.card(_("Per image"), "imagenes")
         self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels(
-            ["Modelo", "Imagen", "Pred", "GT", LABEL_TP, LABEL_FP, LABEL_FN, "Conf media"]
+            [
+                _("Model"),
+                _("Image"),
+                _("Pred"),
+                "GT",
+                str(LABEL_TP),
+                str(LABEL_FP),
+                str(LABEL_FN),
+                _("Mean conf."),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)

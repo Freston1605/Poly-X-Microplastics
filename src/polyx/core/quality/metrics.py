@@ -7,19 +7,23 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from polyx.core.detect.protocol import Instance as Detection
+from polyx.core.i18n import lazy
 
 # ────────────────────────────────────────────────────────────────────
-# Labels for display (Spanish).
+# Labels for display, resolved when they are shown.
 #
 # IMPORTANT: the internal logic still uses the short attributes
 # tp / fp / fn / miscls (and the precision/recall/f1 properties). These
 # constants ONLY change how they are shown to the end user in the
 # interface, the console and the reports; the computation is unaffected.
+#
+# They are lazy because a table header or a KPI card built at import time
+# would otherwise freeze the language of the moment.
 # ────────────────────────────────────────────────────────────────────
-LABEL_TP = "Verdaderos Positivos"
-LABEL_FP = "Falsos Positivos"
-LABEL_FN = "Falsos Negativos"
-LABEL_MISCLS = "Mal Clasificados"
+LABEL_TP = lazy("True positives")
+LABEL_FP = lazy("False positives")
+LABEL_FN = lazy("False negatives")
+LABEL_MISCLS = lazy("Misclassified")
 
 # Code -> readable label map (useful for tables/filters)
 LABELS_BY_CODE = {

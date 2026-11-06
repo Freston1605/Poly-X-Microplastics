@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -33,9 +33,9 @@ from PySide6.QtWidgets import (
 from polyx.core.annotate import find_run_labels
 from polyx.core.i18n import _, ngettext
 from polyx.core.paths import RUNS_DIR
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
@@ -59,17 +59,84 @@ class ViewerWindow(QMainWindow):
 
         super().__init__()
 
+        i18n_qt.activate()
+
         marca.titular(self, "visor")
 
         self.resize(1420, 900)
 
+        self.state = ViewerState()
+        self._model_name = ""
+
+        self._build_ui()
+
+        self._connect_signals()
+
+        self._install_shortcuts()
+
+        self.setAcceptDrops(True)
+
+    # ── Language ───────────────────────────────────────────────
+
+    def changeEvent(self, event):
+
+        if event.type() == QEvent.LanguageChange:
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+
+            QTimer.singleShot(0, self.retranslate)
+
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
+
+        conf = self.spin_conf.value()
+
+        imgsz = self.spin_imgsz.value()
+
+        gpu = self.chk_gpu.isChecked()
+
+        self._build_ui()
+
+        marca.titular(self, "visor")
+
+        self.spin_conf.setValue(conf)
+
+        self.spin_imgsz.setValue(imgsz)
+
+        self.chk_gpu.setChecked(gpu)
+
+        if self._model_name:
+            self.lbl_model.setText(self._model_name)
+
+        self.nav_frame.setVisible(len(self.state.images) > 1)
+
+        if self.state.current_image is not None:
+            self._on_image_loaded(self.state.current_image)
+
+        else:
+            self._update_status_bar()
+
+        if self.state.detections:
+            self._on_detections_changed(self.state.detections)
+
+        if self.state.um_per_px > 0:
+            self.lbl_calib_result.setText(_("%(value).4f μm/px") % {"value": self.state.um_per_px})
+
+            self.lbl_calib_result.setStyleSheet(
+                f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;"
+            )
+
+            self._update_status_bar()
+
+    def _build_ui(self) -> None:
+
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
-        self.state = ViewerState()
-
-        central = QWidget()
-
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
 
         root = QHBoxLayout(central)
 
@@ -136,19 +203,13 @@ class ViewerWindow(QMainWindow):
 
         self._build_right_panel()
 
-        self._connect_signals()
-
-        self._install_shortcuts()
-
-        self.setAcceptDrops(True)
-
     # ── Right panel ─────────────────────────────────────────
 
     def _build_right_panel(self):
 
         rv = self._rv
 
-        rv.addWidget(LogoBadge("POLY-X", "Visor"))
+        rv.addWidget(LogoBadge("POLY-X", _("Viewer")))
 
         rv.addSpacing(4)
 
@@ -429,7 +490,9 @@ class ViewerWindow(QMainWindow):
 
         self.table = QTableWidget(0, 6)
 
-        self.table.setHorizontalHeaderLabels(["#", "Clase", "Tipo", "Largo μm", "Ancho μm", "Asp."])
+        self.table.setHorizontalHeaderLabels(
+            ["#", _("Class"), _("Type"), _("Length μm"), _("Width μm"), _("Asp.")]
+        )
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -597,7 +660,9 @@ class ViewerWindow(QMainWindow):
 
             self.state.model = YoloModel(path)
 
-            self.lbl_model.setText(Path(path).name)
+            self._model_name = Path(path).name
+
+            self.lbl_model.setText(self._model_name)
 
             self._set_status(_("● Model ready"), T.OK)
 
@@ -1236,13 +1301,13 @@ class ViewerWindow(QMainWindow):
 
         img = self.state.current_image
 
-        img_txt = img.name if img else "Sin imagen"
+        img_txt = img.name if img else _("No image")
 
         if self.state.um_per_px > 0:
             calib_txt = f"{self.state.um_per_px:.4f} μm/px"
 
         else:
-            calib_txt = "Sin calibración"
+            calib_txt = _("Not calibrated")
 
         n_det = len(self.state.detections)
 

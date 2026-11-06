@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import N_, _
+from polyx.core.i18n import N_, _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -65,8 +65,8 @@ class _ExportWorker(QThread):
 
 class ExportPage(TrainerPage):
     PAGE_ICON = "exportar"
-    PAGE_TITLE = _("Export model")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Export model")
+    PAGE_DESCRIPTION = lazy(
         "Converts the trained model to other production formats: ONNX (portable), TensorRT (fast on NVIDIA), TFLite (mobile), CoreML (Apple), and so on."
     )
 

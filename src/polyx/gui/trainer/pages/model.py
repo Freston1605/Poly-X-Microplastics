@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import N_, _
+from polyx.core.i18n import N_, _, lazy
 from polyx.gui import theme as T
 
 from ..state import PRESETS
@@ -32,8 +32,8 @@ SIZE_DESCRIPTIONS = [
 
 class ModelPage(TrainerPage):
     PAGE_ICON = "modelo"
-    PAGE_TITLE = _("Select model")
-    PAGE_DESCRIPTION = _(
+    PAGE_TITLE = lazy("Select model")
+    PAGE_DESCRIPTION = lazy(
         "Pick the preset that fits your case, or customize family and size. The 'Balanced' preset is recommended for most projects."
     )
 
@@ -55,9 +55,11 @@ class ModelPage(TrainerPage):
         row.setSpacing(8)
         row.addWidget(QLabel(_("Preset:")))
         self.combo_preset = QComboBox()
-        self.combo_preset.addItems(list(PRESETS.keys()))
-        self.combo_preset.setCurrentText(self.state.model.preset_name)
-        self.combo_preset.currentTextChanged.connect(self._on_preset)
+        for _name in PRESETS:
+            self.combo_preset.addItem(_(_name), _name)
+        index = self.combo_preset.findData(self.state.model.preset_name)
+        self.combo_preset.setCurrentIndex(max(0, index))
+        self.combo_preset.currentIndexChanged.connect(self._on_preset)
         self.combo_preset.setMinimumWidth(280)
         row.addWidget(self.combo_preset)
         row.addStretch(1)
@@ -164,7 +166,10 @@ class ModelPage(TrainerPage):
         l3.addLayout(row3)
         self.body.addWidget(c3)
 
-    def _on_preset(self, name: str):
+    def _on_preset(self, _index: int):
+        name = self.combo_preset.currentData()
+        if not name:
+            return
         self.state.apply_preset(name)
         self.state.model.preset_name = name
 
