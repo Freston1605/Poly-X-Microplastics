@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 20:04-0300\n"
+"POT-Creation-Date: 2026-11-06 20:08-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -322,6 +322,13 @@ msgstr "Dispositivo (mps/cpu):"
 msgid "Device (cpu):"
 msgstr "Dispositivo (cpu):"
 
+#: src/polyx/core/report_simple.py:95
+#, python-format
+msgid "... %(count)d more row omitted"
+msgid_plural "... %(count)d more rows omitted"
+msgstr[0] "... se omite %(count)d fila más"
+msgstr[1] "... se omiten %(count)d filas más"
+
 #: src/polyx/core/report_simple.py:54 src/polyx/core/report_simple.py:59
 msgid "Poly-X run report"
 msgstr "Informe de ejecución de Poly-X"
@@ -330,11 +337,18 @@ msgstr "Informe de ejecución de Poly-X"
 msgid "Run dir:"
 msgstr "Carpeta del run:"
 
-#: src/polyx/core/report_simple.py:76
+#: src/polyx/core/report_simple.py:73
+#, python-format
+msgid "%(count)d skipped image"
+msgid_plural "%(count)d skipped images"
+msgstr[0] "%(count)d imagen omitida"
+msgstr[1] "%(count)d imágenes omitidas"
+
+#: src/polyx/core/report_simple.py:77
 msgid "Images:"
 msgstr "Imágenes:"
 
-#: src/polyx/core/report_simple.py:76
+#: src/polyx/core/report_simple.py:77
 msgid "Detections:"
 msgstr "Detecciones:"
 
@@ -350,24 +364,10 @@ msgstr "Esquema:"
 msgid "Models:"
 msgstr "Modelos:"
 
-#: src/polyx/core/report_simple.py:83 src/polyx/gui/detector/pages/results.py:57
+#: src/polyx/core/report_simple.py:84 src/polyx/gui/detector/pages/results.py:57
 #: src/polyx/gui/report/figures.py:206 src/polyx/gui/report/sections.py:281
 msgid "Detections"
 msgstr "Detecciones"
-
-#: src/polyx/core/report_simple.py:95
-#, python-format
-msgid "... %(count)d more row omitted"
-msgid_plural "... %(count)d more rows omitted"
-msgstr[0] "... se omite %(count)d fila más"
-msgstr[1] "... se omiten %(count)d filas más"
-
-#: src/polyx/core/report_simple.py:74
-#, python-format
-msgid "%(count)d skipped image"
-msgid_plural "%(count)d skipped images"
-msgstr[0] "%(count)d imagen omitida"
-msgstr[1] "%(count)d imágenes omitidas"
 
 #: src/polyx/core/stats.py:48
 msgid "Fibre"

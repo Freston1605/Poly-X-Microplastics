@@ -86,6 +86,23 @@ def test_compact_report_renders_the_selected_language(tmp_path, selected_languag
     assert "Poly-X run report" in english
 
 
+def test_compact_report_uses_the_catalog_plural_forms(tmp_path, selected_language):
+    from polyx.core.report_simple import generate
+
+    run = _canonical_run(tmp_path)
+    payload = json.loads((run / "run.json").read_text(encoding="utf-8"))
+    payload["skipped_images"] = ["a.png", "b.png"]
+    (run / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    rows = ["image,class,conf"] + [f"plate{i}.png,PET,0.90" for i in range(502)]
+    (run / "detections.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    selected_language("es")
+    spanish = generate(run).read_text(encoding="utf-8")
+
+    assert "2 imágenes omitidas" in spanish
+    assert "se omiten 2 filas más" in spanish
+
+
 def test_a_saved_compact_report_keeps_the_language_it_was_generated_in(tmp_path, selected_language):
     from polyx.core.report_simple import generate
 

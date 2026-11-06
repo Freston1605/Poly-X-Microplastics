@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-06 20:04-0300\n"
+"POT-Creation-Date: 2026-11-06 20:08-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -319,6 +319,13 @@ msgstr ""
 msgid "Device (cpu):"
 msgstr ""
 
+#: src/polyx/core/report_simple.py:95
+#, python-format
+msgid "... %(count)d more row omitted"
+msgid_plural "... %(count)d more rows omitted"
+msgstr[0] ""
+msgstr[1] ""
+
 #: src/polyx/core/report_simple.py:54 src/polyx/core/report_simple.py:59
 msgid "Poly-X run report"
 msgstr ""
@@ -327,11 +334,18 @@ msgstr ""
 msgid "Run dir:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:76
+#: src/polyx/core/report_simple.py:73
+#, python-format
+msgid "%(count)d skipped image"
+msgid_plural "%(count)d skipped images"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/polyx/core/report_simple.py:77
 msgid "Images:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:76
+#: src/polyx/core/report_simple.py:77
 msgid "Detections:"
 msgstr ""
 
@@ -347,24 +361,10 @@ msgstr ""
 msgid "Models:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:83 src/polyx/gui/detector/pages/results.py:57
+#: src/polyx/core/report_simple.py:84 src/polyx/gui/detector/pages/results.py:57
 #: src/polyx/gui/report/figures.py:206 src/polyx/gui/report/sections.py:281
 msgid "Detections"
 msgstr ""
-
-#: src/polyx/core/report_simple.py:95
-#, python-format
-msgid "... %(count)d more row omitted"
-msgid_plural "... %(count)d more rows omitted"
-msgstr[0] ""
-msgstr[1] ""
-
-#: src/polyx/core/report_simple.py:74
-#, python-format
-msgid "%(count)d skipped image"
-msgid_plural "%(count)d skipped images"
-msgstr[0] ""
-msgstr[1] ""
 
 #: src/polyx/core/stats.py:48
 msgid "Fibre"

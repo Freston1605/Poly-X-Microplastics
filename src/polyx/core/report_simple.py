@@ -70,9 +70,10 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
         skipped = canonical.get("skipped_images") or []
         if skipped:
             skipped_count = len(skipped)
-            parts.append(
-                f"<p><b>{ngettext('%(count)d skipped image', '%(count)d skipped images', skipped_count) % {'count': skipped_count}}</b></p>"
-            )
+            label = ngettext(
+                "%(count)d skipped image", "%(count)d skipped images", skipped_count
+            ) % {"count": skipped_count}
+            parts.append(f"<p><b>{label}</b></p>")
     parts.append(f"<p>{_('Images:')} {images} &nbsp; {_('Detections:')} {detections}</p>")
     if metrics:
         parts.append(
@@ -91,9 +92,10 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     parts.append("</table>")
     if len(rows) > 500:
         omitted = len(rows) - 500
-        parts.append(
-            f"<p>{ngettext('... %(count)d more row omitted', '... %(count)d more rows omitted', omitted) % {'count': omitted}}</p>"
-        )
+        label = ngettext(
+            "... %(count)d more row omitted", "... %(count)d more rows omitted", omitted
+        ) % {"count": omitted}
+        parts.append(f"<p>{label}</p>")
     parts.append("</body></html>")
     out.write_text("".join(parts), encoding="utf-8")
     return out
