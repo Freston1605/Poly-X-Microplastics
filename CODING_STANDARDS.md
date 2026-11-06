@@ -51,7 +51,9 @@ Automated by the local hooks and the gate — these are the checks
 - [ ] `ty check src/polyx/core src/polyx/cli` is clean.
 - [ ] `english-added-lines` — the lines a commit adds to `src/` or `tests/`
       carry no Spanish comments, docstrings or identifiers (the vocabulary
-      in `tests/english_scan.py`).
+      in `tests/english_scan.py`). On a whole-tree run, a `src/` file with no
+      staged changes is scanned in full; `tests/` keeps the added-lines rule
+      so grandfathered Spanish names still pass.
 - [ ] `no-hardcoded-fallback` — no literal fallback in a
       `CLASS_COLOR_HEX.get(...)` lookup; use `T.FALLBACK_COLOR_HEX`.
 

@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""Reject Spanish in the lines a commit adds to Python files.
+"""Reject Spanish in the added lines of Python files, and in all of ``src/``.
 
 This is the command-line layer over :mod:`tests.english_scan`, the single
 vocabulary the ``*_ingles`` pytest gates use. Pre-commit passes the staged
 files; this script asks ``git diff --cached`` which of their lines are new and
-prints every finding as ``path:line: finding``. Untouched lines are never
-reported, so Spanish that the gates intentionally grandfather (legacy test
-helpers) can stay in a file while new code is held to the English rule.
+prints every finding as ``path:line: finding``.
+
+A staged commit reports untouched lines nowhere, so Spanish that the gates
+intentionally grandfather (legacy test helpers) can stay in a file while new
+code is held to the English rule. On a whole-tree run (``pre-commit run
+--all-files``) there may be no staged diff at all: a file under ``src/`` is then
+scanned in full, because production code has no grandfathered Spanish, while a
+file under ``tests/`` keeps the added-lines-only rule so those legacy names
+still pass.
 
 The hook runs as a ``language: python`` local hook: pre-commit provides the
 interpreter, and git is found through normal executable lookup. There is no
@@ -15,34 +21,21 @@ shell, no absolute path and no regex vocabulary of its own.
 
 from __future__ import annotations
 
-import ast
-import io
 import re
 import shutil
 import subprocess
 import sys
 import tokenize
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests.english_scan import (  # noqa: E402
-    _identifiers_from_source,
-    _strip_inline_code,
-    comment_blocks,
-    identifier_occurrences,
-    is_protected_comment,
-    spanish_comment_findings,
-    spanish_findings,
-    spanish_identifier_findings,
-    split_comment,
-)
+from tests.english_scan import scan_python_source  # noqa: E402
 
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
-_DOCSTRING_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
 
 def _git() -> str:
@@ -78,87 +71,13 @@ def added_lines(path: str) -> set[int]:
     return added
 
 
-def _docstring_spans(tree: ast.AST) -> list[tuple[int, int]]:
-    spans: list[tuple[int, int]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, _DOCSTRING_OWNERS):
-            continue
-        body = getattr(node, "body", None)
-        if not body:
-            continue
-        first = body[0]
-        if (
-            isinstance(first, ast.Expr)
-            and isinstance(first.value, ast.Constant)
-            and isinstance(first.value.value, str)
-        ):
-            spans.append((first.value.lineno, first.value.end_lineno or first.value.lineno))
-    return spans
-
-
-def _added_runs(lines: Iterable[int], added: set[int]) -> list[list[int]]:
-    runs: list[list[int]] = []
-    current: list[int] = []
-    for line in sorted(set(lines)):
-        if line not in added:
-            continue
-        if current and line == current[-1] + 1:
-            current.append(line)
-        else:
-            if current:
-                runs.append(current)
-            current = [line]
-    if current:
-        runs.append(current)
-    return runs
-
-
-def findings_in(source: str, added: set[int]) -> list[tuple[int, str]]:
-    """Return ``(line, finding)`` for the added lines of one source file."""
-    tokens = list(tokenize.generate_tokens(io.StringIO(source).readline))
-    identifiers = _identifiers_from_source(source)
-    found: list[tuple[int, str]] = []
-
-    comment_tokens = [
-        token for token in tokens if token.type == tokenize.COMMENT and token.start[0] in added
-    ]
-    for token in comment_tokens:
-        if is_protected_comment(token.string):
-            continue
-        body = split_comment(token.string)[1]
-        found.extend(
-            (token.start[0], finding) for finding in spanish_comment_findings(body, identifiers)
-        )
-
-    # The gates also judge a block of consecutive comment lines as one prose
-    # unit; only fully-added blocks can be attributed to this commit.
-    for block in comment_blocks(comment_tokens):
-        bodies = [
-            split_comment(token.string)[1]
-            for token in block
-            if not is_protected_comment(token.string)
-        ]
-        if len(bodies) < 2:
-            continue
-        found.extend(
-            (block[0].start[0], finding)
-            for finding in spanish_comment_findings(" ".join(bodies), identifiers)
-        )
-
-    for line, name in identifier_occurrences(source):
-        if line not in added:
-            continue
-        found.extend((line, finding) for finding in spanish_identifier_findings(name))
-
-    source_lines = source.splitlines()
-    for start, end in _docstring_spans(ast.parse(source)):
-        for run in _added_runs(range(start, end + 1), added):
-            prose = "\n".join(source_lines[number - 1] for number in run)
-            found.extend(
-                (run[0], finding) for finding in spanish_findings(_strip_inline_code(prose))
-            )
-
-    return found
+def _scope(path: Path, added: set[int]) -> set[int] | None:
+    """Lines to scan: the staged additions, or the whole of a ``src/`` file."""
+    if added:
+        return added
+    if path.parts and path.parts[0] == "src":
+        return None
+    return set()
 
 
 def _error_line(exc: BaseException) -> int:
@@ -180,7 +99,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             continue
         try:
             source = path.read_text(encoding="utf-8")
-            found = findings_in(source, added_lines(raw))
+            found = scan_python_source(source, _scope(path, added_lines(raw)))
         except (OSError, UnicodeDecodeError, tokenize.TokenError, SyntaxError) as exc:
             print(f"{raw}:{_error_line(exc)}: scanner-error: {exc}")
             failures = True

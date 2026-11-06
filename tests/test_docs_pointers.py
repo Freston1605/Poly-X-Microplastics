@@ -46,3 +46,12 @@ def test_checklist_separates_automated_from_review_only_rules():
 
     assert "## Review checklist" in text
     assert "Review-only" in text, "the checklist must say what the tooling cannot enforce"
+
+
+def test_contributor_guide_documents_the_local_hooks():
+    text = _read("CONTRIBUTING.md")
+
+    assert "uv run pre-commit install" in text
+    assert "uv run pre-commit run --all-files" in text
+    for hook in ("english-added-lines", "no-hardcoded-fallback"):
+        assert hook in text, f"CONTRIBUTING.md must name the {hook} hook"

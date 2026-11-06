@@ -79,10 +79,36 @@ python -m pytest -q          # inside the project .venv
 3. Push the fix to the same branch: the job re-runs on its own, and the new push
    cancels the previous run.
 
+## Local pre-commit guardrails
+
+CI runs the suite, ruff and ty; it does **not** run pre-commit. The hooks in
+`.pre-commit-config.yaml` are local guardrails that catch problems before a
+commit leaves your machine. Install them once in the dev environment, then run
+them manually at any time:
+
+```bash
+uv sync --extra gui
+uv run pre-commit install
+uv run pre-commit run --all-files
+```
+
+Two local hooks enforce the conventions:
+
+- `english-added-lines` — the lines a commit adds to `src/` and `tests/` carry
+  no Spanish comments, docstrings or identifiers. On a whole-tree run, a
+  `src/` file with no staged changes is scanned in full; `tests/` keeps the
+  added-lines rule so grandfathered Spanish names still pass.
+- `no-hardcoded-fallback` — no literal fallback in a
+  `CLASS_COLOR_HEX.get(...)` lookup; use `T.FALLBACK_COLOR_HEX`.
+
+The same checks are listed in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
+
 ## Before opening a PR
 
 - The full suite passes locally (`pytest -q`, zero failures), and
   `ruff check` / `ruff format --check` are clean (see above).
+- The local hooks pass: `uv run pre-commit run --all-files` (or the commit
+  hook ran on your last commit).
 - The PR body follows `.github/PULL_REQUEST_TEMPLATE.md`; that file is the
   single owner of the required fields.
 - Comments, docstrings and identifiers are in English; Spanish survives only as
