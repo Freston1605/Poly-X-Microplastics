@@ -43,9 +43,27 @@ Read by the review agent. Implementation guidance lives in `CLAUDE.md`.
 
 ## Review checklist
 
-- [ ] No hardcoded colour hex values (use theme tokens or annotate constants)
-- [ ] No bare string paths (use pathlib.Path)
-- [ ] No OS-specific code outside platform.py
-- [ ] No Spanish identifiers in new code
-- [ ] cv2.imdecode/imencode used, not imread/imwrite
-- [ ] Docs (CLAUDE.md, GLOSSARY.md) updated in the same PR as behaviour changes
+Automated by the local hooks and the gate — these are the checks
+`.pre-commit-config.yaml` and `tools/check.py` actually run:
+
+- [ ] `pytest` passes with zero failures and zero skips.
+- [ ] `ruff check` and `ruff format --check` are clean.
+- [ ] `ty check src/polyx/core src/polyx/cli` is clean.
+- [ ] `english-added-lines` — the lines a commit adds to `src/` or `tests/`
+      carry no Spanish comments, docstrings or identifiers (the vocabulary
+      in `tests/english_scan.py`). On a whole-tree run, a `src/` file with no
+      staged changes is scanned in full; `tests/` keeps the added-lines rule
+      so grandfathered Spanish names still pass.
+- [ ] `no-hardcoded-fallback` — no literal fallback in a
+      `CLASS_COLOR_HEX.get(...)` lookup; use `T.FALLBACK_COLOR_HEX`.
+
+Review-only — the tooling cannot see these, so the reviewer must:
+
+- [ ] No bare string paths (use `pathlib.Path`).
+- [ ] No OS-specific code outside `platform.py`.
+- [ ] `cv2.imdecode`/`imencode` used, not `imread`/`imwrite`.
+- [ ] Qt signals use snake_case.
+- [ ] No hardcoded colour hex outside the palette fallback (theme tokens or
+      `polyx.core.annotate` constants).
+- [ ] Docs (`CLAUDE.md`, `GLOSSARY.md`) updated in the same PR as behaviour
+      changes.

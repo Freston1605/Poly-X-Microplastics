@@ -14,8 +14,9 @@ Three scanners live side by side:
   ``_strip_inline_code``;
 - identifiers: ``identifier_occurrences`` and ``spanish_identifier_findings``.
 
-The vocabulary is data, not logic: extend a word list when a real Spanish term
-survives, never loosen a regex.
+``scan_python_source`` is the combined, line-aware entry point over all three,
+shared by the pre-commit hook and the gates. The vocabulary is data, not logic:
+extend a word list when a real Spanish term survives, never loosen a regex.
 """
 
 from __future__ import annotations
@@ -1028,3 +1029,107 @@ def identifier_occurrences(text: str, stems: Iterable[str] | None = None) -> lis
                 continue
             occurrences.append((token.start[0], token.string))
     return occurrences
+
+
+def _docstring_spans(text: str) -> list[tuple[int, int, str]]:
+    """Return ``(start_line, end_line, content)`` for every docstring."""
+    tree = ast.parse(text)
+    spans: list[tuple[int, int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            start = first.value.lineno
+            end = first.value.end_lineno or start
+            spans.append((start, end, first.value.value))
+    return spans
+
+
+def _selected_runs(lines: Iterable[int], selected: set[int]) -> list[list[int]]:
+    """Group the selected line numbers into contiguous runs."""
+    runs: list[list[int]] = []
+    current: list[int] = []
+    for line in sorted(set(lines)):
+        if line not in selected:
+            continue
+        if current and line == current[-1] + 1:
+            current.append(line)
+        else:
+            if current:
+                runs.append(current)
+            current = [line]
+    if current:
+        runs.append(current)
+    return runs
+
+
+def scan_python_source(text: str, only_lines: set[int] | None = None) -> list[tuple[int, str]]:
+    """Return ``(line, finding)`` for every Spanish finding in a Python source.
+
+    This is the single entry point over the ``*_ingles`` matchers: comments,
+    docstrings and identifiers are judged with the same vocabulary and the same
+    heuristics as the pytest gates. When ``only_lines`` is given, findings are
+    restricted to those lines; a multi-line comment block is judged only when
+    every line in the block is selected, mirroring a commit's added lines.
+    ``None`` scans the whole source.
+    """
+    tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    identifiers = _identifiers_from_source(text)
+    found: list[tuple[int, str]] = []
+
+    def selected(line: int) -> bool:
+        return only_lines is None or line in only_lines
+
+    comment_tokens = [
+        token for token in tokens if token.type == tokenize.COMMENT and selected(token.start[0])
+    ]
+    for token in comment_tokens:
+        if is_protected_comment(token.string):
+            continue
+        body = split_comment(token.string)[1]
+        found.extend(
+            (token.start[0], finding) for finding in spanish_comment_findings(body, identifiers)
+        )
+
+    # The gates also judge a block of consecutive comment lines as one prose
+    # unit; only fully-selected blocks can be attributed to a set of lines.
+    for block in comment_blocks(comment_tokens):
+        bodies = [
+            split_comment(token.string)[1]
+            for token in block
+            if not is_protected_comment(token.string)
+        ]
+        if len(bodies) < 2:
+            continue
+        found.extend(
+            (block[0].start[0], finding)
+            for finding in spanish_comment_findings(" ".join(bodies), identifiers)
+        )
+
+    for line, name in identifier_occurrences(text):
+        if not selected(line):
+            continue
+        found.extend((line, finding) for finding in spanish_identifier_findings(name))
+
+    source_lines = text.splitlines()
+    for start, end, content in _docstring_spans(text):
+        if only_lines is None:
+            found.extend(
+                (start, finding) for finding in spanish_findings(_strip_inline_code(content))
+            )
+            continue
+        for run in _selected_runs(range(start, end + 1), only_lines):
+            prose = "\n".join(source_lines[number - 1] for number in run)
+            found.extend(
+                (run[0], finding) for finding in spanish_findings(_strip_inline_code(prose))
+            )
+
+    return found

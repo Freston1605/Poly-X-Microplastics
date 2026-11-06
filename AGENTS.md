@@ -16,6 +16,9 @@ convention. **Do not duplicate content here.**
 
 ## The minimum before writing code
 
+The review checklist for these rules is
+[`CODING_STANDARDS.md`](CODING_STANDARDS.md).
+
 - **Code comments, docstrings and identifiers in English** — Spanish
   only survives inside the `tr()` layer and the UI strings it wraps.
 - **Paths always with `pathlib.Path`**, never bare strings.
