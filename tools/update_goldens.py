@@ -34,6 +34,8 @@ _HEX_BYTES = re.compile(rb"[0-9a-f]{64}")
 _ACTUAL = re.compile(r"^\s*(?:E\s+)?\+\s+([0-9a-f]{64})\s*$")
 _FRAME = re.compile(r"^(?P<path>.+?):(?P<line>\d+): in (?P<test>\S+)\s*$")
 _HEADING = re.compile(r"^_{3,}\s+.+?\s+_{3,}$")
+_FAILED_LINE = re.compile(r"^\s*(?:FAILED|ERROR)\s+\S+")
+_FAILED_COUNT = re.compile(r"\b[1-9]\d*\s+(?:failed|error|errors)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -124,8 +126,14 @@ def _failures(report: str, target: Path) -> list[Failure]:
 
 
 def _report_has_failures(report: str) -> bool:
-    """Whether a pytest report contains at least one failure frame."""
-    return any(_FRAME.match(line) is not None for block in _blocks(report) for line in block)
+    """Whether a report shows any failure, even without a traceback frame."""
+    return any(
+        _FRAME.match(line) is not None
+        or _FAILED_LINE.match(line) is not None
+        or _FAILED_COUNT.search(line) is not None
+        for block in _blocks(report)
+        for line in block
+    )
 
 
 def _module_constants(tree: ast.Module) -> dict[str, ast.Constant]:

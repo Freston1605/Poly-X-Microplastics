@@ -12,6 +12,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 _ROOT = Path(__file__).resolve().parents[1]
 _SCRIPT = _ROOT / "tools" / "update_goldens.py"
 
@@ -293,6 +295,32 @@ def check():
     assert path.read_bytes() == original
     assert path.name in result.stderr
     assert "failure" in result.stderr.lower()
+
+
+@pytest.mark.parametrize(
+    "summary",
+    [
+        "FAILED test_goldens_under_test.py::test_golden - AssertionError\n",
+        "1 failed in 0.12s\n",
+    ],
+    ids=["failed-line", "failure-count"],
+)
+def test_summary_only_report_refuses(tmp_path, summary):
+    path = _write_test(tmp_path, _TWO_CONSTANTS)
+    original = path.read_bytes()
+    report = tmp_path / "report.txt"
+    report.write_text(
+        "============================= test session starts ==============================\n"
+        "=========================== short test summary info ============================\n"
+        f"{summary}",
+        encoding="utf-8",
+    )
+
+    result = _run(str(path), "--apply", "--report", str(report))
+
+    assert result.returncode != 0
+    assert path.read_bytes() == original
+    assert path.name in result.stderr
 
 
 def test_clean_report_is_up_to_date_and_writes_nothing(tmp_path):
