@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from polyx.core.annotate import parse_run_label_name
 from polyx.core.i18n import tr
 from polyx.core.paths import RUNS_DIR
 from polyx.gui import iconos, marca
@@ -37,7 +38,7 @@ from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge
 
 from .canvas import ViewerCanvas
-from .export import csv_rows, size_label
+from .export import csv_rows, render_annotated_frame
 from .state import ViewerState
 
 
@@ -719,11 +720,15 @@ class ViewerWindow(QMainWindow):
 
         # index in front so that two homonymous photos from different folders do not
 
-        # collide. That is why it searches by suffix and not by exact name.
+        # collide. The naming owner parses it back, so the Viewer cannot desync.
 
-        candidates = sorted(root_2.rglob(f"*_{img.stem}.txt"))
-
-        candidates = [c for c in candidates if c.parent.name == "labels"]
+        candidates = sorted(
+            c
+            for c in root_2.rglob("*.txt")
+            if c.parent.name == "labels"
+            and (parsed := parse_run_label_name(c.name)) is not None
+            and parsed[1] == img.stem
+        )
 
         if not candidates:
             QMessageBox.information(
@@ -1250,40 +1255,11 @@ class ViewerWindow(QMainWindow):
         if frame is None:
             return
 
-        CLASS_COLORS_BGR = [
-            (47, 52, 227),  # PET  → red
-            (0, 140, 255),  # PP   → orange
-            (0, 215, 255),  # LDPE → yellow
-            (216, 180, 0),
-            (228, 202, 72),
-            (182, 119, 0),
-            (138, 62, 2),
-            (139, 45, 118),
-        ]
-
-        for det in self.state.detections:
-            x1, y1, x2, y2 = int(det.x1), int(det.y1), int(det.x2), int(det.y2)
-
-            color = CLASS_COLORS_BGR[det.class_id % len(CLASS_COLORS_BGR)]
-
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-
-            label = size_label(det, self.state.um_per_px)
-
-            cv2.putText(
-                frame,
-                label,
-                (x1, max(y1 - 6, 14)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                1,
-                cv2.LINE_AA,
-            )
+        annotated = render_annotated_frame(frame, self.state.detections, self.state.um_per_px)
 
         out_path = save_dir / f"{img.stem}_anotada.png"
 
-        ok, buf = cv2.imencode(".png", frame)
+        ok, buf = cv2.imencode(".png", annotated)
 
         if ok:
             buf.tofile(str(out_path))

@@ -19,9 +19,13 @@ _SRC = _RAIZ / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
+
+from polyx.core import annotate as A  # noqa: E402
 from polyx.core.detect.protocol import compute_box_size_um  # noqa: E402
 from polyx.core.detect.yolo import Detection  # noqa: E402
-from polyx.gui.viewer.export import csv_rows, size_label  # noqa: E402
+from polyx.gui.viewer.export import csv_rows, render_annotated_frame, size_label  # noqa: E402
 
 UM = 2.0
 _CAJA_PX = 2.0 * math.sqrt(40 * 40 / math.pi)  # equal-area diameter of a 40x40 box
@@ -94,3 +98,54 @@ def test_size_label_uncalibrated_with_measured_size_still_falls_back():
     det = _medido()
     det.diam_um = None
     assert size_label(det, None) == f"PET {_CAJA_PX:.0f} px"
+
+
+# ── The exported PNG: the primitive with measured-size labels ─────────────
+
+import hashlib  # noqa: E402
+
+
+def _export_plate() -> np.ndarray:
+    return np.zeros((200, 200, 3), dtype=np.uint8)
+
+
+def _export_detections() -> list[Detection]:
+    measured = Detection(class_id=0, class_name="PET", conf=0.9, x1=20, y1=20, x2=80, y2=80)
+    measured.diam_um = 50.0
+    measured.area_um2 = 100.0
+    measured.size_source = "mask"
+    measured.number = 1
+    boxed = Detection(class_id=1, class_name="PP", conf=0.8, x1=100, y1=80, x2=160, y2=150)
+    boxed.diam_um = 33.3
+    boxed.area_um2 = 70.0
+    boxed.size_source = "box"
+    boxed.number = 2
+    return [measured, boxed]
+
+
+def test_export_render_uses_the_class_colours():
+    out = render_annotated_frame(_export_plate(), _export_detections(), UM)
+    # The viewer's old private palette indexed class_id % 8; the primitive
+    # gives PET the documented class colour.
+    assert tuple(int(v) for v in out[20, 20]) == A.bgr_for_class("PET")
+    assert tuple(int(v) for v in out[80, 100]) == A.bgr_for_class("PP")
+
+
+def test_export_render_injects_the_measured_size_labels():
+    # Two calibrations give different label text; the frame must follow the
+    # measured-size formatter rather than the class name alone.
+    dets = _export_detections()
+    measured = render_annotated_frame(_export_plate(), dets, UM)
+    uncalibrated = render_annotated_frame(_export_plate(), dets, 0.0)
+    assert np.any(measured != uncalibrated)
+
+
+def test_golden_export_render_matches_the_pinned_style():
+    # Accepted visible change: class colours, scale-aware thickness and the
+    # particle number prefix replace the old id%8 palette and fixed 2 px.
+    out = render_annotated_frame(_export_plate(), _export_detections(), UM)
+    ok, buf = cv2.imencode(".png", out)
+    assert ok
+    assert hashlib.sha256(bytes(buf)).hexdigest() == (
+        "5ddbf32fb3e0ec3f2c0682d519d2c84ed5fbe31b24f414e52a987635e0c17ada"
+    )

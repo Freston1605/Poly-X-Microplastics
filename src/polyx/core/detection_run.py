@@ -18,6 +18,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from polyx.core.annotate import draw_detections
 from polyx.core.detect.protocol import DetectionSource, Instance
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
@@ -27,24 +28,6 @@ from polyx.core.provenance.observability import logger_for
 from polyx.core.quality.metrics import match_image
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
-
-
-def _draw(img, dets):
-    out = img.copy()
-    for d in dets:
-        cv2.rectangle(out, (int(d.x1), int(d.y1)), (int(d.x2), int(d.y2)), (0, 200, 0), 2)
-        label = f"{d.class_name} {d.conf:.2f}"
-        cv2.putText(
-            out,
-            label,
-            (int(d.x1), max(12, int(d.y1) - 4)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 200, 0),
-            1,
-            cv2.LINE_AA,
-        )
-    return out
 
 
 def _measure(dets: list[Instance], img: np.ndarray, um_per_px: float | None) -> int:
@@ -135,8 +118,9 @@ def run_batch(
                 "miscls": m.miscls,
             }
 
-        # save annotated
-        annotated = _draw(img, dets)
+        # save annotated, with the same class colours and scale-aware
+        # thickness as the desktop app
+        annotated = draw_detections(img, dets, label_for=lambda d: f"{d.class_name} {d.conf:.2f}")
         out_img = img_dir / (img_path.stem + ".png")
         cv2.imencode(".png", annotated)[1].tofile(str(out_img))
 

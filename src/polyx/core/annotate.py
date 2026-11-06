@@ -70,6 +70,12 @@ def line_width(img_shape: tuple[int, ...]) -> int:
 VIEW_SUFFIXES = ("_annot", "_pred", "_gt", "")
 
 _RUN_VIEW_RE = re.compile(r"^(\d+)_(.+)\.png$")
+_RUN_LABEL_RE = re.compile(r"^(\d+)_(.+)\.txt$")
+
+
+def _run_stem(index: int, stem: str) -> str:
+    """The index/stem prefix shared by every file of a run."""
+    return f"{index:04d}_{stem}"
 
 
 def run_view_path(folder: Path, index: int, stem: str, suffix: str = "") -> Path:
@@ -79,7 +85,28 @@ def run_view_path(folder: Path, index: int, stem: str, suffix: str = "") -> Path
     ``{index:04d}_{stem}{suffix}.png``. The index comes before everything
     else because two photos from different folders can share a stem.
     """
-    return folder / f"{index:04d}_{stem}{suffix}.png"
+    return folder / f"{_run_stem(index, stem)}{suffix}.png"
+
+
+def run_label_path(folder: Path, index: int, stem: str) -> Path:
+    """The prediction label of one image inside a run folder.
+
+    Same index/stem contract as :func:`run_view_path`; the label is the
+    ``.txt`` the Viewer loads, not a drawn view.
+    """
+    return folder / f"{_run_stem(index, stem)}.txt"
+
+
+def parse_run_label_name(name: str) -> tuple[int, str] | None:
+    """Parse a run label's file name back into (index, stem).
+
+    Returns ``None`` for anything that is not one: the caller decides
+    whether that is an error or something to skip.
+    """
+    match = _RUN_LABEL_RE.match(name)
+    if match is None:
+        return None
+    return (int(match.group(1)), match.group(2))
 
 
 def parse_run_view_name(name: str) -> tuple[int, str, str] | None:
@@ -245,7 +272,9 @@ __all__ = [
     "bgr_for_class",
     "draw_detections",
     "line_width",
+    "parse_run_label_name",
     "parse_run_view_name",
+    "run_label_path",
     "run_view_path",
     "save_view",
     "triptych",
