@@ -531,6 +531,8 @@ def test_the_pseudo_locale_cannot_be_committed_or_shipped():
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     excludes = pyproject["tool"]["hatch"]["build"]["targets"]["wheel"].get("exclude", [])
     assert any("qps_ploc" in pattern for pattern in excludes)
+    sdist_excludes = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"].get("exclude", [])
+    assert any("qps_ploc" in pattern for pattern in sdist_excludes)
 
 
 def test_the_pseudo_catalog_mangles_text_and_keeps_placeholders(tmp_path):
