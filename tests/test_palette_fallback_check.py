@@ -41,3 +41,21 @@ def test_allowlist_names_real_files():
     # A dead exemption is how a guardrail quietly stops covering anything.
     for relative in guard.ALLOWED:
         assert (guard.ROOT / relative).is_file(), relative
+
+
+def test_whole_gui_tree_has_no_literal_fallbacks():
+    """Scan every GUI module, not a sample: one literal anywhere forks the owner.
+
+    The two legacy canvases are the only documented exceptions. A new module
+    cannot escape the rule by not being on a hand-written list of files.
+    """
+    gui = guard.ROOT / "src" / "polyx" / "gui"
+    failures: list[str] = []
+    for path in sorted(gui.rglob("*.py")):
+        relative = path.relative_to(guard.ROOT).as_posix()
+        if relative in guard.ALLOWED:
+            continue
+        failures += [
+            f"{relative}:{line}: {expression}" for line, expression in guard.violations_in(path)
+        ]
+    assert failures == []
