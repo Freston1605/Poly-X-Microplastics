@@ -36,6 +36,8 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from polyx.core.i18n import _
+
 # Label used to report a particle whose polymer claim does not hold.
 # It is left in Spanish and lowercase because it travels into the report tables as
 # is; the English translation is applied by i18n to this string.
@@ -98,12 +100,16 @@ class SummaryAssignment:
 
     def __str__(self) -> str:
         if not self.active:
-            return "abstención desactivada"
-        return (
-            f"{self.no_assignables} de {self.total} partículas sin polímero "
-            f"asignable ({self.percentage_no_assignable:.1f} %), "
-            f"umbral {self.threshold_2:.2f}"
-        )
+            return _("abstention disabled")
+        return _(
+            "%(unassigned)d of %(total)d particles without an assignable polymer "
+            "(%(percent).1f %%), threshold %(threshold).2f"
+        ) % {
+            "unassigned": self.no_assignables,
+            "total": self.total,
+            "percent": self.percentage_no_assignable,
+            "threshold": self.threshold_2,
+        }
 
 
 def resume(detections: Iterable, threshold_2: float) -> SummaryAssignment:

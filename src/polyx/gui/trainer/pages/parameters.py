@@ -377,9 +377,12 @@ class ParametersPage(TrainerPage):
         if info.available:
             extra = []
             if info.n_gpus > 1:
-                extra.append(f"usando la GPU {info.index} de {info.n_gpus} (la de más VRAM)")
+                extra.append(
+                    _("using GPU %(index)d of %(count)d (the one with most VRAM)")
+                    % {"index": info.index, "count": info.n_gpus}
+                )
             if info.capacity:
-                extra.append(f"capacidad {info.capacity}")
+                extra.append(_("capacity %(value)s") % {"value": info.capacity})
             if info.driver:
                 extra.append(f"driver {info.driver}")
             if info.is_rocm and (info.torch_hip or info.torch_rocm):
@@ -519,17 +522,20 @@ class ParametersPage(TrainerPage):
 
         info = getattr(self, "_last_gpu_info", None) or detect_gpu()
         if not info.available:
-            msg = (
-                "No hay GPU utilizable, así que no hay nada que optimizar: en CPU "
-                "el techo práctico es imgsz 640."
+            msg = _(
+                "No usable GPU, so there is nothing to optimise: on CPU the practical "
+                "ceiling is imgsz 640."
             )
             if info.gpu_sin_torch:
-                msg = (
-                    f"La tarjeta está ahí ({info.name}, "
-                    f"{humanize_gb(info.vram_total_gb)}) pero PyTorch no la puede "
-                    f"usar.\n\n{info.detail}\n\nHay que reinstalar PyTorch con "
-                    f"CUDA; hasta entonces el entrenamiento va por CPU."
-                )
+                msg = _(
+                    "The card is there (%(name)s, %(vram)s) but PyTorch cannot use it."
+                    "\n\n%(detail)s\n\nPyTorch must be reinstalled with CUDA; until then "
+                    "training runs on CPU."
+                ) % {
+                    "name": info.name,
+                    "vram": humanize_gb(info.vram_total_gb),
+                    "detail": info.detail,
+                }
             QMessageBox.information(self, _("No usable GPU"), msg)
             return
 
@@ -563,20 +569,28 @@ class ParametersPage(TrainerPage):
             self.combo_cache.setCurrentText(r.cache)
 
         limit = {
-            "vram": f"la VRAM ({humanize_gb(info.vram_free_gb)} libres)",
-            "resolucion_nativa": f"la resolución nativa del dataset ({side_native} px)",
-            "tope_batch": "el tope de batch útil",
+            "vram": _("the VRAM (%(free)s free)") % {"free": humanize_gb(info.vram_free_gb)},
+            "resolucion_nativa": _("the dataset's native resolution (%(side)d px)")
+            % {"side": side_native},
+            "tope_batch": _("the useful batch ceiling"),
         }.get(r.limited_by, r.limited_by)
-        text_2 = (
-            f"imgsz <b>{r.imgsz}</b> → batch <b>{r.batch}</b> → AMP on, "
-            f"{r.workers} workers, cache {r.cache or 'sin cambio'}. "
-            f"~{humanize_gb(r.vram_est_gb)} de {humanize_gb(r.vram_cap_gb)} "
-            f"utilizables. Limitado por {limit}."
-        )
+        text_2 = _(
+            "imgsz <b>%(imgsz)d</b> → batch <b>%(batch)d</b> → AMP on, %(workers)d "
+            "workers, cache %(cache)s. ~%(estimate)s of %(cap)s usable. Limited by "
+            "%(limit)s."
+        ) % {
+            "imgsz": r.imgsz,
+            "batch": r.batch,
+            "workers": r.workers,
+            "cache": r.cache or _("no change"),
+            "estimate": humanize_gb(r.vram_est_gb),
+            "cap": humanize_gb(r.vram_cap_gb),
+            "limit": limit,
+        }
         if not side_native:
-            text_2 += (
-                " <i>Sin dataset cargado no se pudo medir la resolución nativa: "
-                "carga el dataset y vuelve a optimizar.</i>"
+            text_2 += _(
+                " <i>With no dataset loaded the native resolution could not be measured: "
+                "load the dataset and optimise again.</i>"
             )
         self.lbl_est.setText(text_2)
         self.lbl_est.setTextFormat(Qt.RichText)

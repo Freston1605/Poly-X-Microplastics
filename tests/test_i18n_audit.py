@@ -365,6 +365,45 @@ def test_braces_in_a_translation_fail_the_gate(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Spanish literals that never reach a catalog.
+# ---------------------------------------------------------------------------
+
+
+def test_a_spanish_string_literal_outside_the_catalog_fails_the_gate(tmp_path):
+    """A Spanish literal assigned to a variable bypasses the Qt sink scan."""
+    _write_tree(
+        tmp_path,
+        {"src/polyx/gui/page.py": ('def title():\n    return "Año de muestreo"\n')},
+    )
+
+    findings = audit.audit_spanish_literals(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "spanish-literal"
+    assert findings[0].path == "src/polyx/gui/page.py"
+    assert findings[0].line == 2
+    assert "Año de muestreo" in findings[0].detail
+
+
+def test_a_docstring_with_spanish_is_not_interface_text(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/gui/page.py": (
+                'def title():\n    """Devuelve el año."""\n    return "Year"\n'
+            )
+        },
+    )
+
+    assert audit.audit_spanish_literals(tmp_path) == []
+
+
+def test_the_out_of_scope_sinks_and_data_tokens_are_allowlisted():
+    """Logs, citations and internal tokens are explicit, not a directory skip."""
+    assert audit.audit_spanish_literals(ROOT) == []
+
+
+# ---------------------------------------------------------------------------
 # Dynamic translation calls.
 # ---------------------------------------------------------------------------
 

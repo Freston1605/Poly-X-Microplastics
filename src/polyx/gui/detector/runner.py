@@ -26,6 +26,7 @@ from polyx.core.detection_run import (
     RunStatus,
     run_detection,
 )
+from polyx.core.i18n import _
 from polyx.core.paths import RUNS_DIR
 
 from .state import DetectorState
@@ -178,10 +179,10 @@ class DetectorRunner(QThread):
                 um_por_px=state.calibration.um_per_px,
             )
             if not slots:
-                self.failed.emit("No hay modelos cargados.")
+                self.failed.emit(_("No models loaded."))
                 return
             if not state.images:
-                self.failed.emit("No hay imágenes seleccionadas.")
+                self.failed.emit(_("No images selected."))
                 return
 
             self._active_indices = [state.model_slots.index(slot) for slot in slots]

@@ -840,7 +840,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             bgr = read_image(img)
 
             if bgr is None:
-                raise OSError("no se pudo leer la imagen")
+                raise OSError(_("could not read the image"))
 
             height, width_2 = bgr.shape[:2]
 
@@ -1135,18 +1135,23 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         um = self.state.um_per_px
 
         lines = [
-            f"medido por  {m.method}",
-            f"largo       {m.length_px:8.1f} px"
-            + (f"  x {um:.4f} um/px = {det.length_um:.0f} um" if um > 0 and det.length_um else ""),
-            f"ancho       {m.width_px:8.1f} px"
-            + (f"  = {det.width_um:.0f} um" if um > 0 and det.width_um else ""),
-            f"Feret       {m.feret_px:8.1f} px",
-            f"geodesico   {m.geodesic_px:8.1f} px",
-            f"aspecto     {m.aspect:8.1f}   curvatura {m.curvature:.2f}",
+            _("measured by  %(method)s") % {"method": m.method},
+            _("length      %(value)8.1f px") % {"value": m.length_px}
+            + (
+                _("  x %(scale).4f um/px = %(size).0f um") % {"scale": um, "size": det.length_um}
+                if um > 0 and det.length_um
+                else ""
+            ),
+            _("width       %(value)8.1f px") % {"value": m.width_px}
+            + (_("  = %(size).0f um") % {"size": det.width_um} if um > 0 and det.width_um else ""),
+            _("Feret       %(value)8.1f px") % {"value": m.feret_px},
+            _("geodesic    %(value)8.1f px") % {"value": m.geodesic_px},
+            _("aspect      %(aspect)8.1f   curvature %(curvature).2f")
+            % {"aspect": m.aspect, "curvature": m.curvature},
         ]
 
         if m.warning:
-            lines.append(f"aviso: {m.warning}")
+            lines.append(_("warning: %(message)s") % {"message": m.warning})
 
         self.lbl_record_data.setText("\n".join(lines))
 
@@ -1278,8 +1283,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
+        mode_label = {
+            "línea": _("line"),
+            "círculo": _("circle"),
+        }.get(mode_name, mode_name)
         self.lbl_calib_result.setText(
-            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_name}
+            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_label}
         )
 
         self.lbl_calib_result.setStyleSheet(

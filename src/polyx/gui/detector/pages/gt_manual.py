@@ -204,7 +204,7 @@ class AnnotCanvas(QGraphicsView):
             self._pixmap_item = None
             self.boxes = []
             self.selected_idx = -1
-            self.status_changed.emit("No se pudo abrir la imagen.")
+            self.status_changed.emit(_("Could not open the image."))
             return
         self._image_size = (pm.width(), pm.height())
         self.scene_.clear()
@@ -858,7 +858,7 @@ class GTManualPage(DetectorPage):
     def _save_to_txt(self, img_path: Path, dets: list[Detection]):
         wh = size_image(img_path)
         if not wh or wh[0] <= 0 or wh[1] <= 0:
-            raise ValueError(f"No se pudo leer el tamano de {img_path.name}")
+            raise ValueError(_("Could not read the size of %(name)s") % {"name": img_path.name})
         W, H = wh
         out_path = write_lines(
             label_path_for(img_path, self.state.gt_folder),

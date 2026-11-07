@@ -239,15 +239,15 @@ class ReviewDialog(QDialog):
         self._update_counts(res)
 
     def _update_counts(self, res):
-        parts = [f"Predicciones: {len(res.predictions)}"]
+        parts = [_("Predictions: %(count)d") % {"count": len(res.predictions)}]
         if res.has_gt:
-            parts.append(f"GT: {len(res.gt)}")
-            parts.append(f"VP: {res.tp}")
-            parts.append(f"FP: {res.fp}")
-            parts.append(f"FN: {res.fn}")
+            parts.append(_("GT: %(count)d") % {"count": len(res.gt)})
+            parts.append(_("TP: %(count)d") % {"count": res.tp})
+            parts.append(_("FP: %(count)d") % {"count": res.fp})
+            parts.append(_("FN: %(count)d") % {"count": res.fn})
         verdict = self.state.verdict_for(self._model_idx, res.image_path)
-        v = {"buena": "✓ Buena", "mala": "✗ Mala"}.get(verdict, "sin revisar")
-        parts.append(f"·  {v}")
+        v = {"buena": _("✓ Good"), "mala": _("✗ Bad")}.get(verdict, _("unreviewed"))
+        parts.append(_("·  %(verdict)s") % {"verdict": v})
         self.lbl_counts.setText("   ".join(parts))
 
     def _set_verdict(self, verdict: str):

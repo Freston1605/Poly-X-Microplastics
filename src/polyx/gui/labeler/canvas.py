@@ -16,6 +16,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
+from polyx.core.i18n import _
 from polyx.gui import theme as T
 
 from .state import BBox, LabelerState
@@ -187,7 +188,7 @@ class BboxCanvas(QWidget):
         if self._pixmap is None:
             p.setPen(QColor(T.INK3))
             p.setFont(QFont(T.APP_FONT_FAMILY, 12))
-            p.drawText(self.rect(), Qt.AlignCenter, "Abre una carpeta de imágenes para comenzar")
+            p.drawText(self.rect(), Qt.AlignCenter, _("Open an image folder to begin"))
             return
 
         # Image
