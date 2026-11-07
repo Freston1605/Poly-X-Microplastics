@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from polyx.core.detection_run import RunStatus
-from polyx.core.i18n import _
+from polyx.core.i18n import _, ngettext
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
 from polyx.core.report_metrics import _ORDER_CLASSES, _count_per_class, _pr_f1
@@ -147,7 +147,11 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
             label_2 = (
                 f"{_esc(r.image_path.name)}<br>"
                 f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                f"{_esc(station)} &middot; tramo {_esc(range_value)} &middot; placa {_esc(plate)}</span>"
+                f"{_esc(station)} &middot; "
+                + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
+                + " &middot; "
+                + _("plate %(plate)s") % {"plate": _esc(plate)}
+                + "</span>"
             )
         rows_img.append(
             (
@@ -189,7 +193,9 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
             palabra = _("images") if len(items_2) != 1 else _("image")
             rows_t.append(
                 (
-                    f"{_esc(station)} &middot; tramo {_esc(range_value)} "  # noqa: ISC004
+                    f"{_esc(station)} &middot; "
+                    + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
+                    + " "
                     f"<span style='font-size:8.5pt;color:var(--ink3)'>"
                     f"({len(items_2)} {palabra})</span>",
                     man,
@@ -375,7 +381,7 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
             <div class='caption'>{_("Figure. Confusion matrix (main model: %(modelo)s, IoU = %(iou)s).") % {"modelo": _esc(active[0].alias), "iou": run.params.iou_tp}}</div></div>
         <h3>@@N@@.2 {_("Precision / recall / F1 per class")}</h3>
-        <table class='data'><tr>{_("<th>Class</th>")}<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
+        <table class='data'><tr>{_("<th>Class</th><th>True Positives</th><th>False Positives</th><th>False Negatives</th>")}
         {_("<th>Precision</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
         {note_missing}
         """
@@ -445,8 +451,8 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
 
     return f"""
 <table class='data'><tr>{_("<th>Model</th><th>Images</th><th>Detections</th><th>Mean conf.</th>")}
-<th>True Positives</th><th>False Positives</th><th>False Negatives</th>
-<th>Misclassified</th><th>F1<br><span style='font-weight:400;font-size:8.5pt'>{_("localisation")}</span></th>
+{_("<th>True Positives</th><th>False Positives</th><th>False Negatives</th>")}
+{_("<th>Misclassified</th>")}<th>F1<br><span style='font-weight:400;font-size:8.5pt'>{_("localisation")}</span></th>
 <th>F1<br><span style='font-weight:400;font-size:8.5pt'>{_("with class")}</span></th></tr>{rows_models}</table>
 {note_miscls}"""
 
@@ -506,14 +512,18 @@ def _section_comparison(run, results_2) -> str:
                 by_photo.setdefault(r.image_path, {})[mi] = r
 
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
-        header_line = "<tr><th>Image</th>"
+        header_line = _("<tr><th>Image</th>")
         for mi in active_2:
             alias = run.models[mi].alias
-            header_line += f"<th>{_esc(alias)}<br><span style='font-weight:400;font-size:8.5pt'>dets</span></th>"
+            header_line += (
+                f"<th>{_esc(alias)}<br>"
+                f"<span style='font-weight:400;font-size:8.5pt'>{_('dets')}</span></th>"
+            )
             if there_is_gt:
                 header_line += (
                     "<th><span style='font-weight:400;font-size:8.5pt'>"
-                    "True Positives/False Positives/False Negatives</span></th>"
+                    + _("True Positives/False Positives/False Negatives")
+                    + "</span></th>"
                 )
         header_line += "</tr>"
 
@@ -742,15 +752,21 @@ def _section_gallery(
                 if r.has_gt and gt_bytes:
                     right = (
                         f"<figure><img src='{_uri_gallery(gt_bytes)}' />"
-                        f"<figcaption>Ground Truth (control)"
-                        f"<span class='sub'>{len(r.gt)} etiqueta(s) reales</span>"
-                        f"</figcaption></figure>"
+                        f"<figcaption>{_('Ground Truth (control)')}"
+                        f"<span class='sub'>"
+                        + ngettext(
+                            "%(count)s real label",
+                            "%(count)s real labels",
+                            len(r.gt),
+                        )
+                        % {"count": len(r.gt)}
+                        + "</span></figcaption></figure>"
                     )
                 else:
                     right = (
                         f"<figure><div class='nogt'>"
                         f"{_('No ground truth for this image')}</div>"
-                        f"<figcaption>Ground Truth (control)"
+                        f"<figcaption>{_('Ground Truth (control)')}"
                         f"<span class='sub'>{_('not available')}</span>"
                         f"</figcaption></figure>"
                     )
@@ -762,12 +778,17 @@ def _section_gallery(
                 if sample:
                     station, range_value, plate = sample
                     where = (
-                        f" &nbsp;<span class='tag'>{_esc(station)} · tramo {_esc(range_value)} "
-                        f"· placa {_esc(plate)}</span>"
+                        f" &nbsp;<span class='tag'>{_esc(station)} · "
+                        + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
+                        + " · "
+                        + _("plate %(plate)s") % {"plate": _esc(plate)}
+                        + "</span>"
                     )
                 meta = (
                     f"<strong>{_esc(r.image_path.name)}</strong>{where}"
-                    f"&nbsp;<span class='tag'>modelo: {_esc(slot.alias)}</span>"
+                    "&nbsp;<span class='tag'>"
+                    + _("model: %(model)s") % {"model": _esc(slot.alias)}
+                    + "</span>"
                 )
 
                 # Photo table: particles per polymer. Matches and
@@ -849,7 +870,11 @@ def _section_methods(
     _mic = _average_ic95(_ums_methods)
     if _mic:
         _average_m, _margin_m, _n_m = _mic
-        um_px_txt = f"{_average_m:.4f} ± {_margin_m:.4f} (IC 95%, n={_n_m} fotos)"
+        um_px_txt = _("%(mean)s ± %(margin)s (95%% CI, n=%(n)s photographs)") % {
+            "mean": f"{_average_m:.4f}",
+            "margin": f"{_margin_m:.4f}",
+            "n": _n_m,
+        }
     elif _ums_methods:
         um_px_txt = f"{_ums_methods[0]:.4f} " + _("(a single calibrated photograph, no CI)")
     else:
@@ -857,7 +882,7 @@ def _section_methods(
     methods_rows = [
         (_("Models loaded"), _esc(", ".join(s.alias for s in active)) or "—"),
         (_("Minimum confidence"), f"{p.conf:g}"),
-        ("IoU NMS", f"{p.iou_nms:g}"),
+        (_("IoU NMS"), f"{p.iou_nms:g}"),
         (_("IoU for matching true positives"), f"{p.iou_tp:g}"),
         (_("Image size (imgsz)"), f"{p.imgsz}"),
         (_("Device"), p.device),
@@ -1193,9 +1218,12 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
             if rows_cls:
                 tables += (
                     f"<h3>{NUM}.6 {_('Size by polymer type')}</h3>"
-                    f"<table class='data'><tr><th>Class</th><th>n</th>"
-                    f"<th>smallest<br>(µm)</th><th>median<br>(µm)</th>"
-                    f"<th>largest<br>(µm)</th><th>Fibers</th></tr>{rows_cls}</table>"
+                    + _(
+                        "<table class='data'><tr><th>Class</th><th>n</th>"
+                        "<th>smallest<br>(µm)</th><th>median<br>(µm)</th>"
+                        "<th>largest<br>(µm)</th><th>Fibers</th></tr>"
+                    )
+                    + f"{rows_cls}</table>"
                 )
 
             # The example card is drawn further below, AFTER explaining the
@@ -1390,9 +1418,11 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                 # when it was measured -- a photo with no detected plate leaves
                 # aspecto with a value and ancho_um at None. Without this guard, that
                 # combination crashes the `:.0f` format on None.
-                detail = [f"ancho {d.width_um:.0f} µm"] if d.width_um else []
+                detail = (
+                    [_("width %(width)s µm") % {"width": f"{d.width_um:.0f}"}] if d.width_um else []
+                )
                 if d.aspect:
-                    detail.append(f"aspecto {d.aspect:.1f}")
+                    detail.append(_("aspect %(aspect)s") % {"aspect": f"{d.aspect:.1f}"})
                 detail.append(_("measured by %(metodo)s") % {"metodo": method_label(m.method)})
                 # If an appreciable part of the line falls outside, it is stated with a
                 # number. Below 5% it is contour discretization and

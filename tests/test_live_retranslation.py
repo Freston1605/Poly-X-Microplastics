@@ -187,6 +187,42 @@ def test_detector_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     window.deleteLater()
 
 
+def test_detector_kpis_keep_the_no_data_placeholder_after_a_switch(qapp):
+    """A rebuilt page must not turn "no data yet" into a measured zero."""
+    from polyx.core import i18n
+    from polyx.gui.detector.window import DetectorWindow
+
+    i18n.set_language("es")
+    window = DetectorWindow()
+    assert _results_page(window).kpi_imgs.lbl_value.text() == "—"
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    results = _results_page(window)
+    assert results.kpi_imgs.lbl_value.text() == "—"
+    assert results.kpi_dets.lbl_value.text() == "—"
+    assert results.kpi_tp.lbl_value.text() == "—"
+    assert results.kpi_f1.lbl_value.text() == "—"
+    window.deleteLater()
+
+
+def test_labeler_keeps_the_no_data_placeholder_after_a_switch(qapp):
+    """With no images loaded, the box list still says "no data", not "none"."""
+    from polyx.core import i18n
+    from polyx.gui.labeler.window import LabelerWindow
+
+    i18n.set_language("es")
+    window = LabelerWindow()
+    assert window.lbl_box_info.text() == "—"
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    assert window.lbl_box_info.text() == "—"
+    window.deleteLater()
+
+
 def test_trainer_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     from polyx.core import i18n
     from polyx.gui.trainer.window import TrainerWindow

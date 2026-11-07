@@ -199,13 +199,16 @@ class ResultsPage(DetectorPage):
         fp = sum(r.fp for r in all_results)
         fn = sum(r.fn for r in all_results)
 
-        self.kpi_imgs.set_value(total_imgs)
-        self.kpi_dets.set_value(total_dets)
+        # A retranslation rebuilds the page and refreshes it: an empty batch
+        # must keep the "no data yet" dash, not report a measured zero.
+        has_results = bool(all_results)
+        self.kpi_imgs.set_value(total_imgs if has_results else None)
+        self.kpi_dets.set_value(total_dets if has_results else None)
         self.kpi_conf.set_value(f"{(sum(confs) / len(confs)):.3f}" if confs else None)
         self.kpi_size.set_value(f"{(sum(sizes) / len(sizes)):.1f}" if sizes else None)
-        self.kpi_tp.set_value(tp)
-        self.kpi_fp.set_value(fp)
-        self.kpi_fn.set_value(fn)
+        self.kpi_tp.set_value(tp if has_results else None)
+        self.kpi_fp.set_value(fp if has_results else None)
+        self.kpi_fn.set_value(fn if has_results else None)
         prec = tp / (tp + fp) if (tp + fp) else 0.0
         rec = tp / (tp + fn) if (tp + fn) else 0.0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0

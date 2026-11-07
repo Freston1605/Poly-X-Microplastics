@@ -89,14 +89,14 @@ def _table_count(manual: Counter | None, detected: Counter, classes: list[str]) 
         dif = tot_det - tot_man
         css = "dif-pos" if dif > 0 else ("dif-neg" if dif < 0 else "")
         rows_2 += (
-            f"<tr class='tot'><td>Total</td><td>{tot_man}</td>"
+            f"<tr class='tot'><td>{_('Total')}</td><td>{tot_man}</td>"
             f"<td>{tot_det}</td><td class='{css}'>{dif:+d}</td></tr>"
         )
         cabecera = _(
             "<tr><th>Polymer</th><th>Manual count</th><th>Detected by the model</th><th>Difference</th></tr>"
         )
     else:
-        rows_2 += f"<tr class='tot'><td>Total</td><td>{tot_det}</td></tr>"
+        rows_2 += f"<tr class='tot'><td>{_('Total')}</td><td>{tot_det}</td></tr>"
         cabecera = _("<tr><th>Polymer</th><th>Detected by the model</th></tr>")
 
     return f"<table class='conteo'>{cabecera}{rows_2}</table>"
@@ -162,9 +162,9 @@ def _table_width(
             + "".join(
                 f"<th colspan='2' style='text-align:center'>{_esc(_(c))}</th>" for c in classes
             )
-            + "<th colspan='2' style='text-align:center'>Total</th></tr><tr>"
+            + f"<th colspan='2' style='text-align:center'>{_('Total')}</th></tr><tr>"
             + "".join(
-                "<th class='r'>manual</th><th class='r'>modelo</th>"
+                f"<th class='r'>{_('manual')}</th><th class='r'>{_('model')}</th>"
                 for _unused in classes + ["total"]  # noqa: RUF005
             )
             + "</tr>"
@@ -173,7 +173,7 @@ def _table_width(
         header_line = (
             f"<tr><th>{_esc(title_col)}</th>"
             + "".join(f"<th class='r'>{_esc(_(c))}</th>" for c in classes)
-            + "<th class='r'>Total</th></tr>"
+            + f"<th class='r'>{_('Total')}</th></tr>"
         )
 
     body = ""
@@ -211,6 +211,6 @@ def _table_width(
             cells += f"<td class='r'>{t_man}</td><td class='r'>{t_det}</td>"
         else:
             cells += f"<td class='r'>{t_det}</td>"
-        body += f"<tr style='font-weight:700;background:var(--bg_soft)'><td>TOTAL</td>{cells}</tr>"
+        body += f"<tr style='font-weight:700;background:var(--bg_soft)'><td>{_('TOTAL')}</td>{cells}</tr>"
 
     return f"<table class='data'>{header_line}{body}</table>"
