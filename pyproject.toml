@@ -99,7 +99,7 @@ exclude = [
 path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
 # Same reason as the wheel: the compiled catalogs are gitignored artifacts.
 artifacts = ["src/polyx/locales/**/*.mo"]
 # Never package a generated development pseudo-locale, even from a dirty tree.

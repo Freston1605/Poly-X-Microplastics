@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import tomllib
 import zipfile
 from pathlib import Path
 
 from babel.messages.catalog import Catalog
 from babel.messages.mofile import write_mo
 from tools.check_wheel import CATALOG, check
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _wheel(
@@ -54,3 +57,11 @@ def test_a_catalog_that_lost_its_translation_fails(tmp_path):
 
     assert problems
     assert "expected" in problems[0]
+
+
+def test_the_sdist_ships_the_build_hook():
+    """`uv build` builds the wheel from the sdist, so the hook must travel."""
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    include = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+
+    assert "tools/i18n" in include
