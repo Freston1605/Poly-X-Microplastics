@@ -48,8 +48,9 @@ English report headings.
   `Mal Clasificados`, the comparison header `Imagen` and its combined
   `Verdaderos Positivos/Falsos Positivos/Falsos Negativos` label, plus the
   size-by-class headers `Clase`, `Fibras`, and `menor` / `mediana` / `mayor`
-  with their `(µm)` units. The runtime `tr()` dictionary, the `SECTIONS`
-  titles, the report prose and the `metrics.py` UI labels were not changed.
+  with their `(µm)` units. The runtime `tr()` dictionary of the time (now
+  retired; see ADR-0003), the `SECTIONS` titles, the report prose and the
+  `metrics.py` UI labels were not changed.
   The M004 values `bf483e...` / 139512 B are **superseded**.
 - **Recapture on the pinned stack (PR #4, refactor branch):** the gate was
   first exercised under CI (Python 3.11 + the exact `requirements.txt` pins,
@@ -80,7 +81,7 @@ English report headings.
 The baseline is in **English** and must stay that way. The capture script
 forces `POLYX_LOCALE=en` before importing any fixture or `polyx` module, and
 the tests pin the same value, so the capture and the comparison never depend
-on the machine locale or `~/.polyx_idioma.json`. The M004 snapshots
+on the machine locale or `~/.polyx_preferences.json`. The M004 snapshots
 (`es=bb2e9f...`, `en=bf483e...`) are superseded by this English contract;
 details in the docstring of module `tests/test_benign_report_render.py`.
 
