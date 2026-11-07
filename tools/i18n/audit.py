@@ -1,4 +1,4 @@
-"""The translation gate: six ways a catalog drifts from the source tree.
+"""The translation gate: eight ways a catalog drifts from the source tree.
 
 Every check prints the file, the line and the offending string, because the
 person fixing it is usually an agent reading a log:
@@ -8,6 +8,8 @@ person fixing it is usually an agent reading a log:
 - a catalog entry is empty, fuzzy or missing, so the user would silently get
   the English source instead of a translation;
 - a placeholder set does not match between message id and translation;
+- a placeholder carries a Spanish name, or a message id bakes its plural into
+  the sentence as ``(s)``/``(es)`` instead of using ``ngettext``;
 - a translation call takes an f-string or ``str.format`` braces, which no
   catalog validator can check;
 - a user-visible string reaches a Qt widget without a translation call;
@@ -54,6 +56,8 @@ PSEUDO_TAG = "qps_ploc"
 STALE_TEMPLATE = "stale-template"
 EMPTY_TRANSLATION = "empty-translation"
 PLACEHOLDER_MISMATCH = "placeholder-mismatch"
+PLACEHOLDER_NAME = "placeholder-name"
+PLURAL_PARENTHETICAL = "plural-parenthetical"
 DYNAMIC_CALL = "dynamic-call"
 UNWRAPPED_STRING = "unwrapped-string"
 SPANISH_LITERAL = "spanish-literal"
@@ -62,6 +66,46 @@ SPANISH_LITERAL = "spanish-literal"
 #: constant means the text bypasses the catalog: English is the source
 #: language, so no shipped msgid needs them.
 _SPANISH_CHARS = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]")
+
+#: Spanish words that have appeared as ``%(name)s`` placeholders. A name is an
+#: identifier to Python, so a syntax check cannot tell ``%(modelo)s`` from an
+#: English word; the vocabulary is the check. Extend it when a real leak
+#: survives rather than loosening anything else.
+_SPANISH_PLACEHOLDER_WORDS = frozenset(
+    {
+        "carpeta",
+        "carpetas",
+        "clase",
+        "clases",
+        "coletilla",
+        "etiqueta",
+        "etiquetas",
+        "fibras",
+        "frase",
+        "fuera",
+        "imagen",
+        "imagenes",
+        "metodo",
+        "modelo",
+        "modelos",
+        "nota",
+        "otras",
+        "otro",
+        "particula",
+        "particulas",
+        "que",
+        "sentido",
+        "texto",
+        "umbral",
+        "valor",
+        "valores",
+        "veredicto",
+    }
+)
+
+#: A plural baked into the sentence as ``(s)``/``(es)`` cannot be translated by
+#: a language with different plural rules; ``ngettext`` owns that.
+_PLURAL_PARENTHETICAL = re.compile(r"\((?:s|es)\)", re.IGNORECASE)
 
 #: Out-of-scope and non-prose literals, matched exactly against the string.
 #: Each entry is ``(path, literal)`` and says why that string is not
@@ -436,7 +480,9 @@ def _singular_findings(relative: str, entry: po.PoEntry) -> list[Finding]:
                 f"{_describe(entry.key)} has an empty translation",
             )
         ]
-    return _placeholder_findings(relative, entry, entry.msgid, entry.msgstr, "translation")
+    findings = _placeholder_findings(relative, entry, entry.msgid, entry.msgstr, "translation")
+    findings.extend(_hygiene_findings(relative, entry, entry.msgid, entry.msgstr, "translation"))
+    return findings
 
 
 def _plural_findings(relative: str, entry: po.PoEntry) -> list[Finding]:
@@ -451,6 +497,11 @@ def _plural_findings(relative: str, entry: po.PoEntry) -> list[Finding]:
             )
         ]
     findings: list[Finding] = []
+    findings.extend(_hygiene_findings(relative, entry, entry.msgid, "", "message id"))
+    if entry.msgid_plural:
+        findings.extend(
+            _hygiene_findings(relative, entry, entry.msgid_plural, "", "plural message id")
+        )
     for index in forms:
         value = entry.msgstr_plural[index]
         if not value.strip():
@@ -464,9 +515,45 @@ def _plural_findings(relative: str, entry: po.PoEntry) -> list[Finding]:
             )
             continue
         expected_id = entry.msgid if index == 0 else entry.msgid_plural
+        label = f"plural form {index}"
         findings.extend(
-            _placeholder_findings(
-                relative, entry, expected_id or entry.msgid, value, f"plural form {index}"
+            _placeholder_findings(relative, entry, expected_id or entry.msgid, value, label)
+        )
+        findings.extend(
+            _hygiene_findings(relative, entry, expected_id or entry.msgid, value, label)
+        )
+    return findings
+
+
+def _hygiene_findings(
+    relative: str,
+    entry: po.PoEntry,
+    message_id: str,
+    translation: str,
+    label: str,
+) -> list[Finding]:
+    """Message-id hygiene: English placeholder names and no baked-in plurals."""
+    findings: list[Finding] = []
+    if _PLURAL_PARENTHETICAL.search(message_id):
+        findings.append(
+            Finding(
+                relative,
+                entry.lineno,
+                PLURAL_PARENTHETICAL,
+                f"{_describe(entry.key)} message id carries a plural parenthetical: "
+                f"{message_id!r}; use ngettext",
+            )
+        )
+    names = po.format_placeholders(message_id) | po.format_placeholders(translation)
+    spanish = sorted(name for name in names if name.lower() in _SPANISH_PLACEHOLDER_WORDS)
+    if spanish:
+        findings.append(
+            Finding(
+                relative,
+                entry.lineno,
+                PLACEHOLDER_NAME,
+                f"{label} for {_describe(entry.key)} uses Spanish placeholder "
+                f"name(s) {spanish}; name them in English",
             )
         )
     return findings

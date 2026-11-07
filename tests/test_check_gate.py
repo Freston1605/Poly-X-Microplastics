@@ -99,6 +99,28 @@ def _gate_module():
     return module
 
 
+def test_the_gate_checks_the_lockfile_and_the_palette(monkeypatch):
+    gate = _gate_module()
+    monkeypatch.setattr(gate.shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+
+    commands = gate._commands(Path("/python"), [], [])
+
+    palette = str(gate.ROOT / "tools" / "check_palette_fallbacks.py")
+    assert commands[0] == ["/usr/bin/uv", "lock", "--check"]
+    assert any(palette in command for command in commands)
+    assert any("check_i18n.py" in part for command in commands for part in command)
+
+
+def test_a_missing_uv_only_drops_the_lockfile_check(monkeypatch):
+    gate = _gate_module()
+    monkeypatch.setattr(gate.shutil, "which", lambda name: None)
+
+    commands = gate._commands(Path("/python"), [], [])
+
+    assert all(Path(command[0]).name != "uv" for command in commands)
+    assert any("check_i18n.py" in part for command in commands for part in command)
+
+
 def test_incomplete_worktree_interpreter_is_skipped(tmp_path):
     gate = _gate_module()
     missing = tmp_path / "missing-python"

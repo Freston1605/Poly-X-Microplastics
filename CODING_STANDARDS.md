@@ -63,11 +63,14 @@ Automated by the local hooks and the gate — these are the checks
       in `tests/english_scan.py`). On a whole-tree run, a `src/` file with no
       staged changes is scanned in full; `tests/` keeps the added-lines rule
       so grandfathered Spanish names still pass.
-- [ ] `i18n-audit` — the committed `messages.pot` matches the source tree,
-      every shipped catalog entry is translated with matching `%(name)s`
-      placeholders, and no user-visible string reaches a Qt widget, the CLI or
-      an HTML surface without a translation call. Runs as
-      `python tools/check_i18n.py` and in pre-commit.
+- [ ] `i18n-audit` — the committed `messages.pot` matches the source tree;
+      every shipped entry is translated with matching `%(name)s` placeholders,
+      English placeholder names and no `(s)`/`(es)` parentheticals; no
+      user-visible literal reaches a known Qt, CLI or HTML sink without a
+      translation call; and no Spanish string constant survives anywhere in
+      `src/polyx`. Runs as `python tools/check_i18n.py` and in pre-commit.
+      Text that reaches the interface through a local variable is invisible to
+      the static scan; the reviewer traces those by hand.
 - [ ] `no-hardcoded-fallback` — no literal fallback in a
       `CLASS_COLOR_HEX.get(...)` lookup; use `T.FALLBACK_COLOR_HEX`.
 
