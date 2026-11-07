@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
+from polyx.core.i18n import _
 from polyx.core.report_metrics import _classes_views
 
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
@@ -41,7 +42,7 @@ def _sample_of(path_2) -> tuple | None:
         return None
     range_value, witness, suffix = m.group(1), m.group(2), m.group(3)
     return (
-        _STATION.get(witness, f"Testigo {witness}"),
+        _STATION.get(witness, _("Witness %(witness)s") % {"witness": witness}),
         int(range_value),
         _PLATE.get(suffix, suffix),
     )

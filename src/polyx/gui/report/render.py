@@ -208,7 +208,9 @@ def generate_report(
 
     status = RunStatus.parse(run.status)
     if status is RunStatus.RUNNING:
-        raise ValueError(f"report requires a finished run, not {status.value!r}")
+        raise ValueError(
+            _("report requires a finished run, not %(status)r") % {"status": status.value}
+        )
     n_results = sum(len(rs) for rs in (run.results or {}).values())
     with timer(
         logger_for("detector"),

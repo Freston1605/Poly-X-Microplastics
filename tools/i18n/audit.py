@@ -38,6 +38,7 @@ LOCALES = Path("src/polyx/locales")
 SOURCE = Path("src/polyx")
 GUI = Path("src/polyx/gui")
 CLI = Path("src/polyx/cli")
+REPORT = Path("src/polyx/gui/report")
 
 #: Documents assembled as HTML strings instead of widgets. Their visible text
 #: is a text node, so the Qt sink scan cannot see it.
@@ -140,7 +141,13 @@ _CLI_ERROR_SINKS = {"RuntimeError", "ValueError"}
 
 #: Words that read the same in every language: metric abbreviations, the
 #: run-metadata key the compact report prints, and the Poly-X brand.
-_MACHINE_WORDS = {"TP", "FP", "FN", "miscls", "mAP", "Poly"}
+_MACHINE_WORDS = {"TP", "FP", "FN", "MISCLS", "miscls", "mAP", "Poly"}
+
+#: Units and symbols sit next to numbers; they are not words to translate.
+_UNITS = re.compile(r"\b(?:mm|cm|nm|µm|μm|px|GB|MB|kB)\b")
+
+#: The author credit in the report footer is a proper name and a symbol.
+_CREDIT = re.compile(r"©|Cristofher Ferrada")
 
 #: A parenthesised year marks a bibliography citation, never interface prose.
 _CITATION = re.compile(r"\(\d{4}\)")
@@ -467,6 +474,10 @@ def audit_sources(root: Path) -> list[Finding]:
             findings.extend(_terminal_findings(relative, tree))
         if relative in HTML_SURFACES:
             findings.extend(_html_findings(relative, tree))
+        if path.is_relative_to(root / REPORT):
+            # The full report is a package of hand-built HTML: its words reach
+            # the user through text nodes, so only markup literals are scanned.
+            findings.extend(_html_findings(relative, tree, markup_only=True))
 
     return findings
 
@@ -602,7 +613,7 @@ def _terminal_findings(relative: str, tree: ast.AST) -> list[Finding]:
     return findings
 
 
-def _html_findings(relative: str, tree: ast.AST) -> list[Finding]:
+def _html_findings(relative: str, tree: ast.AST, *, markup_only: bool = False) -> list[Finding]:
     """Prose in a hand-built HTML document: text nodes and display labels.
 
     ``report_simple`` and the training summary write their document as a
@@ -611,6 +622,11 @@ def _html_findings(relative: str, tree: ast.AST) -> list[Finding]:
     literal with several words (a figure caption, an error message). CSS
     blocks are skipped, and bibliography entries are recognised by their
     parenthesised year: citations are never translated.
+
+    ``markup_only`` is for the report package, where most literals are data,
+    matplotlib keyword values or dictionary keys. Only a literal that carries
+    HTML can put a word in front of the reader, so a non-markup literal is
+    ignored instead of being reported as a bare label.
     """
     parents = _parents(tree)
     docstrings = _docstring_ids(tree)
@@ -645,12 +661,16 @@ def _html_findings(relative: str, tree: ast.AST) -> list[Finding]:
             # their CSS in a string literal too.
             continue
         has_markup = re.search(r"<[A-Za-z]", value) is not None
+        if markup_only and not has_markup:
+            continue
+        if has_markup and _CITATION.search(value):
+            # A bibliography entry may span several lines: the year marks the
+            # whole literal as a citation, not just the line it appears on.
+            continue
         for line in value.splitlines() or [value]:
             text = _visible_text(line).strip()
             if has_markup:
-                if _CITATION.search(text):
-                    continue
-                check = _without_machine_words(text)
+                check = _without_neutral_tokens(text)
             else:
                 check = text
                 if not _PROSE.search(check):
@@ -672,11 +692,12 @@ def _html_findings(relative: str, tree: ast.AST) -> list[Finding]:
     return findings
 
 
-def _without_machine_words(text: str) -> str:
+def _without_neutral_tokens(text: str) -> str:
     """Drop the tokens that read the same in every language."""
     for word in _MACHINE_WORDS:
         text = re.sub(rf"\b{re.escape(word)}\b", " ", text)
-    return text
+    text = _UNITS.sub(" ", text)
+    return _CREDIT.sub(" ", text)
 
 
 def _parents(tree: ast.AST) -> dict[int, ast.AST]:

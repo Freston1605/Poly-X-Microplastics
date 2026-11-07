@@ -632,6 +632,46 @@ def test_html_machine_contract_strings_pass(tmp_path):
     assert audit.audit_sources(tmp_path) == []
 
 
+def test_report_html_raw_label_fails_the_gate(tmp_path):
+    """The full report builds HTML by hand; a text node is still visible text."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/gui/report/sections.py": (
+                "def breadcrumb(station, stretch, plate):\n"
+                '    return f"<td>{station} &middot; tramo {stretch}'
+                ' &middot; placa {plate}</td>"\n'
+            )
+        },
+    )
+
+    findings = audit.audit_sources(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "unwrapped-string"
+    assert findings[0].path == "src/polyx/gui/report/sections.py"
+    assert findings[0].line == 2
+    assert "tramo" in findings[0].detail
+
+
+def test_report_html_neutral_tokens_are_not_flagged(tmp_path):
+    """CSS, metric abbreviations, units and citations are not prose to translate."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/gui/report/sections.py": (
+                'STYLE = "<style>.kpi { color: red; }</style>"\n'
+                'ROW = "<tr><th>TP</th><th>FP</th><th>FN</th><th>MISCLS</th></tr>"\n'
+                'SCALE = "<p>100 mm &divide; 2 px = 50 µm/px</p>"\n'
+                'REF = "<li>Pérez M (2024). Development of a new method.</li>"\n'
+                'CREDIT = "<footer>© Cristofher Ferrada</footer>"\n'
+            )
+        },
+    )
+
+    assert audit.audit_sources(tmp_path) == []
+
+
 # ---------------------------------------------------------------------------
 # The real tree.
 # ---------------------------------------------------------------------------

@@ -76,7 +76,7 @@ def _fig_comparison_metrics(data_2: list[tuple]) -> str:
     if not data_2:
         return ""
     fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.2), sharey=True)
-    labels_2 = [_("Precision"), "Recall", "F1"]
+    labels_2 = [_("Precision"), _("Recall"), "F1"]
     x = np.arange(len(labels_2))
     width_2 = 0.8 / max(1, len(data_2))
     for panel, (ax, offset, title) in enumerate(
@@ -129,7 +129,14 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: list[tuple]) -> s
     b = [p[1] for p in pares]
     max_size = max(max(a), max(b), 1)  # noqa: PLW3301
     fig, ax = plt.subplots(figsize=(4.6, 4.2))
-    ax.plot([0, max_size], [0, max_size], "--", color="#999", linewidth=1, label="acuerdo exacto")
+    ax.plot(
+        [0, max_size],
+        [0, max_size],
+        "--",
+        color="#999",
+        linewidth=1,
+        label=_("exact agreement"),
+    )
     ax.scatter(a, b, s=26, alpha=0.75, color=T.DOC.ACCENT, edgecolor="white", linewidth=0.5)
     # The plates that differ the most are labelled: those are the ones to go and inspect.
     for na, nb, name_2 in sorted(pares, key=lambda p: -abs(p[0] - p[1]))[:3]:
@@ -146,8 +153,8 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: list[tuple]) -> s
     ax.set_yscale("symlog", linthresh=10)
     ax.set_xlim(-1, max_size * 1.6)
     ax.set_ylim(-1, max_size * 1.6)
-    ax.set_xlabel(f"Detecciones · {alias_a}")
-    ax.set_ylabel(f"Detecciones · {alias_b}")
+    ax.set_xlabel(_("Detections · %(model)s") % {"model": alias_a})
+    ax.set_ylabel(_("Detections · %(model)s") % {"model": alias_b})
     ax.grid(alpha=0.3)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, fontsize=8, loc="upper left")
@@ -503,7 +510,7 @@ def _figure_calibration(run) -> str:
 
 
 def _fig_confusion_matrix(cm: np.ndarray, class_names: list[str]) -> str:
-    labels = list(class_names) + ["background"]  # noqa: RUF005
+    labels = list(class_names) + [_("background")]  # noqa: RUF005
     fig, ax = plt.subplots(figsize=(5.5, 4.8))
     im = ax.imshow(cm, cmap="Blues")
     ax.set_xticks(range(len(labels)))
@@ -511,7 +518,7 @@ def _fig_confusion_matrix(cm: np.ndarray, class_names: list[str]) -> str:
     ax.set_xticklabels(labels, rotation=45, ha="right")
     ax.set_yticklabels(labels)
     ax.set_xlabel(_("Prediction"))
-    ax.set_ylabel("Ground Truth")
+    ax.set_ylabel(_("Ground Truth"))
     ax.set_title(_("Confusion matrix"))
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):

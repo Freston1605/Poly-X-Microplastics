@@ -246,7 +246,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
     assert nombre_pauta not in html
     assert _e(nombre_pauta) in html
     # La estacion del pauta "2.3x" es Desembocadura ("3" en _ESTACION):
-    assert "Desembocadura &middot; tramo 2 &middot; placa b</span>" in html
+    assert "Desembocadura &middot; stretch 2 &middot; plate b</span>" in html
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -442,7 +442,7 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
     assert f"Model prediction · {ALIAS_ESCAPADO}" in html  # figcaption
-    assert f"modelo: {ALIAS_ESCAPADO}</span>" in html  # tag
+    assert f"model: {ALIAS_ESCAPADO}</span>" in html  # tag
     assert f"<strong>{NOMBRE_ESCAPADO}</strong>" in html  # meta
     # 3 = cabecera global (Models:) + figcaption + tag del meta
     assert html.count(ALIAS_ESCAPADO) == 3

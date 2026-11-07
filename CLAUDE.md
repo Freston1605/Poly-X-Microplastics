@@ -114,7 +114,7 @@ src/                      # Source code (installable package)
         ├── labeler/      # Module 4: Manual YOLO annotation
         └── viewer/       # Module 5: Inspection with μm/px calibration
 
-tests/                    # Pytest (43 test modules + fixtures)
+tests/                    # Pytest (66 test modules + fixtures)
 ├── english_scan.py       # Spanish-remnant scanner (no LibCST)
 ├── test_*_english.py      # Language-convention gates
 ├── fixtures/             # Shared fixtures and report baselines

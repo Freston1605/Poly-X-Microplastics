@@ -108,7 +108,8 @@ class LabelerWindow(QMainWindow):
         self._on_active_class_changed(self.state.active_class)
         if 0 <= index < len(self.state.images):
             self.state.image_changed.emit(index)
-        self._on_annotations_changed()
+        if self.state.images:
+            self._on_annotations_changed()
         self._update_progress()
 
     def _build_ui(self) -> None:
