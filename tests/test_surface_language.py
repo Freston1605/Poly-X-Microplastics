@@ -19,20 +19,6 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
-def selected_language():
-    """Switch the active language and restore it after the test."""
-    import polyx.core.i18n as i18n
-
-    previous = i18n.language()
-
-    def choose(tag: str) -> None:
-        assert i18n.set_language(tag) is True
-
-    yield choose
-    i18n.set_language(previous)
-
-
 def _canonical_run(tmp_path: Path) -> Path:
     """A minimal canonical run folder the compact report can read."""
     run = tmp_path / "run"

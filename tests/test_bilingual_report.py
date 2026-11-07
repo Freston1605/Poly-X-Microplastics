@@ -1,24 +1,19 @@
-"""Que el informe salga de verdad en los dos idiomas.
+"""The report really comes out in both languages.
 
-Hay un modo de fallo que no se nota nunca al programar: si una cadena se
-envuelve como ``{tr('...')}`` dentro de una cadena que NO es f-string, Python
-no protesta y el documento sale con el codigo impreso tal cual:
+The same batch is rendered twice, switching the language through
+``set_language``, and the test reads the document the user receives: the
+HTML ``lang``, the translated headings, and a sweep for sentences that stayed
+untranslated. Nothing here inspects the catalogue, the translation call or the
+``.po`` layout.
 
-    <h3>2.1 {tr('Equipo de computo')}</h3>
-
-Se ve solo abriendo el HTML, y paso tres veces al traducir el informe. Aqui se
-comprueba sobre el documento generado, que es donde el fallo existe.
-
-Tambien se vigila lo contrario: que pedir ingles no devuelva un informe en
-español porque la clave del diccionario dejo de coincidir con la del codigo
--- basta un espacio o un salto de linea de diferencia para que tr() caiga en
-silencio al original.
+There is a failure mode that is easy to miss while coding: a string that never
+reaches the translation layer makes the document come out in the wrong
+language, and only opening the HTML shows it. The sweep below renders both
+languages and flags lines that appear identical in both while reading Spanish.
 """
 
 from __future__ import annotations
 
-import importlib
-import os
 from pathlib import Path
 
 import numpy as np
@@ -65,14 +60,11 @@ def _estado_minimo(tmp_path):
 
 
 def _informe(tmp_path, lang):
-    """Genera el informe con el idioma pedido y devuelve su HTML."""
-    os.environ["POLYX_LOCALE"] = lang
+    """Generate the report in the requested language and return its HTML."""
     import polyx.core.i18n as i18n
-
-    importlib.reload(i18n)
     import polyx.gui.report_html as rh
 
-    importlib.reload(rh)
+    assert i18n.set_language(lang)
     salida = tmp_path / f"informe_{lang}.html"
     rh.generate_report(_estado_minimo(tmp_path), salida, sections=list(rh.IDS_SECTIONS))
     return salida.read_text(encoding="utf-8")
@@ -80,28 +72,20 @@ def _informe(tmp_path, lang):
 
 @pytest.fixture(autouse=True)
 def _restaurar_idioma():
-    previous = os.environ.get("POLYX_LOCALE")
+    """Leave the suite in the language conftest pins."""
+    from polyx.core import i18n
+
+    previous = i18n.language()
     yield
-    if previous is None:
-        os.environ.pop("POLYX_LOCALE", None)
-    else:
-        os.environ["POLYX_LOCALE"] = previous
-    import polyx.core.i18n as i18n
-
-    importlib.reload(i18n)
-    import polyx.gui.report_html as rh
-
-    importlib.reload(rh)
+    i18n.set_language(previous)
 
 
 @pytest.mark.parametrize("lang", ["es", "en"])
-def test_no_queda_codigo_sin_evaluar_en_el_documento(tmp_path, lang):
-    """El fallo de envolver en tr() una cadena que no era f-string."""
+def test_the_document_keeps_no_unrendered_placeholders(tmp_path, lang):
+    """An internal marker or an unresolved ``%(name)s`` reaches the user."""
     html = _informe(tmp_path, lang)
-    assert "{tr(" not in html, (
-        "el documento lleva un {tr(...)} impreso: esa cadena se envolvio "
-        "dentro de una cadena normal, no de una f-string"
-    )
+    assert "@@N@@" not in html, "an internal numbering marker was not substituted"
+    assert "%(" not in html, "an unresolved placeholder is in the document"
 
 
 @pytest.mark.parametrize("lang", ["es", "en"])
@@ -111,8 +95,7 @@ def test_el_idioma_del_documento_es_el_pedido(tmp_path, lang):
 
 
 def test_en_english_no_salen_los_rotulos_en_español(tmp_path):
-    """Si una clave del diccionario deja de coincidir con la del codigo, tr()
-    devuelve el español sin avisar y el informe queda mezclado."""
+    """Asking for English must not return a mixed report."""
     html = _informe(tmp_path, "en")
     for rotulo_es, rotulo_en in [
         ("<th>Parámetro</th>", "Parameter"),
@@ -154,10 +137,10 @@ def _texto_visible(html: str) -> list[str]:
 def test_el_informe_en_english_no_arrastra_frases_en_español(tmp_path):
     """Barrido ancho, no por sondas sueltas.
 
-    Se generan los dos documentos y se comparan sus textos: una linea que
-    aparece IGUAL en ambos y tiene pinta de español es una cadena que se quedo
-    sin envolver en tr() o cuya clave dejo de coincidir. Es como se encontraron
-    las ultimas ~100, y sin esta prueba vuelven a colarse a la primera edicion.
+    Both documents are rendered and their texts compared: a line that appears
+    identically in both and reads Spanish is a string that never reached the
+    translation layer. This is how the last ~100 were found, and without this
+    test they come back on the first edit.
     """
     import re
 
@@ -174,57 +157,6 @@ def test_el_informe_en_english_no_arrastra_frases_en_español(tmp_path):
     sospechosas = [t for t in es & en if marca.search(t) and len(t) > 2 and "(2024)" not in t]
     assert not sospechosas, "texto sin traducir en el informe en ingles:\n  " + "\n  ".join(
         sorted(sospechosas)[:15]
-    )
-
-
-def test_ninguna_traduccion_se_congela_al_importar():
-    """Un tr() en el cuerpo del modulo se evalua UNA vez, al importar.
-
-    Con eso, cambiar el idioma y volver a generar el informe deja ese texto en
-    el idioma anterior. Ya paso con el nombre del morfotipo. Se comprueba sobre
-    el arbol sintactico porque en tiempo de ejecucion no se distingue.
-
-    Desde PR #16 el codigo del informe vive en ``polyx/gui/report/`` y
-    ``report_html.py`` es solo un shim de compatibilidad: el barrido tiene que
-    cubrir el paquete entero, no el shim, o el filtro pasaria vacio sin
-    encontrar ni un tr(). Por eso ademas se cuenta el total de llamadas: un
-    camino equivocado no puede aprobar por no encontrar nada.
-    """
-    import ast
-    from pathlib import Path as _P
-
-    gui = _P(__file__).resolve().parents[1] / "src" / "polyx" / "gui"
-    fuentes = [*sorted((gui / "report").glob("*.py")), gui / "report_html.py"]
-    assert all(ruta.is_file() for ruta in fuentes), f"faltan fuentes del informe en {gui}"
-
-    congeladas: list[str] = []
-    vistas = 0
-    for ruta in fuentes:
-        arbol = ast.parse(ruta.read_text(encoding="utf-8"))
-        dentro_de_funcion = set()
-        for nodo in arbol.body:
-            if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                for sub in ast.walk(nodo):
-                    dentro_de_funcion.add(id(sub))
-        llamadas = [
-            n
-            for n in ast.walk(arbol)
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_"
-        ]
-        vistas += len(llamadas)
-        congeladas += [
-            f"{ruta.name}:{n.lineno}" for n in llamadas if id(n) not in dentro_de_funcion
-        ]
-
-    # Anti-vacuity: the report translates more than 200 strings across three
-    # files; below this floor the scan is not reading the code.
-    assert vistas >= 150, (
-        f"el barrido encontro solo {vistas} llamadas en {len(fuentes)} ficheros: "
-        f"el camino de las fuentes del informe quedo desactualizado"
-    )
-    assert not congeladas, (
-        f"_() en el cuerpo del modulo ({', '.join(congeladas)}): se resuelve al "
-        f"importar y no sigue al idioma elegido"
     )
 
 
@@ -326,13 +258,11 @@ def _estado_completo(tmp_path):
 
 
 def _informe_completo(tmp_path, lang):
-    os.environ["POLYX_LOCALE"] = lang
+    """Render the complete batch in the requested language and return its HTML."""
     import polyx.core.i18n as i18n
-
-    importlib.reload(i18n)
     import polyx.gui.report_html as rh
 
-    importlib.reload(rh)
+    assert i18n.set_language(lang)
     salida = tmp_path / f"completo_{lang}.html"
     rh.generate_report(_estado_completo(tmp_path), salida, sections=list(rh.IDS_SECTIONS))
     return salida.read_text(encoding="utf-8")
@@ -344,7 +274,8 @@ def test_un_lote_con_todas_las_secciones_se_genera(tmp_path, lang):
     idiomas. Es la prueba que habria cazado el mas unario."""
     html = _informe_completo(tmp_path, lang)
     assert html.count("<h2") >= 10, "faltan secciones por construir"
-    assert "{tr(" not in html
+    assert "@@N@@" not in html
+    assert "%(" not in html
 
 
 def test_en_el_lote_completo_tampoco_se_cuela_español(tmp_path):

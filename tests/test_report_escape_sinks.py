@@ -33,13 +33,12 @@ Station, core and plate (the sinks listed under T05 inside _seccion_conteo and
 the gallery) have NO dedicated hostile test: the text that can reach them is
 bounded by the naming regex (_RE_PLACA only accepts digits and 'x'),
 so no hostile string crosses ``_muestra_de`` into them. The escaping is layered
-armour, verified by the byte-identity test of the benign render
-(tests/test_benign_report_render.py), not by injection.
+armour, verified by the per-section render tests
+(tests/test_report_sections.py), not by injection.
 
-The language is pinned to 'en' and the pipeline logger to a NullHandler with
-the same mechanics as tests/test_benign_report_render.py: polyx.core.i18n
-caches the language on import and without POLYX_LOCALE the anchors in this file
-depend on the machine; the 'polyx.detector' logger is cached by logger_para with a
+The language is pinned to 'en' through POLYX_LOCALE before i18n is imported,
+and the pipeline logger to a NullHandler: without the pin the anchors in this
+file depend on the machine; the 'polyx.detector' logger is cached by logger_para with a
 RotatingFileHandler a carpeta_logs() y sin POLYX_LOG_DIR la suite escribiria en
 el HOME real. Los estados de fixture no usan QObjects y no emiten eventos: no
 se pierde nada al silenciar.
@@ -94,12 +93,12 @@ TITULO_ESCAPADO = _e(TITULO_HOSTIL)
 
 @pytest.fixture(autouse=True)
 def rh(tmp_path, monkeypatch):
-    """Fuerza 'en' y revierte el logger del pipeline a NullHandler.
+    """Force 'en' and revert the pipeline logger to a NullHandler.
 
-    Misma mecanica de tests/test_benign_report_render.py: i18n cachea el
-    idioma al importar y los anclajes de este archivo son literales de
-    plantilla en el idioma del render; sin fuerza, el resultado dependia de
-    la maquina. POLYX_LOG_DIR va a tmp_path antes del primer logger_para.
+    The language is pinned to 'en' before i18n is imported: the anchors in
+    this file are template literals in the render language, and without the
+    pin the result depended on the machine. POLYX_LOG_DIR is set to tmp_path
+    before the first logger_para.
     """
     import polyx.core.i18n as i18n
     import polyx.core.observability as obs

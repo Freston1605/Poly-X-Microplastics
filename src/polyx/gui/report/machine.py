@@ -10,7 +10,7 @@ They were re-exported from ``polyx.gui.report._common`` (removed in refactor) on
 section builders read ``_team`` and ``_training_of`` through that module at
 call time, which is what lets the byte-identity fixtures pin the live
 equipment table to canonical rows (``tools/audit/capture_report_fixtures.py``
-and ``tests/test_benign_report_render.py`` patch exactly that attribute).
+patches exactly that attribute).
 """
 
 from __future__ import annotations

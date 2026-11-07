@@ -8,8 +8,10 @@ locale en ingles el informe sale en ingles y la prueba falla; en CI el
 locale suele estar vacio y pasa por casualidad.
 
 The suite pins Spanish explicitly and reproducibly. Tests that exercise the
-language itself -- ``test_bilingual_report`` -- set theirs through
-``POLYX_LOCALE`` directly, and ``setdefault`` leaves an explicit choice alone.
+language itself -- ``test_bilingual_report``, the CLI output and the
+widget-tree switch -- select a language through ``i18n.set_language`` (the
+``selected_language`` fixture below) and restore it afterwards. The old
+environment variable is gone: ``POLYX_LOCALE`` is the only override.
 
 Aislamiento de observabilidad y logs (Decision D007):
 Varios modulos de prueba (como ``test_assignment`` o ``test_bilingual_report``)
@@ -94,3 +96,22 @@ def qapp():
     if app is None:
         app = QApplication([])
     yield app
+
+
+@pytest.fixture
+def selected_language():
+    """Select the active language through the public API and restore it.
+
+    The one seam every surface test uses: set the language, render the
+    surface, assert what the user sees. Restoring keeps the suite in the
+    language conftest pins, so a test never depends on which one ran before.
+    """
+    from polyx.core import i18n
+
+    previous = i18n.language()
+
+    def choose(tag: str) -> None:
+        assert i18n.set_language(tag) is True
+
+    yield choose
+    i18n.set_language(previous)

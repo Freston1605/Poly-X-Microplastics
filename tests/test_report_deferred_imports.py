@@ -23,7 +23,7 @@ is out of scope for M004. The test therefore asserts yolo_wrap IS importable
 cv2's absence.
 
 Language note: the subprocess forces POLYX_LOCALE=en (the same contract as the
-render baseline, see tests/test_benign_report_render.py) plus
+render baseline) plus
 QT_QPA_PLATFORM=offscreen for hermeticity; neither affects the import topology,
 they only remove the dependency on the machine's locale and environment of the
 maquina.

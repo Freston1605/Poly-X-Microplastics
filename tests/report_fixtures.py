@@ -1,11 +1,10 @@
 """Canonical ``RunResult`` fixtures shared by the report tests.
 
-La captura del baseline pre-fix (tools/audit/capture_report_fixtures.py, T03) y
-los tests de identidad de bytes e inyeccion muerta (T04-T07) necesitan todos
-el MISMO par de estados de entrada: uno benigno y otro con inyeccion HTML en
-los nombres de archivo y alias de modelo. Una receta repetida a mano en cada
-consumidor se desincroniza y el baseline deja de describir el render real;
-aqui esta la fuente comun.
+The English baseline capture (tools/audit/capture_report_fixtures.py) and the
+section and injection tests all need the SAME pair of input states: one benign
+and one with HTML injection in the file names and model aliases. A recipe
+repeated by hand in every consumer drifts, and the baseline stops describing
+the real render; here is the common source.
 
 La receta de construccion es la del lote minimo de tests/test_informe_biling
 ue (_estado_minimo): una foto sintetica de 320x260 con un disco de r=22, una
@@ -145,7 +144,7 @@ def estado_benigno(directorio: Path | None = None):
     """Return a clean, benign RunResult for the report fixtures.
 
     The photo written is also benign (``placa_muestra_a.png``), so downstream
-    renders must reproduce the baseline byte-for-byte.
+    renders reproduce the same document the English baseline describes.
     """
     directorio = directorio or Path(tempfile.mkdtemp(prefix="polyx-fixture-benigna-"))
     return _construir_estado(Path(directorio), [NOMBRE_FOTO_BENIGNO], [ALIAS_BENIGNO])
