@@ -19,6 +19,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
+from polyx.core.i18n import _
 from polyx.gui import theme as T
 
 from .export import size_label
@@ -144,7 +145,7 @@ class ViewerCanvas(QWidget):
         if self._pixmap is None:
             p.setPen(QColor(T.INK3))
             p.setFont(QFont(T.APP_FONT_FAMILY, 12))
-            p.drawText(self.rect(), Qt.AlignCenter, "Abre una imagen o una carpeta para comenzar")
+            p.drawText(self.rect(), Qt.AlignCenter, _("Open an image or folder to begin"))
             return
 
         # Image
