@@ -152,31 +152,34 @@ def test_no_visible_text_survives_a_language_switch(qapp, _no_update_check):
     # Reference build: the same windows, freshly built in English.
     assert i18n.set_language("en")
     english_windows = _build_windows()
-    english = _all_texts(english_windows)
-    _destroy(english_windows, qapp)
+    try:
+        english = _all_texts(english_windows)
+    finally:
+        _destroy(english_windows, qapp)
 
     # The application runs in Spanish, then the language changes underneath it.
     assert i18n.set_language("es")
     windows = _build_windows()
-    spanish = _all_texts(windows)
-    _assert_walk_is_not_vacuous(windows)
-    assert i18n.set_language("en")
-    qapp.processEvents()
-    after = _all_texts(windows)
+    try:
+        spanish = _all_texts(windows)
+        _assert_walk_is_not_vacuous(windows)
+        assert i18n.set_language("en")
+        qapp.processEvents()
+        after = _all_texts(windows)
 
-    # Anti-vacuity: every window must have carried text that only exists in
-    # Spanish, or the walk is not exercising the window's translated strings.
-    spanish_only = {name: spanish[name] - english[name] for name in WINDOW_NAMES}
-    empty = sorted(name for name, texts in spanish_only.items() if not texts)
-    assert not empty, f"no Spanish-only text was collected from: {empty}"
+        # Anti-vacuity: every window must have carried text that only exists
+        # in Spanish, or the walk is not exercising its translated strings.
+        spanish_only = {name: spanish[name] - english[name] for name in WINDOW_NAMES}
+        empty = sorted(name for name, texts in spanish_only.items() if not texts)
+        assert not empty, f"no Spanish-only text was collected from: {empty}"
 
-    survivors = {name: sorted(after[name] & spanish_only[name]) for name in WINDOW_NAMES}
-    leftovers = {name: texts for name, texts in survivors.items() if texts}
-    assert not leftovers, "text from the previous language survived the switch: " + "; ".join(
-        f"{name}: {texts[:5]}" for name, texts in leftovers.items()
-    )
-
-    _destroy(windows, qapp)
+        survivors = {name: sorted(after[name] & spanish_only[name]) for name in WINDOW_NAMES}
+        leftovers = {name: texts for name, texts in survivors.items() if texts}
+        assert not leftovers, "text from the previous language survived the switch: " + "; ".join(
+            f"{name}: {texts[:5]}" for name, texts in leftovers.items()
+        )
+    finally:
+        _destroy(windows, qapp)
 
 
 def _assert_walk_is_not_vacuous(windows: dict[str, QWidget]) -> None:
