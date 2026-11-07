@@ -29,7 +29,7 @@ from collections.abc import Callable
 
 from PySide6.QtGui import QColor
 
-from polyx.core.i18n import N_
+from polyx.core.i18n import N_, _, pgettext
 
 # ════════════════════════════════════════════════════════════════════
 #  Palettes
@@ -199,15 +199,27 @@ class _PaletteFixed:
 DOC = _PaletteFixed(PALETTES["claro"])
 
 
-# Display name of each theme. It is translated with tr() at the point of use, not here:
-# this module cannot import i18n without creating a cycle (i18n does not depend on
-# theme, but widgets.py depends on both and the order would stop being clear).
+# Display name of each theme, marked for extraction with ``N_`` and translated
+# when the preferences dialog draws it. Resolving them here would freeze the
+# language at import time.
 NAMES_THEME: dict[str, str] = {
     "claro": N_("Light"),
     "oscuro": N_("Dark"),
     "azul": N_("Midnight blue"),
     "contraste": N_("High contrast"),
 }
+
+
+def theme_name(theme_id: str) -> str:
+    """Translated display name of a theme.
+
+    ``Light`` is also an augmentation level, so the theme sense carries a
+    context: in Spanish the theme is *Claro* and the level is *Suave*.
+    """
+    if theme_id == "claro":
+        return pgettext("theme", "Light")
+    return _(NAMES_THEME[theme_id])
+
 
 # A dark theme needs different decisions in some places (shadows,
 # halo opacity). Instead of checking the name all over the place, it is declared.

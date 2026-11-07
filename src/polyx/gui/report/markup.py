@@ -17,7 +17,7 @@ import html
 from collections import Counter
 from pathlib import Path
 
-from polyx.core.i18n import N_, _
+from polyx.core.i18n import N_, _, pgettext
 
 #: A length method lives in run data as an identifier, not as prose. The
 #: stored values stay as they are — they belong to the run schema — and only
@@ -164,7 +164,7 @@ def _table_width(
             )
             + f"<th colspan='2' style='text-align:center'>{_('Total')}</th></tr><tr>"
             + "".join(
-                f"<th class='r'>{_('manual')}</th><th class='r'>{_('model')}</th>"
+                f"<th class='r'>{_('manual')}</th><th class='r'>{pgettext('table header', 'model')}</th>"
                 for _unused in classes + ["total"]  # noqa: RUF005
             )
             + "</tr>"

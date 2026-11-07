@@ -14,7 +14,7 @@ instead of leaving the user to find out:
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -133,7 +133,7 @@ class _CardTheme(QFrame):
 
 
 # ──────────────────────────────────────────────────────────────────────
-class PreferencesDialog(QDialog):
+class PreferencesDialog(i18n_qt.RetranslateOnLanguageChange, QDialog):
     """Appearance preferences. Every option applies live when picked."""
 
     theme_changed = Signal(str)
@@ -146,21 +146,17 @@ class PreferencesDialog(QDialog):
         self._build()
 
     # ── Language ───────────────────────────────────────────────────
-    def changeEvent(self, event):
-        if event.type() == QEvent.LanguageChange:
-            self.retranslate()
-        super().changeEvent(event)
-
     def retranslate(self) -> None:
         """Rebuild after the event, never inside the click that caused it.
 
         The language buttons trigger this from their own ``clicked`` signal,
         and ``_build`` destroys them. Deleting the sender while it is
-        emitting is undefined, so the rebuild is queued.
+        emitting is undefined, so ``RetranslateOnLanguageChange`` queues this
+        call; by the time it runs the click has returned.
         """
         if not i18n_qt.is_alive(self):
             return
-        QTimer.singleShot(0, self._build)
+        self._build()
 
     # ── Build ──────────────────────────────────────────────────────
     def _build(self) -> None:
@@ -189,8 +185,7 @@ class PreferencesDialog(QDialog):
         grid.setSpacing(10)
         current = T.theme()
         for i, name_2 in enumerate(T.PALETTES):
-            label = T.NAMES_THEME[name_2]
-            card = _CardTheme(name_2, _(label), name_2 == current)
+            card = _CardTheme(name_2, T.theme_name(name_2), name_2 == current)
             card.chosen.connect(self._choose_theme)
             grid.addWidget(card, i // 4, i % 4)
         root.addLayout(grid)
@@ -207,15 +202,15 @@ class PreferencesDialog(QDialog):
         row = QHBoxLayout()
         row.setSpacing(8)
         self._buttons_language: dict[str, QPushButton] = {}
-        for cod, label_2 in available_languages().items():
+        for code, label_2 in available_languages().items():
             b = QPushButton(label_2)
             b.setCheckable(True)
-            b.setChecked(cod == language())
+            b.setChecked(code == language())
             b.setCursor(Qt.PointingHandCursor)
             b.setMinimumWidth(112)
             b.setStyleSheet(self._qss_toggle())
-            b.clicked.connect(lambda _unused=False, c=cod: self._choose_language(c))
-            self._buttons_language[cod] = b
+            b.clicked.connect(lambda _unused=False, c=code: self._choose_language(c))
+            self._buttons_language[code] = b
             row.addWidget(b)
         row.addStretch(1)
         root.addLayout(row)
@@ -285,7 +280,7 @@ class PreferencesDialog(QDialog):
         self.theme_changed.emit(name_2)
 
     def _choose_language(self, code: str) -> None:
-        for cod, button_2 in self._buttons_language.items():
-            button_2.setChecked(cod == code)
+        for tag, button_2 in self._buttons_language.items():
+            button_2.setChecked(tag == code)
         if code != language():
             set_language(code)

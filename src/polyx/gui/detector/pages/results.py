@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import _, lazy
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
 from polyx.gui import iconos
@@ -304,21 +304,22 @@ class ResultsPage(DetectorPage):
         if changed:
             items_2 = ", ".join(changed[:8])
             if len(changed) > 8:
-                items_2 += f" y {len(changed) - 8} más"
-            text = (
-                f"✓ {len(changed)} imagen(es) con ground truth distinto: "
-                f"{items_2}. Métricas e imágenes de control actualizadas; "
-                f"ya puedes generar el informe."
-            )
+                items_2 += _(" and %(count)s more") % {"count": len(changed) - 8}
+            text = ngettext(
+                "✓ %(count)s image with different ground truth: %(items)s. Metrics and control images updated; you can generate the report now.",
+                "✓ %(count)s images with different ground truth: %(items)s. Metrics and control images updated; you can generate the report now.",
+                len(changed),
+            ) % {"count": len(changed), "items": items_2}
         else:
-            text = (
-                f"✓ Revisadas {summary['revisadas']} imágenes: ningún .txt "
-                f"cambió respecto a la corrida. No había nada que recalcular."
-            )
+            text = _(
+                "✓ Reviewed %(count)s images: no .txt changed since the run. There was nothing to recompute."
+            ) % {"count": summary["revisadas"]}
         if summary["sin_gt"]:
-            text += f"  ({len(summary['sin_gt'])} sin .txt de control.)"
+            text += "  " + _("(%(count)s with no control .txt.)") % {
+                "count": len(summary["sin_gt"])
+            }
         if cancelled["si"]:
-            text += "  Se canceló a mitad: vuelve a pulsar para terminar."
+            text += "  " + _("Cancelled halfway: press again to finish.")
         self.lbl_recharge.setText(text)
         self.refresh()
 
@@ -382,15 +383,26 @@ class ResultsPage(DetectorPage):
             if tb > ta + 1e-9 and (f1b - f1a) > 0.002:
                 sign = "⚠" if (f1b - f1a) >= 0.01 else "·"
                 lines.append(
-                    f"{sign} {head}  Su mejor umbral es {tb:.2f}: F1 {f1b:.3f} "
-                    f"({f1b - f1a:+.3f}), P {pb:.3f} / R {rb:.3f}."
+                    _(
+                        "%(sign)s %(head)s  Its best threshold is %(threshold).2f: F1 %(f1b).3f (%(delta)+.3f), P %(pb).3f / R %(rb).3f."
+                    )
+                    % {
+                        "sign": sign,
+                        "head": head,
+                        "threshold": tb,
+                        "f1b": f1b,
+                        "delta": f1b - f1a,
+                        "pb": pb,
+                        "rb": rb,
+                    }
                 )
                 optimal.append(tb)
             else:
                 lines.append(
-                    f"✓ {head}  Es el mejor del rango explorado; por debajo de "
-                    f"{ta:g} no hay detecciones calculadas y no se recuperan "
-                    f"filtrando."
+                    _(
+                        "✓ %(head)s  It is the best in the explored range; below %(threshold)g there are no computed detections and they cannot be recovered by filtering."
+                    )
+                    % {"head": head, "threshold": ta}
                 )
                 optimal.append(ta)
         if not lines:
@@ -400,20 +412,24 @@ class ResultsPage(DetectorPage):
         distinct = len({round(t, 2) for t in optimal}) > 1
         if common and distinct:
             lines.append(
-                f"➜ Cada modelo prefiere un umbral distinto. Usa {common[0]:.2f} "
-                f"para los dos (F1 medio {common[1]:.3f}): es el mismo punto de "
-                f"operación y la comparación queda limpia. Cámbialo en "
-                f"Parámetros y vuelve a Ejecutar."
+                _(
+                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
+                )
+                % {"threshold": common[0], "mean": common[1]}
             )
         elif max(optimal) > used_2 + 1e-9:
             lines.append(
-                f"➜ Cambia la confianza a {max(optimal):.2f} en Parámetros y "
-                f"vuelve a Ejecutar antes de generar el informe."
+                _(
+                    "➜ Change the confidence to %(threshold).2f in Parameters and run again before generating the report."
+                )
+                % {"threshold": max(optimal)}
             )
         else:
             lines.append(
-                f"➜ La confianza {used_2:g} ya es el punto de operación bueno. "
-                f"Puedes generar el informe."
+                _(
+                    "➜ Confidence %(threshold)g is already a good operating point. You can generate the report."
+                )
+                % {"threshold": used_2}
             )
         return "\n".join(lines)
 
@@ -515,9 +531,9 @@ class ResultsPage(DetectorPage):
                     linewidth=0.5,
                 )
 
-            ax.set_xlabel("Diámetro equivalente (μm)", fontsize=9)
-            ax.set_ylabel("Frecuencia", fontsize=9)
-            ax.set_title("Distribución de tamaños por clase", fontsize=10, fontweight="bold")
+            ax.set_xlabel(_("Equivalent diameter (μm)"), fontsize=9)
+            ax.set_ylabel(_("Frequency"), fontsize=9)
+            ax.set_title(_("Size distribution by class"), fontsize=10, fontweight="bold")
             ax.legend(fontsize=8)
             ax.grid(axis="y", alpha=0.3)
             ax.tick_params(labelsize=8)

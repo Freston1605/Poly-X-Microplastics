@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -79,7 +79,7 @@ class SidebarButton(QPushButton):
 
 
 # ────────────────────────────────────────────────────────────────────
-class DetectorWindow(QMainWindow):
+class DetectorWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
         super().__init__()
         i18n_qt.activate()
@@ -100,13 +100,6 @@ class DetectorWindow(QMainWindow):
         self.state.run_aborted.connect(self._apply_pending_retranslation)
 
     # ── Language ───────────────────────────────────────────────
-    def changeEvent(self, event):
-        if event.type() == QEvent.LanguageChange:
-            # Rebuild after the event returns: deleting the widget tree
-            # inside changeEvent is not safe.
-            QTimer.singleShot(0, self.retranslate)
-        super().changeEvent(event)
-
     def retranslate(self) -> None:
         """Rebuild the pages so every text comes from the new catalog.
 

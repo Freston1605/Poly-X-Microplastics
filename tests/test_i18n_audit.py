@@ -97,6 +97,14 @@ def test_po_reader_extracts_named_and_positional_placeholders():
     assert po.format_placeholders("100%% sure") == set()
 
 
+def test_po_reader_extracts_placeholders_with_width_and_precision():
+    """A width or precision is part of the specifier, not a different token."""
+    assert po.format_placeholders("%(done)6.1f/%(total)6.1f MB") == {"done", "total"}
+    assert po.format_placeholders("%(pct)3d%%") == {"pct"}
+    assert po.format_placeholders("%(value)-10.2f μm") == {"value"}
+    assert po.format_placeholders("%(name)+08s") == {"name"}
+
+
 # ---------------------------------------------------------------------------
 # Extraction walker.
 # ---------------------------------------------------------------------------
@@ -277,6 +285,47 @@ def test_placeholder_mismatch_fails_the_gate(tmp_path):
     assert findings[0].kind == "placeholder-mismatch"
     assert "count" in findings[0].detail
     assert "total" in findings[0].detail
+
+
+def test_a_formatted_placeholder_mismatch_fails_the_gate(tmp_path):
+    """The catalog ships ``%(done)6.1f``; dropping it must not pass silently."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                'from polyx.core.i18n import _\n\nlabel = _("%(done)6.1f of %(total)6.1f MB")\n'
+            ),
+            TEMPLATE_REL: _pot(_entry("%(done)6.1f of %(total)6.1f MB", "")),
+            CATALOG_REL: _catalog(
+                _entry("%(done)6.1f of %(total)6.1f MB", "%(hecho)6.1f de %(total)6.1f MB")
+            ),
+        },
+    )
+
+    findings = audit.audit_catalogs(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "placeholder-mismatch"
+    assert "done" in findings[0].detail
+    assert "hecho" in findings[0].detail
+
+
+def test_a_reordered_formatted_placeholder_passes(tmp_path):
+    """Reordering is allowed; only the set of names has to match."""
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                'from polyx.core.i18n import _\n\nlabel = _("%(done)6.1f of %(total)6.1f MB")\n'
+            ),
+            TEMPLATE_REL: _pot(_entry("%(done)6.1f of %(total)6.1f MB", "")),
+            CATALOG_REL: _catalog(
+                _entry("%(done)6.1f of %(total)6.1f MB", "%(total)6.1f de %(done)6.1f MB")
+            ),
+        },
+    )
+
+    assert audit.audit_catalogs(tmp_path) == []
 
 
 def test_positional_placeholder_in_a_translation_fails_the_gate(tmp_path):
@@ -744,6 +793,23 @@ def test_compiled_catalogs_are_in_the_wheel(tmp_path):
     assert packaging.wheel_catalog_entries(tmp_path)
 
 
+def test_hatch_declares_the_compiled_catalogs_as_build_artifacts():
+    """``*.mo`` is gitignored, so Hatch excludes it unless it is an artifact.
+
+    The hook writes the file, but Hatchling still filters VCS-ignored paths
+    out of the wheel.  This pins the declaration that makes the wheel carry
+    the catalogs; the real ``uv build --wheel`` proof lives in the PR.
+    """
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    targets = pyproject["tool"]["hatch"]["build"]["targets"]
+
+    for target in ("wheel", "sdist"):
+        artifacts = targets[target].get("artifacts", [])
+        assert any("*.mo" in pattern for pattern in artifacts), (
+            f"{target} target must declare compiled catalogs as artifacts: {artifacts}"
+        )
+
+
 def test_the_frozen_application_bundles_compiled_catalogs_without_the_pseudo_locale(tmp_path):
     from tools.i18n import packaging
 
@@ -815,6 +881,43 @@ def test_a_missing_explicit_language_is_logged_and_falls_back(monkeypatch, caplo
     importlib.reload(i18n)
 
 
+def test_an_explicit_language_with_an_empty_catalog_directory_is_logged(
+    tmp_path, monkeypatch, caplog
+):
+    """A directory is not a catalog: a chosen language with no file is an error."""
+    import polyx.core.i18n as i18n
+
+    real_locales = i18n.LOCALES_DIR
+    (tmp_path / "fr" / "LC_MESSAGES").mkdir(parents=True)
+    monkeypatch.setattr(i18n, "LOCALES_DIR", tmp_path)
+
+    with caplog.at_level("ERROR", logger="polyx.core.i18n"):
+        assert i18n.set_language("fr") is False
+
+    assert "fr" in caplog.text
+    monkeypatch.setattr(i18n, "LOCALES_DIR", real_locales)
+    assert i18n.set_language("es") is True
+
+
+def test_a_detected_system_language_without_a_catalog_stays_silent(tmp_path, monkeypatch, caplog):
+    """The system locale was detected, not chosen: falling back is not an error."""
+    import polyx.core.i18n as i18n
+
+    real_locales = i18n.LOCALES_DIR
+    (tmp_path / "fr" / "LC_MESSAGES").mkdir(parents=True)
+    monkeypatch.setattr(i18n, "LOCALES_DIR", tmp_path)
+    monkeypatch.setattr(i18n, "_detect_system_language", lambda: "fr")
+    monkeypatch.delenv("POLYX_LOCALE", raising=False)
+    monkeypatch.setattr(i18n.preferences, "get", lambda key: None)
+
+    with caplog.at_level("ERROR", logger="polyx.core.i18n"):
+        assert i18n.carry() == "en"
+
+    assert caplog.text == ""
+    monkeypatch.setattr(i18n, "LOCALES_DIR", real_locales)
+    assert i18n.set_language("es") is True
+
+
 def test_available_languages_discovers_a_new_catalog_directory(tmp_path, monkeypatch):
     import polyx.core.i18n as i18n
 
@@ -844,6 +947,9 @@ def test_a_fresh_checkout_compiles_a_catalog_on_demand(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(i18n, "LOCALES_DIR", tmp_path)
 
+    # Force a real transition: selecting the language that is already active is
+    # deliberately a no-op, so it would not read the catalog from ``tmp_path``.
+    assert i18n.set_language("en") is True
     assert i18n.set_language("es") is True
     assert i18n._("Open") == "Abrir"
     monkeypatch.setattr(i18n, "_language", "en")

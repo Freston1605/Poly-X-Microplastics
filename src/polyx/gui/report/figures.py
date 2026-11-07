@@ -414,8 +414,8 @@ def _fig_profile_depth(profiles: dict) -> str:
 # it is better to go back to `fragment`; here `particula` is used by the author's decision,
 # because in this material almost everything is a fragment and repeating the word in every
 # card added nothing.
-# Translation happens at the CALL SITE, not here: a tr() in the module body is resolved at
-# import time and would keep the language of that moment.
+# Translation happens at the CALL SITE, not here: resolving a message id in the
+# module body would freeze the language at import time.
 
 
 def _figure_calibration(run) -> str:

@@ -124,7 +124,7 @@ Son dos pasos: primero las capturas de la interfaz, despues el manual.
 
   1) capturas (una tanda por idioma)
      .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
-     set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
+     set POLYX_LOCALE=en && .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
 
   2) manual completo, en los dos idiomas, mas los PDF
      .venv\Scripts\python.exe tools\manual\generate_manual.py --pdf

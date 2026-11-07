@@ -94,7 +94,7 @@ def test_el_idioma_del_documento_es_el_pedido(tmp_path, lang):
     assert f"<html lang='{lang}'" in html
 
 
-def test_en_english_no_salen_los_rotulos_en_español(tmp_path):
+def test_english_report_has_no_spanish_labels(tmp_path):
     """Asking for English must not return a mixed report."""
     html = _informe(tmp_path, "en")
     for rotulo_es, rotulo_en in [
@@ -106,8 +106,8 @@ def test_en_english_no_salen_los_rotulos_en_español(tmp_path):
         assert rotulo_en in html, f"falta la traduccion: {rotulo_en}"
 
 
-def test_en_español_siguen_los_rotulos_en_español(tmp_path):
-    """La otra direccion: traducir no debe romper el idioma original."""
+def test_spanish_report_keeps_its_labels_in_spanish(tmp_path):
+    """The other direction: translating must not break the source language."""
     html = _informe(tmp_path, "es")
     assert "<th>Parámetro</th>" in html
     assert "Parameter" not in html

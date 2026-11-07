@@ -1254,7 +1254,6 @@ wheels = [
 name = "polyx-microplastics"
 source = { editable = "." }
 dependencies = [
-    { name = "babel" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "opencv-python-headless" },
@@ -1266,6 +1265,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "babel" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },
@@ -1285,6 +1285,7 @@ sam2 = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "babel" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },
@@ -1295,7 +1296,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "babel", specifier = "==2.17.0" },
+    { name = "babel", marker = "extra == 'dev'", specifier = "==2.17.0" },
     { name = "matplotlib", specifier = "==3.9.2" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "opencv-python-headless", specifier = "==4.10.0.84" },
@@ -1317,6 +1318,7 @@ provides-extras = ["dev", "gui", "legacy", "sam2"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "babel", specifier = "==2.17.0" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },

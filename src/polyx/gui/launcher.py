@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import (
     QKeySequence,
     QShortcut,
@@ -292,7 +292,7 @@ class ModuleCard(QFrame):
 # ──────────────────────────────────────────────────────────────────────
 # Main Launcher window
 # ──────────────────────────────────────────────────────────────────────
-class LauncherWindow(QMainWindow):
+class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
         super().__init__()
         i18n_qt.activate()
@@ -312,13 +312,6 @@ class LauncherWindow(QMainWindow):
         self._install_shortcuts()
 
     # ── Language ───────────────────────────────────────────────
-    def changeEvent(self, event):
-        if event.type() == QEvent.LanguageChange:
-            # Rebuild after the event returns: deleting the widget tree
-            # inside changeEvent is not safe.
-            QTimer.singleShot(0, self.retranslate)
-        super().changeEvent(event)
-
     def retranslate(self) -> None:
         """Rebuild the window so every text is read from the new catalog."""
         if not i18n_qt.is_alive(self):

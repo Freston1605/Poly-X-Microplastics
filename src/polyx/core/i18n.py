@@ -80,8 +80,7 @@ def pgettext(context: str, message: str) -> str:
 
 def npgettext(context: str, singular: str, plural: str, n: int) -> str:
     """Plural translation disambiguated by ``context``."""
-    result = _catalog.npgettext(context, singular, plural, n)
-    return result
+    return _catalog.npgettext(context, singular, plural, n)
 
 
 def N_(message: str) -> str:
@@ -146,11 +145,24 @@ def _candidates(tag: str) -> list[str]:
     return out
 
 
+def _has_catalog(directory: Path) -> bool:
+    """Whether ``directory`` holds a usable catalog, not just a name."""
+    messages = directory / "LC_MESSAGES"
+    return (messages / f"{DOMAIN}.po").is_file() or (messages / f"{DOMAIN}.mo").is_file()
+
+
 def _available() -> set[str]:
-    """Locale tags that have a catalog, plus the source language."""
+    """Locale tags that have a catalog, plus the source language.
+
+    A directory without ``messages.po`` or ``messages.mo`` is not a language:
+    counting it as one made ``resolve`` succeed and ``_load`` fail, which
+    turned an explicitly selected language into a silent fallback.
+    """
     found = {DEFAULT_LANGUAGE}
     if LOCALES_DIR.is_dir():
-        found.update(path.name for path in LOCALES_DIR.iterdir() if path.is_dir())
+        found.update(
+            path.name for path in LOCALES_DIR.iterdir() if path.is_dir() and _has_catalog(path)
+        )
     return found
 
 

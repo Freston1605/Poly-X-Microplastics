@@ -1,39 +1,36 @@
-"""Inyeccion muerta sobre el render del pipeline real (T06).
+"""Hostile input must die on the real pipeline render (T06).
 
-El escape de T05 (_esc = html.escape(str(v), quote=False) en cada sumidero
-de polyx/core/report_html.py) tiene que demostrarse sobre el RENDER, no solo
-sobre las funciones internas: este test construye el estado hostil de
-tests/report_fixtures.py, lo pasa por generate_report (el mismo seam que
-usa la aplicacion) con TODAS las secciones, y comprueba que:
+The escaping from T05 (``_esc = html.escape(str(v), quote=False)`` at every
+sink in ``polyx/core/report_html.py``) has to be proven on the real RENDER,
+not only on the internal functions: this test builds the hostile state from
+``tests/report_fixtures.py``, passes it through ``generate_report`` (the same
+seam the application uses) with EVERY section, and checks that:
 
-  1. NINGUNA de las dos inyecciones de referencia llega viva al HTML: no
-     existe <img src=x onerror=alert(N)> crudo ni <script> en el documento.
-  2. La inyeccion SI esta, escapada como texto visible (el < se convierte en
-     &lt;), para que el usuario vea el dato que se quiso colar en vez de un
-     silencio que lo oculte.
-  3. El texto hostil reaparece UNA Y SOLO UNA vez por sumidero: cada sitio
-     conocido se ubica por su contexto estructural (la marca de
-     tabla/heading que lo contiene) y la suma de los conteos por sumidero
-     agota el total de apariciones de la cadena escapada; si alguna
-     ocurrencia no cuadra con un sumidero documentado, la suma no cierra y
-     el test avisa.
+  1. NEITHER of the two reference injections reaches the HTML alive: no raw
+     ``<img src=x onerror=alert(N)>`` or ``<script>`` in the document.
+  2. The injection IS there, escaped as visible text (``<`` becomes
+     ``&lt;``), so the user sees the data someone tried to smuggle in instead
+     of a silence that hides it.
+  3. The hostile text reappears ONCE AND ONLY ONCE per sink: each known site
+     is located by its structural context (the table/heading mark that
+     contains it) and the per-sink counts add up to the total occurrences of
+     the escaped string; if any occurrence does not match a documented sink,
+     the sum does not close and the test fails.
 
-Las dos inyecciones de referencia distinguen sumideros sin ambiguedad (P001):
-el ALIAS del modelo lleva alert(1) y aparece en 5 sumideros (encabezado,
-tabla de metodos, texto de la figura de calibracion, tabla de conteo y
-caption de comparacion); el NOMBRE DE ARCHIVO lleva alert(2) y aparece en 5
-sumideros (tabla de conteo, titulo h3 de la seccion por imagen, 2 filas de
-la ficha de articulo y 1 fila de la tabla de tamano). El nombre no lleva '/'
-a proposito: pathlib la partiria en componentes y el '<' de apertura se
-perderia de Path.name (P001).
+The two reference injections separate sinks without ambiguity (P001): the
+model ALIAS carries ``alert(1)`` and appears in 5 sinks (header, methods
+table, calibration figure text, count table and comparison caption); the FILE
+NAME carries ``alert(2)`` and appears in 5 sinks (count table, per-image
+section h3, 2 rows of the particle card and 1 row of the size table). The name
+deliberately has no ``/``: ``pathlib`` would split it into components and the
+opening ``<`` would be lost from ``Path.name`` (P001).
 
 The language is pinned to 'en' before i18n is imported (env -> saved preference
 -> system locale); without the pin the counts in this test depend on the
-machine. Los anclajes estructurales de los
-sumideros (td, strong, h3, comillas «») salen de las plantillas del informe
-mismo, no de datos de usuarios, y con el idioma fijado son estables: si una
-reforma de report_html mueve una marca de plantilla, este test delimita
-exactamente que sumidero muto.
+machine. The structural anchors of the sinks (``td``, ``strong``, ``h3``, the
+guillemets) come from the report templates themselves, not from user data, and
+are stable with the language pinned: if a ``report_html`` reform moves a
+template mark, this test pinpoints exactly which sink changed.
 """
 
 from __future__ import annotations

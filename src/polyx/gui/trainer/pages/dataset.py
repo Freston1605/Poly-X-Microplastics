@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from polyx.core.i18n import _, lazy
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.paths import IMAGE_EXTS
 from polyx.core.quality.dataset_audit import (
     LEVEL_ERROR,
@@ -263,7 +263,7 @@ class DatasetPage(TrainerPage):
             _("Train split with images"),
             _("Val split with images"),
             _("Labels found (≥ 80 %)"),
-            "Clases definidas en YAML",
+            _("Classes defined in YAML"),
             _("Valid training parameters"),
         ]
         val_grid = QGridLayout()
@@ -523,10 +523,18 @@ class DatasetPage(TrainerPage):
         self._set_check(
             1,
             n_train > 0,
-            f"{n_train} imagen(es) en train." if n_train else "Sin imágenes en train.",
+            ngettext("%(count)s image in train.", "%(count)s images in train.", n_train)
+            % {"count": n_train}
+            if n_train
+            else _("No images in train."),
         )
         self._set_check(
-            2, n_val > 0, f"{n_val} imagen(es) en val." if n_val else "Sin imágenes en val."
+            2,
+            n_val > 0,
+            ngettext("%(count)s image in val.", "%(count)s images in val.", n_val)
+            % {"count": n_val}
+            if n_val
+            else _("No images in val."),
         )
 
         # Check labels for the first 50 train images
@@ -544,12 +552,13 @@ class DatasetPage(TrainerPage):
                 self._set_check(
                     3,
                     ok_labels,
-                    f"{pct:.0f} % de imágenes tienen label ({with_label}/{len(imgs)} revisadas).",
+                    _("%(pct).0f %% of images have a label (%(with_label)s/%(reviewed)s reviewed).")
+                    % {"pct": pct, "with_label": with_label, "reviewed": len(imgs)},
                 )
             else:
-                self._set_check(3, None, "No se encontraron imágenes para revisar.")
+                self._set_check(3, None, _("No images were found to review."))
         else:
-            self._set_check(3, None, "No se pudo acceder al split train.")
+            self._set_check(3, None, _("Could not access the train split."))
 
         names = d.get("names", [])
         if isinstance(names, dict):
@@ -558,9 +567,9 @@ class DatasetPage(TrainerPage):
         self._set_check(
             4,
             has_names,
-            f"Clases: {', '.join(str(n) for n in names[:10])}"
+            _("Classes: %(names)s") % {"names": ", ".join(str(n) for n in names[:10])}
             if has_names
-            else "No hay clave 'names' en el YAML.",
+            else _("The YAML has no 'names' key."),
         )
 
         # Deep analysis (class distribution, per-class validation, etc.)
