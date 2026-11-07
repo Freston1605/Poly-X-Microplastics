@@ -3,7 +3,9 @@
 
 This is the pre-commit and local-gate entry point. It prints one line per
 finding — ``path:line: kind: detail`` — and exits non-zero, so the person
-fixing it does not have to guess which string moved.
+fixing it does not have to guess which string moved. It also fails on a
+Spanish string constant that never reaches the catalog, which is the one leak
+the Qt sink scan cannot see.
 
 Standard library only: pre-commit installs no third-party package for a local
 hook, and reading a ``.po`` does not need one.

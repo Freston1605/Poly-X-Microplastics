@@ -1,4 +1,4 @@
-"""The translation gate: five ways a catalog drifts from the source tree.
+"""The translation gate: six ways a catalog drifts from the source tree.
 
 Every check prints the file, the line and the offending string, because the
 person fixing it is usually an agent reading a log:
@@ -10,7 +10,8 @@ person fixing it is usually an agent reading a log:
 - a placeholder set does not match between message id and translation;
 - a translation call takes an f-string or ``str.format`` braces, which no
   catalog validator can check;
-- a user-visible string reaches a Qt widget without a translation call.
+- a user-visible string reaches a Qt widget without a translation call;
+- a Spanish string constant survives in Python, outside the catalog.
 
 The scan is standard-library only so the pre-commit hook can run it in its
 isolated environment. Writing catalogs needs Babel; reading them does not.
