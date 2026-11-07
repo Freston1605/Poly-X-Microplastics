@@ -633,7 +633,7 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         and here the user has to be warned.
         """
         if not _spawn_module(dotted):
-            self._toast(fallback or f"No se pudo abrir el módulo {dotted}")
+            self._toast(fallback or _("Could not open the module %(module)s") % {"module": dotted})
 
     def open_manual(self):
         manual = ROOT / "docs" / "manual" / "Manual_PolyX.html"
@@ -642,14 +642,14 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             webbrowser.open(manual.as_uri())
         else:
-            self._toast("Manual_PolyX.html no encontrado")
+            self._toast(_("Manual_PolyX.html not found"))
 
     def open_readme(self):
         readme = ROOT / "LEEME.txt"
         if readme.exists():
             open_in_system(str(readme))
         else:
-            self._toast("LEEME.txt no encontrado")
+            self._toast(_("LEEME.txt not found"))
 
     def _toast(self, msg: str):
         from PySide6.QtWidgets import QMessageBox

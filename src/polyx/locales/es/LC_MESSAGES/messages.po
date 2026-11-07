@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-07 12:55-0300\n"
+"POT-Creation-Date: 2026-11-07 13:35-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -436,6 +436,200 @@ msgstr "la ruta de salida no es un directorio: %(path)s"
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
 
+#: src/polyx/core/quality/assignment.py:103
+msgid "abstention disabled"
+msgstr "abstención desactivada"
+
+#: src/polyx/core/quality/assignment.py:104
+#, python-format
+msgid ""
+"%(unassigned)d of %(total)d particles without an assignable polymer (%(percent).1f %%), "
+"threshold %(threshold).2f"
+msgstr ""
+"%(unassigned)d de %(total)d partículas sin polímero asignable (%(percent).1f %%), umbral "
+"%(threshold).2f"
+
+#: src/polyx/core/quality/dataset_audit.py:186
+msgid "data.yaml not found"
+msgstr "data.yaml no encontrado"
+
+#: src/polyx/core/quality/dataset_audit.py:223
+#, python-format
+msgid "class %(id)s"
+msgstr "clase %(id)s"
+
+#: src/polyx/core/quality/dataset_audit.py:279
+msgid "No classes defined"
+msgstr "Sin clases definidas"
+
+#: src/polyx/core/quality/dataset_audit.py:279
+msgid "The data.yaml has no 'names' key."
+msgstr "El data.yaml no tiene clave 'names'."
+
+#: src/polyx/core/quality/dataset_audit.py:283
+msgid "Empty train"
+msgstr "Train vacío"
+
+#: src/polyx/core/quality/dataset_audit.py:284
+msgid "The train folder exists but contains no images."
+msgstr "La carpeta de train existe pero no contiene imágenes."
+
+#: src/polyx/core/quality/dataset_audit.py:289
+msgid "Empty val"
+msgstr "Val vacío"
+
+#: src/polyx/core/quality/dataset_audit.py:290
+msgid "The val folder exists but contains no images → metrics cannot be measured."
+msgstr "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas."
+
+#: src/polyx/core/quality/dataset_audit.py:304
+msgid ""
+"These classes have examples in train but ZERO in val. mAP will not measure their performance (it"
+" will give you a false sense of success). Add images of these classes to the validation split."
+msgstr ""
+"Estas clases tienen ejemplos en train pero CERO en val. El mAP no medirá su rendimiento (te dará"
+" una falsa sensación de éxito). Agrega imágenes de estas clases al split de validación."
+
+#: src/polyx/core/quality/dataset_audit.py:315
+msgid ""
+"The validation set contains a single class even though the model learns several. Multiclass "
+"metrics are not valid."
+msgstr ""
+"El set de validación contiene una única clase pese a que el modelo aprende varias. Las métricas "
+"multiclase no son válidas."
+
+#: src/polyx/core/quality/dataset_audit.py:428
+msgid "With so few images the metrics are unstable. Aim for ≥ 10-20."
+msgstr "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20."
+
+#: src/polyx/core/quality/dataset_audit.py:436
+msgid "No dataset problems detected"
+msgstr "Dataset sin problemas detectados"
+
+#: src/polyx/core/quality/dataset_audit.py:437
+msgid "Class distribution, validation and format all look correct."
+msgstr "Distribución de clases, validación y formato se ven correctos."
+
+#: src/polyx/core/quality/dataset_audit.py:192
+msgid "Could not read data.yaml"
+msgstr "No se pudo leer data.yaml"
+
+#: src/polyx/core/quality/dataset_audit.py:303
+#, python-format
+msgid "Classes without validation: %(classes)s"
+msgstr "Clases sin validación: %(classes)s"
+
+#: src/polyx/core/quality/dataset_audit.py:313
+#, python-format
+msgid "Single-class validation (%(class)s)"
+msgstr "Validación de una sola clase (%(class)s)"
+
+#: src/polyx/core/quality/dataset_audit.py:331
+msgid "Strong class imbalance in train"
+msgstr "Desbalance fuerte de clases en train"
+
+#: src/polyx/core/quality/dataset_audit.py:395
+msgid "Boxes with width/height ~0. Check the annotation."
+msgstr "Cajas con ancho/alto ~0. Revisa la anotación."
+
+#: src/polyx/core/quality/dataset_audit.py:402
+msgid "Badly normalised labels; YOLO will interpret them wrongly."
+msgstr "Labels mal normalizadas; YOLO las interpretará mal."
+
+#: src/polyx/core/quality/dataset_audit.py:409
+msgid "The same box repeated within one file."
+msgstr "Misma caja repetida en un archivo."
+
+#: src/polyx/core/quality/dataset_audit.py:416
+msgid "They will be trained as background (no objects). Confirm this is intentional."
+msgstr "Se entrenarán como fondo (sin objetos). Confirma que es intencional."
+
+#: src/polyx/core/quality/dataset_audit.py:427
+#, python-format
+msgid "Very small validation set (%(count)d images)"
+msgstr "Validación muy pequeña (%(count)d imágenes)"
+
+#: src/polyx/core/quality/dataset_audit.py:242
+#, python-format
+msgid "No %(split)s split declared"
+msgstr "Sin split %(split)s declarado"
+
+#: src/polyx/core/quality/dataset_audit.py:243
+#, python-format
+msgid "The data.yaml has no '%(split)s' key. Ultralytics needs it to train and measure metrics."
+msgstr "El data.yaml no tiene clave '%(split)s'. Ultralytics la necesita para entrenar y medir métricas."
+
+#: src/polyx/core/quality/dataset_audit.py:332
+#, python-format
+msgid ""
+"“%(top)s” has %(top_count)d boxes and “%(bottom)s” only %(bottom_count)d (%(ratio).0f× more). "
+"Consider balancing or using class weights."
+msgstr ""
+"«%(top)s» tiene %(top_count)d cajas y «%(bottom)s» solo %(bottom_count)d (%(ratio).0f× más). "
+"Considera balancear o usar pesos por clase."
+
+#: src/polyx/core/quality/dataset_audit.py:393
+#, python-format
+msgid "Degenerate boxes in %(split)s: %(count)d"
+msgstr "Cajas degeneradas en %(split)s: %(count)d"
+
+#: src/polyx/core/quality/dataset_audit.py:400
+#, python-format
+msgid "Coordinates outside [0,1] in %(split)s: %(count)d"
+msgstr "Coordenadas fuera de [0,1] en %(split)s: %(count)d"
+
+#: src/polyx/core/quality/dataset_audit.py:407
+#, python-format
+msgid "Duplicate boxes in %(split)s: %(count)d"
+msgstr "Cajas duplicadas en %(split)s: %(count)d"
+
+#: src/polyx/core/quality/dataset_audit.py:414
+#, python-format
+msgid "Images with no label in %(split)s: %(count)d"
+msgstr "Imágenes sin label en %(split)s: %(count)d"
+
+#: src/polyx/core/quality/dataset_audit.py:253
+#, python-format
+msgid "%(split)s path does not exist"
+msgstr "Ruta de %(split)s no existe"
+
+#: src/polyx/core/quality/dataset_audit.py:254
+#, python-format
+msgid ""
+"The data.yaml points to “%(path)s”, which does not exist on this computer. This usually happens "
+"when the project is moved to another folder or PC: fix the paths in the data.yaml (or use "
+"relative paths)."
+msgstr ""
+"El data.yaml apunta a «%(path)s», que no existe en este equipo. Suele pasar al mover el proyecto"
+" de carpeta o de PC: corrige las rutas del data.yaml (o usa rutas relativas)."
+
+#: src/polyx/core/quality/dataset_audit.py:355
+#, python-format
+msgid "“%(class)s”: little diversity"
+msgstr "«%(class)s»: poca diversidad"
+
+#: src/polyx/core/quality/dataset_audit.py:356
+#, python-format
+msgid ""
+"%(percent).0f%% of its boxes come from a single image (%(image)s). The model may overfit to that"
+" scene."
+msgstr ""
+"El %(percent).0f%% de sus cajas viene de una sola imagen (%(image)s). El modelo puede "
+"sobreajustar a esa escena."
+
+#: src/polyx/core/quality/dataset_audit.py:380
+msgid ""
+"Their boxes are the same size, so the model can only tell them apart by colour/texture. If they "
+"also look alike, expect confusion between the two."
+msgstr ""
+"Sus cajas son del mismo tamaño, así que el modelo solo puede distinguirlas por color/textura. Si"
+" además se parecen visualmente, esperá confusión entre ambas."
+
+#: src/polyx/core/quality/dataset_audit.py:378
+#, python-format
+msgid "“%(first)s” and “%(second)s” are almost identical in size"
+msgstr "«%(first)s» y «%(second)s» tienen tamaño casi idéntico"
+
 #: src/polyx/core/quality/metrics.py:23
 msgid "True positives"
 msgstr "Verdaderos Positivos"
@@ -608,6 +802,14 @@ msgstr ""
 "\n"
 "Tus modelos, resultados y datos no se tocan. ¿Continuar?"
 
+#: src/polyx/gui/launcher.py:645
+msgid "Manual_PolyX.html not found"
+msgstr "Manual_PolyX.html no encontrado"
+
+#: src/polyx/gui/launcher.py:652
+msgid "LEEME.txt not found"
+msgstr "LEEME.txt no encontrado"
+
 #: src/polyx/gui/launcher.py:193
 msgid "MODULE"
 msgstr "MÓDULO"
@@ -625,6 +827,11 @@ msgstr ""
 #, python-format
 msgid "Could not launch %(name)s. Run it by hand from the installation folder."
 msgstr "No se pudo lanzar %(name)s. Ejecútalo a mano desde la carpeta de instalación."
+
+#: src/polyx/gui/launcher.py:636
+#, python-format
+msgid "Could not open the module %(module)s"
+msgstr "No se pudo abrir el módulo %(module)s"
 
 #: src/polyx/gui/marca.py:61
 msgid "Poly-X · Microplastics suite"
@@ -813,6 +1020,14 @@ msgstr[0] ""
 msgstr[1] ""
 "Enviada al dataset de reentrenamiento — %(count)d imágenes acumuladas en dataset_correcciones/. "
 "Cuando juntes ~50, haz fine-tuning en el Entrenador."
+
+#: src/polyx/gui/detector/runner.py:182
+msgid "No models loaded."
+msgstr "No hay modelos cargados."
+
+#: src/polyx/gui/detector/runner.py:185
+msgid "No images selected."
+msgstr "No hay imágenes seleccionadas."
 
 #: src/polyx/gui/detector/pages/execute.py:215 src/polyx/gui/detector/pages/execute.py:216
 #: src/polyx/gui/detector/pages/execute.py:217 src/polyx/gui/detector/pages/models.py:47
@@ -1205,7 +1420,7 @@ msgstr "✓ Guardado en: %(path)s%(warning)s"
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:885 src/polyx/gui/viewer/window.py:1354
+#: src/polyx/gui/detector/pages/gt_manual.py:885 src/polyx/gui/viewer/window.py:1358
 msgid "Error while saving"
 msgstr "Error al guardar"
 
@@ -1427,6 +1642,17 @@ msgstr "Asignación de polímero (opcional)"
 #: src/polyx/gui/detector/pages/parameters.py:472
 msgid "Testing…"
 msgstr "Probando…"
+
+#: src/polyx/gui/detector/pages/parameters.py:486
+#, python-format
+msgid ""
+"Safe maximum for “%(model)s”: %(size)d px.\n"
+"\n"
+"imgsz set to %(size)d."
+msgstr ""
+"Máximo seguro para «%(model)s»: %(size)d px.\n"
+"\n"
+"Se fijó imgsz = %(size)d."
 
 #: src/polyx/gui/detector/pages/parameters.py:497
 msgid "maximum imgsz"
@@ -1682,6 +1908,24 @@ msgstr "Carga al menos un modelo en la pestaña Modelos."
 #: src/polyx/gui/detector/pages/parameters.py:462
 msgid "Select images in the Images tab (one of them is used to measure)."
 msgstr "Selecciona imágenes en la pestaña Imágenes (se usa una para medir)."
+
+#: src/polyx/gui/detector/pages/parameters.py:491
+#, python-format
+msgid ""
+"\n"
+"(At %(size)s px it ran out of memory.)"
+msgstr ""
+"\n"
+"(A %(size)s px se quedó sin memoria.)"
+
+#: src/polyx/gui/detector/pages/parameters.py:493
+#, python-format
+msgid ""
+"On CPU there is no GPU memory ceiling. imgsz set to %(size)d but it will be slow. With a GPU the"
+" detector is much faster."
+msgstr ""
+"En CPU no hay tope de memoria GPU. Se fijó imgsz = %(size)d pero será lento. Con GPU el detector"
+" es mucho más rápido."
 
 #: src/polyx/gui/detector/pages/parameters.py:542
 msgid "Select images to see what would be tiled."
@@ -2332,6 +2576,10 @@ msgstr "No se pudo guardar: %(error)s"
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
 
+#: src/polyx/gui/labeler/canvas.py:191
+msgid "Open an image folder to begin"
+msgstr "Abre una carpeta de imágenes para comenzar"
+
 #: src/polyx/gui/labeler/window.py:38
 msgid "Nile Red microplastics"
 msgstr "Microplásticos Nile Red"
@@ -2492,7 +2740,7 @@ msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acer
 msgid "● Folder loaded"
 msgstr "● Carpeta cargada"
 
-#: src/polyx/gui/labeler/window.py:434 src/polyx/gui/viewer/window.py:1446
+#: src/polyx/gui/labeler/window.py:434 src/polyx/gui/viewer/window.py:1450
 msgid "● Model loaded"
 msgstr "● Modelo cargado"
 
@@ -3918,6 +4166,127 @@ msgstr ""
 "que sí va por dentro es el geodésico, en magenta, y se usa cuando la partícula es delgada y está"
 " doblada.</p>"
 
+#: src/polyx/gui/trainer/hw.py:330
+msgid "Neither torch nor nvidia-smi/rocm-smi finds a compatible GPU (CUDA/ROCm)."
+msgstr "Ni torch ni nvidia-smi/rocm-smi encuentran una GPU compatible (CUDA/ROCm)."
+
+#: src/polyx/gui/trainer/hw.py:529
+msgid ""
+"VRAM is not enough even for the minimum case; training will probably run out of memory. Consider"
+" a smaller model."
+msgstr ""
+"La VRAM no alcanza ni para el caso mínimo; el entrenamiento probablemente dé OOM. Considera un "
+"modelo más pequeño."
+
+#: src/polyx/gui/trainer/hw.py:219
+msgid "not importable"
+msgstr "no importable"
+
+#: src/polyx/gui/trainer/hw.py:559
+#, python-format
+msgid ""
+"batch capped at %(batch)d: above that, gains are marginal and a large batch averages gradients "
+"over small objects. Ultralytics accumulates to a nominal batch of 64, so a small batch penalises"
+" less than it seems."
+msgstr ""
+"batch topado en %(batch)d: por encima, las mejoras son marginales y el batch grande promedia "
+"gradientes de objetos pequeños. Ultralytics acumula a batch nominal 64, así que un batch chico "
+"penaliza menos de lo que parece."
+
+#: src/polyx/gui/trainer/hw.py:212
+msgid ""
+"Unified memory: the GPU shares the system RAM, so the figure above is total RAM rather than "
+"dedicated VRAM. MPS does not support every CUDA operation; if training fails, try CPU."
+msgstr ""
+"Memoria unificada: la GPU comparte la RAM del sistema, asi que la cifra de arriba es la RAM "
+"total y no una VRAM dedicada. MPS no soporta todas las operaciones de CUDA; si el entrenamiento "
+"falla, prueba con CPU."
+
+#: src/polyx/gui/trainer/hw.py:248
+#, python-format
+msgid "nvidia-smi sees the card (driver %(driver)s) but torch %(version)s is built %(build)s."
+msgstr "nvidia-smi ve la tarjeta (driver %(driver)s) pero torch %(version)s está compilado %(build)s."
+
+#: src/polyx/gui/trainer/hw.py:279
+#, python-format
+msgid "rocm-smi sees the card (driver %(driver)s) but torch %(version)s is built %(build)s."
+msgstr "rocm-smi ve la tarjeta (driver %(driver)s) pero torch %(version)s está compilado %(build)s."
+
+#: src/polyx/gui/trainer/hw.py:311
+msgid ""
+"This Mac has an Intel processor: it has no MPS, which requires Apple Silicon (M1 or later). "
+"Training and detection run on CPU."
+msgstr ""
+"Este Mac tiene procesador Intel: no dispone de MPS, que requiere Apple Silicon (M1 o posterior)."
+" Se entrena y detecta por CPU."
+
+#: src/polyx/gui/trainer/hw.py:316
+msgid ""
+"Apple Silicon detected but torch does not expose MPS. Reinstall PyTorch from the Poly-X "
+"installer."
+msgstr ""
+"Apple Silicon detectado pero torch no expone MPS. Reinstala PyTorch desde el instalador de "
+"Poly-X."
+
+#: src/polyx/gui/trainer/hw.py:539
+#, python-format
+msgid ""
+"imgsz capped at %(imgsz)d px because the images are %(native)d px on the long side: beyond that "
+"it is only interpolation, burning VRAM without adding signal."
+msgstr ""
+"imgsz topado en %(imgsz)d px porque las imágenes miden %(native)d px de lado: más allá solo se "
+"interpola y se gasta VRAM sin añadir señal."
+
+#: src/polyx/gui/trainer/hw.py:581
+#, python-format
+msgid ""
+"The dataset (~%(gb).1f GB) does not fit comfortably in RAM: cache on disk instead, so as not to "
+"risk swap halfway through training."
+msgstr ""
+"El dataset (~%(gb).1f GB) no cabe holgado en RAM: cache en disco en vez de RAM, para no "
+"arriesgar el swap a mitad del entreno."
+
+#: src/polyx/gui/trainer/hw.py:207
+#, python-format
+msgid "Apple integrated GPU (%(machine)s)"
+msgstr "GPU integrada de Apple (%(machine)s)"
+
+#: src/polyx/gui/trainer/hw.py:256
+msgid "without CUDA"
+msgstr "sin CUDA"
+
+#: src/polyx/gui/trainer/hw.py:287
+msgid "without ROCm"
+msgstr "sin ROCm"
+
+#: src/polyx/gui/trainer/hw.py:517
+#, python-format
+msgid ""
+"Batch %(request)s did not fit even at the minimum resolution: batch was lowered to %(batch)d so "
+"as not to sacrifice imgsz."
+msgstr ""
+"No cabía batch %(request)s ni al mínimo de resolución: se bajó el batch a %(batch)d para no "
+"sacrificar imgsz."
+
+#: src/polyx/gui/trainer/hw.py:258
+#, python-format
+msgid "for CUDA %(version)s"
+msgstr "para CUDA %(version)s"
+
+#: src/polyx/gui/trainer/hw.py:289
+#, python-format
+msgid "for ROCm %(version)s"
+msgstr "para ROCm %(version)s"
+
+#: src/polyx/gui/trainer/runner.py:147
+msgid "Missing data.yaml. Load it in the Dataset tab."
+msgstr "Falta data.yaml. Cárgalo en la pestaña Dataset."
+
+#: src/polyx/gui/trainer/runner.py:136
+#, python-format
+msgid "Could not import Ultralytics / PyTorch: %(error)s"
+msgstr "No se pudo importar Ultralytics / PyTorch: %(error)s"
+
 #: src/polyx/gui/trainer/state.py:24 src/polyx/gui/trainer/state.py:118
 msgid "Balanced (recommended)"
 msgstr "Balanceado (recomendado)"
@@ -3947,6 +4316,118 @@ msgstr "Medio"
 #: src/polyx/gui/trainer/state.py:56 src/polyx/gui/trainer/state.py:105
 msgid "Strong"
 msgstr "Fuerte"
+
+#: src/polyx/gui/trainer/state.py:425
+msgid "No data.yaml loaded (go to the Dataset tab)."
+msgstr "No hay data.yaml cargado (ve a la pestaña Dataset)."
+
+#: src/polyx/gui/trainer/state.py:452
+msgid "No valid labels in train: the model would learn only background."
+msgstr "No hay etiquetas válidas en train: el modelo aprendería solo fondo."
+
+#: src/polyx/gui/trainer/state.py:330
+#, python-format
+msgid "Unknown model family: “%(family)s” (use “v8” or “v11”)."
+msgstr "Familia de modelo desconocida: «%(family)s» (use «v8» o «v11»)."
+
+#: src/polyx/gui/trainer/state.py:335
+#, python-format
+msgid "Unknown model size: “%(size)s” (use n, s, m, l or x)."
+msgstr "Tamaño de modelo desconocido: «%(size)s» (use n, s, m, l o x)."
+
+#: src/polyx/gui/trainer/state.py:341
+#, python-format
+msgid "Epochs out of range: %(value)s (use an integer ≥ 1)."
+msgstr "Épocas fuera de rango: %(value)s (use un entero ≥ 1)."
+
+#: src/polyx/gui/trainer/state.py:343
+#, python-format
+msgid "Batch out of range: %(value)s (use an integer ≥ 1)."
+msgstr "Batch fuera de rango: %(value)s (use un entero ≥ 1)."
+
+#: src/polyx/gui/trainer/state.py:350
+#, python-format
+msgid "imgsz out of range: %(value)s (use a multiple of 32 between 32 and 8192)."
+msgstr "imgsz fuera de rango: %(value)s (use un múltiplo de 32 entre 32 y 8192)."
+
+#: src/polyx/gui/trainer/state.py:355
+#, python-format
+msgid "Invalid device: “%(device)s” (use “cpu”, “mps”, “0” or “cuda:0”)."
+msgstr "Device inválido: «%(device)s» (use «cpu», «mps», «0» o «cuda:0»)."
+
+#: src/polyx/gui/trainer/state.py:359
+#, python-format
+msgid "lr0 out of range: %(value)s (use a value > 0)."
+msgstr "lr0 fuera de rango: %(value)s (use un valor > 0)."
+
+#: src/polyx/gui/trainer/state.py:362
+#, python-format
+msgid "weight_decay out of range: %(value)s (use a value in [0, 1])."
+msgstr "weight_decay fuera de rango: %(value)s (use un valor en [0, 1])."
+
+#: src/polyx/gui/trainer/state.py:367
+#, python-format
+msgid "momentum out of range: %(value)s (use a value in [0, 1])."
+msgstr "momentum fuera de rango: %(value)s (use un valor en [0, 1])."
+
+#: src/polyx/gui/trainer/state.py:371
+#, python-format
+msgid "warmup_epochs out of range: %(value)s (use an integer ≥ 0)."
+msgstr "warmup_epochs fuera de rango: %(value)s (use un entero ≥ 0)."
+
+#: src/polyx/gui/trainer/state.py:376
+#, python-format
+msgid "close_mosaic out of range: %(value)s (use an integer ≥ 0)."
+msgstr "close_mosaic fuera de rango: %(value)s (use un entero ≥ 0)."
+
+#: src/polyx/gui/trainer/state.py:382
+#, python-format
+msgid "label_smoothing out of range: %(value)s (use a value in [0, 1))."
+msgstr "label_smoothing fuera de rango: %(value)s (use un valor en [0, 1))."
+
+#: src/polyx/gui/trainer/state.py:386
+#, python-format
+msgid "patience out of range: %(value)s (use an integer ≥ 0)."
+msgstr "patience fuera de rango: %(value)s (use un entero ≥ 0)."
+
+#: src/polyx/gui/trainer/state.py:389
+#, python-format
+msgid "save_period out of range: %(value)s (use -1 or an integer ≥ 1)."
+msgstr "save_period fuera de rango: %(value)s (use -1 o un entero ≥ 1)."
+
+#: src/polyx/gui/trainer/state.py:394
+#, python-format
+msgid "workers out of range: %(value)s (use an integer between 0 and 64)."
+msgstr "workers fuera de rango: %(value)s (use un entero entre 0 y 64)."
+
+#: src/polyx/gui/trainer/state.py:403
+#, python-format
+msgid "Invalid cache: %(value)r (use “disk”, “ram”, “true” or “false”)."
+msgstr "cache inválido: %(value)r (use «disk», «ram», «true» o «false»)."
+
+#: src/polyx/gui/trainer/state.py:433
+#, python-format
+msgid "data.yaml not found: %(path)s"
+msgstr "data.yaml no encontrado: %(path)s"
+
+#: src/polyx/gui/trainer/state.py:454
+msgid "Valid dataset: splits, labels and classes all correct."
+msgstr "Dataset válido: splits, labels y clases correctos."
+
+#: src/polyx/gui/trainer/state.py:418
+#, python-format
+msgid "%(name)s out of range: %(value)s (use a value in [0, 1])."
+msgstr "%(name)s fuera de rango: %(value)s (use un valor en [0, 1])."
+
+#: src/polyx/gui/trainer/state.py:439
+#, python-format
+msgid "Could not analyse the dataset: %(error)s"
+msgstr "No se pudo analizar el dataset: %(error)s"
+
+#: src/polyx/gui/trainer/state.py:447
+#, python-format
+msgid "[warning] %(message)s"
+msgstr "[aviso] %(message)s"
 
 #: src/polyx/gui/trainer/window.py:30
 msgid "Augmentation"
@@ -4673,7 +5154,7 @@ msgstr ""
 "Fija imgsz al máximo que aguanta la tarjeta (sin pasar de la resolución nativa del dataset), "
 "después sube el batch con lo que sobre, y al final ajusta AMP, workers y cache. En ese orden."
 
-#: src/polyx/gui/trainer/pages/parameters.py:178 src/polyx/gui/trainer/pages/parameters.py:613
+#: src/polyx/gui/trainer/pages/parameters.py:178 src/polyx/gui/trainer/pages/parameters.py:627
 msgid "VRAM estimate: —"
 msgstr "Estimación de VRAM: —"
 
@@ -4704,6 +5185,27 @@ msgstr "vacío = auto-fecha"
 #: src/polyx/gui/trainer/pages/parameters.py:301
 msgid "⌛  Detecting GPU in the background (may take 10–30 s the first time)…"
 msgstr "⌛  Detectando GPU en background (puede tardar 10–30 s la primera vez)…"
+
+#: src/polyx/gui/trainer/pages/parameters.py:525
+msgid "No usable GPU, so there is nothing to optimise: on CPU the practical ceiling is imgsz 640."
+msgstr "No hay GPU utilizable, así que no hay nada que optimizar: en CPU el techo práctico es imgsz 640."
+
+#: src/polyx/gui/trainer/pages/parameters.py:577
+#, python-format
+msgid ""
+"imgsz <b>%(imgsz)d</b> → batch <b>%(batch)d</b> → AMP on, %(workers)d workers, cache %(cache)s. "
+"~%(estimate)s of %(cap)s usable. Limited by %(limit)s."
+msgstr ""
+"imgsz <b>%(imgsz)d</b> → batch <b>%(batch)d</b> → AMP on, %(workers)d workers, cache %(cache)s. "
+"~%(estimate)s de %(cap)s utilizables. Limitado por %(limit)s."
+
+#: src/polyx/gui/trainer/pages/parameters.py:591
+msgid ""
+" <i>With no dataset loaded the native resolution could not be measured: load the dataset and "
+"optimise again.</i>"
+msgstr ""
+" <i>Sin dataset cargado no se pudo medir la resolución nativa: carga el dataset y vuelve a "
+"optimizar.</i>"
 
 #: src/polyx/gui/trainer/pages/parameters.py:81
 msgid "HIGHER = better for small particles. Recommended: 1280+."
@@ -4789,47 +5291,80 @@ msgstr "Workers:"
 msgid "Run name:"
 msgstr "Nombre del run:"
 
-#: src/polyx/gui/trainer/pages/parameters.py:444 src/polyx/gui/trainer/pages/parameters.py:471
+#: src/polyx/gui/trainer/pages/parameters.py:447 src/polyx/gui/trainer/pages/parameters.py:474
 msgid "No GPU"
 msgstr "Sin GPU"
 
-#: src/polyx/gui/trainer/pages/parameters.py:445
+#: src/polyx/gui/trainer/pages/parameters.py:448
 msgid "No NVIDIA GPU available. On CPU we recommend imgsz ≤ 640."
 msgstr "No hay GPU NVIDIA disponible. En CPU recomendamos imgsz ≤ 640."
 
-#: src/polyx/gui/trainer/pages/parameters.py:455
+#: src/polyx/gui/trainer/pages/parameters.py:458
 #, python-format
 msgid "✓ Recommendation: imgsz = %(imgsz)d (model %(model)s, batch %(batch)d, free VRAM %(vram)s)"
 msgstr "✓ Recomendación: imgsz = %(imgsz)d (modelo %(model)s, batch %(batch)d, VRAM libre %(vram)s)"
 
-#: src/polyx/gui/trainer/pages/parameters.py:471
+#: src/polyx/gui/trainer/pages/parameters.py:474
 msgid "This suggestion does not apply without a GPU."
 msgstr "Sin GPU no aplica esta sugerencia."
 
-#: src/polyx/gui/trainer/pages/parameters.py:483
+#: src/polyx/gui/trainer/pages/parameters.py:486
 #, python-format
 msgid "✓ Recommendation: batch = %(batch)d for imgsz %(imgsz)d (%(vram)s free)"
 msgstr "✓ Recomendación: batch = %(batch)d para imgsz %(imgsz)d (%(vram)s libres)"
 
-#: src/polyx/gui/trainer/pages/parameters.py:533
+#: src/polyx/gui/trainer/pages/parameters.py:539
 msgid "No usable GPU"
 msgstr "Sin GPU utilizable"
 
-#: src/polyx/gui/trainer/pages/parameters.py:585
+#: src/polyx/gui/trainer/pages/parameters.py:599
 msgid "Optimized configuration"
 msgstr "Configuración optimizada"
 
-#: src/polyx/gui/trainer/pages/parameters.py:601
+#: src/polyx/gui/trainer/pages/parameters.py:530
+#, python-format
+msgid ""
+"The card is there (%(name)s, %(vram)s) but PyTorch cannot use it.\n"
+"\n"
+"%(detail)s\n"
+"\n"
+"PyTorch must be reinstalled with CUDA; until then training runs on CPU."
+msgstr ""
+"La tarjeta está ahí (%(name)s, %(vram)s) pero PyTorch no la puede usar.\n"
+"\n"
+"%(detail)s\n"
+"\n"
+"Hay que reinstalar PyTorch con CUDA; hasta entonces el entrenamiento va por CPU."
+
+#: src/polyx/gui/trainer/pages/parameters.py:575
+msgid "the useful batch ceiling"
+msgstr "el tope de batch útil"
+
+#: src/polyx/gui/trainer/pages/parameters.py:585
+msgid "no change"
+msgstr "sin cambio"
+
+#: src/polyx/gui/trainer/pages/parameters.py:615
 #, python-format
 msgid "VRAM estimate: ~%(gb)s (model %(size)s, imgsz %(imgsz)s, batch %(batch)s, AMP=%(amp)s)"
 msgstr "Estimación de VRAM: ~%(gb)s (modelo %(size)s, imgsz %(imgsz)s, batch %(batch)s, AMP=%(amp)s)"
 
-#: src/polyx/gui/trainer/pages/parameters.py:392
+#: src/polyx/gui/trainer/pages/parameters.py:381
+#, python-format
+msgid "using GPU %(index)d of %(count)d (the one with most VRAM)"
+msgstr "usando la GPU %(index)d de %(count)d (la de más VRAM)"
+
+#: src/polyx/gui/trainer/pages/parameters.py:385
+#, python-format
+msgid "capacity %(value)s"
+msgstr "capacidad %(value)s"
+
+#: src/polyx/gui/trainer/pages/parameters.py:395
 #, python-format
 msgid "<b>GPU detected:</b> %(name)s · VRAM total: <b>%(total)s</b> · free: <b>%(free)s</b>"
 msgstr "<b>GPU detectada:</b> %(name)s · VRAM total: <b>%(total)s</b> · libre: <b>%(free)s</b>"
 
-#: src/polyx/gui/trainer/pages/parameters.py:413
+#: src/polyx/gui/trainer/pages/parameters.py:416
 #, python-format
 msgid ""
 "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) <b>but PyTorch cannot use "
@@ -4840,16 +5375,26 @@ msgstr ""
 "usar.</b><br><span style='font-size:9pt'>%(detail)s Reinstala PyTorch con CUDA (SETUP.bat) — "
 "hasta entonces se entrena por CPU.</span>"
 
-#: src/polyx/gui/trainer/pages/parameters.py:429
+#: src/polyx/gui/trainer/pages/parameters.py:432
 msgid "✗ No NVIDIA GPU detected. You will train on CPU (it will be VERY slow)."
 msgstr "✗ No se detectó GPU NVIDIA. Entrenarás en CPU (será MUY lento)."
 
-#: src/polyx/gui/trainer/pages/parameters.py:402
+#: src/polyx/gui/trainer/pages/parameters.py:572
+#, python-format
+msgid "the VRAM (%(free)s free)"
+msgstr "la VRAM (%(free)s libres)"
+
+#: src/polyx/gui/trainer/pages/parameters.py:573
+#, python-format
+msgid "the dataset's native resolution (%(side)d px)"
+msgstr "la resolución nativa del dataset (%(side)d px)"
+
+#: src/polyx/gui/trainer/pages/parameters.py:405
 #, python-format
 msgid "<br><span style='font-size:9pt'>%(details)s</span>"
 msgstr "<br><span style='font-size:9pt'>%(details)s</span>"
 
-#: src/polyx/gui/trainer/pages/parameters.py:431
+#: src/polyx/gui/trainer/pages/parameters.py:434
 #, python-format
 msgid "<br><span style='font-size:9pt'>%(detail)s</span>"
 msgstr "<br><span style='font-size:9pt'>%(detail)s</span>"
@@ -5040,6 +5585,10 @@ msgstr "Curvas"
 msgid "Training failed"
 msgstr "Falló el entrenamiento"
 
+#: src/polyx/gui/trainer/pages/train.py:132
+msgid "Epoch"
+msgstr "Época"
+
 #: src/polyx/gui/trainer/pages/train.py:368
 msgid "Cannot train"
 msgstr "No se puede entrenar"
@@ -5112,7 +5661,7 @@ msgstr "  Sin imagen  —  Sin calibración"
 
 #: src/polyx/gui/viewer/window.py:232 src/polyx/gui/viewer/window.py:672
 #: src/polyx/gui/viewer/window.py:778 src/polyx/gui/viewer/window.py:889
-#: src/polyx/gui/viewer/window.py:1302 src/polyx/gui/viewer/window.py:1323
+#: src/polyx/gui/viewer/window.py:1306 src/polyx/gui/viewer/window.py:1327
 msgid "No image"
 msgstr "Sin imagen"
 
@@ -5184,7 +5733,7 @@ msgstr ""
 msgid "✕  Cancel calibration"
 msgstr "✕  Cancelar calibración"
 
-#: src/polyx/gui/viewer/window.py:439 src/polyx/gui/viewer/window.py:1308
+#: src/polyx/gui/viewer/window.py:439 src/polyx/gui/viewer/window.py:1312
 msgid "Not calibrated"
 msgstr "Sin calibrar"
 
@@ -5228,7 +5777,7 @@ msgstr "Carpeta de la corrida (runs/detect_...)"
 msgid "● Calibration mode active"
 msgstr "● Modo calibración activo"
 
-#: src/polyx/gui/viewer/window.py:1329
+#: src/polyx/gui/viewer/window.py:1333
 msgid "Output folder"
 msgstr "Carpeta de salida"
 
@@ -5366,21 +5915,21 @@ msgstr "Calibración — Línea"
 msgid "Real length of the marked line (μm):"
 msgstr "Tamaño real de la línea marcada (μm):"
 
-#: src/polyx/gui/viewer/window.py:1282
+#: src/polyx/gui/viewer/window.py:1286
 #, python-format
 msgid "%(value).4f μm/px  (%(mode)s)"
 msgstr "%(value).4f μm/px  (%(mode)s)"
 
-#: src/polyx/gui/viewer/window.py:1289
+#: src/polyx/gui/viewer/window.py:1293
 #, python-format
 msgid "● Calibration applied: %(value).4f μm/px"
 msgstr "● Calibración aplicada: %(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:1323
+#: src/polyx/gui/viewer/window.py:1327
 msgid "No image is open."
 msgstr "No hay imagen abierta."
 
-#: src/polyx/gui/viewer/window.py:1350
+#: src/polyx/gui/viewer/window.py:1354
 msgid "Saved"
 msgstr "Guardado"
 
@@ -5455,12 +6004,20 @@ msgstr ""
 "Diámetro real del objeto circular (μm):\n"
 "Placa Petri de 100 mm → 100000"
 
-#: src/polyx/gui/viewer/window.py:1347
+#: src/polyx/gui/viewer/window.py:1282
+msgid "line"
+msgstr "línea"
+
+#: src/polyx/gui/viewer/window.py:1283
+msgid "circle"
+msgstr "círculo"
+
+#: src/polyx/gui/viewer/window.py:1351
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr "● Guardado en %(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1350
+#: src/polyx/gui/viewer/window.py:1354
 #, python-format
 msgid ""
 "Files saved to:\n"
@@ -5469,7 +6026,7 @@ msgstr ""
 "Archivos guardados en:\n"
 "%(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1356
+#: src/polyx/gui/viewer/window.py:1360
 msgid "● Error while saving"
 msgstr "● Error al guardar"
 
@@ -5503,7 +6060,7 @@ msgstr ""
 msgid "Could not read the predictions: %(error)s"
 msgstr "No se pudieron leer las predicciones: %(error)s"
 
-#: src/polyx/gui/viewer/window.py:1449
+#: src/polyx/gui/viewer/window.py:1453
 #, python-format
 msgid "● Error: %(error)s"
 msgstr "● Error: %(error)s"

@@ -483,17 +483,17 @@ class ParametersPage(DetectorPage):
         self.btn_probe.setText(_("Detect maximum (GPU)"))
         self.sb_imgsz.setValue(max_ok)
         oom = [str(k) for k, v in detail.items() if v == "oom"]
-        msg = (
-            f"Máximo seguro para «{self.state.active_models()[0].alias}»: "
-            f"{max_ok} px.\n\nSe fijó imgsz = {max_ok}."
-        )
+        msg = _("Safe maximum for “%(model)s”: %(size)d px.\n\nimgsz set to %(size)d.") % {
+            "model": self.state.active_models()[0].alias,
+            "size": max_ok,
+        }
         if oom:
-            msg += f"\n(A {oom[0]} px se quedó sin memoria.)"
+            msg += _("\n(At %(size)s px it ran out of memory.)") % {"size": oom[0]}
         if any(v == "cpu" for v in detail.values()):
-            msg = (
-                f"En CPU no hay tope de memoria GPU. Se fijó imgsz = {max_ok} "
-                "pero será lento. Con GPU el detector es mucho más rápido."
-            )
+            msg = _(
+                "On CPU there is no GPU memory ceiling. imgsz set to %(size)d but it "
+                "will be slow. With a GPU the detector is much faster."
+            ) % {"size": max_ok}
         QMessageBox.information(self, _("maximum imgsz"), msg)
 
     def _on_probe_failed(self, err: str):

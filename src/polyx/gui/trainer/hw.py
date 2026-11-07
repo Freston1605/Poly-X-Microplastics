@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from polyx.core.i18n import _
+
 
 @dataclass
 class GPUInfo:
@@ -202,20 +204,19 @@ def detect_gpu() -> GPUInfo:
                 available=True,
                 is_mps=True,
                 backend="mps",
-                name=f"GPU integrada de Apple ({_pl.machine()})",
+                name=_("Apple integrated GPU (%(machine)s)") % {"machine": _pl.machine()},
                 vram_total_gb=total_gb,
                 vram_free_gb=free_gb,
                 n_gpus=1,
                 torch_version=torch_v,
-                detail=(
-                    "Memoria unificada: la GPU comparte la RAM del sistema, "
-                    "asi que la cifra de arriba es la RAM total y no una VRAM "
-                    "dedicada. MPS no soporta todas las operaciones de CUDA; "
-                    "si el entrenamiento falla, prueba con CPU."
+                detail=_(
+                    "Unified memory: the GPU shares the system RAM, so the figure above is "
+                    "total RAM rather than dedicated VRAM. MPS does not support every CUDA "
+                    "operation; if training fails, try CPU."
                 ),
             )
     except Exception as e:  # noqa: BLE001
-        torch_v = torch_v or "no importable"
+        torch_v = torch_v or _("not importable")
         return GPUInfo(
             available=False,
             torch_version=torch_v,
@@ -244,11 +245,19 @@ def detect_gpu() -> GPUInfo:
             torch_rocm=torch_hip,
             rocm_version=torch_hip,
             backend="cuda",
-            detail=(
-                f"nvidia-smi ve la tarjeta (driver {smi['driver']}) pero "
-                f"torch {torch_v} está compilado "
-                f"{'sin CUDA' if not torch_cuda else f'para CUDA {torch_cuda}'}."
-            ),
+            detail=_(
+                "nvidia-smi sees the card (driver %(driver)s) but torch %(version)s is "
+                "built %(build)s."
+            )
+            % {
+                "driver": smi["driver"],
+                "version": torch_v,
+                "build": (
+                    _("without CUDA")
+                    if not torch_cuda
+                    else _("for CUDA %(version)s") % {"version": torch_cuda}
+                ),
+            },
         )
     rsmi = _rocm_smi()
     if rsmi:
@@ -267,11 +276,19 @@ def detect_gpu() -> GPUInfo:
             rocm_version=torch_hip,
             is_rocm=True,
             backend="rocm",
-            detail=(
-                f"rocm-smi ve la tarjeta (driver {rsmi['driver']}) pero "
-                f"torch {torch_v} está compilado "
-                f"{'sin ROCm' if not torch_hip else f'para ROCm {torch_hip}'}."
-            ),
+            detail=_(
+                "rocm-smi sees the card (driver %(driver)s) but torch %(version)s is "
+                "built %(build)s."
+            )
+            % {
+                "driver": rsmi["driver"],
+                "version": torch_v,
+                "build": (
+                    _("without ROCm")
+                    if not torch_hip
+                    else _("for ROCm %(version)s") % {"version": torch_hip}
+                ),
+            },
         )
     # On a Mac talking about `NVIDIA GPU` means nothing: there the path is MPS and
     # it only exists with Apple Silicon. Saying so keeps someone from going
@@ -291,12 +308,15 @@ def detect_gpu() -> GPUInfo:
             rocm_version=torch_hip,
             backend="cpu",
             detail=(
-                "Este Mac tiene procesador Intel: no dispone de MPS, que "
-                "requiere Apple Silicon (M1 o posterior). Se entrena y "
-                "detecta por CPU."
+                _(
+                    "This Mac has an Intel processor: it has no MPS, which requires "
+                    "Apple Silicon (M1 or later). Training and detection run on CPU."
+                )
                 if intel
-                else "Apple Silicon detectado pero torch no expone MPS. "
-                "Reinstala PyTorch desde el instalador de Poly-X."
+                else _(
+                    "Apple Silicon detected but torch does not expose MPS. Reinstall "
+                    "PyTorch from the Poly-X installer."
+                )
             ),
         )
     return GPUInfo(
@@ -307,7 +327,7 @@ def detect_gpu() -> GPUInfo:
         torch_rocm=torch_hip,
         rocm_version=torch_hip,
         backend="cpu",
-        detail="Ni torch ni nvidia-smi/rocm-smi encuentran una GPU compatible (CUDA/ROCm).",
+        detail=_("Neither torch nor nvidia-smi/rocm-smi finds a compatible GPU (CUDA/ROCm)."),
     )
 
 
@@ -494,8 +514,11 @@ def recommend_config(request: RecommendRequest) -> Recommendation:
                 if estimate_vram_gb(size, sz, b, amp) <= cap:
                     imgsz, batch_min = sz, b
                     notes.append(
-                        f"No cabía batch {request} ni al mínimo de resolución: se bajó "
-                        f"el batch a {b} para no sacrificar imgsz."
+                        _(
+                            "Batch %(request)s did not fit even at the minimum resolution: "
+                            "batch was lowered to %(batch)d so as not to sacrifice imgsz."
+                        )
+                        % {"request": request, "batch": b}
                     )
                     break
             if imgsz:
@@ -503,16 +526,22 @@ def recommend_config(request: RecommendRequest) -> Recommendation:
     if imgsz == 0:
         imgsz, batch_min = min(ladder), 1
         notes.append(
-            "La VRAM no alcanza ni para el caso mínimo; el entrenamiento "
-            "probablemente dé OOM. Considera un modelo más pequeño."
+            _(
+                "VRAM is not enough even for the minimum case; training will probably "
+                "run out of memory. Consider a smaller model."
+            )
         )
     elif max_size and imgsz == max(ladder):
         # The dataset ceiling was reached, not the card's: the leftover VRAM
         # must go to batch, not to interpolating invented pixels.
         limited = "resolucion_nativa"
         notes.append(
-            f"imgsz topado en {imgsz} px porque las imágenes miden {imgsz_native} px "
-            f"de lado: más allá solo se interpola y se gasta VRAM sin añadir señal."
+            _(
+                "imgsz capped at %(imgsz)d px because the images are %(native)d px on "
+                "the long side: beyond that it is only interpolation, burning VRAM "
+                "without adding signal."
+            )
+            % {"imgsz": imgsz, "native": imgsz_native}
         )
 
     # ── 2. batch afterwards, with imgsz already fixed ──
@@ -527,10 +556,12 @@ def recommend_config(request: RecommendRequest) -> Recommendation:
         if limited == "vram":
             limited = "tope_batch"
         notes.append(
-            f"batch topado en {batch_max}: por encima, las mejoras son marginales y "
-            f"el batch grande promedia gradientes de objetos pequeños. "
-            f"Ultralytics acumula a batch nominal 64, así que un batch chico "
-            f"penaliza menos de lo que parece."
+            _(
+                "batch capped at %(batch)d: above that, gains are marginal and a large "
+                "batch averages gradients over small objects. Ultralytics accumulates to "
+                "a nominal batch of 64, so a small batch penalises less than it seems."
+            )
+            % {"batch": batch_max}
         )
 
     # ── 3. speed, at the end and without touching the previous steps ──
@@ -547,8 +578,11 @@ def recommend_config(request: RecommendRequest) -> Recommendation:
         else:
             cache = "disk"
             notes.append(
-                f"El dataset (~{dataset_gb:.1f} GB) no cabe holgado en RAM: cache en "
-                f"disco en vez de RAM, para no arriesgar el swap a mitad del entreno."
+                _(
+                    "The dataset (~%(gb).1f GB) does not fit comfortably in RAM: cache on "
+                    "disk instead, so as not to risk swap halfway through training."
+                )
+                % {"gb": dataset_gb}
             )
 
     return Recommendation(

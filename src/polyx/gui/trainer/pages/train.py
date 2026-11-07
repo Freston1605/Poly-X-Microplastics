@@ -129,7 +129,7 @@ class _LiveCurves(QFrame):
         ax[1, 1].plot(epochs, rec, color=T.OK, lw=1.6)
         ax[1, 1].set_title("Recall", fontsize=10)
         for a in ax.flat:
-            a.set_xlabel("Época", fontsize=8)
+            a.set_xlabel(_("Epoch"), fontsize=8)
             a.tick_params(labelsize=8)
         self.canvas.draw()
 

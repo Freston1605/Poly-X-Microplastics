@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from polyx.core.i18n import N_
+from polyx.core.i18n import N_, _
 from polyx.core.platform import device_available
 from polyx.core.quality.dataset_audit import LEVEL_ERROR, LEVEL_WARN, audit_dataset
 
@@ -326,49 +326,82 @@ def validate_training_config(
 
     # ── 1) Model ──
     if state.model.family not in ("v8", "v11"):
-        _error(f"Familia de modelo desconocida: «{state.model.family}» (use «v8» o «v11»).")
+        _error(
+            _("Unknown model family: “%(family)s” (use “v8” or “v11”).")
+            % {"family": state.model.family}
+        )
     if state.model.size not in ("n", "s", "m", "l", "x"):
-        _error(f"Tamaño de modelo desconocido: «{state.model.size}» (use n, s, m, l o x).")
+        _error(
+            _("Unknown model size: “%(size)s” (use n, s, m, l or x).") % {"size": state.model.size}
+        )
 
     # ── 2) Hyperparameters ──
     p = state.params
     if not _in_range(p.epochs, 1, 10000):
-        _error(f"Épocas fuera de rango: {p.epochs} (use un entero ≥ 1).")
+        _error(_("Epochs out of range: %(value)s (use an integer ≥ 1).") % {"value": p.epochs})
     if not _in_range(p.batch, 1, 512):
-        _error(f"Batch fuera de rango: {p.batch} (use un entero ≥ 1).")
+        _error(_("Batch out of range: %(value)s (use an integer ≥ 1).") % {"value": p.batch})
     try:
         imgsz = int(p.imgsz)
     except (TypeError, ValueError):
         imgsz = -1
     if not (32 <= imgsz <= 8192) or imgsz % 32 != 0:
-        _error(f"imgsz fuera de rango: {p.imgsz} (use un múltiplo de 32 entre 32 y 8192).")
+        _error(
+            _("imgsz out of range: %(value)s (use a multiple of 32 between 32 and 8192).")
+            % {"value": p.imgsz}
+        )
     if not _DEVICE_RE.match((p.device or "").strip()):
-        _error(f"Device inválido: «{p.device}» (use «cpu», «mps», «0» o «cuda:0»).")
+        _error(
+            _("Invalid device: “%(device)s” (use “cpu”, “mps”, “0” or “cuda:0”).")
+            % {"device": p.device}
+        )
     if not _in_range(p.lr0, 1e-9, 1.0):
-        _error(f"lr0 fuera de rango: {p.lr0} (use un valor > 0).")
+        _error(_("lr0 out of range: %(value)s (use a value > 0).") % {"value": p.lr0})
     if not _in_range(p.weight_decay, 0.0, 1.0):
-        _error(f"weight_decay fuera de rango: {p.weight_decay} (use un valor en [0, 1]).")
+        _error(
+            _("weight_decay out of range: %(value)s (use a value in [0, 1]).")
+            % {"value": p.weight_decay}
+        )
     if not _in_range(p.momentum, 0.0, 1.0):
-        _error(f"momentum fuera de rango: {p.momentum} (use un valor en [0, 1]).")
+        _error(
+            _("momentum out of range: %(value)s (use a value in [0, 1]).") % {"value": p.momentum}
+        )
     if not _in_range(p.warmup_epochs, 0, 10**6):
-        _error(f"warmup_epochs fuera de rango: {p.warmup_epochs} (use un entero ≥ 0).")
+        _error(
+            _("warmup_epochs out of range: %(value)s (use an integer ≥ 0).")
+            % {"value": p.warmup_epochs}
+        )
     if not _in_range(p.close_mosaic, 0, 10**6):
-        _error(f"close_mosaic fuera de rango: {p.close_mosaic} (use un entero ≥ 0).")
+        _error(
+            _("close_mosaic out of range: %(value)s (use an integer ≥ 0).")
+            % {"value": p.close_mosaic}
+        )
     ls = _num(p.label_smoothing)
     if ls is None or not (0.0 <= ls < 1.0):
-        _error(f"label_smoothing fuera de rango: {p.label_smoothing} (use un valor en [0, 1)).")
+        _error(
+            _("label_smoothing out of range: %(value)s (use a value in [0, 1)).")
+            % {"value": p.label_smoothing}
+        )
     if not _in_range(p.patience, 0, 10**6):
-        _error(f"patience fuera de rango: {p.patience} (use un entero ≥ 0).")
+        _error(_("patience out of range: %(value)s (use an integer ≥ 0).") % {"value": p.patience})
     if p.save_period != -1 and not _in_range(p.save_period, 1, 10**6):
-        _error(f"save_period fuera de rango: {p.save_period} (use -1 o un entero ≥ 1).")
+        _error(
+            _("save_period out of range: %(value)s (use -1 or an integer ≥ 1).")
+            % {"value": p.save_period}
+        )
     if not _in_range(p.workers, 0, 64):
-        _error(f"workers fuera de rango: {p.workers} (use un entero entre 0 y 64).")
+        _error(
+            _("workers out of range: %(value)s (use an integer between 0 and 64).")
+            % {"value": p.workers}
+        )
     cache = p.cache
     if not (
         isinstance(cache, bool)
         or (isinstance(cache, str) and cache.strip().lower() in ("ram", "disk", "true", "false"))
     ):
-        _error(f"cache inválido: {cache!r} (use «disk», «ram», «true» o «false»).")
+        _error(
+            _("Invalid cache: %(value)r (use “disk”, “ram”, “true” or “false”).") % {"value": cache}
+        )
 
     a = state.aug
     for name_2, value in (
@@ -381,12 +414,15 @@ def validate_training_config(
         ("copy_paste", a.copy_paste),
     ):
         if not _in_range(value, 0.0, 1.0):
-            _error(f"{name_2} fuera de rango: {value} (use un valor en [0, 1]).")
+            _error(
+                _("%(name)s out of range: %(value)s (use a value in [0, 1]).")
+                % {"name": name_2, "value": value}
+            )
 
     # ── 3) Dataset: YAML integrity, presence of splits and labels ──
     yaml_path = state.dataset.yaml_path
     if yaml_path is None:
-        _error("No hay data.yaml cargado (ve a la pestaña Dataset).")
+        _error(_("No data.yaml loaded (go to the Dataset tab)."))
         return ok, msgs
     if not con_dataset:
         # Cheap mode: the dataset is loaded and its structure is audited separately
@@ -394,13 +430,13 @@ def validate_training_config(
         # reports what just changed: the parameters.
         return ok, msgs
     if not Path(yaml_path).exists():
-        _error(f"data.yaml no encontrado: {yaml_path}")
+        _error(_("data.yaml not found: %(path)s") % {"path": yaml_path})
         return ok, msgs
 
     try:
         audit = audit_dataset(yaml_path)
     except Exception as e:  # the audit must not bring down the pre-flight  # noqa: BLE001
-        _error(f"No se pudo analizar el dataset: {e}")
+        _error(_("Could not analyse the dataset: %(error)s") % {"error": e})
         return ok, msgs
 
     for f in audit.findings:
@@ -408,13 +444,13 @@ def validate_training_config(
         if f.level == LEVEL_ERROR:
             _error(text_2)
         elif f.level == LEVEL_WARN:
-            msgs.append(f"[aviso] {text_2}")
+            msgs.append(_("[warning] %(message)s") % {"message": text_2})
     # Train without any valid labels: the model would learn only background. The
     # audit flags it as a per-image warning; here it is blocking.
     labels_train = sum(audit.per_class.get("train", {}).values())
     if audit.ok and labels_train == 0:
-        _error("No hay etiquetas válidas en train: el modelo aprendería solo fondo.")
+        _error(_("No valid labels in train: the model would learn only background."))
     elif audit.ok:
-        msgs.append("Dataset válido: splits, labels y clases correctos.")
+        msgs.append(_("Valid dataset: splits, labels and classes all correct."))
 
     return ok, msgs

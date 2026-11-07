@@ -16,6 +16,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from polyx.core.i18n import _
+
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 
 LEVEL_OK = "ok"
@@ -181,13 +183,13 @@ class _Auditor:
     def run(self) -> DatasetAudit:
         audit = self.audit
         if not self.yaml_path.exists():
-            audit.add(LEVEL_ERROR, "data.yaml no encontrado", str(self.yaml_path))
+            audit.add(LEVEL_ERROR, _("data.yaml not found"), str(self.yaml_path))
             return audit
 
         try:
             self.data = _load_yaml(self.yaml_path)
         except Exception as e:  # noqa: BLE001
-            audit.add(LEVEL_ERROR, "No se pudo leer data.yaml", str(e))
+            audit.add(LEVEL_ERROR, _("Could not read data.yaml"), str(e))
             return audit
 
         self.yaml_dir = self.yaml_path.parent
@@ -215,7 +217,11 @@ class _Auditor:
     # ── helpers ──
     def _cls_name(self, cid: int) -> str:
         audit = self.audit
-        return audit.class_names[cid] if 0 <= cid < len(audit.class_names) else f"clase {cid}"
+        return (
+            audit.class_names[cid]
+            if 0 <= cid < len(audit.class_names)
+            else _("class %(id)s") % {"id": cid}
+        )
 
     def _resolve_names(self) -> None:
         names = self.data.get("names") or []
@@ -233,18 +239,24 @@ class _Auditor:
             if not split_value and split in ("train", "val"):
                 audit.add(
                     LEVEL_ERROR,
-                    f"Sin split {split} declarado",
-                    f"El data.yaml no tiene clave '{split}'. Ultralytics la "
-                    "necesita para entrenar y medir métricas.",
+                    _("No %(split)s split declared") % {"split": split},
+                    _(
+                        "The data.yaml has no '%(split)s' key. Ultralytics needs it "
+                        "to train and measure metrics."
+                    )
+                    % {"split": split},
                 )
             elif split_value and (resolved is None or not resolved.exists()):
                 lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
                 audit.add(
                     lvl,
-                    f"Ruta de {split} no existe",
-                    f"El data.yaml apunta a «{resolved}», que no existe en este equipo. "
-                    "Suele pasar al mover el proyecto de carpeta o de PC: corrige las "
-                    "rutas del data.yaml (o usa rutas relativas).",
+                    _("%(split)s path does not exist") % {"split": split},
+                    _(
+                        "The data.yaml points to “%(path)s”, which does not exist on this "
+                        "computer. This usually happens when the project is moved to another "
+                        "folder or PC: fix the paths in the data.yaml (or use relative paths)."
+                    )
+                    % {"path": resolved},
                 )
             imgs = _iter_images(resolved, yaml_dir, root)
             scans[split] = _scan_split(imgs)
@@ -264,16 +276,18 @@ class _Auditor:
     def _check_structure(self) -> None:
         audit, tr, vl = self.audit, self.tr, self.vl
         if not audit.class_names:
-            audit.add(LEVEL_ERROR, "Sin clases definidas", "El data.yaml no tiene clave 'names'.")
+            audit.add(LEVEL_ERROR, _("No classes defined"), _("The data.yaml has no 'names' key."))
         if tr["n_imgs"] == 0 and tr.get("path_exists"):
             audit.add(
-                LEVEL_ERROR, "Train vacío", "La carpeta de train existe pero no contiene imágenes."
+                LEVEL_ERROR,
+                _("Empty train"),
+                _("The train folder exists but contains no images."),
             )
         if vl["n_imgs"] == 0 and vl.get("path_exists"):
             audit.add(
                 LEVEL_ERROR,
-                "Val vacío",
-                "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas.",
+                _("Empty val"),
+                _("The val folder exists but contains no images → metrics cannot be measured."),
             )
 
     def _check_class_coverage(self) -> None:
@@ -286,17 +300,22 @@ class _Auditor:
             names_2 = ", ".join(sorted(self._cls_name(c) for c in missing_in_val))
             audit.add(
                 LEVEL_ERROR,
-                f"Clases sin validación: {names_2}",
-                "Estas clases tienen ejemplos en train pero CERO en val. El mAP "
-                "no medirá su rendimiento (te dará una falsa sensación de éxito). "
-                "Agrega imágenes de estas clases al split de validación.",
+                _("Classes without validation: %(classes)s") % {"classes": names_2},
+                _(
+                    "These classes have examples in train but ZERO in val. mAP will not "
+                    "measure their performance (it will give you a false sense of success). "
+                    "Add images of these classes to the validation split."
+                ),
             )
         if len(val_classes) == 1 and len(train_classes) > 1:
             audit.add(
                 LEVEL_ERROR,
-                f"Validación de una sola clase ({self._cls_name(next(iter(val_classes)))})",
-                "El set de validación contiene una única clase pese a que el "
-                "modelo aprende varias. Las métricas multiclase no son válidas.",
+                _("Single-class validation (%(class)s)")
+                % {"class": self._cls_name(next(iter(val_classes)))},
+                _(
+                    "The validation set contains a single class even though the model "
+                    "learns several. Multiclass metrics are not valid."
+                ),
             )
 
     def _check_imbalance(self) -> None:
@@ -309,9 +328,19 @@ class _Auditor:
                 bot = self._cls_name(min(counts, key=counts.get))
                 audit.add(
                     LEVEL_WARN,
-                    "Desbalance fuerte de clases en train",
-                    f"«{top}» tiene {mx} cajas y «{bot}» solo {mn} "
-                    f"({mx / mn:.0f}× más). Considera balancear o usar pesos por clase.",
+                    _("Strong class imbalance in train"),
+                    _(
+                        "“%(top)s” has %(top_count)d boxes and “%(bottom)s” only "
+                        "%(bottom_count)d (%(ratio).0f× more). Consider balancing or using "
+                        "class weights."
+                    )
+                    % {
+                        "top": top,
+                        "top_count": mx,
+                        "bottom": bot,
+                        "bottom_count": mn,
+                        "ratio": mx / mn,
+                    },
                 )
 
     def _check_dominance(self) -> None:
@@ -323,9 +352,15 @@ class _Auditor:
                 if top_n / total >= 0.40:
                     audit.add(
                         LEVEL_WARN,
-                        f"«{self._cls_name(c)}»: poca diversidad",
-                        f"El {top_n / total * 100:.0f}% de sus cajas viene de una sola "
-                        f"imagen ({top_img}). El modelo puede sobreajustar a esa escena.",
+                        _("“%(class)s”: little diversity") % {"class": self._cls_name(c)},
+                        _(
+                            "%(percent).0f%% of its boxes come from a single image "
+                            "(%(image)s). The model may overfit to that scene."
+                        )
+                        % {
+                            "percent": top_n / total * 100,
+                            "image": top_img,
+                        },
                     )
 
     def _check_size_similarity(self) -> None:
@@ -340,10 +375,13 @@ class _Auditor:
                     if ratio < 1.25:
                         audit.add(
                             LEVEL_WARN,
-                            f"«{na}» y «{nb}» tienen tamaño casi idéntico",
-                            "Sus cajas son del mismo tamaño, así que el modelo solo "
-                            "puede distinguirlas por color/textura. Si además se "
-                            "parecen visualmente, esperá confusión entre ambas.",
+                            _("“%(first)s” and “%(second)s” are almost identical in size")
+                            % {"first": na, "second": nb},
+                            _(
+                                "Their boxes are the same size, so the model can only tell "
+                                "them apart by colour/texture. If they also look alike, "
+                                "expect confusion between the two."
+                            ),
                         )
 
     def _check_mechanical(self) -> None:
@@ -352,26 +390,33 @@ class _Auditor:
             if sc["degenerate"]:
                 audit.add(
                     LEVEL_WARN,
-                    f"Cajas degeneradas en {split}: {sc['degenerate']}",
-                    "Cajas con ancho/alto ~0. Revisa la anotación.",
+                    _("Degenerate boxes in %(split)s: %(count)d")
+                    % {"split": split, "count": sc["degenerate"]},
+                    _("Boxes with width/height ~0. Check the annotation."),
                 )
             if sc["out_range"]:
                 audit.add(
                     LEVEL_ERROR,
-                    f"Coordenadas fuera de [0,1] en {split}: {sc['out_range']}",
-                    "Labels mal normalizadas; YOLO las interpretará mal.",
+                    _("Coordinates outside [0,1] in %(split)s: %(count)d")
+                    % {"split": split, "count": sc["out_range"]},
+                    _("Badly normalised labels; YOLO will interpret them wrongly."),
                 )
             if sc["duplicates"]:
                 audit.add(
                     LEVEL_WARN,
-                    f"Cajas duplicadas en {split}: {sc['duplicates']}",
-                    "Misma caja repetida en un archivo.",
+                    _("Duplicate boxes in %(split)s: %(count)d")
+                    % {"split": split, "count": sc["duplicates"]},
+                    _("The same box repeated within one file."),
                 )
             if sc["no_label"]:
                 audit.add(
                     LEVEL_WARN,
-                    f"Imágenes sin label en {split}: {sc['no_label']}",
-                    "Se entrenarán como fondo (sin objetos). Confirma que es intencional.",
+                    _("Images with no label in %(split)s: %(count)d")
+                    % {"split": split, "count": sc["no_label"]},
+                    _(
+                        "They will be trained as background (no objects). Confirm this is "
+                        "intentional."
+                    ),
                 )
 
     def _check_val_size(self) -> None:
@@ -379,8 +424,8 @@ class _Auditor:
         if 0 < vl["n_imgs"] < 5:
             audit.add(
                 LEVEL_WARN,
-                f"Validación muy pequeña ({vl['n_imgs']} imágenes)",
-                "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20.",
+                _("Very small validation set (%(count)d images)") % {"count": vl["n_imgs"]},
+                _("With so few images the metrics are unstable. Aim for ≥ 10-20."),
             )
 
     def _finalize(self) -> None:
@@ -388,8 +433,8 @@ class _Auditor:
         if audit.ok and not any(f.level == LEVEL_WARN for f in audit.findings):
             audit.add(
                 LEVEL_OK,
-                "Dataset sin problemas detectados",
-                "Distribución de clases, validación y formato se ven correctos.",
+                _("No dataset problems detected"),
+                _("Class distribution, validation and format all look correct."),
             )
 
 

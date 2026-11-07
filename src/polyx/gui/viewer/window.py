@@ -1278,8 +1278,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
+        mode_label = {
+            "línea": _("line"),
+            "círculo": _("circle"),
+        }.get(mode_name, mode_name)
         self.lbl_calib_result.setText(
-            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_name}
+            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_label}
         )
 
         self.lbl_calib_result.setStyleSheet(
