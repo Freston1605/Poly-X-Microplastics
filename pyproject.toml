@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.25", "Babel>=2.17"]
 build-backend = "hatchling.build"
 
 [project]
@@ -37,6 +37,7 @@ dependencies = [
   "matplotlib==3.9.2",
   "PyYAML==6.0.2",
   "psutil==6.0.0",
+  "Babel==2.17.0",
   # Pins are deliberately strict for a reproducible scientific stack:
   # ultralytics 8.3.x requires numpy<2, and each patch wheel is unit-tested
   # in CI. Loosen only with a test run across the matrix.
@@ -83,9 +84,22 @@ polyx-report = "polyx.cli.report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/polyx"]
+# The pseudo-locale is a developer aid; a mangled catalog must never ship.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+# Never package a generated development pseudo-locale, even from a dirty tree.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
 
@@ -133,3 +147,11 @@ rules.unresolved-import = "ignore"
 rules.not-subscriptable = "ignore"
 rules.not-iterable = "ignore"
 rules.unsupported-operator = "ignore"
+
+[tool.babel]
+[[tool.babel.mappings]]
+method = "polyx"
+pattern = "src/polyx/**.py"
+
+[tool.babel.extractors]
+polyx = "tools.i18n.extract:extract"

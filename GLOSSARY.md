@@ -86,3 +86,61 @@ The Labeller's rule that a `.txt` is written only for images that were
 marked reviewed or drawn on. "Reviewed, zero particles" is a datum; an
 image barely glanced at must not be recorded as reviewed. The policy
 lives in the GUI flows — the codec writes exactly what it is told.
+
+## Source language
+
+English. It is the language every user-facing string is written in, and the
+English sentence is the message id itself: there is no separate key. The
+source language is also the fallback — a missing translation renders the
+English msgid, which is correct text rather than an error. Owned by
+`polyx.core.i18n`; decided in ADR-0003.
+
+## Target locale
+
+A language tag that has a catalog directory, such as `es`. The tag is the
+directory name under `src/polyx/locales/`, so adding a locale is adding a
+directory. A regional tag resolves through its language first (`es_AR` →
+`es`) and then to English; it is not a separate catalog unless one exists.
+Not to be confused with the source language: the source is always English,
+the target locale is what the reader asked for.
+
+## Catalog (catalogue)
+
+The translation file for one target locale:
+`src/polyx/locales/<tag>/LC_MESSAGES/messages.po`. The `.po` is the
+translator handoff — plain data, openable by any CAT tool or text editor,
+with the English msgid, the translated `msgstr` and the source locations.
+`messages.pot` is the committed template every catalog is merged from; the
+`.mo` next to each `.po` is the compiled build artifact the runtime reads,
+never hand-edited and never committed. The catalog is the only home for
+translated text; Python holds English only.
+
+## Extraction
+
+The step that walks the source tree for translation calls (`_`, `ngettext`,
+`pgettext`, `npgettext`, `N_`, `lazy`) and writes the committed template
+`src/polyx/locales/messages.pot`. Run it with
+`python tools/i18n/cli.py extract` whenever a call is added, removed or
+moved: editing source shifts line references, and the audit fails while the
+template disagrees with the tree. Babel performs the walk; the project
+extractor also sees calls inside f-strings.
+
+## Pseudo-locale
+
+A generated, development-only catalog (`qps_ploc`) whose translations are
+bracketed and accented so every translated string is visibly mangled. It is
+there to make an unextracted string obvious by eye — an English sentence on
+screen is a string that bypassed the translation call — and to expose layout
+truncation. Generated with `python tools/i18n/cli.py pseudo`, selected with
+`POLYX_LOCALE=qps_ploc`, gitignored and excluded from the wheel and the
+frozen application. It is not a shipped locale and not part of any gate.
+
+## Retired: `tr()`
+
+The old translation function that looked up a Spanish sentence in
+`polyx/core/translations_en.py` and returned English. It is no longer
+current: the module is deleted, Spanish is no longer a key, and the name
+collided with Qt's own `tr()`. Say `_()` (or `ngettext`/`pgettext`) from
+`polyx.core.i18n`; an old document that still calls `tr()` the translation
+layer is describing the scheme ADR-0003 replaced.
+

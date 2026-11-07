@@ -6,7 +6,7 @@ import io
 import matplotlib.pyplot as plt
 import numpy as np
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 from polyx.core.report_metrics import _ORDER_CLASSES
 from polyx.gui import theme as T
 
@@ -56,8 +56,8 @@ def _fig_sweep(sweep: dict[str, list]) -> str:
             zorder=5,
             color=ax.lines[-1].get_color(),
         )
-    ax.set_xlabel(tr("Umbral de confianza"))
-    ax.set_ylabel(tr("F1 (con clase)"))
+    ax.set_xlabel(_("Confidence threshold"))
+    ax.set_ylabel(_("F1 (with class)"))
     ax.grid(alpha=0.3)
     ax.legend(frameon=False, fontsize=9)
     fig.tight_layout()
@@ -76,11 +76,11 @@ def _fig_comparison_metrics(data_2: list[tuple]) -> str:
     if not data_2:
         return ""
     fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.2), sharey=True)
-    labels_2 = [tr("Precisión"), "Recall", "F1"]
+    labels_2 = [_("Precision"), _("Recall"), "F1"]
     x = np.arange(len(labels_2))
     width_2 = 0.8 / max(1, len(data_2))
     for panel, (ax, offset, title) in enumerate(
-        ((axes[0], 1, tr("Localización")), (axes[1], 4, tr("Con clase")))
+        ((axes[0], 1, _("Localisation")), (axes[1], 4, _("With class")))
     ):
         for i, row in enumerate(data_2):
             vals = row[offset : offset + 3]
@@ -94,7 +94,7 @@ def _fig_comparison_metrics(data_2: list[tuple]) -> str:
         ax.set_ylim(0, 1.12)
         ax.grid(axis="y", alpha=0.3)
         ax.set_axisbelow(True)
-    axes[0].set_ylabel(tr("Valor"))
+    axes[0].set_ylabel(_("Value"))
     # The legend goes below the figure: inside the axes it overlapped the
     # bars, which with these values almost reach the ceiling in both halves.
     handlers, names_2 = axes[0].get_legend_handles_labels()
@@ -129,7 +129,14 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: list[tuple]) -> s
     b = [p[1] for p in pares]
     max_size = max(max(a), max(b), 1)  # noqa: PLW3301
     fig, ax = plt.subplots(figsize=(4.6, 4.2))
-    ax.plot([0, max_size], [0, max_size], "--", color="#999", linewidth=1, label="acuerdo exacto")
+    ax.plot(
+        [0, max_size],
+        [0, max_size],
+        "--",
+        color="#999",
+        linewidth=1,
+        label=_("exact agreement"),
+    )
     ax.scatter(a, b, s=26, alpha=0.75, color=T.DOC.ACCENT, edgecolor="white", linewidth=0.5)
     # The plates that differ the most are labelled: those are the ones to go and inspect.
     for na, nb, name_2 in sorted(pares, key=lambda p: -abs(p[0] - p[1]))[:3]:
@@ -146,8 +153,8 @@ def _fig_agreement_by_image(alias_a: str, alias_b: str, pares: list[tuple]) -> s
     ax.set_yscale("symlog", linthresh=10)
     ax.set_xlim(-1, max_size * 1.6)
     ax.set_ylim(-1, max_size * 1.6)
-    ax.set_xlabel(f"Detecciones · {alias_a}")
-    ax.set_ylabel(f"Detecciones · {alias_b}")
+    ax.set_xlabel(_("Detections · %(model)s") % {"model": alias_a})
+    ax.set_ylabel(_("Detections · %(model)s") % {"model": alias_b})
     ax.grid(alpha=0.3)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, fontsize=8, loc="upper left")
@@ -186,7 +193,7 @@ def _fig_metrics_by_class(by_model: dict[str, dict[str, tuple]]) -> str:
         ax.bar_label(bars, fmt="%.3f", fontsize=7, padding=1)
     ax.set_xticks(x)
     ax.set_xticklabels(classes)
-    ax.set_ylabel(tr("F1 por clase"))
+    ax.set_ylabel(_("F1 per class"))
     ax.set_ylim(0, 1.12)
     ax.grid(axis="y", alpha=0.3)
     ax.set_axisbelow(True)
@@ -203,8 +210,8 @@ def _fig_class_distribution(per_class_counts: dict[str, int]) -> str:
     vals = list(per_class_counts.values())
     colors = [T.CLASS_COLOR_HEX.get(n, T.FALLBACK_COLOR_HEX) for n in names]
     ax.bar(names, vals, color=colors, edgecolor="black", linewidth=0.5)
-    ax.set_ylabel(tr("Detecciones"))
-    ax.set_title(tr("Distribución por clase"))
+    ax.set_ylabel(_("Detections"))
+    ax.set_title(_("Detections per class"))
     ax.grid(axis="y", alpha=0.25)
     return _fig_to_b64(fig)
 
@@ -214,9 +221,9 @@ def _fig_confidence_hist(confs: list[float]) -> str:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.2))
     ax.hist(confs, bins=20, color=T.DOC.ACCENT, edgecolor="black", linewidth=0.5)
-    ax.set_xlabel(tr("Confianza"))
-    ax.set_ylabel(tr("Frecuencia"))
-    ax.set_title(tr("Histograma de confianza"))
+    ax.set_xlabel(_("Confidence"))
+    ax.set_ylabel(_("Frequency"))
+    ax.set_title(_("Confidence histogram"))
     ax.grid(axis="y", alpha=0.25)
     return _fig_to_b64(fig)
 
@@ -226,9 +233,9 @@ def _fig_size_hist(sizes_um: list[float]) -> str:
         return ""
     fig, ax = plt.subplots(figsize=(7, 3.2))
     ax.hist(sizes_um, bins=25, color=T.DOC.WARN, edgecolor="black", linewidth=0.5)
-    ax.set_xlabel(tr("Diámetro equivalente (μm)"))
-    ax.set_ylabel(tr("Frecuencia"))
-    ax.set_title(tr("Distribución de tamaños"))
+    ax.set_xlabel(_("Equivalent diameter (μm)"))
+    ax.set_ylabel(_("Frequency"))
+    ax.set_title(_("Size distribution"))
     ax.grid(axis="y", alpha=0.25)
     return _fig_to_b64(fig)
 
@@ -258,7 +265,7 @@ def _fig_sizes_by_section(lengths_per_class: dict[str, list[float]]) -> str:
         vals = lengths_per_class.get(cls)
         if not vals:
             continue
-        account, _ = np.histogram(np.array(vals, dtype=float), bins=edges)
+        account, _unused = np.histogram(np.array(vals, dtype=float), bins=edges)
         ax.bar(
             centers,
             account,
@@ -271,8 +278,8 @@ def _fig_sizes_by_section(lengths_per_class: dict[str, list[float]]) -> str:
         )
         bottom_2 += account
     ax.set_xscale("log")
-    ax.set_xlabel(tr("talla (µm, dimensión mayor siguiendo la curva)"))
-    ax.set_ylabel(tr("partículas"))
+    ax.set_xlabel(_("size (µm, longest dimension following the curve)"))
+    ax.set_ylabel(_("particles"))
     ax.legend(frameon=False, fontsize=8)
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", alpha=0.25)
@@ -310,7 +317,7 @@ def _fig_boxplot_groups(
     items = items[:max_groups]
     items.sort(key=lambda kv: kv[0])
 
-    data_2 = [np.asarray(v, dtype=float) for _, v in items]
+    data_2 = [np.asarray(v, dtype=float) for _unused, v in items]
     labels_2 = [f"{k}\n(n={len(v)})" for k, v in items]
 
     fig, ax = plt.subplots(figsize=(max(5.5, 1.15 * len(items) + 2), 4.2), dpi=140)
@@ -329,10 +336,10 @@ def _fig_boxplot_groups(
         med.set_color("black")
         med.set_linewidth(1.4)
     ax.set_yscale("log")
-    ax.set_ylabel(tr("talla (µm, escala log)"))
+    ax.set_ylabel(_("size (µm, log scale)"))
     ax.set_xlabel(xlabel)
     title_complete = title + (
-        tr(" (las {n} con más partículas)").format(n=max_groups) if truncated else ""
+        _(" (the %(n)s with the most particles)") % {"n": max_groups} if truncated else ""
     )
     ax.set_title(title_complete, fontsize=10)
     ax.spines[["top", "right"]].set_visible(False)
@@ -380,9 +387,9 @@ def _fig_profile_depth(profiles: dict) -> str:
             color=color,
             linewidth=0,
         )
-    ax1.set_xlabel(tr("partículas por tramo"))
-    ax2.set_xlabel(tr("talla mediana (µm)  ·  banda = rango intercuartílico"))
-    ax1.set_ylabel(tr("tramo (mayor = más profundo)"))
+    ax1.set_xlabel(_("particles per interval"))
+    ax2.set_xlabel(_("median size (µm)  ·  band = interquartile range"))
+    ax1.set_ylabel(_("interval (higher = deeper)"))
     ax1.invert_yaxis()
     for ax in (ax1, ax2):
         ax.grid(alpha=0.25)
@@ -491,28 +498,28 @@ def _figure_calibration(run) -> str:
     diam_px = 2.0 * r_px
     diam_mm = getattr(cal, "diameter_mm", 0) or DIAMETER_PLATE_MM
     return f"""
-<h3>{NUM}.1 {tr("Cómo se obtiene la escala, sobre una placa real")}</h3>
-<p>{tr("En verde, la circunferencia que el ajuste encontró para el borde externo del anillo; en amarillo, su diámetro. Ese diámetro es la magnitud conocida")}
-—<strong>{diam_mm:g} mm</strong>—{tr(" y de ahí sale todo lo demás.")}</p>
+<h3>{NUM}.1 {_("How the scale is obtained, on a real dish")}</h3>
+<p>{_("In green, the circle the fit found for the outer edge of the rim; in yellow, its diameter. That diameter is the known quantity")}
+—<strong>{diam_mm:g} mm</strong>—{_(" and everything else follows from it.")}</p>
 <img src='data:image/jpeg;base64,{img64}' style='max-width:100%'>
 <p style='font-family:monospace;font-size:10pt'>
 {diam_mm:g} mm ÷ {diam_px:.1f} px = <strong>{cal.um_por_px:.4f} µm/px</strong>
 &nbsp;&nbsp;<span style='font-family:inherit;color:#656d76'>({_esc(path_2.name)},
-{tr("{n} puntos de borde").format(n=cal.n_points)})</span></p>
-<p>{tr("Conviene mirar si el círculo verde sigue el borde del anillo y no otra cosa —la sombra de la placa, un reflejo, o el borde del filtro de dentro—. Si cayera mal, <strong>todas</strong> las tallas de esa foto saldrían escaladas por el mismo factor equivocado, y ninguna otra cifra del informe lo delataría.")}</p>"""
+{_("%(n)s edge points") % {"n": cal.n_points}})</span></p>
+<p>{_("It is worth checking that the green circle follows the rim edge and not something else —the dish's shadow, a reflection, or the inner edge of the filter—. If it landed wrong, <strong>every</strong> size in that photo would be scaled by the same wrong factor, and no other figure in the report would reveal it.")}</p>"""
 
 
 def _fig_confusion_matrix(cm: np.ndarray, class_names: list[str]) -> str:
-    labels = list(class_names) + ["background"]  # noqa: RUF005
+    labels = list(class_names) + [_("background")]  # noqa: RUF005
     fig, ax = plt.subplots(figsize=(5.5, 4.8))
     im = ax.imshow(cm, cmap="Blues")
     ax.set_xticks(range(len(labels)))
     ax.set_yticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=45, ha="right")
     ax.set_yticklabels(labels)
-    ax.set_xlabel(tr("Predicción"))
-    ax.set_ylabel("Ground Truth")
-    ax.set_title(tr("Matriz de confusión"))
+    ax.set_xlabel(_("Prediction"))
+    ax.set_ylabel(_("Ground Truth"))
+    ax.set_title(_("Confusion matrix"))
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
             val = cm[i, j]

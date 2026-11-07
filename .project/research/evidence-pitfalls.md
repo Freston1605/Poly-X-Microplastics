@@ -5,8 +5,8 @@ Questions assigned: Does `src/` layout break the existing `lanzar_polyx.py` / `P
 
 ## Finding: src/ layout breaks all three current entry surfaces unless paths are re-derived
 
-- **Claim**: The repo-root layout is hard-coded in at least five places that assume `polyx/` sits directly under the project root: `Poly-X.vbs` checks `raiz & "\polyx"` and runs `python -m polyx.launcher` with `CurrentDirectory = raiz`; `lanzar_polyx.py` does `from polyx.gui.launcher import main` (only works if repo root is on sys.path); `polyx/gui/launcher.py::_spawn_module` sets `cwd=Path(__file__).resolve().parents[2]` (repo root today, would become `src/` after the move); `polyx/core/paths.py` sets `ROOT = Path(__file__).resolve().parents[2]` (repo root today, would become `src/`); and tests `test_arranque_instrumentado.py`, `test_launcher_trainer.py`, `test_trainer_runner.py` assert those exact parent counts. None of these auto-adjust to `src/polyx/`.
-- **Source**: `Poly-X.vbs` lines 22-44; `lanzar_polyx.py`; `polyx/gui/launcher.py` `_spawn_module`; `polyx/core/paths.py` line 4; `tests/test_arranque_instrumentado.py:91`; `tests/test_launcher_trainer.py:74`; `tests/test_trainer_runner.py:47-48`
+- **Claim**: The repo-root layout is hard-coded in at least five places that assume `polyx/` sits directly under the project root: `Poly-X.vbs` checks `raiz & "\polyx"` and runs `python -m polyx.launcher` with `CurrentDirectory = raiz`; `lanzar_polyx.py` does `from polyx.gui.launcher import main` (only works if repo root is on sys.path); `polyx/gui/launcher.py::_spawn_module` sets `cwd=Path(__file__).resolve().parents[2]` (repo root today, would become `src/` after the move); `polyx/core/paths.py` sets `ROOT = Path(__file__).resolve().parents[2]` (repo root today, would become `src/`); and tests `test_instrumented_startup.py`, `test_launcher_trainer.py`, `test_trainer_runner.py` assert those exact parent counts. None of these auto-adjust to `src/polyx/`.
+- **Source**: `Poly-X.vbs` lines 22-44; `lanzar_polyx.py`; `polyx/gui/launcher.py` `_spawn_module`; `polyx/core/paths.py` line 4; `tests/test_instrumented_startup.py:91`; `tests/test_launcher_trainer.py:74`; `tests/test_trainer_runner.py:47-48`
 - **Confidence**: high
 - **Why it matters here**: INTENT SC1 requires `python -m polyx` / `python -m polyx.gui` to launch after the move; the VBS/PyInstaller shim and subprocess cwd must be re-pointed or every secondary process launches in the wrong directory.
 
@@ -76,7 +76,7 @@ Questions assigned: Does `src/` layout break the existing `lanzar_polyx.py` / `P
 ## Finding: Existing failure modes already present in the codebase
 
 - **Claim**: Several INTENT risks already manifest in code: `DEFAULT_MODEL` points at repo root (`bestdetectormedium.pt`) instead of `models/` (evidence-codebase); `polyx/model/` is an empty dead dir with stale pycache; `segmentacion_aprendida` pycache has no source; CLAUDE.md lists Pillow 10.4.0 vs actual 12.3.0; tests/audit scripts hard-code `REPO_ROOT / "polyx"` paths that will move. These are the exact hygiene items INTENT SC5/E6 target.
-- **Source**: `polyx/core/paths.py:10`; evidence-codebase.md; `tests/test_comments_ingles.py`, `test_identifiers_ingles.py`, `test_docstrings_ingles.py` (all use `REPO_ROOT / "polyx"`)
+- **Source**: `polyx/core/paths.py:10`; evidence-codebase.md; `tests/test_comments_english.py`, `test_identifiers_english.py`, `test_docstrings_english.py` (all use `REPO_ROOT / "polyx"`)
 - **Confidence**: high
 - **Why it matters here**: The migration must update these audits' root paths or the i18n gate fails on a moved tree; the grep gate for `polyx.model` must run before deletion.
 

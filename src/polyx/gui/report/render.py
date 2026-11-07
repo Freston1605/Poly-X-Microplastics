@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from polyx.core.detection_run import RunStatus
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
 from .samples import _batch_metrics, _lot_forms
@@ -148,7 +148,7 @@ def _generate_report_impl(
     bodies = {
         "resumen": _section_summary(total_imgs, total_dets, avg_conf, avg_size, active, any_gt),
         "metodos": f"""
-<table class='data'><tr>{tr("<th>Parámetro</th><th>Valor</th>")}</tr>{methods_html}</table>
+<table class='data'><tr>{_("<th>Parameter</th><th>Value</th>")}</tr>{methods_html}</table>
 {team_html}
 {methods_for}""",
         "calibracion": calib_html,
@@ -171,7 +171,7 @@ def _generate_report_impl(
     # dictionary key. The interface already translated it for its checkboxes; the
     # document did not, and came out with the titles in Spanish even though the rest did not.
     alive = [
-        (sid, tr(title), bodies.get(sid, ""))
+        (sid, _(title), bodies.get(sid, ""))
         for sid, title in SECTIONS
         if sid in requested and (bodies.get(sid) or "").strip()
     ]
@@ -208,7 +208,9 @@ def generate_report(
 
     status = RunStatus.parse(run.status)
     if status is RunStatus.RUNNING:
-        raise ValueError(f"report requires a finished run, not {status.value!r}")
+        raise ValueError(
+            _("report requires a finished run, not %(status)r") % {"status": status.value}
+        )
     n_results = sum(len(rs) for rs in (run.results or {}).values())
     with timer(
         logger_for("detector"),

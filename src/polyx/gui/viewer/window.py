@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -31,11 +31,11 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.annotate import find_run_labels
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, ngettext
 from polyx.core.paths import RUNS_DIR
-from polyx.gui import iconos, marca
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
@@ -59,17 +59,84 @@ class ViewerWindow(QMainWindow):
 
         super().__init__()
 
+        i18n_qt.activate()
+
         marca.titular(self, "visor")
 
         self.resize(1420, 900)
 
+        self.state = ViewerState()
+        self._model_name = ""
+
+        self._build_ui()
+
+        self._connect_signals()
+
+        self._install_shortcuts()
+
+        self.setAcceptDrops(True)
+
+    # ── Language ───────────────────────────────────────────────
+
+    def changeEvent(self, event):
+
+        if event.type() == QEvent.LanguageChange:
+            # Rebuild after the event returns: deleting the widget tree
+            # inside changeEvent is not safe.
+
+            QTimer.singleShot(0, self.retranslate)
+
+        super().changeEvent(event)
+
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
+
+        conf = self.spin_conf.value()
+
+        imgsz = self.spin_imgsz.value()
+
+        gpu = self.chk_gpu.isChecked()
+
+        self._build_ui()
+
+        marca.titular(self, "visor")
+
+        self.spin_conf.setValue(conf)
+
+        self.spin_imgsz.setValue(imgsz)
+
+        self.chk_gpu.setChecked(gpu)
+
+        if self._model_name:
+            self.lbl_model.setText(self._model_name)
+
+        self.nav_frame.setVisible(len(self.state.images) > 1)
+
+        if self.state.current_image is not None:
+            self._on_image_loaded(self.state.current_image)
+
+        else:
+            self._update_status_bar()
+
+        if self.state.detections:
+            self._on_detections_changed(self.state.detections)
+
+        if self.state.um_per_px > 0:
+            self.lbl_calib_result.setText(_("%(value).4f μm/px") % {"value": self.state.um_per_px})
+
+            self.lbl_calib_result.setStyleSheet(
+                f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;"
+            )
+
+            self._update_status_bar()
+
+    def _build_ui(self) -> None:
+
         self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
-        self.state = ViewerState()
-
-        central = QWidget()
-
-        self.setCentralWidget(central)
+        central = reset_central_widget(self)
 
         root = QHBoxLayout(central)
 
@@ -95,7 +162,7 @@ class ViewerWindow(QMainWindow):
 
         # Bottom status/calibration bar
 
-        self.status_bar = QLabel(tr("  Sin imagen  —  Sin calibración"))
+        self.status_bar = QLabel(_("  No image  —  Not calibrated"))
 
         self.status_bar.setFixedHeight(28)
 
@@ -136,25 +203,19 @@ class ViewerWindow(QMainWindow):
 
         self._build_right_panel()
 
-        self._connect_signals()
-
-        self._install_shortcuts()
-
-        self.setAcceptDrops(True)
-
     # ── Right panel ─────────────────────────────────────────
 
     def _build_right_panel(self):
 
         rv = self._rv
 
-        rv.addWidget(LogoBadge("POLY-X", "Visor"))
+        rv.addWidget(LogoBadge("POLY-X", _("Viewer")))
 
         rv.addSpacing(4)
 
         # ── Open image / folder ──
 
-        lbl_open = QLabel(tr("Imagen"))
+        lbl_open = QLabel(_("Image"))
 
         lbl_open.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
@@ -162,10 +223,10 @@ class ViewerWindow(QMainWindow):
 
         row_open = QHBoxLayout()
 
-        btn_img = QPushButton(tr("Imagen"))
+        btn_img = QPushButton(_("Image"))
         btn_img.setIcon(iconos.icon("imagenes", 15, T.INK2))
 
-        btn_fol = QPushButton(tr("Carpeta"))
+        btn_fol = QPushButton(_("Folder"))
         btn_fol.setIcon(iconos.icon("dataset", 15, T.INK2))
 
         btn_img.clicked.connect(self._open_image)
@@ -178,7 +239,7 @@ class ViewerWindow(QMainWindow):
 
         rv.addLayout(row_open)
 
-        self.lbl_img_name = QLabel(tr("Sin imagen"))
+        self.lbl_img_name = QLabel(_("No image"))
 
         self.lbl_img_name.setWordWrap(True)
 
@@ -228,13 +289,13 @@ class ViewerWindow(QMainWindow):
 
         # ── Model ──
 
-        lbl_mod = QLabel(tr("Modelo"))
+        lbl_mod = QLabel(_("Model"))
 
         lbl_mod.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_mod)
 
-        self.lbl_model = QLabel(tr("Sin modelo"))
+        self.lbl_model = QLabel(_("No model"))
 
         self.lbl_model.setWordWrap(True)
 
@@ -245,14 +306,14 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(self.lbl_model)
 
-        btn_load_model = QPushButton(tr("Cargar modelo…"))
+        btn_load_model = QPushButton(_("Load model…"))
         btn_load_model.setIcon(iconos.icon("dataset", 15, T.INK2))
 
         btn_load_model.clicked.connect(self._load_model)
 
         rv.addWidget(btn_load_model)
 
-        rv.addWidget(QLabel(tr("Confianza mínima:")))
+        rv.addWidget(QLabel(_("Minimum confidence:")))
 
         self.spin_conf = QDoubleSpinBox()
 
@@ -272,7 +333,7 @@ class ViewerWindow(QMainWindow):
 
         # detected. It must be possible to raise it.
 
-        rv.addWidget(QLabel(tr("Resolución de inferencia (px):")))
+        rv.addWidget(QLabel(_("Inference resolution (px):")))
 
         self.spin_imgsz = QSpinBox()
 
@@ -283,22 +344,20 @@ class ViewerWindow(QMainWindow):
         self.spin_imgsz.setValue(2080)
 
         self.spin_imgsz.setToolTip(
-            tr(
-                "Lado mayor al que se redimensiona la imagen para inferir.\n"
-                "Más alto = partículas más grandes para la red, pero más memoria.\n"
-                "Se redondea al múltiplo de 32 más cercano."
+            _(
+                "Longest side the image is resized to before inference.\nHigher = bigger particles for the network, but more memory.\nRounded to the nearest multiple of 32."
             )
         )
 
         rv.addWidget(self.spin_imgsz)
 
-        self.chk_gpu = QCheckBox(tr("Usar GPU si está disponible"))
+        self.chk_gpu = QCheckBox(_("Use the GPU if available"))
 
         self.chk_gpu.setChecked(True)
 
         rv.addWidget(self.chk_gpu)
 
-        self.btn_detect = QPushButton(tr("Detectar"))
+        self.btn_detect = QPushButton(_("Detect"))
         self.btn_detect.setIcon(iconos.icon("ejecutar", 15, T.INK2))
 
         self.btn_detect.setObjectName("primary")
@@ -307,14 +366,12 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(self.btn_detect)
 
-        self.btn_load_txt = QPushButton(tr("Cargar etiquetas (.txt)"))
+        self.btn_load_txt = QPushButton(_("Load labels (.txt)"))
         self.btn_load_txt.setIcon(iconos.icon("texto", 15, T.INK2))
 
         self.btn_load_txt.setToolTip(
-            tr(
-                "Muestra las anotaciones YOLO que acompañan a la imagen.\n"
-                "Sirve para revisar el conteo manual sobre la placa, con las\n"
-                "tallas ya convertidas a µm por la calibración."
+            _(
+                "Shows the YOLO annotations that come with the image.\nUseful to review the manual count over the plate, with sizes\nalready converted to µm by the calibration."
             )
         )
 
@@ -322,14 +379,12 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(self.btn_load_txt)
 
-        self.btn_load_run = QPushButton(tr("Cargar predicciones de una corrida"))
+        self.btn_load_run = QPushButton(_("Load predictions from a run"))
         self.btn_load_run.setIcon(iconos.icon("dataset", 15, T.INK2))
 
         self.btn_load_run.setToolTip(
-            tr(
-                "Lee las predicciones que el Detector dejó en runs/detect_.../ "
-                "para esta misma foto. Sirve para revisar una corrida ya cerrada, "
-                "sin volver a pasar el modelo."
+            _(
+                "Reads the predictions the Detector left in runs/detect_.../ for this same photo. Use it to review a run you have already closed, without running the model again."
             )
         )
         self.btn_load_run.clicked.connect(self._run_load)
@@ -340,7 +395,7 @@ class ViewerWindow(QMainWindow):
 
         # ── Calibration ──
 
-        lbl_calib = QLabel(tr("Calibración μm/píxel"))
+        lbl_calib = QLabel(_("µm/pixel calibration"))
 
         lbl_calib.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
@@ -348,10 +403,10 @@ class ViewerWindow(QMainWindow):
 
         row_calib = QHBoxLayout()
 
-        self.btn_line = QPushButton(tr("Línea"))
+        self.btn_line = QPushButton(_("Line"))
         self.btn_line.setIcon(iconos.icon("linea", 15, T.INK2))
 
-        self.btn_circ = QPushButton(tr("Círculo"))
+        self.btn_circ = QPushButton(_("Circle"))
         self.btn_circ.setIcon(iconos.icon("circulo", 15, T.INK2))
 
         self.btn_line.setCheckable(True)
@@ -368,7 +423,7 @@ class ViewerWindow(QMainWindow):
 
         rv.addLayout(row_calib)
 
-        self.lbl_calib_hint = QLabel(tr("Haz clic en la imagen para marcar\npuntos de referencia."))
+        self.lbl_calib_hint = QLabel(_("Click on the image to place\nreference points."))
 
         self.lbl_calib_hint.setStyleSheet(f"color: {T.INK3}; font-size: 8.5pt;")
 
@@ -376,7 +431,7 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(self.lbl_calib_hint)
 
-        btn_cancel_calib = QPushButton(tr("✕  Cancelar calibración"))
+        btn_cancel_calib = QPushButton(_("✕  Cancel calibration"))
 
         btn_cancel_calib.setStyleSheet(
             f"QPushButton {{ color: {T.WARN_TX}; border-color: {T.WARN_TX}; }}"
@@ -391,7 +446,7 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(btn_cancel_calib)
 
-        self.lbl_calib_result = QLabel(tr("Sin calibrar"))
+        self.lbl_calib_result = QLabel(_("Not calibrated"))
 
         self.lbl_calib_result.setStyleSheet(f"color: {T.INK2}; font-size: 9.5pt;")
 
@@ -401,23 +456,23 @@ class ViewerWindow(QMainWindow):
 
         # ── Results ──
 
-        lbl_res = QLabel(tr("Resultados"))
+        lbl_res = QLabel(_("Results"))
 
         lbl_res.setStyleSheet("font-weight: 600; font-size: 10pt;")
 
         rv.addWidget(lbl_res)
 
-        rv.addWidget(QLabel(tr("Filtrar por clase:")))
+        rv.addWidget(QLabel(_("Filter by class:")))
 
         self.combo_filter = QComboBox()
 
-        self.combo_filter.addItem(tr("Todas las clases"), None)
+        self.combo_filter.addItem(_("All classes"), None)
 
         self.combo_filter.currentIndexChanged.connect(self._on_filter_changed)
 
         rv.addWidget(self.combo_filter)
 
-        self.lbl_det_count = QLabel(tr("0 detecciones"))
+        self.lbl_det_count = QLabel(_("0 detections"))
 
         self.lbl_det_count.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
 
@@ -435,7 +490,9 @@ class ViewerWindow(QMainWindow):
 
         self.table = QTableWidget(0, 6)
 
-        self.table.setHorizontalHeaderLabels(["#", "Clase", "Tipo", "Largo μm", "Ancho μm", "Asp."])
+        self.table.setHorizontalHeaderLabels(
+            ["#", _("Class"), _("Type"), _("Length μm"), _("Width μm"), _("Asp.")]
+        )
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -465,7 +522,7 @@ class ViewerWindow(QMainWindow):
 
         # measured cannot be verified, and that is what a reviewer asks for.
 
-        self.lbl_record_tit = QLabel(tr("Selecciona una partícula para ver su medición"))
+        self.lbl_record_tit = QLabel(_("Select a particle to see how it was measured"))
 
         self.lbl_record_tit.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
 
@@ -499,7 +556,7 @@ class ViewerWindow(QMainWindow):
 
         # ── Save ──
 
-        btn_save = QPushButton(tr("Guardar info actual"))
+        btn_save = QPushButton(_("Save current info"))
         btn_save.setIcon(iconos.icon("guardar", 15, T.INK2))
 
         btn_save.setObjectName("primary")
@@ -508,7 +565,7 @@ class ViewerWindow(QMainWindow):
 
         rv.addWidget(btn_save)
 
-        self.lbl_status = QLabel(tr("● Listo"))
+        self.lbl_status = QLabel(_("● Ready"))
 
         self.lbl_status.setAlignment(Qt.AlignCenter)
 
@@ -546,8 +603,8 @@ class ViewerWindow(QMainWindow):
 
     def _open_image(self):
 
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Abrir imagen", "", "Imágenes (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)"
+        path, _unused = QFileDialog.getOpenFileName(
+            self, _("Open image"), "", _("Images (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)")
         )
 
         if path:
@@ -557,7 +614,7 @@ class ViewerWindow(QMainWindow):
 
     def _open_folder(self):
 
-        folder = QFileDialog.getExistingDirectory(self, "Abrir carpeta de imágenes")
+        folder = QFileDialog.getExistingDirectory(self, _("Open image folder"))
 
         if folder:
             self.state.load_folder(Path(folder))
@@ -577,7 +634,7 @@ class ViewerWindow(QMainWindow):
 
         self._update_status_bar()
 
-        self._set_status("● Imagen cargada", T.OK)
+        self._set_status(_("● Image loaded"), T.OK)
 
     def _update_nav(self):
 
@@ -591,7 +648,9 @@ class ViewerWindow(QMainWindow):
 
     def _load_model(self):
 
-        path, _ = QFileDialog.getOpenFileName(self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)")
+        path, _unused = QFileDialog.getOpenFileName(
+            self, _("Load YOLO model"), "", _("YOLO model (*.pt)")
+        )
 
         if not path:
             return
@@ -601,24 +660,26 @@ class ViewerWindow(QMainWindow):
 
             self.state.model = YoloModel(path)
 
-            self.lbl_model.setText(Path(path).name)
+            self._model_name = Path(path).name
 
-            self._set_status("● Modelo listo", T.OK)
+            self.lbl_model.setText(self._model_name)
+
+            self._set_status(_("● Model ready"), T.OK)
 
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Error al cargar modelo"), str(e))
+            QMessageBox.warning(self, _("Error loading the model"), str(e))
 
     def _detect(self):
 
         if not self.state.model:
-            QMessageBox.warning(self, tr("Sin modelo"), tr("Carga un modelo .pt primero."))
+            QMessageBox.warning(self, _("No model"), _("Load a .pt model first."))
 
             return
 
         img = self.state.current_image
 
         if img is None:
-            QMessageBox.warning(self, tr("Sin imagen"), tr("Abre una imagen primero."))
+            QMessageBox.warning(self, _("No image"), _("Open an image first."))
 
             return
 
@@ -627,7 +688,11 @@ class ViewerWindow(QMainWindow):
         device = "0" if (self.chk_gpu.isChecked() and _there_are_gpu()) else "cpu"
 
         try:
-            self._set_status(f"● Detectando (imgsz {imgsz}, {device})…", T.ACCENT)
+            self._set_status(
+                _("● Detecting (imgsz %(imgsz)d, %(device)s)…")
+                % {"imgsz": imgsz, "device": device},
+                T.ACCENT,
+            )
 
             QApplication.setOverrideCursor(Qt.WaitCursor)
 
@@ -657,13 +722,32 @@ class ViewerWindow(QMainWindow):
                 p = plan["plan"]
 
                 self._set_status(
-                    f"● {len(dets)} detecciones (troceada en {p['n_tiles']} tiles "
-                    f"de {p['tile']} px, imgsz {imgsz})",
+                    ngettext(
+                        "● %(count)d detection (tiled into %(tiles)d tiles of "
+                        "%(tile)d px, imgsz %(imgsz)d)",
+                        "● %(count)d detections (tiled into %(tiles)d tiles of "
+                        "%(tile)d px, imgsz %(imgsz)d)",
+                        len(dets),
+                    )
+                    % {
+                        "count": len(dets),
+                        "tiles": p["n_tiles"],
+                        "tile": p["tile"],
+                        "imgsz": imgsz,
+                    },
                     T.OK,
                 )
 
             else:
-                self._set_status(f"● {len(dets)} detecciones (imgsz {imgsz})", T.OK)
+                self._set_status(
+                    ngettext(
+                        "● %(count)d detection (imgsz %(imgsz)d)",
+                        "● %(count)d detections (imgsz %(imgsz)d)",
+                        len(dets),
+                    )
+                    % {"count": len(dets), "imgsz": imgsz},
+                    T.OK,
+                )
 
         except Exception as e:  # noqa: BLE001
             # Without enough VRAM the failure is common when raising imgsz: it says
@@ -673,14 +757,14 @@ class ViewerWindow(QMainWindow):
             msg = str(e)
 
             if "out of memory" in msg.lower():
-                msg = (
-                    f"Sin memoria de GPU a imgsz {imgsz}.\n\n"
-                    f"Baja la resolución de inferencia o desmarca «Usar GPU»."
-                )
+                msg = _(
+                    "Out of GPU memory at imgsz %(imgsz)d.\n\n"
+                    "Lower the inference resolution or untick “Use GPU”."
+                ) % {"imgsz": imgsz}
 
-            QMessageBox.warning(self, tr("Error en detección"), msg)
+            QMessageBox.warning(self, _("Detection error"), msg)
 
-            self._set_status("● Error en detección", T.ERR)
+            self._set_status(_("● Detection error"), T.ERR)
 
         finally:
             QApplication.restoreOverrideCursor()
@@ -701,13 +785,13 @@ class ViewerWindow(QMainWindow):
         img = self.state.current_image
 
         if img is None:
-            QMessageBox.warning(self, tr("Sin imagen"), tr("Abre primero la foto original."))
+            QMessageBox.warning(self, _("No image"), _("Open the original photo first."))
 
             return
 
         folder_2 = QFileDialog.getExistingDirectory(
             self,
-            tr("Carpeta de la corrida (runs/detect_...)"),
+            _("Run folder (runs/detect_...)"),
             str(RUNS_DIR),
         )
 
@@ -727,11 +811,11 @@ class ViewerWindow(QMainWindow):
         if not candidates:
             QMessageBox.information(
                 self,
-                tr("Sin predicciones"),
-                tr(
-                    "En esa corrida no hay predicciones para {n}.\n\n"
-                    "Se buscó en las subcarpetas 'labels'."
-                ).format(n=img.name),
+                _("No predictions"),
+                _(
+                    "That run has no predictions for %(n)s.\n\nThe 'labels' subfolders were searched."
+                )
+                % {"n": img.name},
             )
 
             return
@@ -745,8 +829,8 @@ class ViewerWindow(QMainWindow):
 
             chosen, ok = QInputDialog.getItem(
                 self,
-                tr("Varios modelos"),
-                tr("Esta foto se analizó con varios modelos. ¿Cuál revisar?"),
+                _("Several models"),
+                _("This photo was analysed with several models. Which one do you want to review?"),
                 options,
                 0,
                 False,
@@ -775,15 +859,19 @@ class ViewerWindow(QMainWindow):
             dets = read_yolo_txt(txt, width_2, height, names)
 
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Error"), f"No se pudieron leer las predicciones: {e}")
+            QMessageBox.warning(
+                self,
+                _("Error"),
+                _("Could not read the predictions: %(error)s") % {"error": e},
+            )
 
             return
 
         if not dets:
             QMessageBox.information(
                 self,
-                tr("Sin predicciones"),
-                tr("El archivo está vacío: esa foto no tuvo detecciones."),
+                _("No predictions"),
+                _("The file is empty: that photo had no detections."),
             )
 
             return
@@ -793,9 +881,8 @@ class ViewerWindow(QMainWindow):
         self.state.detections_changed.emit(dets)
 
         self._set_status(
-            tr("● {n} predicciones cargadas de {c}").format(
-                n=len(dets), c=txt.parent.parent.parent.name
-            ),
+            _("● %(n)s predictions loaded from %(c)s")
+            % {"n": len(dets), "c": txt.parent.parent.parent.name},
             T.OK,
         )
 
@@ -809,7 +896,7 @@ class ViewerWindow(QMainWindow):
         img = self.state.current_image
 
         if img is None:
-            QMessageBox.warning(self, tr("Sin imagen"), tr("Abre una imagen primero."))
+            QMessageBox.warning(self, _("No image"), _("Open an image first."))
 
             return
 
@@ -820,8 +907,9 @@ class ViewerWindow(QMainWindow):
         if txt is None:
             QMessageBox.information(
                 self,
-                tr("Sin etiquetas"),
-                f"No hay archivo de etiquetas junto a la imagen:\n{img.with_suffix('.txt').name}",
+                _("No labels"),
+                _("There is no label file next to the image:\n%(name)s")
+                % {"name": img.with_suffix(".txt").name},
             )
 
             return
@@ -833,7 +921,7 @@ class ViewerWindow(QMainWindow):
             dets, malformed = read_labels(img)
 
         except ValueError:
-            QMessageBox.warning(self, tr("Error"), tr("No se pudo leer la imagen."))
+            QMessageBox.warning(self, _("Error"), _("Could not read the image."))
 
             return
 
@@ -841,10 +929,24 @@ class ViewerWindow(QMainWindow):
 
         self.state.detections_changed.emit(dets)
 
-        warning_2 = f"  ({malformed} línea(s) ilegible(s))" if malformed else ""
+        warning_2 = (
+            ngettext(
+                "  (%(count)d unreadable line)",
+                "  (%(count)d unreadable lines)",
+                malformed,
+            )
+            % {"count": malformed}
+            if malformed
+            else ""
+        )
 
         self._set_status(
-            f"● {len(dets)} etiquetas cargadas de {txt.name}{warning_2}",
+            ngettext(
+                "● %(count)d label loaded from %(file)s%(warning)s",
+                "● %(count)d labels loaded from %(file)s%(warning)s",
+                len(dets),
+            )
+            % {"count": len(dets), "file": txt.name, "warning": warning_2},
             T.WARN if malformed else T.OK,
         )
 
@@ -870,7 +972,10 @@ class ViewerWindow(QMainWindow):
 
         self._update_filter_combo(dets)
 
-        self.lbl_det_count.setText(f"{len(dets)} detección(es)")
+        self.lbl_det_count.setText(
+            ngettext("%(count)d detection", "%(count)d detections", len(dets))
+            % {"count": len(dets)}
+        )
 
         self._update_status_bar()
 
@@ -995,7 +1100,7 @@ class ViewerWindow(QMainWindow):
             img, m = None, None
 
         if img is None or m is None or not m.ok:
-            self.lbl_record.setText(tr("No se pudo aislar esta partícula del fondo"))
+            self.lbl_record.setText(_("This particle could not be separated from the background"))
 
             self.lbl_record_data.setText("")
 
@@ -1017,9 +1122,16 @@ class ViewerWindow(QMainWindow):
         self.lbl_record.setPixmap(pix)
 
         self.lbl_record_tit.setText(
-            f"Partícula #{det.number} · {det.class_name} · {det.morphotype or '—'}"
-            "   —   izquierda: sin marcas · derecha: verde = contorno medido, "
-            "amarillo = Feret, magenta = geodésico"
+            _(
+                "Particle #%(number)s · %(class)s · %(morphotype)s"
+                "   —   left: no marks · right: green = measured contour, "
+                "yellow = Feret, magenta = geodesic"
+            )
+            % {
+                "number": det.number,
+                "class": det.class_name,
+                "morphotype": det.morphotype or "—",
+            }
         )
 
         um = self.state.um_per_px
@@ -1048,7 +1160,7 @@ class ViewerWindow(QMainWindow):
 
         self.combo_filter.clear()
 
-        self.combo_filter.addItem(tr("Todas las clases"), None)
+        self.combo_filter.addItem(_("All classes"), None)
 
         for _n in sorted({d.class_name for d in dets}):
             self.combo_filter.addItem(_n, _n)
@@ -1085,14 +1197,14 @@ class ViewerWindow(QMainWindow):
         self.btn_cancel_calib.setVisible(True)
 
         if mode == "linea":
-            self.lbl_calib_hint.setText(tr("Haz clic en 2 puntos sobre\nuna referencia conocida."))
+            self.lbl_calib_hint.setText(_("Click 2 points on\na known reference."))
 
         else:
             self.lbl_calib_hint.setText(
-                tr("Haz clic en 3 puntos del borde\nde un objeto circular conocido.")
+                _("Click 3 points on the edge\nof a circular object of known size.")
             )
 
-        self._set_status("● Modo calibración activo", T.WARN)
+        self._set_status(_("● Calibration mode active"), T.WARN)
 
     def _on_calib_pts_changed(self, pts: list):
 
@@ -1110,7 +1222,14 @@ class ViewerWindow(QMainWindow):
         needed = 2 if mode == "linea" else 3
 
         self.lbl_calib_hint.setText(
-            f"Haz clic en {needed - len(pts)} punto(s) más." if pts else self.lbl_calib_hint.text()
+            ngettext(
+                "Click %(count)d more point.",
+                "Click %(count)d more points.",
+                needed - len(pts),
+            )
+            % {"count": needed - len(pts)}
+            if pts
+            else self.lbl_calib_hint.text()
         )
 
     def _on_calib_ready(self):
@@ -1126,8 +1245,8 @@ class ViewerWindow(QMainWindow):
         if mode == "linea":
             val, ok = QInputDialog.getDouble(
                 self,
-                "Calibración — Línea",
-                "Tamaño real de la línea marcada (μm):",
+                _("Calibration — Line"),
+                _("Real length of the marked line (μm):"),
                 1000.0,
                 0.001,
                 1_000_000.0,
@@ -1145,8 +1264,8 @@ class ViewerWindow(QMainWindow):
 
             val, ok = QInputDialog.getDouble(
                 self,
-                "Calibración — Círculo",
-                "Diámetro real del objeto circular (μm):\nPlaca Petri de 100 mm → 100000",
+                _("Calibration — Circle"),
+                _("Real diameter of the circular object (μm):\n100 mm Petri dish → 100000"),
                 100_000.0,
                 0.001,
                 10_000_000.0,
@@ -1161,13 +1280,15 @@ class ViewerWindow(QMainWindow):
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
-        self.lbl_calib_result.setText(f"{um_per_px:.4f} μm/px  ({mode_name})")
+        self.lbl_calib_result.setText(
+            _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_name}
+        )
 
         self.lbl_calib_result.setStyleSheet(
             f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;"
         )
 
-        self._set_status(f"● Calibración aplicada: {um_per_px:.4f} μm/px", T.OK)
+        self._set_status(_("● Calibration applied: %(value).4f μm/px") % {"value": um_per_px}, T.OK)
 
         self._update_status_bar()
 
@@ -1180,13 +1301,13 @@ class ViewerWindow(QMainWindow):
 
         img = self.state.current_image
 
-        img_txt = img.name if img else "Sin imagen"
+        img_txt = img.name if img else _("No image")
 
         if self.state.um_per_px > 0:
             calib_txt = f"{self.state.um_per_px:.4f} μm/px"
 
         else:
-            calib_txt = "Sin calibración"
+            calib_txt = _("Not calibrated")
 
         n_det = len(self.state.detections)
 
@@ -1201,13 +1322,13 @@ class ViewerWindow(QMainWindow):
         img = self.state.current_image
 
         if img is None:
-            QMessageBox.warning(self, tr("Sin imagen"), tr("No hay imagen abierta."))
+            QMessageBox.warning(self, _("No image"), _("No image is open."))
 
             return
 
         # Choose the destination folder
 
-        out_dir = QFileDialog.getExistingDirectory(self, "Carpeta de salida")
+        out_dir = QFileDialog.getExistingDirectory(self, _("Output folder"))
 
         if not out_dir:
             return
@@ -1225,14 +1346,16 @@ class ViewerWindow(QMainWindow):
 
             self._save_json(img, save_dir)
 
-            self._set_status(f"● Guardado en {save_dir.name}", T.OK)
+            self._set_status(_("● Saved to %(folder)s") % {"folder": save_dir.name}, T.OK)
 
-            QMessageBox.information(self, tr("Guardado"), f"Archivos guardados en:\n{save_dir}")
+            QMessageBox.information(
+                self, _("Saved"), _("Files saved to:\n%(folder)s") % {"folder": save_dir}
+            )
 
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Error al guardar"), str(e))
+            QMessageBox.warning(self, _("Error while saving"), str(e))
 
-            self._set_status("● Error al guardar", T.ERR)
+            self._set_status(_("● Error while saving"), T.ERR)
 
     def _save_annotated_image(self, img: Path, save_dir: Path):
 
@@ -1322,10 +1445,10 @@ class ViewerWindow(QMainWindow):
 
                     self.lbl_model.setText(path.name)
 
-                    self._set_status("● Modelo cargado", T.OK)
+                    self._set_status(_("● Model loaded"), T.OK)
 
                 except Exception as e:  # noqa: BLE001
-                    self._set_status(f"● Error: {e}", T.ERR)
+                    self._set_status(_("● Error: %(error)s") % {"error": e}, T.ERR)
 
             elif path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}:
                 self.state.load_single(path)

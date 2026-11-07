@@ -2,18 +2,19 @@
 
 El idioma del programa se resuelve una vez a partir del entorno (ver
 ``polyx.core.i18n``) y se cachea en el modulo, asi que varios tests que no
-fuercen idioma propio --p. ej. ``test_asignacion`` lee texto del informe--
+fuercen idioma propio --p. ej. ``test_assignment`` lee texto del informe--
 acaban dependiendo del locale de la maquina donde corra pytest. Con un
 locale en ingles el informe sale en ingles y la prueba falla; en CI el
 locale suele estar vacio y pasa por casualidad.
 
-Aqui fijamos espanol como idioma de la suite, explicito y reproducible. Las
-pruebas que si prueban idiomas --``test_informe_bilingue``-- fijan el suyo
-mediante ``POLYX_IDIOMA`` directamente, y ``setdefault`` respeta lo que alguien
-pida a mano.
+The suite pins Spanish explicitly and reproducibly. Tests that exercise the
+language itself -- ``test_bilingual_report``, the CLI output and the
+widget-tree switch -- select a language through ``i18n.set_language`` (the
+``selected_language`` fixture below) and restore it afterwards. The old
+environment variable is gone: ``POLYX_LOCALE`` is the only override.
 
 Aislamiento de observabilidad y logs (Decision D007):
-Varios modulos de prueba (como ``test_asignacion`` o ``test_informe_bilingue``)
+Varios modulos de prueba (como ``test_assignment`` o ``test_bilingual_report``)
 invocan el pipeline real de generacion de reportes (``report_html.generate_report``),
 el cual instrumenta eventos a traves de ``logger_para("detector")``. Sin una variable
 de entorno ``POLYX_LOG_DIR`` explicita, estos loggers escriben en el directorio
@@ -36,7 +37,7 @@ _SRC = _RAIZ / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-os.environ.setdefault("POLYX_IDIOMA", "es")
+os.environ.setdefault("POLYX_LOCALE", "es")
 
 
 @pytest.fixture(autouse=True)
@@ -63,21 +64,25 @@ def _aislar_logs_suite(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _isolate_theme_saves(tmp_path, monkeypatch):
-    """Keep theme changes out of the developer's home directory.
+    """Keep saved preferences out of the developer's home directory.
 
-    ``theme.set_theme`` persists the choice to ``~/.polyx_tema.json``. Point
-    that file at the test's ``tmp_path`` and restore the active palette
-    afterwards, so the suite is hermetic. The patch is lazy: a test module
-    that never imported the theme does not acquire a PySide6 dependency, so
-    headless suites such as the install smoke tests stay headless.
+    ``theme.set_theme`` and ``i18n.set_language`` persist through
+    ``polyx.core.preferences``. Point that file at the test's ``tmp_path``
+    and restore the active palette afterwards, so the suite is hermetic. The
+    theme part is lazy: a test module that never imported the theme does not
+    acquire a PySide6 dependency, so headless suites such as the install
+    smoke tests stay headless.
     """
+    from polyx.core import preferences
+
+    monkeypatch.setattr(preferences, "FILE", tmp_path / "polyx_preferences.json")
+
     theme = sys.modules.get("polyx.gui.theme")
     if theme is None:
         yield
         return
 
     original = theme.theme()
-    monkeypatch.setattr(theme, "_FILE", tmp_path / "polyx_tema.json")
     yield
     theme._apply(original)
 
@@ -91,3 +96,22 @@ def qapp():
     if app is None:
         app = QApplication([])
     yield app
+
+
+@pytest.fixture
+def selected_language():
+    """Select the active language through the public API and restore it.
+
+    The one seam every surface test uses: set the language, render the
+    surface, assert what the user sees. Restoring keeps the suite in the
+    language conftest pins, so a test never depends on which one ran before.
+    """
+    from polyx.core import i18n
+
+    previous = i18n.language()
+
+    def choose(tag: str) -> None:
+        assert i18n.set_language(tag) is True
+
+    yield choose
+    i18n.set_language(previous)

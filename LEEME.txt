@@ -123,15 +123,15 @@ REGENERAR EL MANUAL CON LA UI ACTUAL
 Son dos pasos: primero las capturas de la interfaz, despues el manual.
 
   1) capturas (una tanda por idioma)
-     .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-     set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+     .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+     set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
 
   2) manual completo, en los dos idiomas, mas los PDF
-     .venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+     .venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
 
-El texto vive en tools\manual\manual_texto_es.py y manual_texto_en.py; el motor
+El texto vive en tools\manual\manual_text_es.py y manual_text_en.py; el motor
 (plantilla, hoja de estilo, numeracion de figuras) en
-tools\manual\generar_manual.py.
+tools\manual\generate_manual.py.
 
 PROBLEMAS COMUNES
 -----------------

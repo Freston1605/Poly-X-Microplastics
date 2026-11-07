@@ -29,3 +29,10 @@ repos:
         pass_filenames: true
         require_serial: true
         files: ^(?:src|tests)/.*\.py$
+
+      - id: i18n-audit
+        name: Translation catalogs match the source tree
+        entry: python tools/check_i18n.py
+        language: python
+        pass_filenames: false
+        files: ^(?:src/polyx/.*\.py|src/polyx/locales/.*\.(?:po|pot))$

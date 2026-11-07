@@ -4,7 +4,7 @@
 green on a side-by-side view, and appends the pixel→µm accounting with
 Feret/geodesic for comparison. It uses the SAME ``box_margin`` as
 ``segment`` (must not drift: see the comment in the body and
-``tests/test_mascara_alineada.py``), keeps heavy imports lazy (cv2,
+``tests/test_aligned_mask.py``), keeps heavy imports lazy (cv2,
 ``polyx.core.measure.*``) and returns ``""`` on any failure so the
 report never crashes over a bad crop.
 
@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
+
+from .markup import method_label
 
 # Marker that is replaced by the final section number during assembly.
 NUM = "@@N@@"
@@ -63,7 +65,7 @@ def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> 
             w = min(ov.shape[1], mask.shape[1])
             # Contour and not fill: covering the particle in green prevents judging
             # whether the mask really follows it, which is exactly what is shown.
-            cont, _ = cv2.findContours(mask[:h, :w], cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            cont, _unused = cv2.findContours(mask[:h, :w], cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(ov[:h, :w], cont, -1, (0, 255, 0), max(1, min(ov.shape[:2]) // 90))
         par = np.hstack([sub, ov])
         scale = min(4.0, 620 / max(1, par.shape[1]))
@@ -94,21 +96,20 @@ def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> 
         others = []
         if det.feret_um:
             others.append(
-                f"<tr><td>{tr('Feret máximo (cuerda)')}</td><td>{det.feret_um:.0f}</td></tr>"
+                f"<tr><td>{_('Maximum Feret (chord)')}</td><td>{det.feret_um:.0f}</td></tr>"
             )
         if det.geodesic_um:
             others.append(
-                f"<tr><td>{tr('Geodésico (sigue la curva)')}</td><td>{det.geodesic_um:.0f}</td></tr>"
+                f"<tr><td>{_('Geodesic (follows the curve)')}</td><td>{det.geodesic_um:.0f}</td></tr>"
             )
         if others:
             account += (
-                f"<table class='data'><tr>{tr('<th>Medida</th><th>µm</th>')}</tr>"
+                f"<table class='data'><tr>{_('<th>Measure</th><th>µm</th>')}</tr>"
                 f"{''.join(others)}</table>"
-                f"<p>{tr('Se reporta la mayor de las dos primeras')}"
+                f"<p>{_('The larger of the first two is reported')}"
                 + (
-                    tr(", en este caso por <strong>{metodo}</strong>").format(
-                        metodo=tr(det.method_length)
-                    )
+                    _(", here by <strong>%(metodo)s</strong>")
+                    % {"metodo": method_label(det.method_length)}
                     if det.method_length
                     else ""
                 )
@@ -116,9 +117,8 @@ def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> 
             )
     return (
         f"<h3>{NUM}.{title}</h3>"
-        + tr(
-            "<p>A la izquierda la partícula; a la derecha, en verde, el "
-            "contorno que se midió sobre ella.</p>"
+        + _(
+            "<p>On the left the particle; on the right, in green, the outline that was measured on it.</p>"
         )
         + f"{img}{account}"
     )

@@ -128,7 +128,7 @@ The report's Methods section should render it verbatim.
 
 1. **Mask on `Instance`** + RLE helpers (no behaviour change).
 2. **Measurement accepts a mask** (fallback to Otsu). Tests in
-   `tests/test_morfologia.py` keep passing.
+   `tests/test_morphology.py` keep passing.
 3. **`TwoStageDetector`** composer + SAM2 wiring; add `segment_from_boxes` result
    to carry masks.
 4. **YOLO-seg backend** (`task=segment`) reading `r.masks` into `Instance.mask`.

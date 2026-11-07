@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 
 from ._base import DetectorPage
@@ -21,19 +21,27 @@ def _safe_div(a, b):
 
 class ComparePage(DetectorPage):
     STEP_N = 8
-    STEP_TITLE = tr("Comparar")
-    STEP_DESCRIPTION = tr(
-        "Si cargaste más de un modelo, aquí ves tabla resumen con todas las métricas "
-        "lado a lado y cuántas detecciones hizo cada uno por imagen."
+    STEP_TITLE = lazy("Compare")
+    STEP_DESCRIPTION = lazy(
+        "If you loaded more than one model, here is a summary table with every metric side by side and how many detections each one made per image."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
-        c1, l1 = self.card(tr("Resumen por modelo"), "resultados")
+        c1, l1 = self.card(_("Per-model summary"), "resultados")
         self.tbl_summary = QTableWidget(0, 8)
         self.tbl_summary.setHorizontalHeaderLabels(
-            ["Modelo", "Imágenes", "Detecciones", "Conf media", LABEL_TP, LABEL_FP, LABEL_FN, "F1"]
+            [
+                _("Model"),
+                _("Images"),
+                _("Detections"),
+                _("Mean conf."),
+                str(LABEL_TP),
+                str(LABEL_FP),
+                str(LABEL_FN),
+                "F1",
+            ]
         )
         self.tbl_summary.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tbl_summary.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -43,7 +51,7 @@ class ComparePage(DetectorPage):
         l1.addWidget(self.tbl_summary)
         self.body.addWidget(c1)
 
-        c2, l2 = self.card(tr("Detecciones por imagen"), "imagenes")
+        c2, l2 = self.card(_("Detections per image"), "imagenes")
         self.tbl_per_image = QTableWidget(0, 1)
         self.tbl_per_image.setMinimumHeight(280)
         self.tbl_per_image.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -99,7 +107,7 @@ class ComparePage(DetectorPage):
         image_set = sorted(
             {x.image_path for mi in active_indices for x in state.results.get(mi, [])}
         )
-        cols = ["Imagen"] + [state.model_slots[mi].alias for mi in active_indices]
+        cols = [_("Image")] + [state.model_slots[mi].alias for mi in active_indices]
         self.tbl_per_image.setColumnCount(len(cols))
         self.tbl_per_image.setHorizontalHeaderLabels(cols)
         self.tbl_per_image.setRowCount(len(image_set))

@@ -4,8 +4,17 @@ Read by the review agent. Implementation guidance lives in `CLAUDE.md`.
 
 ## Language
 
-- Comments, docstrings, and identifiers in English. Spanish survives only
-  inside `tr()` and the UI strings it wraps.
+- Comments, docstrings, and identifiers in English.
+- User-facing strings are written in English and wrapped in a gettext call
+  from `polyx.core.i18n` (`_`, `ngettext`, `pgettext`, `npgettext`; `N_` or
+  `lazy` when the string is resolved later). English is the source language:
+  the English sentence is the message id.
+- Spanish lives only in the catalogs under `src/polyx/locales/`, never in
+  Python. A new string is added in English and translated in the `.po` file.
+- Placeholders are named `%(name)s`. No f-strings, positional `{}` braces or
+  `str.format` inside a translation call: no catalog validator can check them.
+- Machine contracts stay English in every locale: CSV headers, `run.json`
+  keys, log messages and event names are not translated (ADR-0004).
 - Qt signals use snake_case: `models_changed`, `run_started`, `run_finished`.
 
 ## Paths
@@ -54,6 +63,11 @@ Automated by the local hooks and the gate — these are the checks
       in `tests/english_scan.py`). On a whole-tree run, a `src/` file with no
       staged changes is scanned in full; `tests/` keeps the added-lines rule
       so grandfathered Spanish names still pass.
+- [ ] `i18n-audit` — the committed `messages.pot` matches the source tree,
+      every shipped catalog entry is translated with matching `%(name)s`
+      placeholders, and no user-visible string reaches a Qt widget, the CLI or
+      an HTML surface without a translation call. Runs as
+      `python tools/check_i18n.py` and in pre-commit.
 - [ ] `no-hardcoded-fallback` — no literal fallback in a
       `CLASS_COLOR_HEX.get(...)` lookup; use `T.FALLBACK_COLOR_HEX`.
 

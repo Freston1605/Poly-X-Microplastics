@@ -3,14 +3,14 @@
 Both readers are pure I/O over the machine (OS, RAM, GPU) and over the model
 checkpoint, so both keep their heavy imports (``psutil``, ``torch``) lazy
 inside the body: the import-laziness gate
-(``tests/test_importes_diferidos_informe.py``) requires that importing the
+(``tests/test_report_deferred_imports.py``) requires that importing the
 report package does not pay for them.
 
 They were re-exported from ``polyx.gui.report._common`` (removed in refactor) on purpose: the
 section builders read ``_team`` and ``_training_of`` through that module at
 call time, which is what lets the byte-identity fixtures pin the live
-equipment table to canonical rows (``tools/audit/capturar_fixtures_informe.py``
-and ``tests/test_render_reporte_benigno.py`` patch exactly that attribute).
+equipment table to canonical rows (``tools/audit/capture_report_fixtures.py``
+patches exactly that attribute).
 """
 
 from __future__ import annotations
@@ -18,20 +18,20 @@ from __future__ import annotations
 import platform
 from pathlib import Path
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 
 
 def _team() -> list[tuple]:
     """Machine components, so the report can state where it was run."""
 
     rows_2 = [
-        (tr("Sistema operativo"), f"{platform.system()} {platform.release()}"),
-        (tr("Procesador"), platform.processor() or "—"),
+        (_("Operating system"), f"{platform.system()} {platform.release()}"),
+        (_("Processor"), platform.processor() or "—"),
     ]
     try:
         import psutil
 
-        rows_2.append((tr("Memoria RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
+        rows_2.append((_("RAM"), f"{psutil.virtual_memory().total / 1024**3:.1f} GB"))
     except Exception:  # noqa: BLE001, S110
         pass
     try:
@@ -42,14 +42,14 @@ def _team() -> list[tuple]:
             rows_2 += [
                 ("GPU", props.name),
                 ("VRAM", f"{props.total_memory / 1024**3:.1f} GB"),
-                ("Compute capability", f"{props.major}.{props.minor}"),
+                (_("Compute capability"), f"{props.major}.{props.minor}"),
                 (
                     "PyTorch",
                     f"{torch.__version__} ({'ROCm' if getattr(torch.version, 'hip', None) else 'CUDA'} {getattr(torch.version, 'hip', None) or getattr(torch.version, 'cuda', None)})",
                 ),
             ]
         else:
-            rows_2 += [("GPU", tr("no disponible")), ("PyTorch", torch.__version__)]
+            rows_2 += [("GPU", _("not available")), ("PyTorch", torch.__version__)]
     except Exception:  # noqa: BLE001, S110
         pass
     return rows_2

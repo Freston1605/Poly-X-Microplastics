@@ -1,4 +1,4 @@
-"""Page 4 — `Augmentación`. Presets (`Suave`/`Medio`/`Fuerte`) + manual sliders."""
+"""Page 4 — `Augmentation`. Presets (`Light`/`Medium`/`Strong`) + manual sliders."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QSlider,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy
 from polyx.gui import theme as T
 
 from ..state import AUG_LEVELS
@@ -46,35 +46,33 @@ def _slider_row(
 
 class AugmentationPage(TrainerPage):
     PAGE_ICON = "augmentacion"
-    PAGE_TITLE = tr("Augmentación de datos")
-    PAGE_DESCRIPTION = tr(
-        "Aumenta artificialmente la variedad del dataset. Útil para datasets pequeños "
-        "(< 500 imágenes). Demasiado aug = el modelo no converge; muy poco = sobreajuste."
+    PAGE_TITLE = lazy("Data augmentation")
+    PAGE_DESCRIPTION = lazy(
+        "Artificially increases the variety of the dataset. Useful for small datasets (< 500 images). Too much augmentation and the model will not converge; too little and it overfits."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Preset ──
-        c1, l1 = self.card(tr("Nivel de augmentación"), "ajustes")
+        c1, l1 = self.card(_("Augmentation level"), "ajustes")
         row = QHBoxLayout()
         row.setSpacing(8)
-        row.addWidget(QLabel(tr("Nivel:")))
+        row.addWidget(QLabel(_("Level:")))
         self.combo = QComboBox()
-        self.combo.addItems(list(AUG_LEVELS.keys()))
-        self.combo.setCurrentText(state.aug.level)
-        self.combo.currentTextChanged.connect(self._apply_level)
+        for _name in AUG_LEVELS:
+            self.combo.addItem(_(_name), _name)
+        index = self.combo.findData(state.aug.level)
+        self.combo.setCurrentIndex(max(0, index))
+        self.combo.currentIndexChanged.connect(self._apply_level)
         self.combo.setMinimumWidth(180)
         row.addWidget(self.combo)
         row.addStretch(1)
         l1.addLayout(row)
 
         legend = QLabel(
-            tr(
-                "<b>Ninguno</b>: sin transformaciones. &nbsp; "
-                "<b>Suave</b>: solo flips y jitter HSV. &nbsp; "
-                "<b>Medio</b> (recomendado): + mosaic, mixup ligero. &nbsp; "
-                "<b>Fuerte</b>: + copy-paste agresivo."
+            _(
+                "<b>None</b>: no transformations. &nbsp; <b>Light</b>: flips and HSV jitter only. &nbsp; <b>Medium</b> (recommended): + mosaic, light mixup. &nbsp; <b>Strong</b>: + aggressive copy-paste."
             )
         )
         legend.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
@@ -84,16 +82,16 @@ class AugmentationPage(TrainerPage):
         self.body.addWidget(c1)
 
         # ── Manual sliders ──
-        c2, l2 = self.card(tr("Sliders manuales (avanzado)"), "ajustes")
+        c2, l2 = self.card(_("Manual sliders (advanced)"), "ajustes")
 
         sets = [
-            ("HSV-H (hue):", "hsv_h", 0.1),
-            ("HSV-S (saturación):", "hsv_s", 1.0),
-            ("HSV-V (valor):", "hsv_v", 1.0),
-            ("Fliplr (horizontal):", "fliplr", 1.0),
-            ("Mosaic:", "mosaic", 1.0),
-            ("Mixup:", "mixup", 1.0),
-            ("Copy-paste:", "copy_paste", 1.0),
+            (_("HSV-H (hue):"), "hsv_h", 0.1),
+            (_("HSV-S (saturation):"), "hsv_s", 1.0),
+            (_("HSV-V (value):"), "hsv_v", 1.0),
+            (_("Fliplr (horizontal):"), "fliplr", 1.0),
+            (_("Mosaic:"), "mosaic", 1.0),
+            (_("Mixup:"), "mixup", 1.0),
+            (_("Copy-paste:"), "copy_paste", 1.0),
         ]
         self.sliders: dict[str, QSlider] = {}
         self.value_lbls: dict[str, QLabel] = {}
@@ -107,13 +105,10 @@ class AugmentationPage(TrainerPage):
         self.body.addWidget(c2)
 
         # Hints
-        c3, l3 = self.card(tr("Recomendaciones"), "idea")
+        c3, l3 = self.card(_("Recommendations"), "idea")
         tips = QLabel(
-            tr(
-                "• <b>Dataset pequeño (< 500 imgs)</b>: usa Fuerte. Más variedad sintética compensa pocos ejemplos.<br>"
-                "• <b>Microplásticos PET/PP/LDPE</b>: <b>NO</b> uses HSV-H alto: los colores son la pista principal.<br>"
-                "• <b>Copy-paste</b> funciona muy bien si el fondo es uniforme (como un filtro).<br>"
-                "• Si el modelo no converge (mAP no sube), baja el nivel a Suave o Ninguno."
+            _(
+                "• <b>Small dataset (&lt; 500 imgs)</b>: use Strong. More synthetic variety makes up for few examples.<br>• <b>PET/PP/LDPE microplastics</b>: do <b>NOT</b> use a high HSV-H: color is the main cue.<br>• <b>Copy-paste</b> works very well when the background is uniform (such as a filter).<br>• If the model does not converge (mAP does not rise), lower the level to Light or None."
             )
         )
         tips.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none; line-height: 1.6;")
@@ -128,7 +123,7 @@ class AugmentationPage(TrainerPage):
     def _reload_from_state(self):
         a = self.state.aug
         self.combo.blockSignals(True)
-        self.combo.setCurrentText(a.level)
+        self.combo.setCurrentIndex(max(0, self.combo.findData(a.level)))
         self.combo.blockSignals(False)
         for attr, slider in self.sliders.items():
             mx = 0.1 if attr == "hsv_h" else 1.0
@@ -138,7 +133,8 @@ class AugmentationPage(TrainerPage):
             slider.blockSignals(False)
             self.value_lbls[attr].setText(f"{val:.3f}")
 
-    def _apply_level(self, name: str):
+    def _apply_level(self, _index: int):
+        name = self.combo.currentData()
         if name not in AUG_LEVELS:
             return
         d = AUG_LEVELS[name]
@@ -151,5 +147,5 @@ class AugmentationPage(TrainerPage):
 
     def _on_slider(self, attr: str, value: float):
         setattr(self.state.aug, attr, value)
-        # touching a slider manually switches to `Personalizado`
+        # touching a slider manually switches to `Custom`
         # (the level is kept visually; it is not critical)

@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
 from polyx.gui import theme as T
@@ -28,48 +28,53 @@ from ._base import DetectorPage
 
 class ErrorsPage(DetectorPage):
     STEP_N = 7
-    STEP_TITLE = tr("Errores")
-    STEP_DESCRIPTION = tr(
-        "Lista de cajas problemáticas (solo si hay Ground Truth). "
-        "Falsos Positivos: detección sin GT cercano. Falsos Negativos: GT no detectado. "
-        "Mal Clasificados: bien localizado, mala clase."
+    STEP_TITLE = lazy("Errors")
+    STEP_DESCRIPTION = lazy(
+        "List of problematic boxes (only with Ground Truth). False Positives: detection with no nearby GT. False Negatives: GT not detected. Misclassified: located correctly, wrong class."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Filters ──
-        c1, l1 = self.card(tr("Filtros"), "buscar")
+        c1, l1 = self.card(_("Filters"), "buscar")
         row = QHBoxLayout()
         row.setSpacing(12)
-        row.addWidget(QLabel(tr("Tipo:")))
+        row.addWidget(QLabel(_("Type:")))
         self.combo_type = QComboBox()
         # Displayed text (full name) + internal data (short code)
-        self.combo_type.addItem(tr("Todos"), "ALL")
-        self.combo_type.addItem(LABEL_FP, "FP")
-        self.combo_type.addItem(LABEL_FN, "FN")
-        self.combo_type.addItem(LABEL_MISCLS, "MISCLS")
+        self.combo_type.addItem(_("All"), "ALL")
+        self.combo_type.addItem(str(LABEL_FP), "FP")
+        self.combo_type.addItem(str(LABEL_FN), "FN")
+        self.combo_type.addItem(str(LABEL_MISCLS), "MISCLS")
         self.combo_type.currentIndexChanged.connect(self.refresh)
         row.addWidget(self.combo_type)
 
-        row.addWidget(QLabel(tr("Modelo:")))
+        row.addWidget(QLabel(_("Model:")))
         self.combo_model = QComboBox()
-        self.combo_model.addItem(tr("Todos"), -1)
+        self.combo_model.addItem(_("All"), -1)
         self.combo_model.currentIndexChanged.connect(self.refresh)
         row.addWidget(self.combo_model)
 
         row.addStretch(1)
-        self.lbl_count = QLabel(tr("0 errores"))
+        self.lbl_count = QLabel(_("0 errors"))
         self.lbl_count.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         row.addWidget(self.lbl_count)
         l1.addLayout(row)
         self.body.addWidget(c1)
 
         # ── Error table ──
-        c2, l2 = self.card(tr("Cajas con error"), "errores")
+        c2, l2 = self.card(_("Boxes with errors"), "errores")
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(
-            ["Modelo", "Imagen", "Tipo", "Clase GT", "Clase Pred", "Conf"]
+            [
+                _("Model"),
+                _("Image"),
+                _("Type"),
+                _("GT class"),
+                _("Pred class"),
+                _("Conf"),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -88,7 +93,7 @@ class ErrorsPage(DetectorPage):
     def _refresh_model_combo(self):
         self.combo_model.blockSignals(True)
         self.combo_model.clear()
-        self.combo_model.addItem("Todos", -1)
+        self.combo_model.addItem(_("All"), -1)
         for i, slot in enumerate(self.state.model_slots):
             if slot.path is not None:
                 self.combo_model.addItem(slot.alias, i)
@@ -136,7 +141,9 @@ class ErrorsPage(DetectorPage):
                             )
                         )
 
-        self.lbl_count.setText(f"{len(rows)} error{'es' if len(rows) != 1 else ''}")
+        self.lbl_count.setText(
+            ngettext("%(count)d error", "%(count)d errors", len(rows)) % {"count": len(rows)}
+        )
         self.table.setRowCount(len(rows))
         badge_colors = {"FP": T.WARN, "FN": T.ERR, "MISCLS": T.VIO}
         label_by_code = {"FP": LABEL_FP, "FN": LABEL_FN, "MISCLS": LABEL_MISCLS}
@@ -145,7 +152,7 @@ class ErrorsPage(DetectorPage):
         for i, (alias, p, code, cgt, cpr, cf) in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(alias))
             self.table.setItem(i, 1, QTableWidgetItem(p.name))
-            it = QTableWidgetItem(label_by_code.get(code, code))
+            it = QTableWidgetItem(str(label_by_code.get(code, code)))
             it.setTextAlignment(Qt.AlignCenter)
             it.setForeground(QBrush(QColor(badge_colors.get(code, T.INK))))
             self.table.setItem(i, 2, it)

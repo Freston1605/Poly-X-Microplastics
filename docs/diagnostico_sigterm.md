@@ -50,7 +50,7 @@ Reviewing the systemd events of user sessions confirmed that the intermittent SI
 
 ## 6. Negative Tests and Robustness (Negative Tests - Q7)
 - Verified through tests with simulated environment variables and defensive reading of `/proc` on systems without cgroup v2 support.
-- Exception coverage in telemetry capture with no impact on test results (`tests/test_recetas_jq.py`, etc.).
+- Exception coverage in telemetry capture with no impact on test results (`tests/test_jq_recipes.py`, etc.).
 
 ---
 

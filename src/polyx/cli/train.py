@@ -9,19 +9,22 @@ from __future__ import annotations
 import argparse
 import sys
 
+from polyx.core.i18n import _
 from polyx.core.training import TrainingConfig
 from polyx.core.training import train as run_training
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Train a Poly-X YOLO model (headless)")
+    p = argparse.ArgumentParser(description=_("Train a Poly-X YOLO model (headless)"))
     p.add_argument("--weights", required=True)
     p.add_argument("--data", required=True, dest="data_yaml")
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--batch", type=int, default=16)
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument(
-        "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
+        "--device",
+        default=None,
+        help=_("'cpu', a CUDA index, or empty = auto-select (default: auto)"),
     )
     p.add_argument("--optimizer", default="SGD")
     p.add_argument("--lr0", type=float, default=0.01)
@@ -47,14 +50,17 @@ def main(argv: list[str] | None = None) -> int:
 
     def on_epoch(info):
         m = info.get("metrics", {})
-        print(f"epoch {info.get('epoch')}: {m}", flush=True)
+        print(
+            _("epoch %(epoch)s: %(metrics)s") % {"epoch": info.get("epoch"), "metrics": m},
+            flush=True,
+        )
 
     try:
         best = run_training(cfg, on_epoch=on_epoch, on_log=on_log)
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return 1
-    print(f"BEST: {best}")
+    print(_("BEST: %(path)s") % {"path": best})
     return 0
 
 

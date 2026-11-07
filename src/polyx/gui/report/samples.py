@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
+from polyx.core.i18n import _
 from polyx.core.report_metrics import _classes_views
 
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
@@ -41,7 +42,7 @@ def _sample_of(path_2) -> tuple | None:
         return None
     range_value, witness, suffix = m.group(1), m.group(2), m.group(3)
     return (
-        _STATION.get(witness, f"Testigo {witness}"),
+        _STATION.get(witness, _("Witness %(witness)s") % {"witness": witness}),
         int(range_value),
         _PLATE.get(suffix, suffix),
     )
@@ -158,7 +159,7 @@ def _batch_metrics(run, solo_images):
     inline in ``_generate_report_impl``: same empty-set filter semantics,
     same computation order, same ``Counter`` loops. Returns a plain tuple —
     no :class:`~typing.NamedTuple` and no new imports, so the lazy-import
-    gate (``test_importes_diferidos_informe.py``) sees nothing new and no
+    gate (``test_report_deferred_imports.py``) sees nothing new and no
     heavy module (``ultralytics``/``cv2``/``morfologia``/``calibracion``)
     gets touched at module level.
     """

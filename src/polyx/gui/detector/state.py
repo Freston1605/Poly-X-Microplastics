@@ -18,7 +18,7 @@ from polyx.core.detection_run import (
     RunParams,
     RunResult,
 )
-from polyx.core.i18n import tr
+from polyx.core.i18n import _
 
 # Compatibility name used by the pages and by old headless folder readers.
 InferenceParams = RunParams
@@ -30,6 +30,9 @@ class ModelSlot(ModelInfo):
     """A model slot in the `Modelos` tab (up to 3): metadata plus its backend."""
 
     loaded: DetectionSource | None = None
+    #: The alias is still the generated "Model N", so it follows the interface
+    #: language; a name typed by the user is kept as written.
+    alias_default: bool = True
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -49,10 +52,14 @@ class DetectorState(QObject):
     def __init__(self):
         super().__init__()
         self.model_slots: list[ModelSlot] = [
-            ModelSlot(alias=tr("Modelo {n}").format(n=i + 1)) for i in range(3)
+            ModelSlot(alias=_("Model %(n)s") % {"n": i + 1}) for i in range(3)
         ]
         self.images: list[Path] = []
         self.gt_folder: Path | None = None
+        # Image currently open in the Manual GT page. Kept in the state so a
+        # language change can rebuild the page without moving the user away
+        # from the annotation they were working on.
+        self.gt_image: Path | None = None
         self.params = InferenceParams()
         # Calibration has one owner and it is not RunParams: the pages edit
         # this policy, the runner hands it to the engine and the run records

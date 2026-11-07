@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, language, lazy
 from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -85,7 +85,7 @@ table.data td{{padding:6px 9px;border-bottom:1px solid {T.DOC.RULE_SOFT};}}
 def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = True) -> Path:
     """Builds the training HTML report from the run folder."""
     if not run_dir.exists():
-        raise RuntimeError(f"No existe {run_dir}")
+        raise RuntimeError(_("No such run folder: %(path)s") % {"path": run_dir})
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     header, rows = _read_results_csv_full(run_dir)
@@ -111,7 +111,7 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
         rec = col("metrics/recall(B)", "metrics/recall")
         kpi_html = f"""
         <div class='kpis'>
-          <div class='kpi'><div class='l'>Épocas</div><div class='v'>{last_epoch}</div><div class='b'></div></div>
+          <div class='kpi'><div class='l'>{_("Epochs")}</div><div class='v'>{last_epoch}</div><div class='b'></div></div>
           <div class='kpi'><div class='l'>mAP@50</div><div class='v'>{f"{map50:.3f}" if map50 is not None else "—"}</div><div class='b' style='background:{T.DOC.OK}'></div></div>
           <div class='kpi'><div class='l'>mAP@50-95</div><div class='v'>{f"{map95:.3f}" if map95 is not None else "—"}</div><div class='b' style='background:{T.DOC.VIO}'></div></div>
           <div class='kpi'><div class='l'>P / R</div><div class='v'>{f"{prec:.2f}/{rec:.2f}" if prec is not None and rec is not None else "—"}</div><div class='b' style='background:{T.DOC.WARN}'></div></div>
@@ -122,14 +122,14 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
     # Figures produced by Ultralytics
     figs = []
     for name, label in [
-        ("results.png", "Curvas de entrenamiento (loss + métricas)"),
-        ("confusion_matrix.png", "Matriz de confusión"),
-        ("PR_curve.png", "Curva Precision–Recall"),
-        ("F1_curve.png", "Curva F1 vs confianza"),
-        ("P_curve.png", "Curva Precision vs confianza"),
-        ("R_curve.png", "Curva Recall vs confianza"),
-        ("labels.jpg", "Distribución de etiquetas en train"),
-        ("val_batch0_pred.jpg", "Predicciones del batch 0 de validación"),
+        ("results.png", _("Training curves (loss + metrics)")),
+        ("confusion_matrix.png", _("Confusion matrix")),
+        ("PR_curve.png", _("Precision–Recall curve")),
+        ("F1_curve.png", _("F1 vs confidence curve")),
+        ("P_curve.png", _("Precision vs confidence curve")),
+        ("R_curve.png", _("Recall vs confidence curve")),
+        ("labels.jpg", _("Label distribution in train")),
+        ("val_batch0_pred.jpg", _("Validation batch 0 predictions")),
     ]:
         p = run_dir / name
         if p.exists():
@@ -146,8 +146,8 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
 
     refs = ""
     if include_refs:
-        refs = """
-        <h2>Referencias</h2>
+        refs = f"""
+        <h2>{_("References")}</h2>
         <ol>
           <li>Pérez M, Parra S, Ferrada C, Bravo M, Pérez PA, Quiroz W (2024). Development of a new methodology for the determination of PET microplastics in sediment, based on microwave-assisted acid digestion. <em>PLoS ONE</em> 19(12): e0314520.</li>
           <li>Ferrada C, Pérez M, Parra S, Salas E, Sepúlveda F, Bravo MA, Quiroz W (2024). Evaluation of microwave-assisted acid/oxidant digestion method for the detection of polyethylene microplastics in <em>Merluccius gayi</em> fish by Nile Red fluorescent staining and image analysis. <em>J. Chil. Chem. Soc.</em> 69(1): 6082-6085.</li>
@@ -157,26 +157,26 @@ def build_training_report(run_dir: Path, out_path: Path, include_refs: bool = Tr
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     doc = f"""<!doctype html>
-<html lang='es'><head><meta charset='utf-8'>
-<title>Reporte de entrenamiento · {html.escape(run_dir.name)}</title>
+<html lang='{language()}'><head><meta charset='utf-8'>
+<title>{_("Training report")} · {html.escape(run_dir.name)}</title>
 <style>{CSS}</style>
 </head><body><div class='container'>
 <header class='cover'>
-  <div class='kicker'>Poly-X · Reporte de entrenamiento</div>
+  <div class='kicker'>Poly-X · {_("Training report")}</div>
   <h1>{html.escape(run_dir.name)}</h1>
-  <p class='meta'><strong>Carpeta:</strong> {html.escape(str(run_dir))} &middot; <strong>Generado:</strong> {now}</p>
+  <p class='meta'><strong>{_("Folder:")}</strong> {html.escape(str(run_dir))} &middot; <strong>{_("Generated:")}</strong> {now}</p>
 </header>
 
-<h2>1. Métricas finales</h2>
-{metrics_html or "<p>Sin results.csv legible.</p>"}
+<h2>{_("1. Final metrics")}</h2>
+{metrics_html or f"<p>{_('No readable results.csv.')}</p>"}
 
-<h2>2. Curvas y figuras</h2>
-{figs_html or "<p>No se encontraron figuras en el run.</p>"}
+<h2>{_("2. Curves and figures")}</h2>
+{figs_html or f"<p>{_('No figures found in the run.')}</p>"}
 
 {refs}
 
 <p style='margin-top:60px;color:{T.DOC.INK3};font-size:9.5pt;border-top:1px solid {T.DOC.RULE};padding-top:14px;'>
-© Cristofher Ferrada · Poly-X · Reporte autogenerado.</p>
+{_("© Cristofher Ferrada · Poly-X · Autogenerated report.")}</p>
 </div></body></html>
 """
     out_path.write_text(doc, encoding="utf-8")
@@ -203,20 +203,19 @@ class _ReportWorker(QThread):
 
 class ReportPage(TrainerPage):
     PAGE_ICON = "reporte"
-    PAGE_TITLE = tr("Informe del entrenamiento")
-    PAGE_DESCRIPTION = tr(
-        "Genera un informe HTML autocontenido con las curvas y métricas del run "
-        "elegido. Listo para convertir a PDF (Ctrl+P en el navegador)."
+    PAGE_TITLE = lazy("Training report")
+    PAGE_DESCRIPTION = lazy(
+        "Generates a self-contained HTML report with the curves and metrics of the chosen run. Ready to convert to PDF (Ctrl+P in the browser)."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
         self.worker: _ReportWorker | None = None
 
-        c1, l1 = self.card(tr("Selección de run"), "dataset")
+        c1, l1 = self.card(_("Run selection"), "dataset")
         row = QHBoxLayout()
         row.setSpacing(8)
-        row.addWidget(QLabel(tr("Run:")))
+        row.addWidget(QLabel(_("Run:")))
         self.combo = QComboBox()
         self.combo.setMinimumWidth(360)
         row.addWidget(self.combo, 1)
@@ -225,15 +224,15 @@ class ReportPage(TrainerPage):
         btn.clicked.connect(self._refresh)
         row.addWidget(btn)
         l1.addLayout(row)
-        self.chk_refs = QCheckBox(tr("Incluir referencias bibliográficas"))
+        self.chk_refs = QCheckBox(_("Include bibliographic references"))
         self.chk_refs.setChecked(True)
         l1.addWidget(self.chk_refs)
         self.body.addWidget(c1)
 
-        c2, l2 = self.card(tr("Generar"), "texto")
+        c2, l2 = self.card(_("Generate"), "texto")
         rr = QHBoxLayout()
         rr.setSpacing(8)
-        b1 = QPushButton(tr("Generar reporte HTML"))
+        b1 = QPushButton(_("Generate HTML report"))
         b1.setIcon(iconos.icon("reporte", 15, T.ON_ACCENT))
         b1.setStyleSheet(
             f"background: {T.DOC.ACCENT}; color: white; border: none; "
@@ -242,7 +241,7 @@ class ReportPage(TrainerPage):
         b1.setCursor(Qt.PointingHandCursor)
         b1.clicked.connect(self._generate)
         rr.addWidget(b1)
-        b2 = QPushButton(tr("Guardar como…"))
+        b2 = QPushButton(_("Save as…"))
         b2.setIcon(iconos.icon("guardar", 15, T.INK2))
         b2.clicked.connect(self._save_as)
         rr.addWidget(b2)
@@ -278,7 +277,7 @@ class ReportPage(TrainerPage):
     def _generate(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            QMessageBox.warning(self, _("No run"), _("No runs available."))
             return
         out = run / "reporte_entrenamiento.html"
         self._run_worker(run, out)
@@ -286,28 +285,31 @@ class ReportPage(TrainerPage):
     def _save_as(self):
         run = self._current_run()
         if not run:
-            QMessageBox.warning(self, tr("Sin run"), tr("No hay runs disponibles."))
+            QMessageBox.warning(self, _("No run"), _("No runs available."))
             return
-        f, _ = QFileDialog.getSaveFileName(
-            self, "Guardar reporte", str(run / "reporte_entrenamiento.html"), "HTML (*.html)"
+        f, _unused = QFileDialog.getSaveFileName(
+            self,
+            _("Save report"),
+            str(run / "reporte_entrenamiento.html"),
+            _("HTML (*.html)"),
         )
         if f:
             self._run_worker(run, Path(f))
 
     def _run_worker(self, run: Path, out: Path):
-        self.lbl_status.setText(tr("Generando informe…"))
+        self.lbl_status.setText(_("Generating report…"))
         self.worker = _ReportWorker(run, out, self.chk_refs.isChecked())
         self.worker.finished_ok.connect(self._on_ok)
         self.worker.failed.connect(self._on_fail)
         self.worker.start()
 
     def _on_ok(self, p: str):
-        self.lbl_status.setText(f"✓ Generado: {p}")
+        self.lbl_status.setText(_("✓ Generated: %(path)s") % {"path": p})
         try:  # noqa: SIM105
             webbrowser.open(Path(p).as_uri())
         except Exception:  # noqa: BLE001, S110
             pass
 
     def _on_fail(self, msg: str):
-        self.lbl_status.setText(tr("✗ Error"))
-        QMessageBox.critical(self, tr("Falló"), msg)
+        self.lbl_status.setText(_("✗ Error"))
+        QMessageBox.critical(self, _("Failed"), msg)

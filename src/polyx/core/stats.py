@@ -6,7 +6,7 @@ import math
 
 import numpy as np
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import N_, _
 from polyx.core.quality.metrics import match_image
 
 _TABLE_T95 = {
@@ -45,7 +45,7 @@ _TABLE_T95 = {
     120: 1.980,
 }
 
-_NAME_MORPHOTYPE = {"fibra": "Fibra", "fragmento": "Partícula"}
+_NAME_MORPHOTYPE = {"fibra": N_("Fibre"), "fragmento": N_("Particle")}
 
 
 def _chi2_sf(h: float, df: int) -> float:
@@ -158,7 +158,7 @@ def _kruskal_wallis(groups: list[np.ndarray]) -> tuple[float, float, int] | None
         h += (r_i * r_i) / n_i
         idx += n_i
     h = (12.0 / (n_total * (n_total + 1))) * h - 3 * (n_total + 1)
-    _, counts = np.unique(all_value_2, return_counts=True)
+    _unused, counts = np.unique(all_value_2, return_counts=True)
     draw = np.sum(counts**3 - counts)
     denom = n_total**3 - n_total
     if denom > 0 and draw > 0:
@@ -172,21 +172,16 @@ def _kruskal_wallis(groups: list[np.ndarray]) -> tuple[float, float, int] | None
 
 def _text_kruskal(result: tuple[float, float, int] | None, n_groups: int) -> str:
     if result is None:
-        return tr(
-            "Sin datos suficientes para una prueba estadística (hace falta "
-            "más de una observación por grupo)."
+        return _(
+            "Not enough data for a statistical test (more than one observation per group is required)."
         )
     h, p, df = result
     frase = (
-        tr("<strong>diferencia significativa</strong>")
-        if p < 0.05
-        else tr("sin diferencia significativa")
+        _("<strong>significant difference</strong>") if p < 0.05 else _("no significant difference")
     )
-    return tr(
-        "Kruskal-Wallis entre los {n} grupos: {frase} (H={h}, gl={gl}, "
-        "p={p}). No dice CUÁL grupo difiere de cuál, solo que no todos "
-        "comparten la misma distribución de talla."
-    ).format(n=n_groups, frase=frase, h=f"{h:.2f}", gl=df, p=f"{p:.3g}")
+    return _(
+        "Kruskal-Wallis across the %(n)s groups: %(frase)s (H=%(h)s, df=%(gl)s, p=%(p)s). It does not say WHICH group differs from which, only that not all of them share the same size distribution."
+    ) % {"n": n_groups, "frase": frase, "h": f"{h:.2f}", "gl": df, "p": f"{p:.3g}"}
 
 
 def _spearman(x, y) -> float | None:
@@ -227,7 +222,7 @@ def _p_permutation(x, y, n_perm: int = 20000, seed: int = 0) -> float | None:
     rng = np.random.default_rng(seed)
     y = np.asarray(y, dtype=float)
     extremes = 0
-    for _ in range(n_perm):
+    for _unused in range(n_perm):
         r = _spearman(x, rng.permutation(y))
         if r is not None and abs(r) >= abs(rho) - 1e-12:
             extremes += 1
@@ -242,31 +237,36 @@ def _text_trend(x, y, que: str) -> str:
     if rho is None:
         return ""
     p = _p_permutation(x, y)
-    direction = tr("crece") if rho > 0 else tr("decrece")
+    direction = _("increases") if rho > 0 else _("decreases")
     if p is not None and p < 0.05:
         # Capital initial letter: the sentence goes after the period that closes the station
         # name, and in lowercase it reads like a truncated line.
-        verdict = tr("<strong>{que} {sentido} con la profundidad</strong>").format(
-            que=que[0].upper() + que[1:], sentido=direction
-        )
+        verdict = _("<strong>%(que)s %(sentido)s with depth</strong>") % {
+            "que": que[0].upper() + que[1:],
+            "sentido": direction,
+        }
     else:
-        verdict = tr("No se detecta tendencia en {que} con la profundidad").format(que=que)
+        verdict = _("No trend in %(que)s with depth is detected") % {"que": que}
     # The operator travels with the value: with `p = {p}` and a small p it printed
     # `p = < 0.001`, with two signs in a row.
     #
     # Decimal point and not comma: the rest of the report figures come from
     # Python formats and carry a point; mixing them reads like a typo.
     p_txt = "< 0.001" if p is not None and p < 0.001 else f"= {p:.3f}"
-    return tr("{veredicto} (Spearman ρ = {rho}, p {p}, n = {n} tramos).").format(
-        veredicto=verdict, rho=f"{rho:+.2f}", p=p_txt, n=len(x)
-    )
+    return _("%(veredicto)s (Spearman ρ = %(rho)s, p = %(p)s, n = %(n)s intervals).") % {
+        "veredicto": verdict,
+        "rho": f"{rho:+.2f}",
+        "p": p_txt,
+        "n": len(x),
+    }
 
 
 def _morphotype(value: str | None, lowercase: bool = False) -> str:
     """Presentable name for a morphotype. '—' when it could not be determined."""
     if not value:
         return "—"
-    name_2 = tr(_NAME_MORPHOTYPE.get(value, value))
+    label = _NAME_MORPHOTYPE.get(value, value)
+    name_2 = _(label)
     return name_2.lower() if lowercase else name_2
 
 

@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / ".pre-commit-config.yaml"
 PYPROJECT = ROOT / "pyproject.toml"
 
-LOCAL_IDS = {"english-added-lines", "no-hardcoded-fallback"}
+LOCAL_IDS = {"english-added-lines", "i18n-audit", "no-hardcoded-fallback"}
 SHELL_TOKENS = ("&&", "||", "|", ";", ">", "<", "$(", "`")
 
 

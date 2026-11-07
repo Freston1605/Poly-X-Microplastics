@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, ngettext
 from polyx.core.labels import STUDY_CLASSES, bbox_from, write_classes, write_lines
 from polyx.core.paths import DATASET_CORRECTIONS_DIR
 from polyx.gui import iconos
@@ -45,7 +45,7 @@ class ReviewDialog(QDialog):
     def __init__(self, state, parent=None):
         super().__init__(parent)
         self.state = state
-        self.setWindowTitle(tr("Revisión de detecciones — Poly-X"))
+        self.setWindowTitle(_("Detection review — Poly-X"))
         self.setModal(False)
         self._current_idx = -1
         self._model_idx = -1
@@ -58,19 +58,19 @@ class ReviewDialog(QDialog):
         # ── Top bar ──
         top = QHBoxLayout()
         top.setSpacing(10)
-        top.addWidget(QLabel(tr("Modelo:")))
+        top.addWidget(QLabel(_("Model:")))
         self.combo_model = QComboBox()
         self.combo_model.setMinimumWidth(160)
         self.combo_model.currentIndexChanged.connect(self._on_model_change)
         top.addWidget(self.combo_model)
 
-        top.addWidget(QLabel(tr("Clase (para nuevas cajas):")))
+        top.addWidget(QLabel(_("Class (for new boxes):")))
         self.combo_class = QComboBox()
         self.combo_class.addItems(STUDY_CLASSES)
         self.combo_class.currentIndexChanged.connect(lambda i: self.canvas.set_active_class(i))  # noqa: PLW0108
         top.addWidget(self.combo_class)
 
-        btn_fit = QPushButton(tr("Ajustar (F)"))
+        btn_fit = QPushButton(_("Fit (F)"))
         btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())  # noqa: PLW0108
         top.addWidget(btn_fit)
         btn_100 = QPushButton("100 %")
@@ -90,7 +90,7 @@ class ReviewDialog(QDialog):
 
         left = QVBoxLayout()
         left.setSpacing(6)
-        lbl_files = QLabel(tr("Imágenes"))
+        lbl_files = QLabel(_("Images"))
         lbl_files.setStyleSheet(f"color: {T.INK2}; font-weight: 600; border: none;")
         left.addWidget(lbl_files)
         self.list = QListWidget()
@@ -109,10 +109,7 @@ class ReviewDialog(QDialog):
 
         # ── Canvas status ──
         self.lbl_status = QLabel(
-            tr(
-                "Click y arrastra para dibujar · rueda: zoom · "
-                "Espacio+arrastre: mover · Supr: borrar caja."
-            )
+            _("Click and drag to draw · wheel: zoom · Space+drag: pan · Del: delete box.")
         )
         self.lbl_status.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         self.canvas.status_changed.connect(self.lbl_status.setText)
@@ -121,15 +118,15 @@ class ReviewDialog(QDialog):
         # ── Button row ──
         btns = QHBoxLayout()
         btns.setSpacing(8)
-        b_prev = QPushButton(tr("←  Anterior"))
+        b_prev = QPushButton(_("←  Previous"))
         b_prev.clicked.connect(self._go_prev)
         btns.addWidget(b_prev)
-        b_next = QPushButton(tr("Siguiente  →"))
+        b_next = QPushButton(_("Next  →"))
         b_next.clicked.connect(self._go_next)
         btns.addWidget(b_next)
 
         btns.addSpacing(20)
-        self.btn_good = QPushButton(tr("✓  Buena"))
+        self.btn_good = QPushButton(_("✓  Good"))
         self.btn_good.setStyleSheet(
             f"background: {T.OK}; color: white; border: none; "
             f"border-radius: 6px; padding: 8px 18px; font-weight: 700;"
@@ -137,7 +134,7 @@ class ReviewDialog(QDialog):
         self.btn_good.setCursor(Qt.PointingHandCursor)
         self.btn_good.clicked.connect(lambda: self._set_verdict("buena"))
         btns.addWidget(self.btn_good)
-        self.btn_bad = QPushButton(tr("✗  Mala"))
+        self.btn_bad = QPushButton(_("✗  Bad"))
         self.btn_bad.setStyleSheet(
             f"background: {T.ERR}; color: white; border: none; "
             f"border-radius: 6px; padding: 8px 18px; font-weight: 700;"
@@ -147,18 +144,17 @@ class ReviewDialog(QDialog):
         btns.addWidget(self.btn_bad)
 
         btns.addStretch(1)
-        b_dataset = QPushButton(tr("Enviar al dataset de reentrenamiento"))
+        b_dataset = QPushButton(_("Send to the retraining dataset"))
         b_dataset.setIcon(iconos.icon("exportar", 15, T.INK2))
         b_dataset.setToolTip(
-            tr(
-                "Copia esta imagen y sus cajas corregidas a dataset_correcciones/ "
-                "para mejorar el modelo con fine-tuning (active learning)."
+            _(
+                "Copies this image and its corrected boxes into dataset_correcciones/ so the model can be improved by fine-tuning (active learning)."
             )
         )
         b_dataset.setCursor(Qt.PointingHandCursor)
         b_dataset.clicked.connect(self._send_to_dataset)
         btns.addWidget(b_dataset)
-        b_save = QPushButton(tr("Guardar correcciones (.txt YOLO)"))
+        b_save = QPushButton(_("Save corrections (.txt YOLO)"))
         b_save.setIcon(iconos.icon("guardar", 15, T.ON_ACCENT))
         b_save.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -221,9 +217,14 @@ class ReviewDialog(QDialog):
                 it.setForeground(QColor(T.ERR))
             self.list.addItem(it)
         self.list.blockSignals(False)
-        self.setWindowTitle(
-            f"Revisión de detecciones — {len(self._results)} imágenes (✓{good} ✗{bad}) — Poly-X"
-        )
+        count = len(self._results)
+        title = ngettext(
+            "Detection review — %(count)d image",
+            "Detection review — %(count)d images",
+            count,
+        ) % {"count": count}
+        title += _(" (✓%(good)d ✗%(bad)d) — Poly-X") % {"good": good, "bad": bad}
+        self.setWindowTitle(title)
 
     def _on_list_row(self, row: int):
         # auto-save the verdict/boxes in memory of the previous image is already done
@@ -289,7 +290,7 @@ class ReviewDialog(QDialog):
         # were normalized on a different frame than the rest of the run.
         wh = size_image(path)
         if wh is None or wh[0] <= 0 or wh[1] <= 0:
-            QMessageBox.warning(self, tr("Error"), tr("No se pudo leer la imagen."))
+            QMessageBox.warning(self, _("Error"), _("Could not read the image."))
             return None
         return path, dets, wh[0], wh[1]
 
@@ -308,7 +309,14 @@ class ReviewDialog(QDialog):
         cls_path = out_dir / "classes.txt"
         if not cls_path.exists():
             write_classes(out_dir)
-        self.lbl_status.setText(f"✓ Guardado: {txt_path}  ({len(dets)} cajas)")
+        self.lbl_status.setText(
+            ngettext(
+                "✓ Saved: %(path)s  (%(count)d box)",
+                "✓ Saved: %(path)s  (%(count)d boxes)",
+                len(dets),
+            )
+            % {"path": txt_path, "count": len(dets)}
+        )
 
     def _send_to_dataset(self):
         """Active learning: accumulates image + corrected boxes to retrain."""
@@ -319,8 +327,8 @@ class ReviewDialog(QDialog):
         if not dets:
             QMessageBox.information(
                 self,
-                tr("Dataset"),
-                tr("No hay cajas en esta imagen. Corrige o dibuja antes de enviarla."),
+                _("Dataset"),
+                _("There are no boxes in this image. Correct or draw some before sending it."),
             )
             return
         root = DATASET_CORRECTIONS_DIR
@@ -333,7 +341,12 @@ class ReviewDialog(QDialog):
             write_classes(root)
         n = len(list((root / "labels").glob("*.txt")))
         self.lbl_status.setText(
-            f"Enviada al dataset de reentrenamiento — {n} imagen(es) "
-            f"acumuladas en dataset_correcciones/. Cuando juntes ~50, haz "
-            f"fine-tuning en el Entrenador."
+            ngettext(
+                "Sent to the retraining dataset — %(count)d image accumulated in "
+                "dataset_correcciones/. Once you have ~50, fine-tune in the Trainer.",
+                "Sent to the retraining dataset — %(count)d images accumulated in "
+                "dataset_correcciones/. Once you have ~50, fine-tune in the Trainer.",
+                n,
+            )
+            % {"count": n}
         )

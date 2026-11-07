@@ -981,15 +981,16 @@ is remembered between sessions; the first time it follows the system language.</
 
 <div class="aviso">
   <span class="et">When it takes effect</span>
-  <p>Because modules are separate processes, they read the language <b>as they
-  open</b>. The change shows up as soon as you open the next module, not in
-  windows that are already open.</p>
+  <p>Every open window switches <b>immediately</b>. Modules are separate
+  processes, but each one watches the saved choice and re-reads the catalogue,
+  so nothing has to be reopened. Loaded images, models and the current run are
+  kept.</p>
   <p>The <b>detection report also comes out in the chosen language</b>: titles,
   tables, figure captions, chart axes and the methods prose. Even the HTML
   <code>lang</code> attribute is set, so the browser's spell-checker and screen
   readers handle it properly.</p>
   <p>To force it without touching the interface, the environment variable
-  <code>POLYX_IDIOMA=en</code>.</p>
+  <code>POLYX_LOCALE=en</code>.</p>
 </div>
 
 <h3>The new-version notice</h3>
@@ -1406,7 +1407,7 @@ defect being eliminated.</p>
   <p>Against synthetic shapes of known size — straight lines, rotated lines, arcs
   of 60°, 120° and 180°, a circle, a saw-toothed line and a notched clump — the
   length measured this way gives <b>0.6 % median error and 4.7 % in the worst
-  case</b>. It is pinned in <code>tests/test_morfologia.py</code>, so a
+  case</b>. It is pinned in <code>tests/test_morphology.py</code>, so a
   well-meaning change that makes it worse fails the suite.</p>
 </div>
 
@@ -1463,7 +1464,7 @@ elongated, nor passed through the touching-particle splitter: both cut real fibr
 In the case that exposed it, <b>53 % of the length</b> was lost — 369 px of
 connected component became 174 — and an underestimated size does not show up in
 the figures, only in the image. It is pinned in
-<code>tests/test_fibra_no_se_trunca.py</code>.</p>
+<code>tests/test_fiber_is_not_truncated.py</code>.</p>
 
 <div class="aviso err">
   <span class="et">Declared limitations</span>
