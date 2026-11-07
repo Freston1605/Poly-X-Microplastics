@@ -364,6 +364,92 @@ def test_braces_in_a_translation_fail_the_gate(tmp_path):
     assert findings[0].kind == "placeholder-mismatch"
 
 
+def test_a_spanish_placeholder_name_fails_the_gate(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                'from polyx.core.i18n import _\n\nlabel = _("%(modelo)s is ready")\n'
+            ),
+            TEMPLATE_REL: _pot(_entry("%(modelo)s is ready", "")),
+            CATALOG_REL: _catalog(_entry("%(modelo)s is ready", "%(modelo)s listo")),
+        },
+    )
+
+    findings = audit.audit_catalogs(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "placeholder-name"
+    assert "modelo" in findings[0].detail
+
+
+def test_english_placeholder_names_pass(tmp_path):
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                'from polyx.core.i18n import _\n\nlabel = _("%(model)s is ready")\n'
+            ),
+            TEMPLATE_REL: _pot(_entry("%(model)s is ready", "")),
+            CATALOG_REL: _catalog(_entry("%(model)s is ready", "%(model)s listo")),
+        },
+    )
+
+    assert audit.audit_catalogs(tmp_path) == []
+
+
+def test_a_plural_parenthetical_in_a_message_id_fails_the_gate(tmp_path):
+    template = (
+        '#: src/polyx/app.py:3\nmsgid "%(n)d image(s)"\nmsgid_plural "%(n)d image(s)"\n'
+        'msgstr[0] ""\nmsgstr[1] ""\n\n'
+    )
+    catalog = (
+        '#: src/polyx/app.py:3\nmsgid "%(n)d image(s)"\nmsgid_plural "%(n)d image(s)"\n'
+        'msgstr[0] "%(n)d imagen(es)"\nmsgstr[1] "%(n)d imágenes"\n\n'
+    )
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                "from polyx.core.i18n import ngettext\n\n"
+                'label = ngettext("%(n)d image(s)", "%(n)d image(s)", 2)\n'
+            ),
+            TEMPLATE_REL: _pot(template),
+            CATALOG_REL: _catalog(catalog),
+        },
+    )
+
+    findings = audit.audit_catalogs(tmp_path)
+
+    assert findings
+    assert findings[0].kind == "plural-parenthetical"
+    assert "ngettext" in findings[0].detail
+
+
+def test_a_plural_through_ngettext_passes(tmp_path):
+    template = (
+        '#: src/polyx/app.py:3\nmsgid "%(n)d image"\nmsgid_plural "%(n)d images"\n'
+        'msgstr[0] ""\nmsgstr[1] ""\n\n'
+    )
+    catalog = (
+        '#: src/polyx/app.py:3\nmsgid "%(n)d image"\nmsgid_plural "%(n)d images"\n'
+        'msgstr[0] "%(n)d imagen"\nmsgstr[1] "%(n)d imágenes"\n\n'
+    )
+    _write_tree(
+        tmp_path,
+        {
+            "src/polyx/app.py": (
+                "from polyx.core.i18n import ngettext\n\n"
+                'label = ngettext("%(n)d image", "%(n)d images", 2)\n'
+            ),
+            TEMPLATE_REL: _pot(template),
+            CATALOG_REL: _catalog(catalog),
+        },
+    )
+
+    assert audit.audit_catalogs(tmp_path) == []
+
+
 # ---------------------------------------------------------------------------
 # Spanish literals that never reach a catalog.
 # ---------------------------------------------------------------------------

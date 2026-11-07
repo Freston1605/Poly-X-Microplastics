@@ -129,14 +129,22 @@ def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
 
 def _commands(python: Path, xdist_args: list[str], pytest_args: list[str]) -> list[list[str]]:
     """The gate's commands, in the order they should fail."""
-    return [
+    commands = [
         # Fast and deterministic: a stale catalog fails before the suite runs.
         [str(python), str(ROOT / "tools" / "check_i18n.py")],
+        [str(python), str(ROOT / "tools" / "check_palette_fallbacks.py")],
         [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
         [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
         [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
     ]
+    uv = shutil.which("uv")
+    if uv is not None:
+        # The interpreter may come from another checkout, so the gate cannot
+        # see a dependency edit; checking the lock at least proves it is not
+        # stale. CI runs the same check before syncing.
+        commands.insert(0, [uv, "lock", "--check"])
+    return commands
 
 
 def main(argv: list[str]) -> int:
@@ -150,7 +158,13 @@ def main(argv: list[str]) -> int:
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
-    for command in _commands(python, xdist_args, pytest_args):
+    commands = _commands(python, xdist_args, pytest_args)
+    if not any(Path(command[0]).name == "uv" for command in commands):
+        print(
+            "uv not found: skipping the lockfile check; CI still runs `uv lock --check`.",
+            file=sys.stderr,
+        )
+    for command in commands:
         code = _run(command, env)
         if code:
             return code
