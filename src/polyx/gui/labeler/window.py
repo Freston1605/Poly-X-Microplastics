@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import _, ngettext
+from polyx.core.i18n import N_, _, ngettext
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
@@ -35,9 +35,9 @@ from .canvas import BboxCanvas
 from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
-    "Nile Red microplastics": ["PET", "PP", "LDPE"],
-    "General (1 class)": ["objeto"],
-    "Custom": [],
+    N_("Nile Red microplastics"): ["PET", "PP", "LDPE"],
+    N_("General (1 class)"): ["objeto"],
+    N_("Custom"): [],
 }
 
 # Colors matching those of the canvas
@@ -53,7 +53,7 @@ _CLS_COLORS = [
 ]
 
 
-class LabelerWindow(QMainWindow):
+class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
         super().__init__()
         i18n_qt.activate()
@@ -83,13 +83,6 @@ class LabelerWindow(QMainWindow):
         self._autosave_timer.start(60_000)
 
     # ── Language ───────────────────────────────────────────────
-    def changeEvent(self, event):
-        if event.type() == QEvent.LanguageChange:
-            # Rebuild after the event returns: deleting the widget tree
-            # inside changeEvent is not safe.
-            QTimer.singleShot(0, self.retranslate)
-        super().changeEvent(event)
-
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
         if not i18n_qt.is_alive(self):

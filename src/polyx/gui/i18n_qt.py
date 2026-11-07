@@ -32,6 +32,7 @@ from PySide6.QtCore import (
     QEvent,
     QFileSystemWatcher,
     QLibraryInfo,
+    QTimer,
     QTranslator,
 )
 from PySide6.QtWidgets import QApplication
@@ -45,6 +46,20 @@ _installed_tag: str | None = None
 _watcher: QFileSystemWatcher | None = None
 _watched_file: Path | None = None
 _watched_signature: tuple[int, int] | None = None
+
+
+class RetranslateOnLanguageChange:
+    """Rebuild a window when Qt reports a language change.
+
+    Subclasses provide ``retranslate``. The rebuild is queued: deleting the
+    widget tree synchronously inside ``changeEvent`` is unsafe, and the
+    dialog's own rebuild follows the same rule.
+    """
+
+    def changeEvent(self, event) -> None:
+        if event.type() == QEvent.LanguageChange:
+            QTimer.singleShot(0, self.retranslate)
+        super().changeEvent(event)
 
 
 def translations_dir() -> Path:

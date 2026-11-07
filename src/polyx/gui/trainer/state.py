@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from polyx.core.i18n import N_
 from polyx.core.platform import device_available
 from polyx.core.quality.dataset_audit import LEVEL_ERROR, LEVEL_WARN, audit_dataset
 
@@ -20,7 +21,7 @@ _DEVICE_RE = re.compile(r"^(cpu|mps|cuda(:\d+)?|\d+(,\d+)*)$", re.IGNORECASE)
 # Training presets (`Light`/`Balanced`/`Strict`)
 # ────────────────────────────────────────────────────────────────────
 PRESETS = {
-    "Balanced (recommended)": {
+    N_("Balanced (recommended)"): {
         "epochs": 150,
         "imgsz": 1280,
         "batch": 8,
@@ -35,9 +36,9 @@ PRESETS = {
         "amp": True,
         "cos_lr": False,
         "cache": "disk",
-        "aug_level": "Medium",
+        "aug_level": N_("Medium"),
     },
-    "Fast (little data)": {
+    N_("Fast (little data)"): {
         "epochs": 100,
         "imgsz": 960,
         "batch": 16,
@@ -52,9 +53,9 @@ PRESETS = {
         "amp": True,
         "cos_lr": False,
         "cache": "ram",
-        "aug_level": "Strong",
+        "aug_level": N_("Strong"),
     },
-    "Long (paper-quality)": {
+    N_("Long (paper-quality)"): {
         "epochs": 300,
         "imgsz": 1280,
         "batch": 8,
@@ -69,9 +70,9 @@ PRESETS = {
         "amp": True,
         "cos_lr": True,
         "cache": "disk",
-        "aug_level": "Medium",
+        "aug_level": N_("Medium"),
     },
-    "Maximum imgsz (high resolution)": {
+    N_("Maximum imgsz (high resolution)"): {
         "epochs": 200,
         "imgsz": 1920,
         "batch": 4,
@@ -86,22 +87,22 @@ PRESETS = {
         "amp": True,
         "cos_lr": False,
         "cache": "disk",
-        "aug_level": "Medium",
+        "aug_level": N_("Medium"),
     },
-    "Custom": {},  # marker
+    N_("Custom"): {},  # marker
 }
 
 AUG_LEVELS = {
-    "None": dict(  # noqa: C408
+    N_("None"): dict(  # noqa: C408
         hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, fliplr=0.0, mosaic=0.0, mixup=0.0, copy_paste=0.0
     ),
-    "Light": dict(  # noqa: C408
+    N_("Light"): dict(  # noqa: C408
         hsv_h=0.01, hsv_s=0.5, hsv_v=0.3, fliplr=0.5, mosaic=0.5, mixup=0.0, copy_paste=0.0
     ),
-    "Medium": dict(  # noqa: C408
+    N_("Medium"): dict(  # noqa: C408
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, fliplr=0.5, mosaic=1.0, mixup=0.1, copy_paste=0.1
     ),
-    "Strong": dict(  # noqa: C408
+    N_("Strong"): dict(  # noqa: C408
         hsv_h=0.02, hsv_s=0.9, hsv_v=0.5, fliplr=0.5, mosaic=1.0, mixup=0.2, copy_paste=0.3
     ),
 }
@@ -114,7 +115,7 @@ class ModelConfig:
     size: str = "m"  # n / s / m / l / x
     task: str = "detect"  # `"detect"` or `"segment"`
     custom_weights: Path | None = None
-    preset_name: str = "Balanced (recommended)"
+    preset_name: str = N_("Balanced (recommended)")
     # Train v8 and v11 in sequence with the SAME configuration, to attribute
     # the metric difference to the architecture and not to the hyperparameters.
     compare_families: bool = False
@@ -187,7 +188,7 @@ class TrainParams:
 
 @dataclass
 class AugParams:
-    level: str = "Medium"
+    level: str = N_("Medium")
     hsv_h: float = 0.015
     hsv_s: float = 0.7
     hsv_v: float = 0.4
@@ -260,7 +261,7 @@ class TrainerState(QObject):
         return a
 
     def apply_preset(self, name: str):
-        if name not in PRESETS or name == "Custom":
+        if name not in PRESETS or name == N_("Custom"):
             return
         d = PRESETS[name]
         p = self.params
@@ -268,7 +269,7 @@ class TrainerState(QObject):
         for k, v in d.items():
             if k == "aug_level":
                 a.level = str(v)
-                aug_vals = AUG_LEVELS.get(v, AUG_LEVELS["Medium"])
+                aug_vals = AUG_LEVELS.get(v, AUG_LEVELS[N_("Medium")])
                 for ak, av in aug_vals.items():
                     setattr(a, ak, av)
             elif hasattr(p, k):

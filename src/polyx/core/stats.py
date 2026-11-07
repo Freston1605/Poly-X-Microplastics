@@ -176,12 +176,12 @@ def _text_kruskal(result: tuple[float, float, int] | None, n_groups: int) -> str
             "Not enough data for a statistical test (more than one observation per group is required)."
         )
     h, p, df = result
-    frase = (
+    phrase = (
         _("<strong>significant difference</strong>") if p < 0.05 else _("no significant difference")
     )
     return _(
-        "Kruskal-Wallis across the %(n)s groups: %(frase)s (H=%(h)s, df=%(gl)s, p=%(p)s). It does not say WHICH group differs from which, only that not all of them share the same size distribution."
-    ) % {"n": n_groups, "frase": frase, "h": f"{h:.2f}", "gl": df, "p": f"{p:.3g}"}
+        "Kruskal-Wallis across the %(n)s groups: %(phrase)s (H=%(h)s, df=%(df)s, p=%(p)s). It does not say WHICH group differs from which, only that not all of them share the same size distribution."
+    ) % {"n": n_groups, "phrase": phrase, "h": f"{h:.2f}", "df": df, "p": f"{p:.3g}"}
 
 
 def _spearman(x, y) -> float | None:
@@ -231,7 +231,7 @@ def _p_permutation(x, y, n_perm: int = 20000, seed: int = 0) -> float | None:
     return (extremes + 1) / (n_perm + 1)
 
 
-def _text_trend(x, y, que: str) -> str:
+def _text_trend(x, y, quantity: str) -> str:
     """Sentence with the correlation, its p and the n. Empty when it cannot be computed."""
     rho = _spearman(x, y)
     if rho is None:
@@ -241,20 +241,20 @@ def _text_trend(x, y, que: str) -> str:
     if p is not None and p < 0.05:
         # Capital initial letter: the sentence goes after the period that closes the station
         # name, and in lowercase it reads like a truncated line.
-        verdict = _("<strong>%(que)s %(sentido)s with depth</strong>") % {
-            "que": que[0].upper() + que[1:],
-            "sentido": direction,
+        verdict = _("<strong>%(quantity)s %(direction)s with depth</strong>") % {
+            "quantity": quantity[0].upper() + quantity[1:],
+            "direction": direction,
         }
     else:
-        verdict = _("No trend in %(que)s with depth is detected") % {"que": que}
+        verdict = _("No trend in %(quantity)s with depth is detected") % {"quantity": quantity}
     # The operator travels with the value: with `p = {p}` and a small p it printed
     # `p = < 0.001`, with two signs in a row.
     #
     # Decimal point and not comma: the rest of the report figures come from
     # Python formats and carry a point; mixing them reads like a typo.
     p_txt = "< 0.001" if p is not None and p < 0.001 else f"= {p:.3f}"
-    return _("%(veredicto)s (Spearman ρ = %(rho)s, p = %(p)s, n = %(n)s intervals).") % {
-        "veredicto": verdict,
+    return _("%(verdict)s (Spearman ρ = %(rho)s, p = %(p)s, n = %(n)s intervals).") % {
+        "verdict": verdict,
         "rho": f"{rho:+.2f}",
         "p": p_txt,
         "n": len(x),

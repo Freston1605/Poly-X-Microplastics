@@ -163,3 +163,96 @@ def test_command_line_error_follows_the_selected_language(tmp_path, selected_lan
 
     assert code == detect.EXIT_USAGE
     assert "toma un valor para todos los modelos" in capsys.readouterr().err
+
+
+# ── Dynamically resolved definition-site strings ────────────────────────
+
+
+def test_preset_tables_are_extracted_from_their_definition_site():
+    """A table key resolved later still has to reach the committed template."""
+    from tools.i18n import po
+
+    template = po.parse_po(
+        (Path(__file__).resolve().parents[1] / "src/polyx/locales/messages.pot").read_text(
+            encoding="utf-8"
+        )
+    )
+    message_ids = {entry.msgid for entry in template}
+
+    for message in (
+        "Balanced (recommended)",
+        "Fast (little data)",
+        "Long (paper-quality)",
+        "Maximum imgsz (high resolution)",
+        "None",
+        "Light",
+        "Medium",
+        "Strong",
+        "Fast",
+        "Balanced",
+        "Maximum detection",
+        "Nile Red microplastics",
+        "General (1 class)",
+    ):
+        assert message in message_ids, message
+
+
+def test_a_dynamically_resolved_preset_label_renders_in_spanish(selected_language):
+    from polyx.core.i18n import _
+    from polyx.gui.trainer.state import PRESETS
+
+    selected_language("es")
+    label = next(iter(PRESETS))
+
+    assert _(label) != label
+
+
+# ── Text assembled into a local variable before it reaches a widget ─────
+
+
+class _Label:
+    def __init__(self) -> None:
+        self.text = ""
+
+    def setText(self, text: str) -> None:
+        self.text = text
+
+
+def _viewer_with_particles():
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    viewer = SimpleNamespace(
+        state=SimpleNamespace(current_image=Path("plate.png"), um_per_px=0.0),
+        lbl_morph=_Label(),
+        _bgr_current=None,
+    )
+    dets = [
+        SimpleNamespace(y1=10.0, x1=10.0, morphotype="fibra"),
+        SimpleNamespace(y1=20.0, x1=20.0, morphotype="fragmento"),
+        SimpleNamespace(y1=30.0, x1=30.0, morphotype="fragmento"),
+    ]
+    return ViewerWindow, viewer, dets
+
+
+def test_viewer_morph_summary_is_translated(selected_language, monkeypatch):
+    """The summary is built in a local variable; the language must reach it."""
+    from polyx.core.measure import calibration, shape
+
+    monkeypatch.setattr(calibration, "read_image", lambda _path: object())
+    monkeypatch.setattr(shape, "measure_detections", lambda *args: None)
+    viewer_class, viewer, dets = _viewer_with_particles()
+
+    selected_language("es")
+    viewer_class._measure_shapes(viewer, dets)
+    assert "1 fibra" in viewer.lbl_morph.text
+    assert "2 partículas" in viewer.lbl_morph.text
+    assert "sin calibrar" in viewer.lbl_morph.text
+
+    selected_language("en")
+    viewer_class._measure_shapes(viewer, dets)
+    assert "1 fibre" in viewer.lbl_morph.text
+    assert "2 particles" in viewer.lbl_morph.text
+    assert "uncalibrated" in viewer.lbl_morph.text

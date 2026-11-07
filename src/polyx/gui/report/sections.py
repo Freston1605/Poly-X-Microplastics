@@ -43,6 +43,18 @@ from .samples import _MAX_FOLDER_PER_PHOTO, _ORDER_STATION, _clue_order, _sample
 _common = machine
 
 
+def _clue_label(station: str, stretch: str, plate: str | None = None) -> str:
+    """``station · stretch N · plate X`` as the grouped tables render it.
+
+    The three tables that group by station/stretch build this label; keeping
+    it in one place keeps the separators and escaping identical.
+    """
+    label = _esc(station) + " &middot; " + _("stretch %(stretch)s") % {"stretch": _esc(stretch)}
+    if plate is not None:
+        label += " &middot; " + _("plate %(plate)s") % {"plate": _esc(plate)}
+    return label
+
+
 def _section_team(active) -> str:
     """Table of components and of how each loaded model was trained."""
     rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in _common._team())
@@ -147,10 +159,7 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
             label_2 = (
                 f"{_esc(r.image_path.name)}<br>"
                 f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                f"{_esc(station)} &middot; "
-                + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
-                + " &middot; "
-                + _("plate %(plate)s") % {"plate": _esc(plate)}
+                + _clue_label(station, range_value, plate)
                 + "</span>"
             )
         rows_img.append(
@@ -190,14 +199,14 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
             station, range_value = clue
             items_2 = per_section[clue]
             man, det = _add(items_2)
-            palabra = _("images") if len(items_2) != 1 else _("image")
+            palabra = ngettext("%(count)s image", "%(count)s images", len(items_2)) % {
+                "count": len(items_2)
+            }
             rows_t.append(
                 (
-                    f"{_esc(station)} &middot; "
-                    + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
-                    + " "
+                    _clue_label(station, range_value) + " "
                     f"<span style='font-size:8.5pt;color:var(--ink3)'>"
-                    f"({len(items_2)} {palabra})</span>",
+                    f"({palabra})</span>",
                     man,
                     det,
                 )
@@ -227,8 +236,10 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
         if outside:
             note_grouping = (
                 "<p class='caption'>"
-                + _(
-                    "%(n)s image(s) do not follow the <code>interval.core</code> naming and are left out of the grouped tables; they are still in the per-image table."
+                + ngettext(
+                    "%(n)s image does not follow the <code>interval.core</code> naming and is left out of the grouped tables; it is still in the per-image table.",
+                    "%(n)s images do not follow the <code>interval.core</code> naming and are left out of the grouped tables; they are still in the per-image table.",
+                    outside,
                 )
                 % {"n": outside}
                 + "</p>"
@@ -237,9 +248,9 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
     tagline = _(", the first active model.") if len(run.models) > 1 else "."
     intro = (
         _(
-            "<p>Particles counted in each sample, broken down by polymer. The <em>manual</em> column is the human annotation (ground truth) and the <em>model</em> column is every detection made by <strong>%(alias)s</strong>%(coletilla)s</p>"
+            "<p>Particles counted in each sample, broken down by polymer. The <em>manual</em> column is the human annotation (ground truth) and the <em>model</em> column is every detection made by <strong>%(alias)s</strong>%(suffix)s</p>"
         )
-        % {"alias": _esc(run.models[0].alias), "coletilla": tagline}
+        % {"alias": _esc(run.models[0].alias), "suffix": tagline}
         + _(
             "<p><strong>Read it as a count, not as an evaluation.</strong> The model's column does not subtract false positives nor match box to box: it is how many particles of each polymer it reported. Agreeing on the total does not imply getting each particle right; that is what the error analysis is for.</p>"
         )
@@ -270,14 +281,14 @@ def _section_summary(
     heading and the section number.
     """
     # Outside the paragraph f-string: it carries a plural and a numeric format,
-    # and nesting them inside {tr(...)} would require quotes of the same type.
+    # and nesting them inside `_()` would require quotes of the same type.
     _summary_paragraph = _(
-        "<strong>%(imgs)s images</strong> were analysed with <strong>%(n)s YOLO %(modelos)s</strong> trained to detect PET, PP and LDPE microplastics under Nile Red fluorescence (254 nm). Detections totalled <strong>%(dets)s</strong> with a mean confidence of <strong>%(conf)s</strong>."
+        "<strong>%(images)s images</strong> were analysed with <strong>%(n)s YOLO %(models)s</strong> trained to detect PET, PP and LDPE microplastics under Nile Red fluorescence (254 nm). Detections totalled <strong>%(detections)s</strong> with a mean confidence of <strong>%(conf)s</strong>."
     ) % {
-        "imgs": total_imgs,
+        "images": total_imgs,
         "n": len(active),
-        "modelos": _("models") if len(active) != 1 else _("model"),
-        "dets": total_dets,
+        "models": ngettext("model", "models", len(active)),
+        "detections": total_dets,
         "conf": f"{avg_conf:.3f}",
     }
 
@@ -369,9 +380,9 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         note_missing = (
             "<p class='caption' style='text-align:left'>"
             + _(
-                "No row for %(clases)s: it appears neither in the manual annotation nor among this batch's predictions, so there is no metric to report. The model is trained for that class all the same."
+                "No row for %(classes)s: it appears neither in the manual annotation nor among this batch's predictions, so there is no metric to report. The model is trained for that class all the same."
             )
-            % {"clases": _esc(", ".join(missing))}
+            % {"classes": _esc(", ".join(missing))}
             + "</p>"
         )
 
@@ -379,7 +390,7 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         
         <h3>@@N@@.1 {_("Confusion matrix")}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{_("Figure. Confusion matrix (main model: %(modelo)s, IoU = %(iou)s).") % {"modelo": _esc(active[0].alias), "iou": run.params.iou_tp}}</div></div>
+            <div class='caption'>{_("Figure. Confusion matrix (main model: %(model)s, IoU = %(iou)s).") % {"model": _esc(active[0].alias), "iou": run.params.iou_tp}}</div></div>
         <h3>@@N@@.2 {_("Precision / recall / F1 per class")}</h3>
         <table class='data'><tr>{_("<th>Class</th><th>True Positives</th><th>False Positives</th><th>False Negatives</th>")}
         {_("<th>Precision</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
@@ -437,8 +448,10 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
         fn_g = sum(r.fn for r in all_results)
         p_loc, r_loc, f_loc = _pr_f1(tp_g, fp_g, fn_g)
         p_cls, r_cls, f_cls = _pr_f1(tp_g, fp_g + total_mc, fn_g + total_mc)
-        note_miscls = _(
-            "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers whether the detector finds the particle (P %(pl)s · R %(rl)s · <strong>F1 %(fl)s</strong>). <em>With class</em> also requires getting the polymer right, counting each misclassified box as a false positive of the predicted class and a false negative of the real one (P %(pc)s · R %(rc)s · <strong>F1 %(fc)s</strong>).</p><p>The difference corresponds to <strong>%(mc)s</strong> particle(s) located correctly but assigned to the wrong class. It is the figure that reconciles this table with the per-class precision in the error section.</p>"
+        note_miscls = ngettext(
+            "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers whether the detector finds the particle (P %(pl)s · R %(rl)s · <strong>F1 %(fl)s</strong>). <em>With class</em> also requires getting the polymer right, counting each misclassified box as a false positive of the predicted class and a false negative of the real one (P %(pc)s · R %(rc)s · <strong>F1 %(fc)s</strong>).</p><p>The difference corresponds to <strong>%(mc)s</strong> particle located correctly but assigned to the wrong class. It is the figure that reconciles this table with the per-class precision in the error section.</p>",
+            "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers whether the detector finds the particle (P %(pl)s · R %(rl)s · <strong>F1 %(fl)s</strong>). <em>With class</em> also requires getting the polymer right, counting each misclassified box as a false positive of the predicted class and a false negative of the real one (P %(pc)s · R %(rc)s · <strong>F1 %(fc)s</strong>).</p><p>The difference corresponds to <strong>%(mc)s</strong> particles located correctly but assigned to the wrong class. It is the figure that reconciles this table with the per-class precision in the error section.</p>",
+            total_mc,
         ) % {
             "pl": f"{p_loc:.3f}",
             "rl": f"{r_loc:.3f}",
@@ -475,11 +488,11 @@ def _section_verdict(results_2, run) -> str:
             summary.sort(key=lambda x: x[2][3], reverse=True)
             g_alias, g_act, g_best = summary[0]  # noqa: RUF059
             text_2 = _(
-                "<p><strong>Best performance: %(alias)s</strong>, with F1 %(f1)s at threshold %(umbral)s (P %(p)s · R %(r)s).</p>"
+                "<p><strong>Best performance: %(alias)s</strong>, with F1 %(f1)s at threshold %(threshold)s (P %(p)s · R %(r)s).</p>"
             ) % {
                 "alias": _esc(g_alias),
                 "f1": f"{g_best[3]:.3f}",
-                "umbral": f"{g_best[0]:.2f}",
+                "threshold": f"{g_best[0]:.2f}",
                 "p": f"{g_best[1]:.3f}",
                 "r": f"{g_best[2]:.3f}",
             }
@@ -487,8 +500,8 @@ def _section_verdict(results_2, run) -> str:
                 p_alias, _unused, p_best = summary[-1]
                 d = g_best[3] - p_best[3]
                 text_2 += _(
-                    "<p>The gap against %(otro)s is <strong>%(d)s</strong> of F1. With a single training run per architecture, a small difference does not tell the network design apart from initialisation luck: it would take repeating with different seeds to claim one is better.</p>"
-                ) % {"otro": _esc(p_alias), "d": f"{d:.3f}"}
+                    "<p>The gap against %(other)s is <strong>%(d)s</strong> of F1. With a single training run per architecture, a small difference does not tell the network design apart from initialisation luck: it would take repeating with different seeds to claim one is better.</p>"
+                ) % {"other": _esc(p_alias), "d": f"{d:.3f}"}
 
             return text_2
     return text_2
@@ -621,9 +634,9 @@ def _section_comparison(run, results_2) -> str:
                     f"<div class='fig'><img src='data:image/png;base64,{f_bars}' />"
                     "<div class='caption'>"
                     + _(
-                        "Figure. Precision, recall and F1 of each model at threshold %(umbral)s, under both criteria. The gap between panels is the confusion between polymers."
+                        "Figure. Precision, recall and F1 of each model at threshold %(threshold)s, under both criteria. The gap between panels is the confusion between polymers."
                     )
-                    % {"umbral": f"{run.params.conf:g}"}
+                    % {"threshold": f"{run.params.conf:g}"}
                     + "</div></div>"
                 )
 
@@ -668,9 +681,9 @@ def _section_comparison(run, results_2) -> str:
                     f"<div class='fig'><img src='data:image/png;base64,{f_sweep}' />"
                     "<div class='caption'>"
                     + _(
-                        "Figure. F1 (with class) against the confidence threshold; the star marks each model's maximum. The curve starts at %(umbral)s, the threshold it was run with: below that the detections were never computed."
+                        "Figure. F1 (with class) against the confidence threshold; the star marks each model's maximum. The curve starts at %(threshold)s, the threshold it was run with: below that the detections were never computed."
                     )
-                    % {"umbral": f"{run.params.conf:g}"}
+                    % {"threshold": f"{run.params.conf:g}"}
                     + "</div></div>"
                 )
 
@@ -741,7 +754,11 @@ def _section_gallery(
                     f"<figure><img src='{_uri_gallery(pred_bytes)}' />"
                     f"<figcaption>{_('Model prediction')} · {_esc(slot.alias)}"
                     f"<span class='sub'>"
-                    + _("%(n)s detection(s) by YOLO")
+                    + ngettext(
+                        "%(n)s detection by YOLO",
+                        "%(n)s detections by YOLO",
+                        len(r.predictions),
+                    )
                     % {"n": len(r.predictions)}
                     + "</span>"
                     "</figcaption></figure>"
@@ -778,10 +795,8 @@ def _section_gallery(
                 if sample:
                     station, range_value, plate = sample
                     where = (
-                        f" &nbsp;<span class='tag'>{_esc(station)} · "
-                        + _("stretch %(stretch)s") % {"stretch": _esc(range_value)}
-                        + " · "
-                        + _("plate %(plate)s") % {"plate": _esc(plate)}
+                        " &nbsp;<span class='tag'>"
+                        + _clue_label(station, range_value, plate)
                         + "</span>"
                     )
                 meta = (
@@ -812,9 +827,9 @@ def _section_gallery(
                 note = (
                     "<p class='caption'>"
                     + _(
-                        "The first %(n)s images are shown, each with every model; %(fuera)s were left out of the gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
+                        "The first %(n)s images are shown, each with every model; %(omitted)s were left out of the gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
                     )
-                    % {"n": n_shown, "fuera": omitted}
+                    % {"n": n_shown, "omitted": omitted}
                     + "</p>"
                 )
             gallery_html = (
@@ -928,10 +943,10 @@ def _section_methods(
         "<blockquote style='border-left:3px solid var(--accent); margin:8px 0; "
         "padding:6px 14px; color:#424a53; background:#f6f8fa; border-radius:0 6px 6px 0;'>"
         + _(
-            "Automated detection was carried out with the YOLO model «%(modelos)s» (Ultralytics %(ul)s) at an input resolution of %(imgsz)s px, confidence threshold %(conf)s and non-maximum suppression at IoU %(iou)s. "
+            "Automated detection was carried out with the YOLO model «%(models)s» (Ultralytics %(ul)s) at an input resolution of %(imgsz)s px, confidence threshold %(conf)s and non-maximum suppression at IoU %(iou)s. "
         )
         % {
-            "modelos": _model_names,
+            "models": _model_names,
             "ul": _ul_see,
             "imgsz": p.imgsz,
             "conf": f"{p.conf:g}",
@@ -950,8 +965,8 @@ def _section_methods(
             if _ums_methods
             else ""
         )
-        + _("%(imgs)s images were processed with a total of %(dets)s detections.")
-        % {"imgs": total_imgs, "dets": total_dets}
+        + _("%(images)s images were processed with a total of %(detections)s detections.")
+        % {"images": total_imgs, "detections": total_dets}
         + "</blockquote>"
     )
     return methods_html, team_html, methods_for
@@ -1013,7 +1028,7 @@ def _section_calibration(run) -> str:
             }
             rows_2 = "".join(
                 f"<tr><td>{label_2.get(o, o)}</td>"
-                f"<td>{k} {_('images') if k != 1 else _('image')}</td></tr>"
+                f"<td>{ngettext('%(count)s image', '%(count)s images', k) % {'count': k}}</td></tr>"
                 for o, k in sorted(res["origenes"].items())
             )
             warning = ""
@@ -1140,8 +1155,10 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
             warning_review += (
                 f"<p style='border-left:3px solid {T.DOC.INK3};padding:6px 12px;"
                 f"background:var(--bg_soft)'>"
-                + _(
-                    "<strong>%(n)s detection(s) fall on the dish's rim</strong> —beyond %(pct)s %% of the fitted radius— and are left out of this section: the rim is a bright band the detector mistakes for material, and being huge it would displace the real particles at the large end. They are still counted in the counting section."
+                + ngettext(
+                    "<strong>%(n)s detection falls on the dish's rim</strong> —beyond %(pct)s %% of the fitted radius— and is left out of this section: the rim is a bright band the detector mistakes for material, and being huge it would displace the real particles at the large end. It is still counted in the counting section.",
+                    "<strong>%(n)s detections fall on the dish's rim</strong> —beyond %(pct)s %% of the fitted radius— and are left out of this section: the rim is a bright band the detector mistakes for material, and being huge it would displace the real particles at the large end. They are still counted in the counting section.",
+                    n_en_el_aro,
                 )
                 % {"n": n_en_el_aro, "pct": f"{100 * FRACTION_AREA_USEFUL:.0f}"}
                 + "</p>"
@@ -1282,12 +1299,11 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
             which_2 = (
                 _("<strong>No image has a scale</strong>")
                 if all_value
-                else _("<strong>%(n)s of %(total)s images have no scale</strong> (%(cuales)s)")
+                else _("<strong>%(n)s of %(total)s images have no scale</strong> (%(which)s)")
                 % {
                     "n": len(no_scale),
                     "total": len(por_img),
-                    "cuales": ", ".join(sorted(no_scale)[:6])
-                    + (", …" if len(no_scale) > 6 else ""),
+                    "which": ", ".join(sorted(no_scale)[:6]) + (", …" if len(no_scale) > 6 else ""),
                 }
             )
             count_2 += (
@@ -1423,7 +1439,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                 )
                 if d.aspect:
                     detail.append(_("aspect %(aspect)s") % {"aspect": f"{d.aspect:.1f}"})
-                detail.append(_("measured by %(metodo)s") % {"metodo": method_label(m.method)})
+                detail.append(_("measured by %(method)s") % {"method": method_label(m.method)})
                 # If an appreciable part of the line falls outside, it is stated with a
                 # number. Below 5% it is contour discretization and
                 # saying it would only add noise to the card.
@@ -1465,13 +1481,15 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
             # towards the large ones and towards fibres.
             n_others_sample = made - n_fibers_sample
             if n_fibers_sample:
-                criterion = _(
-                    "The <strong>%(fibras)s fibre(s) and the %(otras)s largest particles</strong> are shown"
-                ) % {"fibras": n_fibers_sample, "otras": n_others_sample}
+                criterion = ngettext(
+                    "The <strong>%(fibres)s fibre and the %(others)s largest particles</strong> are shown",
+                    "The <strong>%(fibres)s fibres and the %(others)s largest particles</strong> are shown",
+                    n_fibers_sample,
+                ) % {"fibres": n_fibers_sample, "others": n_others_sample}
             else:
                 criterion = _(
-                    "The <strong>%(otras)s largest particles</strong> are shown. No fibre was detected in this batch, so the sample includes none"
-                ) % {"otras": n_others_sample}
+                    "The <strong>%(others)s largest particles</strong> are shown. No fibre was detected in this batch, so the sample includes none"
+                ) % {"others": n_others_sample}
             records_html = (
                 _(
                     "<p>Each particle with the number it carries in the annotated image, its crop and the measurement drawn <strong>on it</strong>: in yellow the Feret line, in magenta the geodesic path, whichever of the two decided its size. The green outline is the mask that was measured. On the left the particle without marks, so you can judge whether the outline follows it.</p>"
@@ -1616,7 +1634,7 @@ def _size_per_folder(with_size):
     measured particles, so the assembler drops the section like it does
     today.
     """
-    # ── Size by folder (`{tr('Talla por carpeta')}`), and by photo within each folder ──
+    # ── Size by folder (`{_('Size by folder')}`), and by photo within each folder ──
     # Generalizes the `by station/stretch` contrast from the paper
     # pipeline (which depended on a filename pattern specific
     # to one study) to the only thing ANY batch has: which
@@ -1656,7 +1674,7 @@ def _size_per_folder(with_size):
                 continue
             fig_photo = _fig_boxplot_groups(
                 folder_photos,
-                _("Size per photograph — %(carpeta)s") % {"carpeta": folder},
+                _("Size per photograph — %(folder)s") % {"folder": folder},
                 _("photograph"),
                 max_groups=20,
             )
@@ -1687,9 +1705,9 @@ def _size_per_folder(with_size):
             by_html_folder += (
                 f"<h3>{NUM}.2 {_('Size by photo, within each folder')}</h3>"
                 + _(
-                    "<p>Compares size across the individual photographs of one folder: for instance, whether size changes with depth or with the sampling moment within the same site.%(nota)s</p>"
+                    "<p>Compares size across the individual photographs of one folder: for instance, whether size changes with depth or with the sampling moment within the same site.%(note)s</p>"
                 )
-                % {"nota": note_tope}
+                % {"note": note_tope}
                 + "".join(parts_photo)
             )
     return by_html_folder

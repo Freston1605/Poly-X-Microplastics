@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from polyx.core.detection_run import RunStatus
-from polyx.core.i18n import _
+from polyx.core.i18n import _, pgettext
 
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
 from .samples import _batch_metrics, _lot_forms
@@ -36,6 +36,18 @@ from .sections import (
 )
 
 __all__ = ["_generate_report_impl", "generate_report"]
+
+
+def _section_title(message_id: str) -> str:
+    """Resolve a section title from the registry.
+
+    ``Summary`` is also the Trainer tab, where the translation differs; the
+    report section keeps its own wording. The context is applied here, at
+    render time, so the module-level registry still stores message ids only.
+    """
+    if message_id == "Summary":
+        return pgettext("report section", "Summary")
+    return _(message_id)
 
 
 def _generate_report_impl(
@@ -167,11 +179,11 @@ def _generate_report_impl(
 
     # An id in ``pedidas`` with an empty body is dropped here: the checkbox was ticked but
     # there was nothing to fill it with (errors without ground truth, count without samples).
-    # tr() on the title: SECCIONES stores the Spanish version, which is the
-    # dictionary key. The interface already translated it for its checkboxes; the
-    # document did not, and came out with the titles in Spanish even though the rest did not.
+    # ``SECTIONS`` holds message ids. The interface already resolved them for its
+    # checkboxes; the document resolves them here against the active catalog, so a
+    # saved report keeps the language it was generated in.
     alive = [
-        (sid, _(title), bodies.get(sid, ""))
+        (sid, _section_title(title), bodies.get(sid, ""))
         for sid, title in SECTIONS
         if sid in requested and (bodies.get(sid) or "").strip()
     ]

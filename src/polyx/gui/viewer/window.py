@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -54,7 +54,7 @@ def _there_are_gpu() -> bool:
         return False
 
 
-class ViewerWindow(QMainWindow):
+class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
 
         super().__init__()
@@ -77,16 +77,6 @@ class ViewerWindow(QMainWindow):
         self.setAcceptDrops(True)
 
     # ── Language ───────────────────────────────────────────────
-
-    def changeEvent(self, event):
-
-        if event.type() == QEvent.LanguageChange:
-            # Rebuild after the event returns: deleting the widget tree
-            # inside changeEvent is not safe.
-
-            QTimer.singleShot(0, self.retranslate)
-
-        super().changeEvent(event)
 
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
@@ -1031,13 +1021,21 @@ class ViewerWindow(QMainWindow):
 
         sin = sum(1 for d in dets if d.morphotype is None)
 
-        txt = f"{fib} fibra(s) · {len(dets) - fib - sin} fragmento(s)"
+        others = len(dets) - fib - sin
+
+        txt = (
+            ngettext("%(count)s fibre", "%(count)s fibres", fib) % {"count": fib}
+            + " · "
+            + ngettext("%(count)s particle", "%(count)s particles", others) % {"count": others}
+        )
 
         if sin:
-            txt += f" · {sin} sin medir"
+            txt += " · " + ngettext("%(count)s unmeasured", "%(count)s unmeasured", sin) % {
+                "count": sin
+            }
 
         if not um:
-            txt += "   (sin calibrar: tallas solo en píxeles)"
+            txt += "   " + _("(uncalibrated: sizes in pixels only)")
 
         self.lbl_morph.setText(txt)
 

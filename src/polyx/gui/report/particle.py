@@ -108,8 +108,8 @@ def _record_particle(det, image_path_2, um_por_px: float | None, title: str) -> 
                 f"{''.join(others)}</table>"
                 f"<p>{_('The larger of the first two is reported')}"
                 + (
-                    _(", here by <strong>%(metodo)s</strong>")
-                    % {"metodo": method_label(det.method_length)}
+                    _(", here by <strong>%(method)s</strong>")
+                    % {"method": method_label(det.method_length)}
                     if det.method_length
                     else ""
                 )

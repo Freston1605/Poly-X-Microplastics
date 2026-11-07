@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from polyx.core.i18n import _, lazy
+from polyx.core.i18n import N_, _, lazy
 from polyx.core.platform import IS_MAC, architecture_mac, label_devices
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -35,9 +35,9 @@ def _hint(text: str) -> QLabel:
 # `Maximum detection` targets tiny particles in high-resolution photos
 # (if the GPU cannot handle the imgsz, the auto-fallback lowers the size on its own).
 PRESETS = {
-    "Fast": {"conf": 0.25, "imgsz": 1280},
-    "Balanced": {"conf": 0.15, "imgsz": 2560},
-    "Maximum detection": {"conf": 0.10, "imgsz": 4096},
+    N_("Fast"): {"conf": 0.25, "imgsz": 1280},
+    N_("Balanced"): {"conf": 0.15, "imgsz": 2560},
+    N_("Maximum detection"): {"conf": 0.10, "imgsz": 4096},
 }
 
 
