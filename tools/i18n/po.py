@@ -31,7 +31,9 @@ _ESCAPES = {
 _FIELD = re.compile(r"^(msgctxt|msgid_plural|msgid|msgstr)(?:\[(\d+)\])?\s+(.*)$")
 
 #: Named ``%(name)s`` specifiers and the positional forms the audit rejects.
-_NAMED_PLACEHOLDER = re.compile(r"%\(([A-Za-z_][A-Za-z0-9_]*)\)[sdifr]")
+#: The conversion specifier may carry flags, a width and a precision
+#: (``%(done)6.1f``, ``%(pct)3d``), and those are part of the same token.
+_NAMED_PLACEHOLDER = re.compile(r"%\(([A-Za-z_][A-Za-z0-9_]*)\)(?:[#0 +\-]*\d*(?:\.\d+)?)[sdifr]")
 _POSITIONAL_PLACEHOLDER = re.compile(r"(?<!%)%([sdifr])")
 
 
