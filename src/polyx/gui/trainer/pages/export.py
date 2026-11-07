@@ -18,19 +18,19 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import N_, _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ._base import TrainerPage
 
 FORMATS = [
-    ("ONNX", "onnx", "Más portable. Para CPU o GPU vía onnxruntime."),
-    ("TorchScript", "torchscript", "Modelo nativo de PyTorch."),
-    ("TensorRT", "engine", "Solo NVIDIA. Inferencia más rápida en producción."),
-    ("OpenVINO", "openvino", "Intel CPU/iGPU."),
-    ("TFLite", "tflite", "Mobile/Edge devices."),
-    ("CoreML", "coreml", "Apple Silicon (M1/M2/M3) y iOS."),
+    ("ONNX", "onnx", N_("Most portable. For CPU or GPU via onnxruntime.")),
+    ("TorchScript", "torchscript", N_("Native PyTorch model.")),
+    ("TensorRT", "engine", N_("NVIDIA only. Fastest inference in production.")),
+    ("OpenVINO", "openvino", N_("Intel CPU/iGPU.")),
+    ("TFLite", "tflite", N_("Mobile/edge devices.")),
+    ("CoreML", "coreml", N_("Apple Silicon (M1/M2/M3) and iOS.")),
 ]
 
 
@@ -65,19 +65,18 @@ class _ExportWorker(QThread):
 
 class ExportPage(TrainerPage):
     PAGE_ICON = "exportar"
-    PAGE_TITLE = tr("Exportar modelo")
-    PAGE_DESCRIPTION = tr(
-        "Convierte el modelo entrenado a otros formatos para producción: ONNX (portable), "
-        "TensorRT (NVIDIA rápido), TFLite (móvil), CoreML (Apple), etc."
+    PAGE_TITLE = lazy("Export model")
+    PAGE_DESCRIPTION = lazy(
+        "Converts the trained model to other production formats: ONNX (portable), TensorRT (fast on NVIDIA), TFLite (mobile), CoreML (Apple), and so on."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
         self.worker: _ExportWorker | None = None
 
-        c1, l1 = self.card(tr("Modelo a exportar"), "paquete")
+        c1, l1 = self.card(_("Model to export"), "paquete")
         row = QHBoxLayout()
-        row.addWidget(QLabel(tr("Pesos .pt:")))
+        row.addWidget(QLabel(_("Weights .pt:")))
         self.ed_w = QLineEdit()
         # autofill with best.pt from the last run
         if state.run_dir:
@@ -92,22 +91,22 @@ class ExportPage(TrainerPage):
         l1.addLayout(row)
         self.body.addWidget(c1)
 
-        c2, l2 = self.card(tr("Formato y opciones"), "ajustes")
+        c2, l2 = self.card(_("Format and options"), "ajustes")
         g = QGridLayout()
         g.setHorizontalSpacing(20)
         g.setVerticalSpacing(10)
-        g.addWidget(QLabel(tr("Formato:")), 0, 0)
+        g.addWidget(QLabel(_("Format:")), 0, 0)
         self.combo = QComboBox()
         for name, code, desc in FORMATS:  # noqa: B007
             self.combo.addItem(f"{name}  ({code})", code)
         self.combo.currentIndexChanged.connect(self._update_desc)
         g.addWidget(self.combo, 0, 1)
 
-        g.addWidget(QLabel(tr("imgsz:")), 1, 0)
+        g.addWidget(QLabel(_("imgsz:")), 1, 0)
         self.ed_imgsz = QLineEdit(str(state.params.imgsz))
         self.ed_imgsz.setMaximumWidth(100)
         g.addWidget(self.ed_imgsz, 1, 1)
-        self.cb_half = QCheckBox(tr("FP16 (half precision)"))
+        self.cb_half = QCheckBox(_("FP16 (half precision)"))
         self.cb_half.setChecked(True)
         g.addWidget(self.cb_half, 2, 1)
         l2.addLayout(g)
@@ -117,7 +116,7 @@ class ExportPage(TrainerPage):
         self.lbl_desc.setWordWrap(True)
         l2.addWidget(self.lbl_desc)
 
-        btn = QPushButton(tr("Exportar"))
+        btn = QPushButton(_("Export"))
         btn.setIcon(iconos.icon("exportar", 15, T.ON_ACCENT))
         btn.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -128,7 +127,7 @@ class ExportPage(TrainerPage):
         l2.addWidget(btn, 0, Qt.AlignLeft)
         self.body.addWidget(c2)
 
-        c3, l3 = self.card("Log", "registro")
+        c3, l3 = self.card(_("Log"), "registro")
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setStyleSheet(
@@ -142,7 +141,7 @@ class ExportPage(TrainerPage):
         self._update_desc()
 
     def _browse(self):
-        f, _ = QFileDialog.getOpenFileName(self, "Seleccionar .pt", "", "Pesos (*.pt)")
+        f, _unused = QFileDialog.getOpenFileName(self, _("Select .pt"), "", _("Weights (*.pt)"))
         if f:
             self.ed_w.setText(f)
 
@@ -150,12 +149,13 @@ class ExportPage(TrainerPage):
         idx = self.combo.currentIndex()
         # The description is translated here and not in FORMATS because that list also fixes
         # the internal code of the format, which is never translated.
-        self.lbl_desc.setText(tr(FORMATS[idx][2]))
+        description = FORMATS[idx][2]
+        self.lbl_desc.setText(_(description))
 
     def _run(self):
         w = self.ed_w.text().strip()
         if not w or not Path(w).exists():
-            QMessageBox.warning(self, tr("Falta modelo"), tr("Selecciona un .pt válido."))
+            QMessageBox.warning(self, _("Model missing"), _("Select a valid .pt file."))
             return
         try:
             imgsz = int(self.ed_imgsz.text())
@@ -167,9 +167,13 @@ class ExportPage(TrainerPage):
         self.worker.log_line.connect(self.log.appendPlainText)
         self.worker.finished_ok.connect(
             lambda p: (
-                self.log.appendPlainText(f"[OK] Exportado: {p}"),
-                QMessageBox.information(self, tr("Exportación lista"), f"Archivo generado:\n{p}"),
+                self.log.appendPlainText(_("[OK] Exported: %(path)s") % {"path": p}),
+                QMessageBox.information(
+                    self,
+                    _("Export finished"),
+                    _("File generated:\n%(path)s") % {"path": p},
+                ),
             )
         )
-        self.worker.failed.connect(lambda m: QMessageBox.critical(self, tr("Falló"), m))
+        self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
         self.worker.start()

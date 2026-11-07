@@ -28,6 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from polyx.core.i18n import _
+
 # ── System identification ──
 # Computed once: `sys.platform` does not change mid-run, and
 # querying it on every call only makes the code noisier.
@@ -201,13 +203,11 @@ def label_devices() -> str:
     """
     if IS_MAC:
         return (
-            "Dispositivo (mps/cpu):"
-            if architecture_mac() == "Apple Silicon"
-            else "Dispositivo (cpu):"
+            _("Device (mps/cpu):") if architecture_mac() == "Apple Silicon" else _("Device (cpu):")
         )
     if is_rocm_available():
-        return "Dispositivo (0/rocm/cpu):"
-    return "Dispositivo (0/cpu):"
+        return _("Device (0/rocm/cpu):")
+    return _("Device (0/cpu):")
 
 
 def description_device(device: str) -> str:

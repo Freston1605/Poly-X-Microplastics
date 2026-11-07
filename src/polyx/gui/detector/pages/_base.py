@@ -28,7 +28,7 @@ class DetectorPage(QWidget):
         outer.setSpacing(20)
 
         # Step header
-        outer.addWidget(StepHeader(self.STEP_N, self.STEP_TITLE, self.STEP_DESCRIPTION))
+        outer.addWidget(StepHeader(self.STEP_N, str(self.STEP_TITLE), str(self.STEP_DESCRIPTION)))
 
         # Body container (cards)
         self.body = QVBoxLayout()

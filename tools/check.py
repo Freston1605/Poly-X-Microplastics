@@ -3,8 +3,8 @@
 The project ``.venv`` is installed editable against the main checkout, so
 running pytest or ty from a git worktree would otherwise import the wrong
 ``src/``. This script locates that interpreter, points ``PYTHONPATH`` at the
-worktree it is run from, and runs the same gate as CI: the suite, ruff and the
-ty engine check.
+worktree it is run from, and runs the same gate as CI: the translation audit,
+the suite, ruff and the ty engine check.
 
 A worktree's own ``.venv`` is used only when it can import pytest and PySide6.
 A partial environment created by ``uv run`` without the GUI extra is skipped in
@@ -127,6 +127,26 @@ def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
     return forwarded, worker_args
 
 
+def _commands(python: Path, xdist_args: list[str], pytest_args: list[str]) -> list[list[str]]:
+    """The gate's commands, in the order they should fail."""
+    commands = [
+        # Fast and deterministic: a stale catalog fails before the suite runs.
+        [str(python), str(ROOT / "tools" / "check_i18n.py")],
+        [str(python), str(ROOT / "tools" / "check_palette_fallbacks.py")],
+        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
+        [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
+        [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
+        [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
+    ]
+    uv = shutil.which("uv")
+    if uv is not None:
+        # The interpreter may come from another checkout, so the gate cannot
+        # see a dependency edit; checking the lock at least proves it is not
+        # stale. CI runs the same check before syncing.
+        commands.insert(0, [uv, "lock", "--check"])
+    return commands
+
+
 def main(argv: list[str]) -> int:
     pytest_args, xdist_args = _split_parallel(argv)
     python = _python()
@@ -138,12 +158,12 @@ def main(argv: list[str]) -> int:
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
-    commands = [
-        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
-        [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
-    ]
+    commands = _commands(python, xdist_args, pytest_args)
+    if not any(Path(command[0]).name == "uv" for command in commands):
+        print(
+            "uv not found: skipping the lockfile check; CI still runs `uv lock --check`.",
+            file=sys.stderr,
+        )
     for command in commands:
         code = _run(command, env)
         if code:

@@ -35,13 +35,13 @@ class TrainerPage(QWidget):
         icon_lbl.setPixmap(iconos.pixmap(self.PAGE_ICON, 30, T.ACCENT_TX, 1.9))
         icon_lbl.setStyleSheet("border: none;")
         head.addWidget(icon_lbl, 0, Qt.AlignVCenter)
-        title_lbl = QLabel(self.PAGE_TITLE)
+        title_lbl = QLabel(str(self.PAGE_TITLE))
         title_lbl.setStyleSheet(f"color: {T.INK}; font-size: 22pt; font-weight: 600; border: none;")
         head.addWidget(title_lbl, 1)
         outer.addLayout(head)
 
         if self.PAGE_DESCRIPTION:
-            desc = QLabel(self.PAGE_DESCRIPTION)
+            desc = QLabel(str(self.PAGE_DESCRIPTION))
             desc.setWordWrap(True)
             desc.setStyleSheet(
                 f"color: {T.INK3}; font-size: 10pt; border: none; margin-left: 52px;"

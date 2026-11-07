@@ -18,7 +18,7 @@ def _spread_geodesic(inside: np.ndarray, seed: tuple) -> np.ndarray:
     reference swap instead of a full copy. Allocation churn was the dominant
     avoidable cost at ~5.9 ms/particle measured on a 10-plate batch.
 
-    Bit-identical contract, pinned by tests/test_geodesia.py:
+    Bit-identical contract, pinned by tests/test_geodesy.py:
       * float32 weights np.float32(0.95509) / np.float32(1.36930), UNCHANGED;
       * the 8 shifted minimums accumulate into ``p`` in the SAME arange order
         as the pre-rewrite body (rectos then diagonals, bottom-up then top-down)

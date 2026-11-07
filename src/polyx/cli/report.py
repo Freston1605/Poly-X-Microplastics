@@ -17,23 +17,24 @@ import argparse
 import sys
 from pathlib import Path
 
+from polyx.core.i18n import _
 from polyx.core.report_simple import generate
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate an HTML report from a run folder")
+    parser = argparse.ArgumentParser(description=_("Generate an HTML report from a run folder"))
     parser.add_argument("--run", required=True)
     parser.add_argument("--output", default=None)
     parser.add_argument(
         "--images",
         default=None,
         metavar="DIR",
-        help="original photographs of a pre-canonical headless run",
+        help=_("original photographs of a pre-canonical headless run"),
     )
     parser.add_argument(
         "--full-report",
         action="store_true",
-        help="paper-quality report (requires PySide6, [gui] extra)",
+        help=_("paper-quality report (requires PySide6, [gui] extra)"),
     )
     return parser
 
@@ -65,18 +66,20 @@ def main(argv: list[str] | None = None) -> int:
         try:
             path = _write_full_report(run_dir, output, images)
         except Exception as exc:  # noqa: BLE001
-            print(f"Full report unavailable ({exc}); writing compact report.")
-            print(f"COMPACT REPORT: {generate(run_dir, output)}")
+            print(
+                _("Full report unavailable (%(error)s); writing compact report.") % {"error": exc}
+            )
+            print(_("COMPACT REPORT: %(path)s") % {"path": generate(run_dir, output)})
         else:
-            print(f"FULL REPORT: {path}")
+            print(_("FULL REPORT: %(path)s") % {"path": path})
         return 0
 
     try:
         path = generate(run_dir, output)
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return 1
-    print(f"WROTE: {path}")
+    print(_("WROTE: %(path)s") % {"path": path})
     return 0
 
 

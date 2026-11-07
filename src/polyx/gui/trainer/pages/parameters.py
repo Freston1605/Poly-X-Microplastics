@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -55,23 +55,22 @@ def _hint(text: str) -> QLabel:
 
 class ParametersPage(TrainerPage):
     PAGE_ICON = "ajustes"
-    PAGE_TITLE = tr("Parámetros de entrenamiento")
-    PAGE_DESCRIPTION = tr(
-        "Cada parámetro tiene un hint con su explicación. Los valores por defecto son "
-        "sensatos para microplásticos. Si tocas algo, el preset cambia a 'Personalizado'."
+    PAGE_TITLE = lazy("Training parameters")
+    PAGE_DESCRIPTION = lazy(
+        "Every parameter has a hint explaining it. The defaults are sensible for microplastics. If you change anything, the preset switches to 'Custom'."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Basic configuration (includes Maximize imgsz) ──
-        c1, l1 = self.card(tr("Configuración básica"), "piezas")
+        c1, l1 = self.card(_("Basic configuration"), "piezas")
         g = QGridLayout()
         g.setHorizontalSpacing(20)
         g.setVerticalSpacing(10)
 
         # Imgsz: combobox with high sizes as the main values
-        g.addWidget(QLabel(tr("Tamaño imagen (imgsz):")), 0, 0)
+        g.addWidget(QLabel(_("Image size (imgsz):")), 0, 0)
         self.combo_imgsz = QComboBox()
         self.combo_imgsz.setEditable(True)
         for v in IMGSZ_CHOICES:
@@ -79,43 +78,41 @@ class ParametersPage(TrainerPage):
         self.combo_imgsz.setCurrentText(str(state.params.imgsz))
         self.combo_imgsz.currentTextChanged.connect(self._on_change)
         g.addWidget(self.combo_imgsz, 0, 1)
-        g.addWidget(
-            _hint(tr("MÁS ALTO = mejor para partículas pequeñas. Recomendado: 1280+.")), 0, 2
-        )
+        g.addWidget(_hint(_("HIGHER = better for small particles. Recommended: 1280+.")), 0, 2)
 
         # Epochs
-        g.addWidget(QLabel(tr("Épocas:")), 1, 0)
+        g.addWidget(QLabel(_("Epochs:")), 1, 0)
         self.sb_epochs = QSpinBox()
         self.sb_epochs.setRange(1, 2000)
         self.sb_epochs.setValue(state.params.epochs)
         self.sb_epochs.valueChanged.connect(self._on_change)
         g.addWidget(self.sb_epochs, 1, 1)
         g.addWidget(
-            _hint(tr("150–300 típico. Early stopping detiene si no mejora (ver Patience).")), 1, 2
+            _hint(
+                _("150–300 is typical. Early stopping halts if it stops improving (see Patience).")
+            ),
+            1,
+            2,
         )
 
         # Batch
-        g.addWidget(QLabel(tr("Batch size:")), 2, 0)
+        g.addWidget(QLabel(_("Batch size:")), 2, 0)
         self.sb_batch = QSpinBox()
         self.sb_batch.setRange(1, 256)
         self.sb_batch.setValue(state.params.batch)
         self.sb_batch.valueChanged.connect(self._on_change)
         g.addWidget(self.sb_batch, 2, 1)
-        g.addWidget(_hint(tr("Bajar si hay OOM. Subir si la GPU tiene RAM de sobra.")), 2, 2)
+        g.addWidget(_hint(_("Lower it on OOM. Raise it if the GPU has RAM to spare.")), 2, 2)
 
         # Cache
-        g.addWidget(QLabel(tr("Cache:")), 3, 0)
+        g.addWidget(QLabel(_("Cache:")), 3, 0)
         self.combo_cache = QComboBox()
         self.combo_cache.addItems(["disk", "ram", "False"])
         self.combo_cache.setCurrentText(state.params.cache)
         self.combo_cache.currentTextChanged.connect(self._on_change)
         g.addWidget(self.combo_cache, 3, 1)
         g.addWidget(
-            _hint(
-                tr(
-                    "'ram' es lo más rápido si cabe; 'disk' es seguro; 'False' para datasets gigantes."
-                )
-            ),
+            _hint(_("'ram' is fastest when it fits; 'disk' is safe; 'False' for huge datasets.")),
             3,
             2,
         )
@@ -131,21 +128,21 @@ class ParametersPage(TrainerPage):
         gf.setContentsMargins(14, 10, 14, 12)
         gf.setSpacing(8)
 
-        title = QLabel(tr("Maximizar imgsz para mi GPU"))
+        title = QLabel(_("Maximize imgsz for my GPU"))
         title.setStyleSheet(f"color: {T.INK}; font-size: 11pt; font-weight: 600; border: none;")
         gf.addWidget(title)
-        self.lbl_gpu = QLabel(tr("Detectando GPU…"))
+        self.lbl_gpu = QLabel(_("Detecting GPU…"))
         self.lbl_gpu.setStyleSheet(f"color: {T.INK2}; font-size: 10pt; border: none;")
         gf.addWidget(self.lbl_gpu)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
-        self.btn_detect = QPushButton(tr("Detectar GPU / VRAM"))
+        self.btn_detect = QPushButton(_("Detect GPU / VRAM"))
         self.btn_detect.setIcon(iconos.icon("recargar", 15, T.ON_ACCENT))
         self.btn_detect.clicked.connect(self._detect_gpu)
         btn_row.addWidget(self.btn_detect)
 
-        self.btn_maximize = QPushButton(tr("Sugerir imgsz MÁXIMO"))
+        self.btn_maximize = QPushButton(_("Suggest MAXIMUM imgsz"))
         self.btn_maximize.setIcon(iconos.icon("rayo", 15, T.ON_ACCENT))
         self.btn_maximize.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -155,7 +152,7 @@ class ParametersPage(TrainerPage):
         self.btn_maximize.clicked.connect(self._maximize_imgsz)
         btn_row.addWidget(self.btn_maximize)
 
-        self.btn_suggest_batch = QPushButton(tr("Sugerir batch para mi GPU"))
+        self.btn_suggest_batch = QPushButton(_("Suggest batch for my GPU"))
         self.btn_suggest_batch.clicked.connect(self._suggest_batch)
         btn_row.addWidget(self.btn_suggest_batch)
         btn_row.addStretch(1)
@@ -163,7 +160,7 @@ class ParametersPage(TrainerPage):
 
         # A single button that applies the full priority order, instead of
         # letting the user guess whether to raise imgsz or batch first.
-        self.btn_optimize = QPushButton(tr("Optimizar todo (imgsz → batch → velocidad)"))
+        self.btn_optimize = QPushButton(_("Optimize everything (imgsz → batch → speed)"))
         self.btn_optimize.setIcon(iconos.icon("diana", 15, T.ON_ACCENT))
         self.btn_optimize.setStyleSheet(
             f"background: {T.OK}; color: white; border: none; "
@@ -171,16 +168,14 @@ class ParametersPage(TrainerPage):
         )
         self.btn_optimize.setCursor(Qt.PointingHandCursor)
         self.btn_optimize.setToolTip(
-            tr(
-                "Fija imgsz al máximo que aguanta la tarjeta (sin pasar de la resolución "
-                "nativa del dataset), después sube el batch con lo que sobre, y al final "
-                "ajusta AMP, workers y cache. En ese orden."
+            _(
+                "Sets imgsz to the maximum the card can take (without exceeding the dataset's native resolution), then raises the batch with what is left, and finally tunes AMP, workers and cache. In that order."
             )
         )
         self.btn_optimize.clicked.connect(self._optimize_all)
         gf.addWidget(self.btn_optimize)
 
-        self.lbl_est = QLabel(tr("Estimación de VRAM: —"))
+        self.lbl_est = QLabel(_("VRAM estimate: —"))
         self.lbl_est.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         gf.addWidget(self.lbl_est)
 
@@ -188,11 +183,11 @@ class ParametersPage(TrainerPage):
         self.body.addWidget(c1)
 
         # ── Optimizer and LR ──
-        c2, l2 = self.card(tr("Optimizador y learning rate"), "curva")
+        c2, l2 = self.card(_("Optimizer and learning rate"), "curva")
         grid2 = QGridLayout()
         grid2.setHorizontalSpacing(20)
         grid2.setVerticalSpacing(10)
-        grid2.addWidget(QLabel(tr("Learning rate (lr0):")), 0, 0)
+        grid2.addWidget(QLabel(_("Learning rate (lr0):")), 0, 0)
         self.sb_lr0 = QDoubleSpinBox()
         self.sb_lr0.setRange(0.0001, 0.1)
         self.sb_lr0.setDecimals(4)
@@ -200,7 +195,7 @@ class ParametersPage(TrainerPage):
         self.sb_lr0.setValue(state.params.lr0)
         self.sb_lr0.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_lr0, 0, 1)
-        grid2.addWidget(QLabel(tr("Weight decay:")), 0, 2)
+        grid2.addWidget(QLabel(_("Weight decay:")), 0, 2)
         self.sb_wd = QDoubleSpinBox()
         self.sb_wd.setRange(0.0, 0.01)
         self.sb_wd.setDecimals(5)
@@ -209,7 +204,7 @@ class ParametersPage(TrainerPage):
         self.sb_wd.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_wd, 0, 3)
 
-        grid2.addWidget(QLabel(tr("Momentum:")), 1, 0)
+        grid2.addWidget(QLabel(_("Momentum:")), 1, 0)
         self.sb_mom = QDoubleSpinBox()
         self.sb_mom.setRange(0.5, 0.999)
         self.sb_mom.setDecimals(3)
@@ -217,20 +212,20 @@ class ParametersPage(TrainerPage):
         self.sb_mom.setValue(state.params.momentum)
         self.sb_mom.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_mom, 1, 1)
-        grid2.addWidget(QLabel(tr("Warmup épocas:")), 1, 2)
+        grid2.addWidget(QLabel(_("Warmup epochs:")), 1, 2)
         self.sb_warm = QSpinBox()
         self.sb_warm.setRange(0, 50)
         self.sb_warm.setValue(state.params.warmup_epochs)
         self.sb_warm.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_warm, 1, 3)
 
-        grid2.addWidget(QLabel(tr("Close mosaic:")), 2, 0)
+        grid2.addWidget(QLabel(_("Close mosaic:")), 2, 0)
         self.sb_close = QSpinBox()
         self.sb_close.setRange(0, 100)
         self.sb_close.setValue(state.params.close_mosaic)
         self.sb_close.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_close, 2, 1)
-        grid2.addWidget(QLabel(tr("Label smoothing:")), 2, 2)
+        grid2.addWidget(QLabel(_("Label smoothing:")), 2, 2)
         self.sb_ls = QDoubleSpinBox()
         self.sb_ls.setRange(0.0, 0.3)
         self.sb_ls.setDecimals(2)
@@ -239,11 +234,11 @@ class ParametersPage(TrainerPage):
         self.sb_ls.valueChanged.connect(self._on_change)
         grid2.addWidget(self.sb_ls, 2, 3)
 
-        self.cb_cos = QCheckBox(tr("Cosine LR (curva coseno)"))
+        self.cb_cos = QCheckBox(_("Cosine LR (cosine schedule)"))
         self.cb_cos.setChecked(state.params.cos_lr)
         self.cb_cos.stateChanged.connect(self._on_change)
         grid2.addWidget(self.cb_cos, 3, 0, 1, 2)
-        self.cb_amp = QCheckBox(tr("AMP (Mixed Precision FP16)"))
+        self.cb_amp = QCheckBox(_("AMP (Mixed Precision FP16)"))
         self.cb_amp.setChecked(state.params.amp)
         self.cb_amp.stateChanged.connect(self._on_change)
         grid2.addWidget(self.cb_amp, 3, 2, 1, 2)
@@ -251,46 +246,46 @@ class ParametersPage(TrainerPage):
         self.body.addWidget(c2)
 
         # ── Early stopping ──
-        c3, l3 = self.card(tr("Early stopping y checkpoints"), "guardar")
+        c3, l3 = self.card(_("Early stopping and checkpoints"), "guardar")
         g3 = QGridLayout()
         g3.setHorizontalSpacing(20)
         g3.setVerticalSpacing(10)
-        g3.addWidget(QLabel(tr("Patience:")), 0, 0)
+        g3.addWidget(QLabel(_("Patience:")), 0, 0)
         self.sb_pat = QSpinBox()
         self.sb_pat.setRange(0, 500)
         self.sb_pat.setValue(state.params.patience)
         self.sb_pat.valueChanged.connect(self._on_change)
         g3.addWidget(self.sb_pat, 0, 1)
-        g3.addWidget(_hint(tr("Épocas sin mejora antes de detener. 50 = sensato.")), 0, 2)
-        g3.addWidget(QLabel(tr("Save period:")), 1, 0)
+        g3.addWidget(_hint(_("Epochs without improvement before stopping. 50 is sensible.")), 0, 2)
+        g3.addWidget(QLabel(_("Save period:")), 1, 0)
         self.sb_save = QSpinBox()
         self.sb_save.setRange(1, 100)
         self.sb_save.setValue(state.params.save_period)
         self.sb_save.valueChanged.connect(self._on_change)
         g3.addWidget(self.sb_save, 1, 1)
-        g3.addWidget(_hint(tr("Guardar checkpoint cada N épocas.")), 1, 2)
+        g3.addWidget(_hint(_("Save a checkpoint every N epochs.")), 1, 2)
         l3.addLayout(g3)
         self.body.addWidget(c3)
 
         # ── Hardware / IO ──
-        c4, l4 = self.card(tr("Hardware e I/O"), "equipo")
+        c4, l4 = self.card(_("Hardware and I/O"), "equipo")
         g4 = QGridLayout()
         g4.setHorizontalSpacing(20)
         g4.setVerticalSpacing(10)
-        g4.addWidget(QLabel(tr("Device:")), 0, 0)
+        g4.addWidget(QLabel(_("Device:")), 0, 0)
         self.ed_device = QLineEdit(state.params.device)
         self.ed_device.editingFinished.connect(self._on_change)
         g4.addWidget(self.ed_device, 0, 1)
-        g4.addWidget(_hint(tr("'0' = primera GPU. 'cpu' = CPU (muy lento).")), 0, 2)
-        g4.addWidget(QLabel(tr("Workers:")), 1, 0)
+        g4.addWidget(_hint(_("'0' = first GPU. 'cpu' = CPU (very slow).")), 0, 2)
+        g4.addWidget(QLabel(_("Workers:")), 1, 0)
         self.sb_workers = QSpinBox()
         self.sb_workers.setRange(0, 32)
         self.sb_workers.setValue(state.params.workers)
         self.sb_workers.valueChanged.connect(self._on_change)
         g4.addWidget(self.sb_workers, 1, 1)
-        g4.addWidget(QLabel(tr("Nombre del run:")), 2, 0)
+        g4.addWidget(QLabel(_("Run name:")), 2, 0)
         self.ed_run = QLineEdit(state.params.run_name)
-        self.ed_run.setPlaceholderText(tr("vacío = auto-fecha"))
+        self.ed_run.setPlaceholderText(_("empty = auto date"))
         self.ed_run.editingFinished.connect(self._on_change)
         g4.addWidget(self.ed_run, 2, 1, 1, 2)
         l4.addLayout(g4)
@@ -303,7 +298,7 @@ class ParametersPage(TrainerPage):
         # Deferred GPU detection (in the background) so startup is not blocked
         self._gpu_worker: _GpuDetectWorker | None = None
         self.lbl_gpu.setText(
-            tr("⌛  Detectando GPU en background (puede tardar 10–30 s la primera vez)…")
+            _("⌛  Detecting GPU in the background (may take 10–30 s the first time)…")
         )
         self.lbl_gpu.setStyleSheet(f"color: {T.INK3}; font-size: 10pt; border: none;")
         QTimer.singleShot(100, self._detect_gpu)
@@ -331,7 +326,7 @@ class ParametersPage(TrainerPage):
         self.ed_run.setText(p.run_name)
         self._update_estimate()
 
-    def _on_change(self, *_):
+    def _on_change(self, *_unused):
         p = self.state.params
         try:  # noqa: SIM105
             p.imgsz = int(self.combo_imgsz.currentText())
@@ -353,9 +348,9 @@ class ParametersPage(TrainerPage):
         p.device = self.ed_device.text().strip() or "0"
         p.workers = self.sb_workers.value()
         p.run_name = self.ed_run.text().strip()
-        # Manual change → `Personalizado` preset
-        if self.state.model.preset_name != "Personalizado":
-            self.state.model.preset_name = "Personalizado"
+        # Manual change → `Custom` preset
+        if self.state.model.preset_name != "Custom":
+            self.state.model.preset_name = "Custom"
             self.state.model_changed.emit()
         self._update_estimate()
 
@@ -382,9 +377,12 @@ class ParametersPage(TrainerPage):
         if info.available:
             extra = []
             if info.n_gpus > 1:
-                extra.append(f"usando la GPU {info.index} de {info.n_gpus} (la de más VRAM)")
+                extra.append(
+                    _("using GPU %(index)d of %(count)d (the one with most VRAM)")
+                    % {"index": info.index, "count": info.n_gpus}
+                )
             if info.capacity:
-                extra.append(f"capacidad {info.capacity}")
+                extra.append(_("capacity %(value)s") % {"value": info.capacity})
             if info.driver:
                 extra.append(f"driver {info.driver}")
             if info.is_rocm and (info.torch_hip or info.torch_rocm):
@@ -394,28 +392,49 @@ class ParametersPage(TrainerPage):
             elif info.torch_cuda:
                 extra.append(f"torch {info.torch_version} / CUDA {info.torch_cuda}")
             self.lbl_gpu.setText(
-                f"<b>GPU detectada:</b> {info.name} · "
-                f"VRAM total: <b>{humanize_gb(info.vram_total_gb)}</b> · "
-                f"libre: <b>{humanize_gb(info.vram_free_gb)}</b>"
-                + (f"<br><span style='font-size:9pt'>{' · '.join(extra)}</span>" if extra else "")
+                _(
+                    "<b>GPU detected:</b> %(name)s · VRAM total: <b>%(total)s</b> · "
+                    "free: <b>%(free)s</b>"
+                )
+                % {
+                    "name": info.name,
+                    "total": humanize_gb(info.vram_total_gb),
+                    "free": humanize_gb(info.vram_free_gb),
+                }
+                + (
+                    _("<br><span style='font-size:9pt'>%(details)s</span>")
+                    % {"details": " · ".join(extra)}
+                    if extra
+                    else ""
+                )
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.OK_TX}; font-size: 10pt; border: none;")
         elif info.gpu_sin_torch:
             # The distinction matters: the card works, what is wrong is the
             # installation. Saying `no GPU` here would send someone to buy hardware.
             self.lbl_gpu.setText(
-                f"⚠ <b>{info.name}</b> está presente "
-                f"({humanize_gb(info.vram_total_gb)}, driver {info.driver}) "
-                f"<b>pero PyTorch no la puede usar.</b><br>"
-                f"<span style='font-size:9pt'>{info.detail} "
-                f"Reinstala PyTorch con CUDA (SETUP.bat) — hasta entonces se "
-                f"entrena por CPU.</span>"
+                _(
+                    "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) "
+                    "<b>but PyTorch cannot use it.</b><br>"
+                    "<span style='font-size:9pt'>%(detail)s Reinstall PyTorch with CUDA "
+                    "(SETUP.bat) — until then it trains on CPU.</span>"
+                )
+                % {
+                    "name": info.name,
+                    "vram": humanize_gb(info.vram_total_gb),
+                    "driver": info.driver,
+                    "detail": info.detail,
+                }
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.ERR_TX}; font-size: 10pt; border: none;")
         else:
             self.lbl_gpu.setText(
-                "✗ No se detectó GPU NVIDIA. Entrenarás en CPU (será MUY lento)."
-                + (f"<br><span style='font-size:9pt'>{info.detail}</span>" if info.detail else "")
+                _("✗ No NVIDIA GPU detected. You will train on CPU (it will be VERY slow).")
+                + (
+                    _("<br><span style='font-size:9pt'>%(detail)s</span>") % {"detail": info.detail}
+                    if info.detail
+                    else ""
+                )
             )
             self.lbl_gpu.setStyleSheet(f"color: {T.WARN_TX}; font-size: 10pt; border: none;")
         self._update_estimate()
@@ -425,8 +444,8 @@ class ParametersPage(TrainerPage):
         if not info.available:
             QMessageBox.information(
                 self,
-                tr("Sin GPU"),
-                tr("No hay GPU NVIDIA disponible. En CPU recomendamos imgsz ≤ 640."),
+                _("No GPU"),
+                _("No NVIDIA GPU available. On CPU we recommend imgsz ≤ 640."),
             )
             self.combo_imgsz.setCurrentText("640")
             return
@@ -436,14 +455,24 @@ class ParametersPage(TrainerPage):
         sz = recommend_max_imgsz(size, batch, info.vram_free_gb, amp=amp)
         self.combo_imgsz.setCurrentText(str(sz))
         self.lbl_est.setText(
-            f"✓ Recomendación: imgsz = {sz} (modelo {size}, batch {batch}, "
-            f"VRAM libre {humanize_gb(info.vram_free_gb)})"
+            _(
+                "✓ Recommendation: imgsz = %(imgsz)d (model %(model)s, batch %(batch)d, "
+                "free VRAM %(vram)s)"
+            )
+            % {
+                "imgsz": sz,
+                "model": size,
+                "batch": batch,
+                "vram": humanize_gb(info.vram_free_gb),
+            }
         )
 
     def _suggest_batch(self):
         info = getattr(self, "_last_gpu_info", None) or detect_gpu()
         if not info.available:
-            QMessageBox.information(self, tr("Sin GPU"), tr("Sin GPU no aplica esta sugerencia."))
+            QMessageBox.information(
+                self, _("No GPU"), _("This suggestion does not apply without a GPU.")
+            )
             return
         try:
             imgsz = int(self.combo_imgsz.currentText())
@@ -454,7 +483,8 @@ class ParametersPage(TrainerPage):
         )
         self.sb_batch.setValue(b)
         self.lbl_est.setText(
-            f"✓ Recomendación: batch = {b} para imgsz {imgsz} ({humanize_gb(info.vram_free_gb)} libres)"
+            _("✓ Recommendation: batch = %(batch)d for imgsz %(imgsz)d (%(vram)s free)")
+            % {"batch": b, "imgsz": imgsz, "vram": humanize_gb(info.vram_free_gb)}
         )
 
     def _measure_dataset(self) -> tuple[int, float]:
@@ -492,18 +522,21 @@ class ParametersPage(TrainerPage):
 
         info = getattr(self, "_last_gpu_info", None) or detect_gpu()
         if not info.available:
-            msg = (
-                "No hay GPU utilizable, así que no hay nada que optimizar: en CPU "
-                "el techo práctico es imgsz 640."
+            msg = _(
+                "No usable GPU, so there is nothing to optimise: on CPU the practical "
+                "ceiling is imgsz 640."
             )
             if info.gpu_sin_torch:
-                msg = (
-                    f"La tarjeta está ahí ({info.name}, "
-                    f"{humanize_gb(info.vram_total_gb)}) pero PyTorch no la puede "
-                    f"usar.\n\n{info.detail}\n\nHay que reinstalar PyTorch con "
-                    f"CUDA; hasta entonces el entrenamiento va por CPU."
-                )
-            QMessageBox.information(self, tr("Sin GPU utilizable"), msg)
+                msg = _(
+                    "The card is there (%(name)s, %(vram)s) but PyTorch cannot use it."
+                    "\n\n%(detail)s\n\nPyTorch must be reinstalled with CUDA; until then "
+                    "training runs on CPU."
+                ) % {
+                    "name": info.name,
+                    "vram": humanize_gb(info.vram_total_gb),
+                    "detail": info.detail,
+                }
+            QMessageBox.information(self, _("No usable GPU"), msg)
             return
 
         side_native, dataset_gb = self._measure_dataset()
@@ -536,26 +569,34 @@ class ParametersPage(TrainerPage):
             self.combo_cache.setCurrentText(r.cache)
 
         limit = {
-            "vram": f"la VRAM ({humanize_gb(info.vram_free_gb)} libres)",
-            "resolucion_nativa": f"la resolución nativa del dataset ({side_native} px)",
-            "tope_batch": "el tope de batch útil",
+            "vram": _("the VRAM (%(free)s free)") % {"free": humanize_gb(info.vram_free_gb)},
+            "resolucion_nativa": _("the dataset's native resolution (%(side)d px)")
+            % {"side": side_native},
+            "tope_batch": _("the useful batch ceiling"),
         }.get(r.limited_by, r.limited_by)
-        text_2 = (
-            f"imgsz <b>{r.imgsz}</b> → batch <b>{r.batch}</b> → AMP on, "
-            f"{r.workers} workers, cache {r.cache or 'sin cambio'}. "
-            f"~{humanize_gb(r.vram_est_gb)} de {humanize_gb(r.vram_cap_gb)} "
-            f"utilizables. Limitado por {limit}."
-        )
+        text_2 = _(
+            "imgsz <b>%(imgsz)d</b> → batch <b>%(batch)d</b> → AMP on, %(workers)d "
+            "workers, cache %(cache)s. ~%(estimate)s of %(cap)s usable. Limited by "
+            "%(limit)s."
+        ) % {
+            "imgsz": r.imgsz,
+            "batch": r.batch,
+            "workers": r.workers,
+            "cache": r.cache or _("no change"),
+            "estimate": humanize_gb(r.vram_est_gb),
+            "cap": humanize_gb(r.vram_cap_gb),
+            "limit": limit,
+        }
         if not side_native:
-            text_2 += (
-                " <i>Sin dataset cargado no se pudo medir la resolución nativa: "
-                "carga el dataset y vuelve a optimizar.</i>"
+            text_2 += _(
+                " <i>With no dataset loaded the native resolution could not be measured: "
+                "load the dataset and optimise again.</i>"
             )
         self.lbl_est.setText(text_2)
         self.lbl_est.setTextFormat(Qt.RichText)
         if r.notes:
             QMessageBox.information(
-                self, tr("Configuración optimizada"), "\n\n".join(f"• {n}" for n in r.notes)
+                self, _("Optimized configuration"), "\n\n".join(f"• {n}" for n in r.notes)
             )
 
     def _update_estimate(self):
@@ -571,16 +612,16 @@ class ParametersPage(TrainerPage):
             # with the data inside it would change on every call and would never match
             # an entry in the dictionary.
             self.lbl_est.setText(
-                tr(
-                    "Estimación de VRAM: ~{gb} (modelo {size}, imgsz {imgsz}, "
-                    "batch {batch}, AMP={amp})"
-                ).format(
-                    gb=humanize_gb(est),
-                    size=self.state.model.size,
-                    imgsz=imgsz,
-                    batch=self.state.params.batch,
-                    amp="on" if self.cb_amp.isChecked() else "off",
+                _(
+                    "VRAM estimate: ~%(gb)s (model %(size)s, imgsz %(imgsz)s, batch %(batch)s, AMP=%(amp)s)"
                 )
+                % {
+                    "gb": humanize_gb(est),
+                    "size": self.state.model.size,
+                    "imgsz": imgsz,
+                    "batch": self.state.params.batch,
+                    "amp": "on" if self.cb_amp.isChecked() else "off",
+                }
             )
         except Exception:  # noqa: BLE001
-            self.lbl_est.setText(tr("Estimación de VRAM: —"))
+            self.lbl_est.setText(_("VRAM estimate: —"))

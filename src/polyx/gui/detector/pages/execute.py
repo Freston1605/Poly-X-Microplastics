@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -39,7 +39,7 @@ class _PreviewSlot(QFrame):
         self.lbl_title.setStyleSheet(
             f"color: {T.INK2}; font-weight: 600; font-size: 10pt; border: none;"
         )
-        self.preview = QLabel(tr("(esperando imagen)"))
+        self.preview = QLabel(_("(waiting for image)"))
         self.preview.setAlignment(Qt.AlignCenter)
         self.preview.setStyleSheet(
             f"background: {T.BG_SOFT}; color: {T.MUTED}; border-radius: 6px; "
@@ -71,10 +71,9 @@ class _PreviewSlot(QFrame):
 
 class RunPage(DetectorPage):
     STEP_N = 5
-    STEP_TITLE = tr("Ejecutar")
-    STEP_DESCRIPTION = tr(
-        "Inicia la inferencia. Verás progreso en vivo, previews de imágenes anotadas "
-        "y podrás cancelar en cualquier momento."
+    STEP_TITLE = lazy("Run")
+    STEP_DESCRIPTION = lazy(
+        "Starts inference. You will see live progress, previews of annotated images, and you can cancel at any time."
     )
 
     def refresh(self):
@@ -97,11 +96,10 @@ class RunPage(DetectorPage):
 
         if p.tiling == "nunca":
             self.lbl_tiling.setText(
-                tr(
-                    "Troceado desactivado: cada foto entra completa a imgsz {}. "
-                    "En fotos grandes las partículas pequeñas pueden desaparecer al "
-                    "reescalar."
-                ).format(p.imgsz)
+                _(
+                    "Tiling disabled: each photo enters whole at imgsz %(imgsz)s. In large photos, small particles may vanish when rescaled."
+                )
+                % {"imgsz": p.imgsz}
             )
             return
 
@@ -116,27 +114,25 @@ class RunPage(DetectorPage):
 
         if plan is None:
             self.lbl_tiling.setText(
-                tr(
-                    "Las fotos ({}×{} px) no llegan al umbral de {} px: se analizan de una pieza."
-                ).format(wh[0], wh[1], p.tiling_threshold_px)
+                _(
+                    "The photos (%(width)s×%(height)s px) do not reach the %(threshold)s px threshold: they are analysed in one piece."
+                )
+                % {"width": wh[0], "height": wh[1], "threshold": p.tiling_threshold_px}
             )
         else:
             self.lbl_tiling.setText(
-                tr(
-                    "⚠ Fotos grandes ({}×{} px): se analizarán en "
-                    "{} recortes de {} px con "
-                    "{}% de solape. Va a tardar unas "
-                    "{}× más.<br>"
-                    "El recorte es solo para que el modelo pueda detectar: los "
-                    "resultados y el informe se entregan sobre la foto completa."
-                ).format(
-                    wh[0],
-                    wh[1],
-                    plan["n_tiles"],
-                    plan["tile"],
-                    int(plan["overlap"] * 100),
+                ngettext(
+                    "⚠ Large photos (%(width)s×%(height)s px): they will be analysed as %(count)d tile of %(tile)s px with %(overlap)d%% overlap. It will take about %(count)d× longer.<br>Tiling is only so the model can detect: results and the report are delivered on the complete photo.",
+                    "⚠ Large photos (%(width)s×%(height)s px): they will be analysed as %(count)d tiles of %(tile)s px with %(overlap)d%% overlap. It will take about %(count)d× longer.<br>Tiling is only so the model can detect: results and the report are delivered on the complete photo.",
                     plan["n_tiles"],
                 )
+                % {
+                    "width": wh[0],
+                    "height": wh[1],
+                    "count": plan["n_tiles"],
+                    "tile": plan["tile"],
+                    "overlap": int(plan["overlap"] * 100),
+                }
             )
 
     def __init__(self, state, parent=None):
@@ -144,7 +140,7 @@ class RunPage(DetectorPage):
         self.runner: DetectorRunner | None = None
 
         # ── Control ──
-        c1, l1 = self.card(tr("Control"), "ejecutar")
+        c1, l1 = self.card(_("Control"), "ejecutar")
 
         # Tiling warning. It used to live only on the `Parametros` tab, where nobody
         # saw it; here it appears right before pressing Start, which is when it matters
@@ -156,7 +152,7 @@ class RunPage(DetectorPage):
 
         row = QHBoxLayout()
         row.setSpacing(8)
-        self.btn_start = QPushButton(tr("Iniciar detección"))
+        self.btn_start = QPushButton(_("Start detection"))
         self.btn_start.setIcon(iconos.icon("ejecutar", 15, T.ON_ACCENT))
         self.btn_start.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -166,7 +162,7 @@ class RunPage(DetectorPage):
         self.btn_start.clicked.connect(self._start)
         row.addWidget(self.btn_start)
 
-        self.btn_stop = QPushButton(tr("Detener"))
+        self.btn_stop = QPushButton(_("Stop"))
         self.btn_stop.setIcon(iconos.icon("detener", 15, T.ON_ACCENT))
         self.btn_stop.setStyleSheet(
             f"background: {T.ERR}; color: white; border: none; "
@@ -176,7 +172,7 @@ class RunPage(DetectorPage):
         self.btn_stop.clicked.connect(self._stop)
         row.addWidget(self.btn_stop)
 
-        self.btn_review = QPushButton(tr("Revisar en pantalla grande"))
+        self.btn_review = QPushButton(_("Review full screen"))
         self.btn_review.setIcon(iconos.icon("ver", 15, T.ON_ACCENT))
         self.btn_review.setStyleSheet(
             f"background: {T.OK}; color: white; border: none; "
@@ -187,7 +183,7 @@ class RunPage(DetectorPage):
         self.btn_review.clicked.connect(self._open_review)
         row.addWidget(self.btn_review)
 
-        self.btn_open = QPushButton(tr("Abrir carpeta de resultados"))
+        self.btn_open = QPushButton(_("Open results folder"))
         self.btn_open.setIcon(iconos.icon("dataset", 15, T.INK2))
         self.btn_open.clicked.connect(self._open_results)
         row.addWidget(self.btn_open)
@@ -196,29 +192,29 @@ class RunPage(DetectorPage):
         self.body.addWidget(c1)
 
         # ── Progress ──
-        c2, l2 = self.card(tr("Progreso"), "espera")
+        c2, l2 = self.card(_("Progress"), "espera")
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         self.progress.setFormat("%p%  —  %v / %m")
         l2.addWidget(self.progress)
-        self.lbl_progress_info = QLabel(tr("Sin ejecución todavía."))
+        self.lbl_progress_info = QLabel(_("No run yet."))
         self.lbl_progress_info.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         l2.addWidget(self.lbl_progress_info)
         self.body.addWidget(c2)
 
         # ── Preview ──
-        c3, l3 = self.card(tr("Preview en vivo"), "ver")
-        sub = QLabel(tr("Última imagen procesada por cada modelo:"))
+        c3, l3 = self.card(_("Live preview"), "ver")
+        sub = QLabel(_("Last image processed by each model:"))
         sub.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         l3.addWidget(sub)
 
         grid = QHBoxLayout()
         grid.setSpacing(12)
         self.previews = [
-            _PreviewSlot(tr("Modelo {n}").format(n=1)),
-            _PreviewSlot(tr("Modelo {n}").format(n=2)),
-            _PreviewSlot(tr("Modelo {n}").format(n=3)),
+            _PreviewSlot(_("Model %(n)s") % {"n": 1}),
+            _PreviewSlot(_("Model %(n)s") % {"n": 2}),
+            _PreviewSlot(_("Model %(n)s") % {"n": 3}),
         ]
         for p in self.previews:
             grid.addWidget(p, 1)
@@ -233,14 +229,12 @@ class RunPage(DetectorPage):
         if not active:
             QMessageBox.warning(
                 self,
-                tr("Faltan modelos"),
-                tr("Carga al menos un modelo .pt en la pestaña Modelos."),
+                _("Missing models"),
+                _("Load at least one .pt model in the Models tab."),
             )
             return
         if not self.state.images:
-            QMessageBox.warning(
-                self, tr("Sin imágenes"), tr("Selecciona imágenes en la pestaña Imágenes.")
-            )
+            QMessageBox.warning(self, _("No images"), _("Select images in the Images tab."))
             return
         # Update each preview title with the model alias
         for i, slot in enumerate(active):
@@ -265,22 +259,18 @@ class RunPage(DetectorPage):
         if not self.state.is_running():
             return
         self.state.request_abort()
-        self.lbl_progress_info.setText(tr("Deteniendo…"))
+        self.lbl_progress_info.setText(_("Stopping…"))
 
     def _open_results(self):
         d = self.state.run_dir
         if d and d.exists():
             open_in_system(str(d))
         else:
-            QMessageBox.information(
-                self, tr("Sin resultados"), tr("Aún no se ha ejecutado ninguna corrida.")
-            )
+            QMessageBox.information(self, _("No results"), _("No run has been executed yet."))
 
     def _open_review(self):
         if not any(self.state.results.values()):
-            QMessageBox.information(
-                self, tr("Sin resultados"), tr("Ejecuta una detección primero.")
-            )
+            QMessageBox.information(self, _("No results"), _("Run a detection first."))
             return
         from ..review_dialog import ReviewDialog
 
@@ -293,7 +283,10 @@ class RunPage(DetectorPage):
         self.progress.setMaximum(total)
         self.progress.setValue(done)
         self.state.run_progress.emit(done, total, name)
-        self.lbl_progress_info.setText(f"Procesando {name}  ({done}/{total})")
+        self.lbl_progress_info.setText(
+            _("Processing %(name)s  (%(done)d/%(total)d)")
+            % {"name": name, "done": done, "total": total}
+        )
 
     def _on_image_done(self, model_idx: int, res):
         active = self.state.active_models()
@@ -313,7 +306,7 @@ class RunPage(DetectorPage):
         self.btn_stop.setEnabled(False)
         self.btn_review.setEnabled(True)
         self.lbl_progress_info.setText(
-            tr("Listo. Pulsa «Revisar en pantalla grande» para inspeccionar y corregir.")
+            _("Ready. Press “Review full screen” to inspect and correct.")
         )
         self.state.run_finished.emit()
 
@@ -323,12 +316,12 @@ class RunPage(DetectorPage):
         self.btn_stop.setEnabled(False)
         if any(self.state.results.values()):
             self.btn_review.setEnabled(True)
-        self.lbl_progress_info.setText(tr("Detenido por el usuario."))
+        self.lbl_progress_info.setText(_("Stopped by the user."))
         self.state.run_aborted.emit()
 
     def _on_failed(self, msg: str):
         self.state.set_running(False)
         self.btn_start.setEnabled(True)
         self.btn_stop.setEnabled(False)
-        self.lbl_progress_info.setText(f"Error: {msg}")
-        QMessageBox.critical(self, tr("Falló la ejecución"), msg)
+        self.lbl_progress_info.setText(_("Error: %(message)s") % {"message": msg})
+        QMessageBox.critical(self, _("The run failed"), msg)

@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
 from polyx.core import observability as obs
+from polyx.core.i18n import _
 from polyx.core.paths import RUNS_TRAIN_DIR
 
 from .dominio import choose_better_in_real
@@ -132,7 +133,7 @@ class TrainerRunner(QThread):
             import torch
             from ultralytics import YOLO  # noqa: F401
         except Exception as e:  # noqa: BLE001
-            self.failed.emit(f"No se pudo importar Ultralytics / PyTorch: {e}")
+            self.failed.emit(_("Could not import Ultralytics / PyTorch: %(error)s") % {"error": e})
             return
 
         try:
@@ -143,7 +144,7 @@ class TrainerRunner(QThread):
             a = st.aug
 
             if not ds.yaml_path or not Path(ds.yaml_path).exists():
-                self.failed.emit("Falta data.yaml. Cárgalo en la pestaña Dataset.")
+                self.failed.emit(_("Missing data.yaml. Load it in the Dataset tab."))
                 return
             log = self._log()
             obs.set_run_id(mdl.base_weights_name)

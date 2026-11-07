@@ -52,7 +52,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.image_io import read_image
 from polyx.core.labels import (
     STUDY_CLASSES,
@@ -204,7 +204,7 @@ class AnnotCanvas(QGraphicsView):
             self._pixmap_item = None
             self.boxes = []
             self.selected_idx = -1
-            self.status_changed.emit("No se pudo abrir la imagen.")
+            self.status_changed.emit(_("Could not open the image."))
             return
         self._image_size = (pm.width(), pm.height())
         self.scene_.clear()
@@ -632,37 +632,34 @@ class AnnotCanvas(QGraphicsView):
 # ────────────────────────────────────────────────────────────────────
 class GTManualPage(DetectorPage):
     STEP_N = 3
-    STEP_TITLE = tr("GT manual")
-    STEP_DESCRIPTION = tr(
-        "Anotador completo de Ground Truth. Click izquierdo para dibujar, click sobre una "
-        "caja para seleccionar, arrastra los handles para redimensionar, Espacio o botón "
-        "medio para pan, rueda para zoom. Teclas 1..9: clase activa · Supr: borrar · "
-        "Ctrl+Z/Y: undo/redo · ←/→: imagen anterior/siguiente (autoguarda)."
+    STEP_TITLE = lazy("Manual GT")
+    STEP_DESCRIPTION = lazy(
+        "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · Ctrl+Z/Y: undo/redo · ←/→: previous/next image (autosaves)."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── Main card ──
-        c1, l1 = self.card(tr("Anotación"), "editar")
+        c1, l1 = self.card(_("Annotation"), "editar")
 
         # Top bar: name + active class + zoom
         top = QHBoxLayout()
         top.setSpacing(8)
-        self.lbl_image_name = QLabel(tr("(sin imagen seleccionada)"))
+        self.lbl_image_name = QLabel(_("(no image selected)"))
         self.lbl_image_name.setStyleSheet(
             f"color: {T.INK2}; font-weight: 600; font-size: 11pt; border: none;"
         )
         top.addWidget(self.lbl_image_name, 1)
 
-        top.addWidget(QLabel(tr("Clase:")))
+        top.addWidget(QLabel(_("Class:")))
         self.combo_class = QComboBox()
         self.combo_class.addItems(STUDY_CLASSES)
         self.combo_class.currentIndexChanged.connect(self._on_class_combo)
         self.combo_class.setMinimumWidth(120)
         top.addWidget(self.combo_class)
 
-        btn_fit = QPushButton(tr("Ajustar (F)"))
+        btn_fit = QPushButton(_("Fit (F)"))
         btn_fit.clicked.connect(lambda: self.canvas.zoom_fit())  # noqa: PLW0108
         top.addWidget(btn_fit)
         btn_100 = QPushButton("100 %")
@@ -677,7 +674,7 @@ class GTManualPage(DetectorPage):
         # Image list (compact)
         left_col = QVBoxLayout()
         left_col.setSpacing(6)
-        lbl_files = QLabel(tr("Imágenes"))
+        lbl_files = QLabel(_("Images"))
         lbl_files.setStyleSheet(f"color: {T.INK2}; font-weight: 600; border: none;")
         left_col.addWidget(lbl_files)
         self.list = QListWidget()
@@ -697,7 +694,7 @@ class GTManualPage(DetectorPage):
         right_col.addWidget(self.canvas, 1)
 
         # Canvas mini-status
-        self.lbl_canvas_status = QLabel(tr("Listo. Click y arrastra para dibujar."))
+        self.lbl_canvas_status = QLabel(_("Ready. Click and drag to draw."))
         self.lbl_canvas_status.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
         right_col.addWidget(self.lbl_canvas_status)
 
@@ -707,7 +704,7 @@ class GTManualPage(DetectorPage):
         # Bottom button row
         btns = QHBoxLayout()
         btns.setSpacing(8)
-        b_save = QPushButton(tr("Guardar GT (.txt YOLO)"))
+        b_save = QPushButton(_("Save ground truth (.txt YOLO)"))
         b_save.setIcon(iconos.icon("guardar", 15, T.ON_ACCENT))
         b_save.setStyleSheet(
             f"background: {T.ACCENT}; color: white; border: none; "
@@ -717,32 +714,32 @@ class GTManualPage(DetectorPage):
         b_save.clicked.connect(self._save_current)
         btns.addWidget(b_save)
 
-        b_prev = QPushButton(tr("←  Anterior"))
+        b_prev = QPushButton(_("←  Previous"))
         b_prev.clicked.connect(self._go_prev)
         btns.addWidget(b_prev)
-        b_next = QPushButton(tr("Siguiente  →"))
+        b_next = QPushButton(_("Next  →"))
         b_next.clicked.connect(self._go_next)
         btns.addWidget(b_next)
 
-        b_undo = QPushButton(tr("Deshacer"))
+        b_undo = QPushButton(_("Undo"))
         b_undo.setIcon(iconos.icon("deshacer", 15, T.INK2))
         b_undo.clicked.connect(lambda: self.canvas.undo())  # noqa: PLW0108
         btns.addWidget(b_undo)
-        b_redo = QPushButton(tr("Rehacer"))
+        b_redo = QPushButton(_("Redo"))
         b_redo.setIcon(iconos.icon("rehacer", 15, T.INK2))
         b_redo.clicked.connect(lambda: self.canvas.redo())  # noqa: PLW0108
         btns.addWidget(b_redo)
 
-        b_del = QPushButton(tr("Borrar selección"))
+        b_del = QPushButton(_("Delete selection"))
         b_del.setIcon(iconos.icon("papelera", 15, T.INK2))
         b_del.clicked.connect(lambda: self.canvas.delete_selected())  # noqa: PLW0108
         btns.addWidget(b_del)
-        b_clear = QPushButton(tr("Limpiar todo"))
+        b_clear = QPushButton(_("Clear all"))
         b_clear.clicked.connect(self._clear_with_confirm)
         btns.addWidget(b_clear)
         btns.addStretch(1)
 
-        self.lbl_count = QLabel(tr("0 cajas"))
+        self.lbl_count = QLabel(_("0 boxes"))
         self.lbl_count.setStyleSheet(f"color: {T.INK3}; border: none;")
         btns.addWidget(self.lbl_count)
         l1.addLayout(btns)
@@ -761,7 +758,9 @@ class GTManualPage(DetectorPage):
 
     # ── Image list ──────────────────────────────────────────
     def _refresh_list(self):
-        # Preserve the selection if it exists
+        # Preserve the selection if it exists. The language change rebuilds
+        # this page, so the image the user was annotating lives in the state.
+        wanted = self.state.gt_image
         prev = self.list.currentRow()
         self.list.blockSignals(True)
         self.list.clear()
@@ -774,6 +773,11 @@ class GTManualPage(DetectorPage):
                 it.setText(f"✓ {p.name}")
             self.list.addItem(it)
         self.list.blockSignals(False)
+        if wanted is not None:
+            for row in range(self.list.count()):
+                if Path(self.list.item(row).data(Qt.UserRole)) == wanted:
+                    prev = row
+                    break
         if 0 <= prev < self.list.count():
             self.list.setCurrentRow(prev)
         elif self.list.count() > 0:
@@ -808,6 +812,7 @@ class GTManualPage(DetectorPage):
             return
         path = Path(it.data(Qt.UserRole))
         self._current_path = path
+        self.state.gt_image = path
         self.lbl_image_name.setText(path.name)
         existing: list[Detection] = []
         gt_txt = find_label_file(path, self.state.gt_folder)
@@ -828,16 +833,22 @@ class GTManualPage(DetectorPage):
 
     def _on_boxes_changed(self):
         n = len(self.canvas.boxes)
-        self.lbl_count.setText(f"{n} caja{'s' if n != 1 else ''}")
+        self.lbl_count.setText(ngettext("%(count)d box", "%(count)d boxes", n) % {"count": n})
 
     def _clear_with_confirm(self):
         if not self.canvas.boxes:
             return
+        count = len(self.canvas.boxes)
+        message = ngettext(
+            "Delete the %(count)d box on this image?",
+            "Delete the %(count)d boxes on this image?",
+            count,
+        ) % {"count": count}
+        message += "\n" + _("(You can undo with Ctrl+Z)")
         r = QMessageBox.question(
             self,
-            tr("Limpiar todo"),
-            f"¿Borrar las {len(self.canvas.boxes)} cajas de esta imagen?\n"
-            "(se puede deshacer con Ctrl+Z)",
+            _("Clear all"),
+            message,
             QMessageBox.Yes | QMessageBox.No,
         )
         if r == QMessageBox.Yes:
@@ -847,7 +858,7 @@ class GTManualPage(DetectorPage):
     def _save_to_txt(self, img_path: Path, dets: list[Detection]):
         wh = size_image(img_path)
         if not wh or wh[0] <= 0 or wh[1] <= 0:
-            raise ValueError(f"No se pudo leer el tamano de {img_path.name}")
+            raise ValueError(_("Could not read the size of %(name)s") % {"name": img_path.name})
         W, H = wh
         out_path = write_lines(
             label_path_for(img_path, self.state.gt_folder),
@@ -868,15 +879,15 @@ class GTManualPage(DetectorPage):
         try:
             self._save_to_txt(path, dets)
             if not silent:
-                self.lbl_canvas_status.setText("Auto-guardado.")
+                self.lbl_canvas_status.setText(_("Autosaved."))
         except Exception as e:  # noqa: BLE001
             if not silent:
-                QMessageBox.warning(self, tr("Error guardando"), str(e))
+                QMessageBox.warning(self, _("Error while saving"), str(e))
 
     def _save_current(self):
         it = self.list.currentItem()
         if not it:
-            QMessageBox.information(self, tr("GT manual"), tr("Selecciona primero una imagen."))
+            QMessageBox.information(self, _("Manual GT"), _("Select an image first."))
             return
         path = Path(it.data(Qt.UserRole))
         dets = self.canvas.detections()
@@ -888,11 +899,9 @@ class GTManualPage(DetectorPage):
             # false positives of an empty plate if its .txt exists.
             r = QMessageBox.question(
                 self,
-                tr("GT manual"),
-                tr(
-                    "No hay ninguna caja dibujada. ¿Guardar esta imagen como "
-                    "revisada con cero partículas? Se sobrescribirá la anotación "
-                    "anterior, si la hubiera."
+                _("Manual GT"),
+                _(
+                    "No boxes have been drawn. Save this image as reviewed with zero particles? Any previous annotation will be overwritten."
                 ),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
@@ -904,9 +913,10 @@ class GTManualPage(DetectorPage):
         # Without this warning, relabeling and regenerating the report seems to do nothing.
         warning_2 = ""
         if any(self.state.results.values()):
-            warning_2 = tr(
-                "   ⚠ Vuelve a Ejecutar la detección: el informe usa el "
-                "GT leído en la última corrida."
+            warning_2 = _(
+                "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
             )
-        self.lbl_canvas_status.setText(f"✓ Guardado en: {out_path}{warning_2}")
+        self.lbl_canvas_status.setText(
+            _("✓ Saved to: %(path)s%(warning)s") % {"path": out_path, "warning": warning_2}
+        )
         self._refresh_list()

@@ -1,9 +1,29 @@
 """Reusable widgets (logo, numbered headers, KPI cards)."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 from . import theme as T
+
+
+def reset_central_widget(window: QMainWindow) -> QWidget:
+    """Return the window's central widget with its previous contents gone.
+
+    A language change rebuilds the interface, and the old tree has to be
+    deleted *before* the new one reads the shared state: hidden widgets are
+    still connected to its signals. ``setCentralWidget`` only schedules the
+    deletion, so the layout is moved to a throwaway widget instead and dies
+    with it.
+    """
+    central = window.centralWidget()
+    if central is None:
+        central = QWidget()
+        window.setCentralWidget(central)
+        return central
+    previous = central.layout()
+    if previous is not None:
+        QWidget().setLayout(previous)
+    return central
 
 
 class LogoBadge(QWidget):

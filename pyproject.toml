@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.25", "Babel>=2.17"]
 build-backend = "hatchling.build"
 
 [project]
@@ -51,6 +51,7 @@ Changelog = "https://github.com/CrissFerrada/Poly-X-Microplastics/blob/main/CHAN
 
 [dependency-groups]
 dev = [
+  "Babel==2.17.0",  # extraction, compilation, locale display names
   "pre-commit",
   "pytest",
   "pytest-xdist",
@@ -62,6 +63,7 @@ dev = [
 [project.optional-dependencies]
 gui = ["PySide6==6.7.2"]
 dev = [
+  "Babel==2.17.0",  # extraction, compilation, locale display names
   "pre-commit",
   "pytest",
   "pytest-xdist",
@@ -83,9 +85,28 @@ polyx-report = "polyx.cli.report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/polyx"]
+# ``*.mo`` is a build artifact and gitignored. Hatchling filters VCS-ignored
+# paths out of a target unless they are declared here, so the hook compiling
+# them next to each ``.po`` is not enough on its own.
+artifacts = ["src/polyx/locales/**/*.mo"]
+# The pseudo-locale is a developer aid; a mangled catalog must never ship.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+# Same reason as the wheel: the compiled catalogs are gitignored artifacts.
+artifacts = ["src/polyx/locales/**/*.mo"]
+# Never package a generated development pseudo-locale, even from a dirty tree.
+exclude = [
+  "src/polyx/locales/qps_ploc",
+  "src/polyx/locales/qps_ploc/**",
+]
 [tool.hatch.version]
 path = "src/polyx/__init__.py"
 
@@ -133,3 +154,11 @@ rules.unresolved-import = "ignore"
 rules.not-subscriptable = "ignore"
 rules.not-iterable = "ignore"
 rules.unsupported-operator = "ignore"
+
+[tool.babel]
+[[tool.babel.mappings]]
+method = "polyx"
+pattern = "src/polyx/**.py"
+
+[tool.babel.extractors]
+polyx = "tools.i18n.extract:extract"

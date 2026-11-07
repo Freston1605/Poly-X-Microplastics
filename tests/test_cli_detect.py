@@ -107,7 +107,10 @@ def image_folder(tmp_path: Path, count: int = 2) -> Path:
 # ── Models and aliases ──────────────────────────────────────────────────
 
 
-def test_single_model_defaults_to_yolo_and_the_weights_stem(tmp_path, monkeypatch, capsys):
+def test_single_model_defaults_to_yolo_and_the_weights_stem(
+    tmp_path, monkeypatch, capsys, selected_language
+):
+    selected_language("es")
     weights = weights_file(tmp_path, "best")
     detector = FakeDetector()
     calls = install_factory(monkeypatch, detector)
@@ -131,7 +134,7 @@ def test_single_model_defaults_to_yolo_and_the_weights_stem(tmp_path, monkeypatc
     assert run.status == "completed"
     # The engine never loads a model: the CLI did it before the run.
     assert (tmp_path / "run" / "best" / "0000_plate1_annot.png").is_file()
-    assert "COMPACT REPORT:" in capsys.readouterr().out
+    assert "INFORME COMPACTO:" in capsys.readouterr().out
 
 
 def test_repeatable_models_and_aliases_come_from_the_stems(tmp_path, monkeypatch):
@@ -246,7 +249,10 @@ def test_a_model_type_count_that_is_not_one_or_all_is_rejected(tmp_path, monkeyp
 # ── Output folder and failure handling ─────────────────────────────────
 
 
-def test_non_empty_output_is_refused_unless_forced(tmp_path, monkeypatch, capsys):
+def test_non_empty_output_is_refused_unless_forced(
+    tmp_path, monkeypatch, capsys, selected_language
+):
+    selected_language("es")
     weights = weights_file(tmp_path, "best")
     images = image_folder(tmp_path)
     out = tmp_path / "run"
@@ -260,7 +266,7 @@ def test_non_empty_output_is_refused_unless_forced(tmp_path, monkeypatch, capsys
     assert cli_detect.main(base) == cli_detect.EXIT_OUTPUT_EXISTS
     assert (out / "run.json").read_text(encoding="utf-8") == original
     error = capsys.readouterr().err
-    assert "not empty" in error
+    assert "Usa --force para sobrescribir los ficheros canónicos." in error
     assert "--force" in error
 
     assert cli_detect.main([*base, "--force"]) == 0
@@ -268,8 +274,9 @@ def test_non_empty_output_is_refused_unless_forced(tmp_path, monkeypatch, capsys
 
 
 def test_an_output_path_that_is_a_file_is_rejected_with_its_own_message(
-    tmp_path, monkeypatch, capsys
+    tmp_path, monkeypatch, capsys, selected_language
 ):
+    selected_language("es")
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [FakeDetector()])
     out = tmp_path / "already-a-file.txt"
@@ -288,12 +295,14 @@ def test_an_output_path_that_is_a_file_is_rejected_with_its_own_message(
 
     assert code == cli_detect.EXIT_OUTPUT_EXISTS
     error = capsys.readouterr().err
-    assert "not a directory" in error
-    assert "folder path" in error
+    # The hint is the one that distinguishes this refusal from a non-empty
+    # folder, and it follows the selected language.
+    assert "Elige una ruta de carpeta para --out." in error
     assert out.read_text(encoding="utf-8") == "keep me"
 
 
-def test_a_failed_run_reports_the_partial_folder(tmp_path, monkeypatch, capsys):
+def test_a_failed_run_reports_the_partial_folder(tmp_path, monkeypatch, capsys, selected_language):
+    selected_language("es")
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [ExplodingDetector()])
 
@@ -311,7 +320,7 @@ def test_a_failed_run_reports_the_partial_folder(tmp_path, monkeypatch, capsys):
     assert code == cli_detect.EXIT_ERROR
     error = capsys.readouterr().err
     assert "inference exploded" in error
-    assert "PARTIAL RUN" in error
+    assert "EJECUCIÓN PARCIAL" in error
     partial = load_run(tmp_path / "run")
     assert partial.status == "failed"
 
@@ -430,7 +439,17 @@ def test_without_a_manual_scale_the_run_is_uncalibrated(tmp_path, monkeypatch):
 # ── Reports ────────────────────────────────────────────────────────────
 
 
-def test_compact_report_reads_the_canonical_folder_first(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("language", "title", "images", "detections"),
+    [
+        ("es", "Informe de ejecución de Poly-X", "Imágenes: 2", "Detecciones: 4"),
+        ("en", "Poly-X run report", "Images: 2", "Detections: 4"),
+    ],
+)
+def test_compact_report_reads_the_canonical_folder_first(
+    tmp_path, monkeypatch, selected_language, language, title, images, detections
+):
+    selected_language(language)
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [FakeDetector(boxes=(TOP_BOX, BOTTOM_BOX))])
     out = tmp_path / "run"
@@ -449,14 +468,24 @@ def test_compact_report_reads_the_canonical_folder_first(tmp_path, monkeypatch):
 
     report = generate_compact(out)
     text = report.read_text(encoding="utf-8")
-    assert "Poly-X run report" in text
+    assert title in text
     assert "PET" in text
     assert "OLD-CLASS" not in text
-    assert "Images: 2" in text
-    assert "Detections: 4" in text
+    assert images in text
+    assert detections in text
 
 
-def test_full_report_renders_the_engine_result_directly(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize(
+    ("language", "header", "title"),
+    [
+        ("es", "INFORME COMPLETO:", "Informe de detección"),
+        ("en", "FULL REPORT:", "Detection report"),
+    ],
+)
+def test_full_report_renders_the_engine_result_directly(
+    tmp_path, monkeypatch, capsys, selected_language, language, header, title
+):
+    selected_language(language)
     weights = weights_file(tmp_path, "best")
     install_factory(monkeypatch, [FakeDetector(boxes=(TOP_BOX, BOTTOM_BOX))])
     out = tmp_path / "run"
@@ -475,10 +504,12 @@ def test_full_report_renders_the_engine_result_directly(tmp_path, monkeypatch, c
 
     captured = capsys.readouterr()
     assert code == 0
-    assert "FULL REPORT:" in captured.out
-    assert "Full report unavailable" not in captured.out
+    assert header in captured.out
+    # The full report succeeded, so no compact fallback was announced.
+    assert "COMPACT REPORT:" not in captured.out
+    assert "INFORME COMPACTO:" not in captured.out
     report = (out / "report.html").read_text(encoding="utf-8")
-    assert "Informe de detección" in report
+    assert title in report
     # The cover names the canonical model alias, which proves the report
     # consumed the engine's RunResult directly (no DetectorState rebuild).
     assert "best" in report

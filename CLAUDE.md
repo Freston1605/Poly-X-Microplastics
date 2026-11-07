@@ -38,9 +38,10 @@ The root deliberately mixes two surfaces with different audiences:
   flat into the bundle root. Moving them again means updating all of that and
   the cross-references between the scripts themselves.
 - **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
-  `tools/audit` (UI-translation audit and report fixtures), `tools/manual`
+  `tools/audit` (report fixture capture), `tools/i18n` (the gettext
+  extract/update/compile/audit/pseudo workflow), `tools/manual`
   (the manual chain), `tools/packaging` (PyInstaller), `tools/check.py` (the
-  local gate: suite, ruff and ty) and `tools/update_goldens.py`
+  local gate: translation audit, suite, ruff and ty) and `tools/update_goldens.py`
   (characterization goldens). The compiled manual lives in `docs/manual/` and
   IS versioned: a fresh ZIP download opens it offline. The PDFs stay ignored
   (regenerable from `tools/manual`).
@@ -59,8 +60,8 @@ src/                      # Source code (installable package)
     ├── core/             # Engine, no Qt
     │   ├── paths.py      # Paths (ROOT, ASSETS_DIR, USER_DATA_DIR, ...)
     │   ├── platform.py   # OS differences
-    │   ├── i18n.py       # tr(), language()
-    │   ├── translations_en.py
+    │   ├── preferences.py  # One JSON file: theme, animations, locale
+    │   ├── i18n.py       # gettext: _(), language(), set_language()
     │   ├── observability.py  # JSONL logs (logger_for, set_run_id)
     │   ├── yolo_wrap.py  # YOLO wrapper (Detection, YoloModel)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
@@ -78,14 +79,16 @@ src/                      # Source code (installable package)
     │   ├── data/         # Dataset loading/validation
     │   ├── quality/      # Metrics, assignment, abstractness
     │   └── provenance/   # Run traceability
+    ├── locales/          # gettext: messages.pot + <tag>/LC_MESSAGES/messages.po
     └── gui/              # Presentation: everything that touches Qt
         ├── __main__.py   # python -m polyx.gui
         ├── launcher.py   # Module 1: Main menu (hero + 4 cards)
         ├── theme.py      # Colour palette (Segoe UI, Nile Red RGB)
+        ├── i18n_qt.py    # Qt catalogs + QEvent.LanguageChange broadcast
         ├── iconos.py     # Vector icons (QPainterPath)
         ├── marca.py      # Per-window identity (logo + name)
         ├── widgets.py    # LogoBadge, HLine, custom widgets
-        ├── preferencias.py  # Preferences dialog (theme, language)
+        ├── preferencias.py  # Preferences dialog (theme, motion, language)
         ├── pdf_export.py # HTML → PDF
         ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
@@ -111,14 +114,15 @@ src/                      # Source code (installable package)
         ├── labeler/      # Module 4: Manual YOLO annotation
         └── viewer/       # Module 5: Inspection with μm/px calibration
 
-tests/                    # Pytest (43 test modules + fixtures)
+tests/                    # Pytest (66 test modules + fixtures)
 ├── english_scan.py       # Spanish-remnant scanner (no LibCST)
-├── test_*_ingles.py      # Language-convention gates
+├── test_*_english.py      # Language-convention gates
 ├── fixtures/             # Shared fixtures and report baselines
 └── formas/               # Geometric test cases
 
 tools/                    # Development tooling (not packaged)
-├── audit/                # Translation audit + report fixture capture
+├── audit/                # Report fixture capture
+├── i18n/                 # gettext workflow: extract, update, compile, audit, pseudo
 ├── manual/               # Manual chain (capture, generate, text ES/EN)
 ├── packaging/            # PyInstaller (polyx.spec, build.py)
 └── data/                 # Dataset split tooling (manifest + make_splits)
@@ -247,8 +251,10 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 | Modules already open | They do not change: they are separate processes with the colour baked in |
 | Modules opened afterwards | They already come up with the new theme |
 
-It is the same contract as the language. Preferences are stored in
-`~/.polyx_theme.json` (theme + animations) and `~/.polyx_language.json`.
+Preferences are stored in one file, `~/.polyx_preferences.json` (theme,
+animations and language), owned by `polyx.core.preferences`. Unlike the theme,
+a language change also reaches modules that are already open: the shared file
+is the cross-process channel. See "Languages and translation" below.
 
 ### Animation
 
@@ -334,6 +340,89 @@ per-class recall sinks there: PET 0.98 · PP 0.70 · LDPE 0.54.
 The documentation used to say PP was "orange", which does not match the observed
 emission. Corrected in August 2026 from the measurement and the author's
 observation.
+
+---
+
+## 🌐 Languages and translation (src/polyx/core/i18n.py)
+
+**English is the source language.** Every user-facing string is an English
+sentence wrapped in a gettext call, and the English sentence is the message id
+— there is no symbolic key. Spanish is the first translation, not the base
+language. Decided in [ADR-0003](docs/adr/0003-english-source-language.md).
+
+```python
+from polyx.core.i18n import _, ngettext, pgettext, N_, lazy
+
+button = QPushButton(_("Open folder…"))
+label = ngettext("%(count)s image", "%(count)s images", count)
+title = lazy("Detection report")   # module-level constant, resolved when shown
+```
+
+`N_()` marks a string for extraction without translating it now; `lazy()`
+defers resolution for module-level constants that would otherwise freeze the
+language at import.
+
+### Where translations live
+
+```text
+src/polyx/locales/
+  messages.pot                       # committed template
+  es/LC_MESSAGES/messages.po         # Spanish, the translator handoff
+```
+
+The `.po` is plain data; the `.mo` next to it is compiled (gitignored) and is
+what the runtime reads. The directory is the registration: a new language is a
+new `<tag>/LC_MESSAGES/messages.po`, with no Python change.
+`available_languages()` discovers them and Babel supplies each language's own
+display name. The extract → translate → compile → test loop is in
+[`CONTRIBUTING.md`](CONTRIBUTING.md); the vocabulary is in
+[`GLOSSARY.md`](GLOSSARY.md).
+
+### Resolution
+
+`POLYX_LOCALE`, then the saved preference in `~/.polyx_preferences.json`
+(owned by `polyx.core.preferences`), then the system locale, then English. A
+regional tag falls back through its language (`es_AR` → `es`) and then to
+English. A missing translation renders the English msgid. An explicitly chosen
+language with no catalog is a logged error: at startup it falls back to English,
+and `set_language` keeps the current language. A system locale with no catalog
+falls back silently, because the user never asked for a language.
+
+### Live switching
+
+`polyx.gui.i18n_qt` owns Qt's own catalogs and the `LanguageChange` broadcast.
+`i18n.set_language(tag)` swaps the active catalog and notifies the Qt bridge;
+every top-level window owns a `retranslate()` that rebuilds its text. The
+modules are separate processes, so the shared preferences file is also the
+cross-process channel: a `QFileSystemWatcher` in every process applies a locale
+another process saved.
+
+Three rules keep that channel from feeding itself:
+
+- `i18n.set_language(tag, persist=False)` applies a value that came from
+  another process, whose file already holds it. It does not write the file.
+- `preferences.peek()` reads one value without migrating or writing the file.
+  The watcher uses it, so its own read cannot become a write.
+- Asking for the language that is already active is a successful no-op: no
+  file write and no subscriber notification, so a watched value cannot start a
+  change/write/change loop.
+
+### What does not follow the language
+
+Reports, CSV headers, `run.json` keys, run metadata, numbers and ISO dates are
+a scientific and machine contract: they keep dot decimals, ISO dates and
+English headers in every locale
+([ADR-0004](docs/adr/0004-locale-invariant-artifacts.md)). Locale-aware
+formatting is allowed only in interactive widgets. Log messages and event names
+are also untranslated.
+
+### Pseudo-locale
+
+`python tools/i18n/cli.py pseudo` generates `qps_ploc`, a development-only
+catalog whose translations are bracketed and accented. Select it with
+`POLYX_LOCALE=qps_ploc` to see which strings were never extracted and where the
+layout truncates. It is gitignored, excluded from the wheel and the frozen
+application, and it is not part of the gate.
 
 ---
 
@@ -564,7 +653,7 @@ comes from an observed failure:
 | **Non-convex**, `solidity < 0.90` | `SOLIDITY_CONVEX` | on a convex shape geodesic and Feret coincide by definition; a rotated bar measured 200 px at 0° and 45° but **208 at 15°, 30° and 60°** |
 
 Against synthetic shapes of known size: **median error 0.6 %, worst case
-4.7 %**. Pinned in `tests/test_morfologia.py`.
+4.7 %**. Pinned in `tests/test_morphology.py`.
 
 **The equivalent rectangle `L = (P + √(P²−16A))/4` is NOT a size** and must not
 be used as one. It depends on the perimeter, so a jagged edge inflates it
@@ -689,10 +778,15 @@ results.csv + curves
 
 The review checklist lives in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
-- **English:** Comments, docstrings and identifiers in English. Spanish
-  survives only inside the `tr()` layer and the UI strings it wraps.
-- **Spanish:** Runtime UI strings and `tr()` dictionary keys remain Spanish;
-  they are the translation layer, not developer-facing text.
+- **English is the source language:** Comments, docstrings and identifiers in
+  English. User-facing strings are written in English and wrapped in a gettext
+  call from `polyx.core.i18n`; Spanish lives only in the catalogs under
+  `src/polyx/locales/`.
+- **Translation calls:** `_()`, `ngettext`, `pgettext`, `npgettext`; `N_()` or
+  `lazy()` when the string is resolved later. Placeholders are named
+  `%(name)s` — no f-strings or `{}` braces inside a translation call.
+- **Machine contracts:** CSV headers, `run.json` keys, run metadata, numbers,
+  ISO dates, log messages and event names do not follow the locale (ADR-0004).
 - **Qt Signals:** `models_changed`, `run_started`, `run_finished`, etc.
 - **Paths:** Always pathlib `Path`, never strings
 - **Colors:** Use `T.ACCENT`, `T.OK`, etc., never hardcodes. As
@@ -797,19 +891,19 @@ lr0: float = 0.01
 ## 📚 Automatically generated files
 
 - **docs/manual/Manual_PolyX.html / Manual_PolyX.en.html** (+ their PDFs) —
-  built from scratch by `tools/manual/generar_manual.py`: text, figures,
+  built from scratch by `tools/manual/generate_manual.py`: text, figures,
   index and stylesheet. Versioned: a fresh ZIP download opens it offline.
-- **tools/manual/manual_texto_es.py / manual_texto_en.py** — the manual's
-  text. Content only; the engine is in `tools/manual/generar_manual.py`.
+- **tools/manual/manual_text_es.py / manual_text_en.py** — the manual's
+  text. Content only; the engine is in `tools/manual/generate_manual.py`.
 - **docs/assets/manual_screenshots/** — screenshots the manual embeds, one
   folder per source: `es/` and `en/` (interface, one language each), plus
   `web/` and `win/`.
 
 To regenerate (screenshots first, manual after):
 ```bash
-.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-set POLYX_IDIOMA=en && .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
-.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+set POLYX_LOCALE=en && .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
 ```
 
 > The previous generator replaced figures *by position* inside an already written

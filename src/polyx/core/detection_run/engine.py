@@ -19,6 +19,7 @@ import numpy as np
 
 from polyx.core.annotate import triptych
 from polyx.core.detect.protocol import Instance
+from polyx.core.i18n import _
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.calibration import (
@@ -51,14 +52,20 @@ class RunDirNotEmpty(RunOutputError):
     """The caller chose an output folder that already has content."""
 
     def __init__(self, path: Path):
-        super().__init__(path, f"output directory is not empty: {Path(path)}")
+        super().__init__(
+            path,
+            _("output directory is not empty: %(path)s") % {"path": Path(path)},
+        )
 
 
 class RunOutputNotADirectory(RunOutputError):
     """The output path exists but it is a file, not a folder."""
 
     def __init__(self, path: Path):
-        super().__init__(path, f"output path is not a directory: {Path(path)}")
+        super().__init__(
+            path,
+            _("output path is not a directory: %(path)s") % {"path": Path(path)},
+        )
 
 
 class RunFailed(RuntimeError):
@@ -66,7 +73,7 @@ class RunFailed(RuntimeError):
 
     def __init__(self, result: RunResult, message: str | None = None):
         self.result = result
-        super().__init__(message or result.error or "detection run failed")
+        super().__init__(message or result.error or _("detection run failed"))
 
 
 def _prepare_output_dir(output_dir: Path, force: bool) -> None:

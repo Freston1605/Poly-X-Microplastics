@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.i18n import tr
+from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
 from polyx.gui import iconos
@@ -41,26 +41,25 @@ def histogram_backgrounds() -> tuple[str, str]:
 
 class ResultsPage(DetectorPage):
     STEP_N = 6
-    STEP_TITLE = tr("Resultados")
-    STEP_DESCRIPTION = tr(
-        "Resumen cuantitativo del análisis. Para gráficos completos y galería por imagen, "
-        "genera el reporte HTML en la pestaña Reporte."
+    STEP_TITLE = lazy("Results")
+    STEP_DESCRIPTION = lazy(
+        "Quantitative summary of the analysis. For full charts and a per-image gallery, generate the HTML report in the Report tab."
     )
 
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
         # ── KPIs ──
-        c1, l1 = self.card(tr("Métricas generales"), "resultados")
+        c1, l1 = self.card(_("General metrics"), "resultados")
         grid = QGridLayout()
         grid.setSpacing(12)
-        self.kpi_imgs = KPICard(tr("Imágenes"), T.ACCENT)
-        self.kpi_dets = KPICard(tr("Detecciones"), T.ACCENT)
-        self.kpi_conf = KPICard(tr("Confianza media"), T.VIO)
-        self.kpi_size = KPICard(tr("Tamaño medio (μm)"), T.WARN)
-        self.kpi_tp = KPICard(LABEL_TP, T.OK)
-        self.kpi_fp = KPICard(LABEL_FP, T.WARN)
-        self.kpi_fn = KPICard(LABEL_FN, T.ERR)
+        self.kpi_imgs = KPICard(_("Images"), T.ACCENT)
+        self.kpi_dets = KPICard(_("Detections"), T.ACCENT)
+        self.kpi_conf = KPICard(_("Mean confidence"), T.VIO)
+        self.kpi_size = KPICard(_("Mean size (μm)"), T.WARN)
+        self.kpi_tp = KPICard(str(LABEL_TP), T.OK)
+        self.kpi_fp = KPICard(str(LABEL_FP), T.WARN)
+        self.kpi_fn = KPICard(str(LABEL_FN), T.ERR)
         self.kpi_f1 = KPICard("F1", T.ACCENT_D)
         grid.addWidget(self.kpi_imgs, 0, 0)
         grid.addWidget(self.kpi_dets, 0, 1)
@@ -74,11 +73,11 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c1)
 
         # ── Detailed metrics ──
-        c2, l2 = self.card(tr("Métricas detalladas (suma de todos los modelos)"), "lista")
+        c2, l2 = self.card(_("Detailed metrics (summed over all models)"), "lista")
         row = QHBoxLayout()
         row.setSpacing(20)
-        self.lbl_prec = QLabel(tr("Precisión:  —"))
-        self.lbl_rec = QLabel(tr("Recall:  —"))
+        self.lbl_prec = QLabel(_("Precision:  —"))
+        self.lbl_rec = QLabel(_("Recall:  —"))
         self.lbl_mis = QLabel(f"{LABEL_MISCLS}:  —")
         for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):  # noqa: E741
             l.setStyleSheet(f"color: {T.INK2}; font-size: 10.5pt; font-weight: 500; border: none;")
@@ -96,11 +95,9 @@ class ResultsPage(DetectorPage):
 
         # ── Size histogram (calibration only) ──
         self.c_hist, l_hist = self.card(
-            tr("Distribución de tamaños (μm) — solo con calibración activa"), "visor"
+            _("Size distribution (μm) — only with calibration active"), "visor"
         )
-        self._hist_placeholder = QLabel(
-            tr("Configura μm/px en Parámetros para ver la distribución de tamaños.")
-        )
+        self._hist_placeholder = QLabel(_("Set µm/px in Parameters to see the size distribution."))
         self._hist_placeholder.setAlignment(Qt.AlignCenter)
         self._hist_placeholder.setStyleSheet(
             f"color: {T.INK3}; font-size: 10pt; border: none; padding: 24px;"
@@ -110,15 +107,10 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(self.c_hist)
 
         # ── Reload GT from disk ──
-        c_gt, l_gt = self.card(tr("Ground truth"), "recargar")
+        c_gt, l_gt = self.card(_("Ground truth"), "recargar")
         note_gt = QLabel(
-            tr(
-                "No pide ninguna carpeta: relee los .txt que están junto a cada "
-                "foto, los mismos que ves en GT manual. Hace falta porque la corrida "
-                "guarda el ground truth que leyó, así que corregir una anotación "
-                "después no cambia por sí solo estas métricas ni el informe. "
-                "Recalcula sin pasar el modelo otra vez y solo redibuja las imágenes "
-                "cuyo .txt cambió."
+            _(
+                "It asks for no folder: it re-reads the .txt files sitting next to each photo, the same ones you see under Manual GT. This is needed because a run freezes the ground truth it read, so fixing an annotation afterwards does not by itself change these metrics or the report. It recalculates without running the model again, and only redraws the images whose .txt actually changed."
             )
         )
         note_gt.setWordWrap(True)
@@ -130,7 +122,7 @@ class ResultsPage(DetectorPage):
             f"color: {T.OK_TX}; font-size: 10pt; font-weight: 600; border: none;"
         )
         row_gt = QHBoxLayout()
-        self.btn_reload = QPushButton(tr("Releer los .txt del disco y recalcular"))
+        self.btn_reload = QPushButton(_("Re-read the .txt files from disk and recalculate"))
         self.btn_reload.setIcon(iconos.icon("recargar", 15, T.INK2))
         self.btn_reload.clicked.connect(self._reload_gt)
         row_gt.addWidget(self.btn_reload)
@@ -140,9 +132,9 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c_gt)
 
         # ── Export CSV ──
-        c_csv, l_csv = self.card(tr("Exportar datos"), "guardar")
+        c_csv, l_csv = self.card(_("Export data"), "guardar")
         row_csv = QHBoxLayout()
-        btn_csv = QPushButton(tr("Exportar CSV de detecciones"))
+        btn_csv = QPushButton(_("Export detections CSV"))
         btn_csv.setIcon(iconos.icon("texto", 15, T.INK2))
         btn_csv.clicked.connect(self._export_csv)
         row_csv.addWidget(btn_csv)
@@ -151,10 +143,19 @@ class ResultsPage(DetectorPage):
         self.body.addWidget(c_csv)
 
         # ── Per-image table ──
-        c3, l3 = self.card(tr("Por imagen"), "imagenes")
+        c3, l3 = self.card(_("Per image"), "imagenes")
         self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels(
-            ["Modelo", "Imagen", "Pred", "GT", LABEL_TP, LABEL_FP, LABEL_FN, "Conf media"]
+            [
+                _("Model"),
+                _("Image"),
+                _("Pred"),
+                "GT",
+                str(LABEL_TP),
+                str(LABEL_FP),
+                str(LABEL_FN),
+                _("Mean conf."),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -165,17 +166,15 @@ class ResultsPage(DetectorPage):
         self.table.setMinimumHeight(280)
         l3.addWidget(self.table)
         row_rev = QHBoxLayout()
-        btn_rev = QPushButton(tr("Revisar partícula a partícula en el Visor"))
+        btn_rev = QPushButton(_("Review particle by particle in the Viewer"))
         btn_rev.setIcon(iconos.icon("buscar", 15, T.INK2))
         btn_rev.clicked.connect(self._review_in_viewer)
         row_rev.addWidget(btn_rev)
         row_rev.addStretch(1)
         l3.addLayout(row_rev)
         note_rev = QLabel(
-            tr(
-                "Abre la imagen seleccionada en el Visor con estas mismas detecciones, "
-                "numeradas. Allí cada partícula muestra sobre qué se midió y si es "
-                "fibra o fragmento — sin volver a pasar el modelo."
+            _(
+                "Opens the selected image in the Viewer with these very detections, numbered. There each particle shows what it was measured on and whether it is a fibre or a fragment — without running the model again."
             )
         )
         note_rev.setWordWrap(True)
@@ -200,20 +199,27 @@ class ResultsPage(DetectorPage):
         fp = sum(r.fp for r in all_results)
         fn = sum(r.fn for r in all_results)
 
-        self.kpi_imgs.set_value(total_imgs)
-        self.kpi_dets.set_value(total_dets)
+        # A retranslation rebuilds the page and refreshes it: an empty batch
+        # must keep the "no data yet" dash, not report a measured zero.
+        has_results = bool(all_results)
+        self.kpi_imgs.set_value(total_imgs if has_results else None)
+        self.kpi_dets.set_value(total_dets if has_results else None)
         self.kpi_conf.set_value(f"{(sum(confs) / len(confs)):.3f}" if confs else None)
         self.kpi_size.set_value(f"{(sum(sizes) / len(sizes)):.1f}" if sizes else None)
-        self.kpi_tp.set_value(tp)
-        self.kpi_fp.set_value(fp)
-        self.kpi_fn.set_value(fn)
+        self.kpi_tp.set_value(tp if has_results else None)
+        self.kpi_fp.set_value(fp if has_results else None)
+        self.kpi_fn.set_value(fn if has_results else None)
         prec = tp / (tp + fp) if (tp + fp) else 0.0
         rec = tp / (tp + fn) if (tp + fn) else 0.0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
         any_gt = any(r.has_gt for r in all_results)
         self.kpi_f1.set_value(f"{f1:.3f}" if any_gt else None)
-        self.lbl_prec.setText(f"Precisión:  {prec:.3f}" if any_gt else "Precisión:  —")
-        self.lbl_rec.setText(f"Recall:  {rec:.3f}" if any_gt else "Recall:  —")
+        self.lbl_prec.setText(
+            _("Precision:  %(value).3f") % {"value": prec} if any_gt else _("Precision:  —")
+        )
+        self.lbl_rec.setText(
+            _("Recall:  %(value).3f") % {"value": rec} if any_gt else _("Recall:  —")
+        )
         mc = sum(r.miscls for r in all_results)
         self.lbl_mis.setText(f"{LABEL_MISCLS}:  {mc}" if any_gt else f"{LABEL_MISCLS}:  —")
 
@@ -262,12 +268,12 @@ class ResultsPage(DetectorPage):
 
         if not self.state.results:
             self.lbl_recharge.setText(
-                "No hay resultados que recalcular: ejecuta primero la detección."
+                _("There are no results to recompute: run the detection first.")
             )
             return
 
-        dlg = QProgressDialog(tr("Releyendo ground truth…"), tr("Cancelar"), 0, 0, self)
-        dlg.setWindowTitle(tr("Recargar GT"))
+        dlg = QProgressDialog(_("Re-reading ground truth…"), _("Cancel"), 0, 0, self)
+        dlg.setWindowTitle(_("Reload GT"))
         dlg.setMinimumDuration(0)
         dlg.setValue(0)
 
@@ -288,7 +294,7 @@ class ResultsPage(DetectorPage):
         except Exception as e:  # noqa: BLE001
             dlg.close()
             self.btn_reload.setEnabled(True)
-            QMessageBox.warning(self, tr("Recargar GT"), f"{type(e).__name__}: {e}")
+            QMessageBox.warning(self, _("Reload GT"), f"{type(e).__name__}: {e}")
             return
         finally:
             dlg.close()
@@ -298,21 +304,22 @@ class ResultsPage(DetectorPage):
         if changed:
             items_2 = ", ".join(changed[:8])
             if len(changed) > 8:
-                items_2 += f" y {len(changed) - 8} más"
-            text = (
-                f"✓ {len(changed)} imagen(es) con ground truth distinto: "
-                f"{items_2}. Métricas e imágenes de control actualizadas; "
-                f"ya puedes generar el informe."
-            )
+                items_2 += _(" and %(count)s more") % {"count": len(changed) - 8}
+            text = ngettext(
+                "✓ %(count)s image with different ground truth: %(items)s. Metrics and control images updated; you can generate the report now.",
+                "✓ %(count)s images with different ground truth: %(items)s. Metrics and control images updated; you can generate the report now.",
+                len(changed),
+            ) % {"count": len(changed), "items": items_2}
         else:
-            text = (
-                f"✓ Revisadas {summary['revisadas']} imágenes: ningún .txt "
-                f"cambió respecto a la corrida. No había nada que recalcular."
-            )
+            text = _(
+                "✓ Reviewed %(count)s images: no .txt changed since the run. There was nothing to recompute."
+            ) % {"count": summary["revisadas"]}
         if summary["sin_gt"]:
-            text += f"  ({len(summary['sin_gt'])} sin .txt de control.)"
+            text += "  " + _("(%(count)s with no control .txt.)") % {
+                "count": len(summary["sin_gt"])
+            }
         if cancelled["si"]:
-            text += "  Se canceló a mitad: vuelve a pulsar para terminar."
+            text += "  " + _("Cancelled halfway: press again to finish.")
         self.lbl_recharge.setText(text)
         self.refresh()
 
@@ -339,14 +346,14 @@ class ResultsPage(DetectorPage):
         if len(by_model) < 2:
             return None
         candidates = sorted(
-            {round(p.conf, 2) for _, rs in by_model for r in rs for p in r.predictions}
+            {round(p.conf, 2) for _unused, rs in by_model for r in rs for p in r.predictions}
         )
         if not candidates:
             return None
         paso = max(1, len(candidates) // 25)
         best = None
         for t in candidates[::paso]:
-            f1s = [self._metrics_to(rs, t)[0] for _, rs in by_model]
+            f1s = [self._metrics_to(rs, t)[0] for _unused, rs in by_model]
             half = sum(f1s) / len(f1s)
             if best is None or half > best[1]:
                 best = (t, half)
@@ -376,15 +383,26 @@ class ResultsPage(DetectorPage):
             if tb > ta + 1e-9 and (f1b - f1a) > 0.002:
                 sign = "⚠" if (f1b - f1a) >= 0.01 else "·"
                 lines.append(
-                    f"{sign} {head}  Su mejor umbral es {tb:.2f}: F1 {f1b:.3f} "
-                    f"({f1b - f1a:+.3f}), P {pb:.3f} / R {rb:.3f}."
+                    _(
+                        "%(sign)s %(head)s  Its best threshold is %(threshold).2f: F1 %(f1b).3f (%(delta)+.3f), P %(pb).3f / R %(rb).3f."
+                    )
+                    % {
+                        "sign": sign,
+                        "head": head,
+                        "threshold": tb,
+                        "f1b": f1b,
+                        "delta": f1b - f1a,
+                        "pb": pb,
+                        "rb": rb,
+                    }
                 )
                 optimal.append(tb)
             else:
                 lines.append(
-                    f"✓ {head}  Es el mejor del rango explorado; por debajo de "
-                    f"{ta:g} no hay detecciones calculadas y no se recuperan "
-                    f"filtrando."
+                    _(
+                        "✓ %(head)s  It is the best in the explored range; below %(threshold)g there are no computed detections and they cannot be recovered by filtering."
+                    )
+                    % {"head": head, "threshold": ta}
                 )
                 optimal.append(ta)
         if not lines:
@@ -394,20 +412,24 @@ class ResultsPage(DetectorPage):
         distinct = len({round(t, 2) for t in optimal}) > 1
         if common and distinct:
             lines.append(
-                f"➜ Cada modelo prefiere un umbral distinto. Usa {common[0]:.2f} "
-                f"para los dos (F1 medio {common[1]:.3f}): es el mismo punto de "
-                f"operación y la comparación queda limpia. Cámbialo en "
-                f"Parámetros y vuelve a Ejecutar."
+                _(
+                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
+                )
+                % {"threshold": common[0], "mean": common[1]}
             )
         elif max(optimal) > used_2 + 1e-9:
             lines.append(
-                f"➜ Cambia la confianza a {max(optimal):.2f} en Parámetros y "
-                f"vuelve a Ejecutar antes de generar el informe."
+                _(
+                    "➜ Change the confidence to %(threshold).2f in Parameters and run again before generating the report."
+                )
+                % {"threshold": max(optimal)}
             )
         else:
             lines.append(
-                f"➜ La confianza {used_2:g} ya es el punto de operación bueno. "
-                f"Puedes generar el informe."
+                _(
+                    "➜ Confidence %(threshold)g is already a good operating point. You can generate the report."
+                )
+                % {"threshold": used_2}
             )
         return "\n".join(lines)
 
@@ -509,9 +531,9 @@ class ResultsPage(DetectorPage):
                     linewidth=0.5,
                 )
 
-            ax.set_xlabel("Diámetro equivalente (μm)", fontsize=9)
-            ax.set_ylabel("Frecuencia", fontsize=9)
-            ax.set_title("Distribución de tamaños por clase", fontsize=10, fontweight="bold")
+            ax.set_xlabel(_("Equivalent diameter (μm)"), fontsize=9)
+            ax.set_ylabel(_("Frequency"), fontsize=9)
+            ax.set_title(_("Size distribution by class"), fontsize=10, fontweight="bold")
             ax.legend(fontsize=8)
             ax.grid(axis="y", alpha=0.3)
             ax.tick_params(labelsize=8)
@@ -519,13 +541,15 @@ class ResultsPage(DetectorPage):
             self._hist_placeholder.setVisible(False)
             self._hist_canvas.setVisible(True)
         except Exception as e:  # noqa: BLE001
-            self._hist_placeholder.setText(f"matplotlib no disponible: {e}")
+            self._hist_placeholder.setText(
+                _("matplotlib is not available: %(error)s") % {"error": e}
+            )
             self._hist_placeholder.setVisible(True)
 
     def _export_csv(self):
         """Exports all the detections to a CSV file."""
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Exportar CSV", "detecciones.csv", "CSV (*.csv)"
+        path, _unused = QFileDialog.getSaveFileName(
+            self, _("Export CSV"), "detecciones.csv", _("CSV (*.csv)")
         )
         if not path:
             return
@@ -601,7 +625,7 @@ class ResultsPage(DetectorPage):
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
 
-            QMessageBox.warning(self, tr("Error"), f"No se pudo guardar: {e}")
+            QMessageBox.warning(self, _("Error"), _("Could not save: %(error)s") % {"error": e})
 
     def _open_row(self, row: int, col: int):
         if row < 0 or self.state.run_dir is None:
@@ -625,7 +649,7 @@ class ResultsPage(DetectorPage):
         rows_2 = self.table.selectionModel().selectedRows()
         if not rows_2:
             QMessageBox.information(
-                self, tr("Revisar"), tr("Selecciona primero una fila de la tabla de abajo.")
+                self, _("Review"), _("Select a row from the table below first.")
             )
             return
         row = rows_2[0].row()
@@ -642,15 +666,15 @@ class ResultsPage(DetectorPage):
                     dets = list(r.predictions)
                     break
         if not dets:
-            QMessageBox.information(
-                self, tr("Revisar"), tr("Esa imagen no tiene detecciones que revisar.")
-            )
+            QMessageBox.information(self, _("Review"), _("That image has no detections to review."))
             return
 
         try:
             from polyx.gui.viewer.window import ViewerWindow
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Revisar"), f"No se pudo abrir el Visor: {e}")
+            QMessageBox.warning(
+                self, _("Review"), _("Could not open the Viewer: %(error)s") % {"error": e}
+            )
             return
 
         # It is stored in self so the garbage collector does not take it when

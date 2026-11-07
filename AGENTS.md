@@ -26,8 +26,9 @@ convention. **Do not duplicate content here.**
 The review checklist for these rules is
 [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
-- **Code comments, docstrings and identifiers in English** — Spanish
-  only survives inside the `tr()` layer and the UI strings it wraps.
+- **Code comments, docstrings and identifiers in English** — and so is every
+  user-facing string: English is the source language, wrapped in a gettext
+  call; Spanish lives only in `src/polyx/locales/`.
 - **Paths always with `pathlib.Path`**, never bare strings.
 - **Colors from `polyx/gui/theme.py`** (`T.ACCENT`, `T.OK`…), never by hand.
 - **Nothing OS-specific outside `polyx/core/platform.py`.**
@@ -38,10 +39,10 @@ The review checklist for these rules is
 - **Docs ship with the behaviour** — manual text and CLAUDE.md updates
   ride in the same PR as the change that makes them true; the worktree
   never carries uncommitted doc updates across builds.
-- **Run the gate with `python tools/check.py`** — suite, ruff and the ty
-  engine check, from any checkout or worktree. Wait until the **full
-  suite passes with zero failures and zero skips** before calling
-  anything done.
+- **Run the gate with `python tools/check.py`** — translation audit, suite,
+  ruff and the ty engine check, from any checkout or worktree. Wait until
+  the **full suite passes with zero failures and zero skips** before
+  calling anything done.
 - **Branch from `origin/main`**, never from a merged feature-branch tip:
   this repo squash-merges, so old tips are not ancestors and produce
   phantom PR conflicts.

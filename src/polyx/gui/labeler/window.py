@@ -24,21 +24,20 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
 )
 
-from polyx.core.i18n import tr
-from polyx.gui import iconos, marca
+from polyx.core.i18n import N_, _, ngettext
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import HLine, LogoBadge
+from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import BboxCanvas
 from .state import LabelerState
 
 _PRESETS: dict[str, list[str]] = {
-    "Microplásticos Nile Red": ["PET", "PP", "LDPE"],
-    "General (1 clase)": ["objeto"],
-    "Personalizado": [],
+    N_("Nile Red microplastics"): ["PET", "PP", "LDPE"],
+    N_("General (1 class)"): ["objeto"],
+    N_("Custom"): [],
 }
 
 # Colors matching those of the canvas
@@ -54,15 +53,16 @@ _CLS_COLORS = [
 ]
 
 
-class LabelerWindow(QMainWindow):
+class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "etiquetador")
         self.resize(1400, 880)
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = LabelerState()
         self._pre_model = None  # YoloModel loaded on demand
+        self._pre_model_name = ""
 
         # Thumbnails in the background: generating them all at once froze the
         # window for ~9 s with 552 crops, because each one decodes the full
@@ -71,8 +71,44 @@ class LabelerWindow(QMainWindow):
         self._thumb_timer = QTimer(self)
         self._thumb_timer.timeout.connect(self._process_thumbs)
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        self._build_ui()
+
+        self._connect_signals()
+        self._install_shortcuts()
+        self._apply_preset("Nile Red microplastics")
+
+        # ── Auto-save every 60 s ──
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_timer.start(60_000)
+
+    # ── Language ───────────────────────────────────────────────
+    def retranslate(self) -> None:
+        """Rebuild the window and re-read the state that must survive."""
+        if not i18n_qt.is_alive(self):
+            return
+        index = self.state.current_idx
+        keep_zoom = self.canvas.keep_zoom
+        self._build_ui()
+        marca.titular(self, "etiquetador")
+        self.chk_zoom.setChecked(keep_zoom)
+        self.canvas.keep_zoom = keep_zoom
+        if self._pre_model_name:
+            self.lbl_model.setText(self._pre_model_name)
+        if self.state.images:
+            self._on_images_loaded(self.state.images)
+        self._rebuild_class_buttons(self.state.class_names)
+        self._on_active_class_changed(self.state.active_class)
+        if 0 <= index < len(self.state.images):
+            self.state.image_changed.emit(index)
+        if self.state.images:
+            self._on_annotations_changed()
+        self._update_progress()
+
+    def _build_ui(self) -> None:
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
+
+        central = reset_central_widget(self)
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -81,15 +117,6 @@ class LabelerWindow(QMainWindow):
         self.canvas = BboxCanvas(self.state)
         root.addWidget(self.canvas, 1)
         root.addWidget(self._build_right())
-
-        self._connect_signals()
-        self._install_shortcuts()
-        self._apply_preset("Microplásticos Nile Red")
-
-        # ── Auto-save every 60 s ──
-        self._autosave_timer = QTimer(self)
-        self._autosave_timer.timeout.connect(self._autosave)
-        self._autosave_timer.start(60_000)
 
     # ── Left panel ────────────────────────────────────────────
     def _build_left(self) -> QFrame:
@@ -100,17 +127,17 @@ class LabelerWindow(QMainWindow):
         lv.setContentsMargins(12, 14, 12, 12)
         lv.setSpacing(8)
 
-        lv.addWidget(LogoBadge("POLY-X", "Etiquetador"))
+        lv.addWidget(LogoBadge("POLY-X", _("Labeler")))
         lv.addSpacing(6)
 
-        btn_open = QPushButton(tr("Abrir carpeta…"))
+        btn_open = QPushButton(_("Open folder…"))
         btn_open.setIcon(iconos.icon("dataset", 15, T.INK2))
         btn_open.setObjectName("primary")
         btn_open.setCursor(Qt.PointingHandCursor)
         btn_open.clicked.connect(self._open_folder)
         lv.addWidget(btn_open)
 
-        self.lbl_count = QLabel(tr("Sin imágenes"))
+        self.lbl_count = QLabel(_("No images"))
         self.lbl_count.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
         lv.addWidget(self.lbl_count)
 
@@ -130,8 +157,8 @@ class LabelerWindow(QMainWindow):
 
         nav = QHBoxLayout()
         nav.setSpacing(6)
-        btn_prev = QPushButton(tr("← Anterior"))
-        btn_next = QPushButton(tr("Siguiente →"))
+        btn_prev = QPushButton(_("← Previous"))
+        btn_next = QPushButton(_("Next →"))
         for b in (btn_prev, btn_next):
             b.setFixedHeight(28)
         btn_prev.clicked.connect(self.state.prev_image)
@@ -161,8 +188,8 @@ class LabelerWindow(QMainWindow):
         self.lbl_progress.setStyleSheet(f"color: {T.INK2}; font-size: 8.5pt;")
         lv.addWidget(self.lbl_progress)
 
-        btn_pend = QPushButton(tr("⏭  Siguiente sin revisar"))
-        btn_pend.setToolTip(tr("Salta a la próxima imagen que aún no has revisado (Tab)"))
+        btn_pend = QPushButton(_("⏭  Next unreviewed"))
+        btn_pend.setToolTip(_("Jumps to the next image you have not reviewed yet (Tab)"))
         btn_pend.clicked.connect(self._go_next_pending)
         lv.addWidget(btn_pend)
 
@@ -178,14 +205,17 @@ class LabelerWindow(QMainWindow):
         rv.setSpacing(9)
 
         # Preset
-        rv.addWidget(QLabel(tr("Preset de clases:")))
+        rv.addWidget(QLabel(_("Class preset:")))
         self.combo_preset = QComboBox()
-        self.combo_preset.addItems(_PRESETS.keys())
-        self.combo_preset.currentTextChanged.connect(self._apply_preset)
+        for _name in _PRESETS:
+            self.combo_preset.addItem(_(_name), _name)
+        self.combo_preset.currentIndexChanged.connect(
+            lambda _index: self._apply_preset(self.combo_preset.currentData())
+        )
         rv.addWidget(self.combo_preset)
 
         rv.addWidget(HLine())
-        rv.addWidget(QLabel(tr("Clases activas:")))
+        rv.addWidget(QLabel(_("Active classes:")))
 
         self.class_frame = QFrame()
         self.class_frame.setStyleSheet("QFrame { border: none; background: transparent; }")
@@ -195,7 +225,7 @@ class LabelerWindow(QMainWindow):
         self._class_btns: list[QPushButton] = []
         rv.addWidget(self.class_frame)
 
-        btn_add = QPushButton(tr("+ Agregar clase"))
+        btn_add = QPushButton(_("+ Add class"))
         btn_add.setStyleSheet(
             f"QPushButton {{ background: transparent; color: {T.ACCENT_TX}; "
             f"border: 1px dashed {T.ACCENT}; border-radius: 4px; padding: 4px; }}"
@@ -207,7 +237,7 @@ class LabelerWindow(QMainWindow):
         rv.addWidget(HLine())
 
         # Statistics of the current image
-        lbl_stat = QLabel(tr("Anotaciones (imagen actual):"))
+        lbl_stat = QLabel(_("Annotations (current image):"))
         lbl_stat.setStyleSheet(f"color: {T.INK2}; font-weight: 600;")
         rv.addWidget(lbl_stat)
         self.lbl_box_info = QLabel("—")
@@ -218,12 +248,12 @@ class LabelerWindow(QMainWindow):
         rv.addWidget(HLine())
 
         # Pre-annotation
-        lbl_pre = QLabel(tr("Pre-anotación automática"))
+        lbl_pre = QLabel(_("Automatic pre-annotation"))
         lbl_pre.setStyleSheet("font-weight: 600; font-size: 10pt;")
         rv.addWidget(lbl_pre)
 
-        rv.addWidget(QLabel(tr("Modelo .pt:")))
-        self.lbl_model = QLabel(tr("Sin modelo"))
+        rv.addWidget(QLabel(_("Model .pt:")))
+        self.lbl_model = QLabel(_("No model"))
         self.lbl_model.setWordWrap(True)
         self.lbl_model.setStyleSheet(
             f"color: {T.INK3}; font-size: 9pt; background: {T.BG_SOFT}; "
@@ -231,52 +261,49 @@ class LabelerWindow(QMainWindow):
         )
         rv.addWidget(self.lbl_model)
 
-        btn_load_model = QPushButton(tr("Cargar modelo…"))
+        btn_load_model = QPushButton(_("Load model…"))
         btn_load_model.setIcon(iconos.icon("dataset", 15, T.INK2))
         btn_load_model.clicked.connect(self._load_model)
         rv.addWidget(btn_load_model)
 
         row_pre = QHBoxLayout()
         row_pre.setSpacing(6)
-        row_pre.addWidget(QLabel(tr("conf:")))
+        row_pre.addWidget(QLabel(_("conf:")))
         self.sb_pre_conf = QDoubleSpinBox()
         self.sb_pre_conf.setRange(0.01, 0.99)
         self.sb_pre_conf.setSingleStep(0.05)
         self.sb_pre_conf.setDecimals(2)
         self.sb_pre_conf.setValue(0.10)
         row_pre.addWidget(self.sb_pre_conf)
-        row_pre.addWidget(QLabel(tr("imgsz:")))
+        row_pre.addWidget(QLabel(_("imgsz:")))
         self.sb_pre_imgsz = QSpinBox()
         self.sb_pre_imgsz.setRange(320, 8192)
         self.sb_pre_imgsz.setSingleStep(64)
         self.sb_pre_imgsz.setValue(2080)
         self.sb_pre_imgsz.setToolTip(
-            tr(
-                "Resolución de inferencia. Con partículas diminutas en fotos grandes,\n"
-                "un valor bajo no propone nada."
+            _(
+                "Inference resolution. With tiny particles in large photographs,\na low value proposes nothing at all."
             )
         )
         row_pre.addWidget(self.sb_pre_imgsz)
         rv.addLayout(row_pre)
 
-        btn_pre_one = QPushButton(tr("Pre-anotar imagen actual"))
+        btn_pre_one = QPushButton(_("Pre-annotate current image"))
         btn_pre_one.clicked.connect(self._pre_annotate_current)
         rv.addWidget(btn_pre_one)
 
-        btn_pre_all = QPushButton(tr("Pre-anotar TODAS"))
+        btn_pre_all = QPushButton(_("Pre-annotate ALL"))
         btn_pre_all.setObjectName("primary")
         btn_pre_all.clicked.connect(self._pre_annotate_all)
         rv.addWidget(btn_pre_all)
 
         rv.addWidget(HLine())
 
-        self.chk_zoom = QCheckBox(tr("Mantener zoom entre imágenes"))
+        self.chk_zoom = QCheckBox(_("Keep zoom between images"))
         self.chk_zoom.setChecked(True)
         self.chk_zoom.setToolTip(
-            tr(
-                "Conserva el nivel de acercamiento al cambiar de recorte.\n"
-                "Con cientos de recortes, reencuadrar cada vez cuesta mucho tiempo.\n"
-                "F reencuadra manualmente."
+            _(
+                "Keeps the zoom level when moving between crops.\nWith hundreds of crops, reframing every time costs a lot of time.\nF reframes manually."
             )
         )
         self.chk_zoom.toggled.connect(lambda v: setattr(self.canvas, "keep_zoom", v))
@@ -284,23 +311,22 @@ class LabelerWindow(QMainWindow):
 
         rv.addStretch(1)
 
-        btn_rev = QPushButton(tr("✓  Revisada, siguiente   (Espacio)"))
+        btn_rev = QPushButton(_("✓  Reviewed, next   (Space)"))
         btn_rev.setToolTip(
-            tr(
-                "Deja constancia de que miraste esta imagen aunque no tenga partículas.\n"
-                "Sin esto, una placa vacía revisada es indistinguible de una sin mirar."
+            _(
+                "Records that you looked at this image even if it has no particles.\nWithout this, a reviewed empty plate is indistinguishable from one never looked at."
             )
         )
         btn_rev.clicked.connect(self._mark_reviewed)
         rv.addWidget(btn_rev)
 
-        btn_save = QPushButton(tr("Guardar (.txt)"))
+        btn_save = QPushButton(_("Save (.txt)"))
         btn_save.setIcon(iconos.icon("guardar", 15, T.INK2))
         btn_save.setObjectName("primary")
         btn_save.clicked.connect(self._save)
         rv.addWidget(btn_save)
 
-        self.lbl_status = QLabel(tr("● Listo"))
+        self.lbl_status = QLabel(_("● Ready"))
         self.lbl_status.setAlignment(Qt.AlignCenter)
         self.lbl_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 9pt;")
         rv.addWidget(self.lbl_status)
@@ -325,11 +351,11 @@ class LabelerWindow(QMainWindow):
 
     def _on_box_rejected(self, side: float):
         self._set_status(
-            f"⚠ Caja de {side:.1f} px descartada (mínimo "
-            f"{self.canvas.SIDE_MINIMUM_PX:.0f} px) — acerca el zoom",
+            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
+            % {"side": side, "minimum": self.canvas.SIDE_MINIMUM_PX},
             T.WARN,
         )
-        QTimer.singleShot(3500, lambda: self._set_status("● Listo", T.OK))
+        QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):
         QShortcut(QKeySequence("Ctrl+S"), self, self._save)
@@ -361,7 +387,7 @@ class LabelerWindow(QMainWindow):
                 f"color: {T.INK}; font-weight: 600; }}"
                 f"QPushButton:hover {{ background: {T.BG_SOFT}; }}"
             )
-            b.clicked.connect(lambda _, x=i: self.state.set_active_class(x))
+            b.clicked.connect(lambda _unused, x=i: self.state.set_active_class(x))
             self._class_layout.addWidget(b)
             self._class_btns.append(b)
 
@@ -375,40 +401,43 @@ class LabelerWindow(QMainWindow):
             self.state.set_class_names(names)
 
     def _add_class(self):
-        name, ok = QInputDialog.getText(self, "Nueva clase", "Nombre de la clase:")
+        name, ok = QInputDialog.getText(self, _("New class"), _("Class name:"))
         if ok and name.strip():
             self.state.set_class_names(list(self.state.class_names) + [name.strip()])  # noqa: RUF005
 
     # ── Files ────────────────────────────────────────────────
     def _open_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta de imágenes")
+        folder = QFileDialog.getExistingDirectory(self, _("Select an image folder"))
         if folder:
             self.state.load_images(Path(folder))
             self.state.save_classes_txt()
-            self._set_status("● Carpeta cargada", T.OK)
+            self._set_status(_("● Folder loaded"), T.OK)
 
     def _save(self):
         self.state.save_current()
         self.state.save_classes_txt()
-        self._set_status("● Guardado", T.OK)
+        self._set_status(_("● Saved"), T.OK)
 
     # ── Pre-annotation ────────────────────────────────────────
     def _load_model(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Cargar modelo YOLO", "", "Modelo YOLO (*.pt)")
+        path, _unused = QFileDialog.getOpenFileName(
+            self, _("Load YOLO model"), "", _("YOLO model (*.pt)")
+        )
         if not path:
             return
         try:
             from polyx.core.detect.yolo import YoloModel
 
             self._pre_model = YoloModel(path)
-            self.lbl_model.setText(Path(path).name)
-            self._set_status("● Modelo cargado", T.OK)
+            self._pre_model_name = Path(path).name
+            self.lbl_model.setText(self._pre_model_name)
+            self._set_status(_("● Model loaded"), T.OK)
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Error al cargar modelo"), str(e))
+            QMessageBox.warning(self, _("Error loading the model"), str(e))
 
     def _pre_annotate_current(self):
         if not self._pre_model:
-            QMessageBox.warning(self, tr("Sin modelo"), tr("Carga un modelo .pt primero."))
+            QMessageBox.warning(self, _("No model"), _("Load a .pt model first."))
             return
         img = self.state.current_image
         if img is None:
@@ -416,8 +445,8 @@ class LabelerWindow(QMainWindow):
         if self.state.current_boxes:
             r = QMessageBox.question(
                 self,
-                tr("Sobrescribir"),
-                tr("Esta imagen ya tiene anotaciones. ¿Sobrescribir con el modelo?"),
+                _("Overwrite"),
+                _("This image already has annotations. Overwrite them with the model?"),
             )
             if r != QMessageBox.Yes:
                 return
@@ -425,20 +454,28 @@ class LabelerWindow(QMainWindow):
             dets = self._pre_model.predict_auto(str(img), **self._pre_annotation_params())
             boxes = self._dets_to_boxes(dets, img)
             self.state.set_current_boxes(boxes)
-            self._set_status(f"● Pre-anotadas {len(boxes)} cajas", T.OK)
+            self._set_status(
+                ngettext(
+                    "● Pre-annotated %(count)d box",
+                    "● Pre-annotated %(count)d boxes",
+                    len(boxes),
+                )
+                % {"count": len(boxes)},
+                T.OK,
+            )
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, tr("Error en pre-anotación"), str(e))
+            QMessageBox.warning(self, _("Pre-annotation error"), str(e))
 
     def _pre_annotate_all(self):
         if not self._pre_model:
-            QMessageBox.warning(self, tr("Sin modelo"), tr("Carga un modelo .pt primero."))
+            QMessageBox.warning(self, _("No model"), _("Load a .pt model first."))
             return
         if not self.state.images:
             return
 
         total = len(self.state.images)
-        pd = QProgressDialog("Pre-anotando imágenes…", "Cancelar", 0, total, self)
-        pd.setWindowTitle(tr("Pre-anotando"))
+        pd = QProgressDialog(_("Pre-annotating images…"), _("Cancel"), 0, total, self)
+        pd.setWindowTitle(_("Pre-annotating"))
         pd.setMinimumDuration(0)
         pd.setValue(0)
 
@@ -462,7 +499,7 @@ class LabelerWindow(QMainWindow):
 
         pd.setValue(total)
         self.state.annotations_changed.emit()
-        self._set_status("● Pre-anotación completa", T.OK)
+        self._set_status(_("● Pre-annotation complete"), T.OK)
 
     def _pre_annotation_params(self) -> dict:
         """Inference parameters for the pre-annotation.
@@ -517,7 +554,9 @@ class LabelerWindow(QMainWindow):
         for img in imgs:
             item = QListWidgetItem(self._text_item(img, count_2=True))
             self.img_list.addItem(item)
-        self.lbl_count.setText(f"{len(imgs)} imagen(es)")
+        self.lbl_count.setText(
+            ngettext("%(count)d image", "%(count)d images", len(imgs)) % {"count": len(imgs)}
+        )
         # Thumbnails are generated later, in batches, so as not to freeze the
         # window: each one decodes the full image and there are hundreds.
         self._queue_thumbs = list(range(len(imgs)))
@@ -543,7 +582,7 @@ class LabelerWindow(QMainWindow):
         if not self._queue_thumbs:
             self._thumb_timer.stop()
             return
-        for _ in range(4):
+        for _unused in range(4):
             if not self._queue_thumbs:
                 break
             i = self._queue_thumbs.pop(0)
@@ -571,14 +610,20 @@ class LabelerWindow(QMainWindow):
         self.bar.setMaximum(total)
         self.bar.setValue(made)
         self.lbl_progress.setText(
-            f"{made} / {total} revisadas  ({100 * made / total:.0f}%)   faltan {total - made}"
+            _("%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left")
+            % {
+                "done": made,
+                "total": total,
+                "percent": 100 * made / total,
+                "remaining": total - made,
+            }
         )
 
     def _go_next_pending(self):
         i = self.state.next_unreviewed()
         if i < 0:
             QMessageBox.information(
-                self, tr("Conteo completo"), tr("No quedan imágenes sin revisar.")
+                self, _("Counting complete"), _("There are no unreviewed images left.")
             )
             return
         self.state.goto(i)
@@ -608,10 +653,12 @@ class LabelerWindow(QMainWindow):
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:
-            lines = [f"{n} caja(s)"] + [f"  {k}: {v}" for k, v in cls_counts.items()]
+            lines = [ngettext("%(count)d box", "%(count)d boxes", n) % {"count": n}] + [
+                f"  {k}: {v}" for k, v in cls_counts.items()
+            ]
             self.lbl_box_info.setText("\n".join(lines))
         else:
-            self.lbl_box_info.setText(tr("Sin anotaciones"))
+            self.lbl_box_info.setText(_("No annotations"))
 
         # Update the status indicator in the list (without losing the icon)
         idx = self.state.current_idx
@@ -629,8 +676,8 @@ class LabelerWindow(QMainWindow):
             return
         self.state.save_current()
         self.state.save_classes_txt()
-        self._set_status("● Autoguardado", T.INK3)
-        QTimer.singleShot(2500, lambda: self._set_status("● Listo", T.OK))
+        self._set_status(_("● Autosaved"), T.INK3)
+        QTimer.singleShot(2500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _set_status(self, text: str, color: str = T.OK):
         self.lbl_status.setText(text)

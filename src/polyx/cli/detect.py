@@ -43,6 +43,7 @@ from polyx.core.detection_run import (
     RunStatus,
     run_detection,
 )
+from polyx.core.i18n import _
 from polyx.core.paths import find_images
 
 # Exit codes: one for a failed run, one for bad usage, one for refusing to
@@ -67,48 +68,50 @@ class _CalibrationAction(argparse.Action):
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Batch-detect microplastics (headless)")
+    parser = argparse.ArgumentParser(description=_("Batch-detect microplastics (headless)"))
     parser.add_argument(
         "--model",
         action="append",
         required=True,
         metavar="WEIGHTS",
-        help="weights path; repeat once per model (aliases default to the file stem)",
+        help=_("weights path; repeat once per model (aliases default to the file stem)"),
     )
     parser.add_argument(
         "--model-type",
         action="append",
         default=[],
         metavar="TYPE",
-        help="detector type; repeat once per model, or give one value for all (default: yolo)",
+        help=_("detector type; repeat once per model, or give one value for all (default: yolo)"),
     )
     parser.add_argument("--images", required=True)
-    parser.add_argument("--out", required=True, help="exact run folder to write")
-    parser.add_argument("--force", action="store_true", help="overwrite a non-empty run folder")
+    parser.add_argument("--out", required=True, help=_("exact run folder to write"))
+    parser.add_argument("--force", action="store_true", help=_("overwrite a non-empty run folder"))
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--iou", type=float, default=0.45)
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument(
-        "--device", default=None, help="'cpu', a CUDA index, or empty = auto-select (default: auto)"
+        "--device",
+        default=None,
+        help=_("'cpu', a CUDA index, or empty = auto-select (default: auto)"),
     )
     parser.add_argument(
         "--calibrate",
         choices=CALIBRATION_MODES,
         default="auto",
         action=_CalibrationAction,
-        help="per-photo calibration policy (default: auto)",
+        help=_("per-photo calibration policy (default: auto)"),
     )
     parser.add_argument(
         "--um-per-px",
         type=float,
         default=0.0,
-        help="manual µm/px; used alone it selects --calibrate manual",
+        help=_("manual µm/px; used alone it selects --calibrate manual"),
     )
     parser.add_argument(
         "--index-calibration",
         default=None,
         metavar="CSV",
-        help="explicit index CSV mapping image names to µm/px",
+        help=_("explicit index CSV mapping image names to µm/px"),
     )
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
@@ -116,38 +119,38 @@ def _build_parser() -> argparse.ArgumentParser:
         "--tiling",
         choices=("auto", "always", "never"),
         default="auto",
-        help="tiling policy: auto by photo size, always, or never (default: auto)",
+        help=_("tiling policy: auto by photo size, always, or never (default: auto)"),
     )
     parser.add_argument(
         "--tiling-threshold-px",
         type=int,
         default=2000,
-        help="longest side above which --tiling auto splits the photo (default: 2000)",
+        help=_("longest side above which --tiling auto splits the photo (default: 2000)"),
     )
     parser.add_argument(
         "--tiling-tile",
         type=int,
         default=0,
-        help="tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)",
+        help=_("tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)"),
     )
     parser.add_argument(
         "--tiling-overlap",
         type=float,
         default=0.25,
-        help="overlap between tiles, 0..0.9 (default: 0.25)",
+        help=_("overlap between tiles, 0..0.9 (default: 0.25)"),
     )
-    parser.add_argument("--size-min-um", type=float, default=0.0, help="drop particles below it")
-    parser.add_argument("--size-max-um", type=float, default=0.0, help="drop particles above it")
+    parser.add_argument("--size-min-um", type=float, default=0.0, help=_("drop particles below it"))
+    parser.add_argument("--size-max-um", type=float, default=0.0, help=_("drop particles above it"))
     parser.add_argument(
         "--conf-assignment",
         type=float,
         default=0.0,
-        help="below this confidence the particle is reported as unassignable (default: 0)",
+        help=_("below this confidence the particle is reported as unassignable (default: 0)"),
     )
     parser.add_argument(
         "--full-report",
         action="store_true",
-        help="run-order paper-quality HTML report (requires PySide6, [gui] extra)",
+        help=_("run-order paper-quality HTML report (requires PySide6, [gui] extra)"),
     )
     return parser
 
@@ -161,8 +164,11 @@ def _resolve_model_types(requested: list[str], model_count: int) -> list[str]:
         return types * model_count
     if len(types) != model_count:
         raise ValueError(
-            f"--model-type takes one value for all models or one per model "
-            f"({model_count}); got {len(types)}"
+            _(
+                "--model-type takes one value for all models or one per model "
+                "(%(count)d); got %(got)d"
+            )
+            % {"count": model_count, "got": len(types)}
         )
     return types
 
@@ -238,35 +244,35 @@ def main(argv: list[str] | None = None) -> int:
     try:
         model_types = _resolve_model_types(args.model_type, len(args.model))
     except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return EXIT_USAGE
 
     try:
         specs = _load_models(args.model, model_types)
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR loading model: {exc}", file=sys.stderr)
+        print(_("ERROR loading model: %(error)s") % {"error": exc}, file=sys.stderr)
         return EXIT_ERROR
 
     try:
         result = run_detection(_build_config(args, specs))
     except RunOutputError as exc:
         hint = (
-            "Use --force to overwrite the canonical files."
+            _("Use --force to overwrite the canonical files.")
             if isinstance(exc, RunDirNotEmpty)
-            else "Choose a folder path for --out."
+            else _("Choose a folder path for --out.")
         )
-        print(f"ERROR: {exc}. {hint}", file=sys.stderr)
+        print(_("ERROR: %(error)s. %(hint)s") % {"error": exc, "hint": hint}, file=sys.stderr)
         return EXIT_OUTPUT_EXISTS
     except RunFailed as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        print(f"PARTIAL RUN: {exc.result.run_dir}", file=sys.stderr)
+        print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
+        print(_("PARTIAL RUN: %(run_dir)s") % {"run_dir": exc.result.run_dir}, file=sys.stderr)
         return EXIT_ERROR
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return EXIT_ERROR
 
     if result.status is RunStatus.ABORTED:
-        print(f"ABORTED: {result.run_dir}", file=sys.stderr)
+        print(_("ABORTED: %(run_dir)s") % {"run_dir": result.run_dir}, file=sys.stderr)
         return EXIT_ABORTED
 
     _write_reports(args, result)
@@ -275,10 +281,13 @@ def main(argv: list[str] | None = None) -> int:
         for model_results in result.results.values()
         for image_result in model_results
     )
-    print(f"IMAGES: {len(result.images)}  DETECTIONS: {detections}")
-    print(f"OUTPUT: {result.run_dir}")
+    print(
+        _("IMAGES: %(images)d  DETECTIONS: %(detections)d")
+        % {"images": len(result.images), "detections": detections}
+    )
+    print(_("OUTPUT: %(run_dir)s") % {"run_dir": result.run_dir})
     if result.skipped_images:
-        print(f"SKIPPED: {len(result.skipped_images)}", file=sys.stderr)
+        print(_("SKIPPED: %(count)d") % {"count": len(result.skipped_images)}, file=sys.stderr)
     return 0
 
 
@@ -288,12 +297,14 @@ def _write_reports(args, result: RunResult) -> None:
         try:
             _write_full_report(result, report_path)
         except Exception as exc:  # noqa: BLE001
-            print(f"Full report unavailable ({exc}); writing compact report.")
-            print(f"COMPACT REPORT: {_write_compact(result.run_dir)}")
+            print(
+                _("Full report unavailable (%(error)s); writing compact report.") % {"error": exc}
+            )
+            print(_("COMPACT REPORT: %(path)s") % {"path": _write_compact(result.run_dir)})
         else:
-            print(f"FULL REPORT: {report_path}")
+            print(_("FULL REPORT: %(path)s") % {"path": report_path})
     else:
-        print(f"COMPACT REPORT: {_write_compact(result.run_dir)}")
+        print(_("COMPACT REPORT: %(path)s") % {"path": _write_compact(result.run_dir)})
 
 
 def _write_full_report(result: RunResult, report_path: Path) -> None:

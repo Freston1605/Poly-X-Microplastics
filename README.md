@@ -233,7 +233,7 @@ defect this was meant to remove.
 Against synthetic shapes of known size — straight bars, rotated bars, arcs of
 60°, 120° and 180°, a circle, a bar with a jagged edge and a blob with a notch —
 the length measured this way gives a **median error of 0.6 % and 4.7 % in the
-worst case**. This is pinned down in `tests/test_morfologia.py`.
+worst case**. This is pinned down in `tests/test_morphology.py`.
 
 > **The equivalent rectangle is not a size.** The formula
 > *L* = (*P* + √(*P*²−16*A*))/4 gives the length of a rectangle with the same
@@ -277,7 +277,7 @@ when the particle is elongated, nor passed through the touching-particle splitte
 both of those cut real fibres short. On the one that exposed it, 53 % of the
 length was lost — 369 px of connected component came out as 174 — and an
 underestimated size does not show in the figures, only in the image. It is pinned
-down in `tests/test_fibra_no_se_trunca.py`.
+down in `tests/test_fiber_is_not_truncated.py`.
 
 **Stated limitations.** Two particles overlapping by more than 40 % of their
 diameter are still measured as one: past that point there is no neck left to cut
@@ -306,28 +306,35 @@ explains why per-class recall collapses there: PET 0.98 · PP 0.70 · LDPE 0.54.
 
 ## Language
 
-The interface is available in **Spanish and English**. The selector sits in the
-Launcher's top bar and the choice is remembered between sessions. The first time,
-the system language is used; `POLYX_IDIOMA=en` forces it without touching the
-interface.
+The interface is available in **Spanish and English**. The selector lives in
+**Preferences** (the Launcher's top-bar button, or `Ctrl+,`) and the choice is
+remembered between sessions. The first time, the system language is used;
+`POLYX_LOCALE=en` forces it without touching the interface.
 
-Modules are separate processes and read the language when they open, so the
-change takes effect as soon as you open the next module.
+Changing the language applies immediately, including to modules that are
+already open: they share the preference file and watch it for changes.
 
 **The detection report comes out in the chosen language**, not just the
 interface: headings, tables, figure captions, chart axes and the methods prose.
-The HTML `lang` attribute follows too, so the browser's spell checker and screen
-readers treat it correctly.
+Numbers, dates and CSV column headers do not change with the language: they are
+the report's machine contract, so the same run reads the same digits everywhere.
+A report already saved keeps the language it was generated in.
 
-To see what is still untranslated:
+To see which strings are still untranslated:
 
 ```bat
-.venv\Scripts\python.exe tools\audit\audit_translations.py
+.venv\Scripts\python.exe tools\i18n\cli.py audit
 ```
 
-It walks the syntax tree of every module looking for `tr()` calls and checks them
-against the dictionary. It must report **0 untranslated**. With `--list` it
-also prints the strings that are missing.
+It compares the committed template with the source tree and fails on any empty
+or fuzzy translation, a placeholder mismatch or a user-visible string that
+bypasses the translation call. To see by eye which strings were never
+extracted, generate the pseudo-locale and select it:
+
+```bat
+.venv\Scripts\python.exe tools\i18n\cli.py pseudo
+set POLYX_LOCALE=qps_ploc
+```
 
 ## Themes
 
@@ -343,7 +350,8 @@ Four themes, under **Preferences** (top-bar button, or `Ctrl+,`):
 The theme applies **immediately in the launcher**, which rebuilds itself.
 Modules already open keep theirs — they are separate processes, with the colours
 baked into their stylesheet — and any you open afterwards come up with the new
-one. Same contract as the language.
+one. A language change is the exception: it reaches modules that are already
+open, because every process watches the shared preference file.
 
 `POLYX_TEMA=oscuro` forces it without touching the interface.
 
@@ -640,16 +648,16 @@ To regenerate it against the current interface:
 
 ```bash
 # 1. interface screenshots, one pass per language
-.venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/es
-POLYX_IDIOMA=en .venv\Scripts\python.exe tools\manual\capturar_manual.py --salida docs/assets/manual_screenshots/en
+.venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
+POLYX_LOCALE=en .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
 
 # 2. the manual, both languages and their PDFs
-.venv\Scripts\python.exe tools\manual\generar_manual.py --pdf
+.venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
 ```
 
-The text lives in `tools/manual/manual_texto_es.py` and
-`tools/manual/manual_texto_en.py`; the engine — template, stylesheet and
-figure numbering — in `tools/manual/generar_manual.py`.
+The text lives in `tools/manual/manual_text_es.py` and
+`tools/manual/manual_text_en.py`; the engine — template, stylesheet and
+figure numbering — in `tools/manual/generate_manual.py`.
 
 ---
 

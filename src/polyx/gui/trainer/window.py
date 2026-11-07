@@ -13,27 +13,26 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QStackedWidget,
     QVBoxLayout,
-    QWidget,
 )
 
-from polyx.core.i18n import tr
-from polyx.gui import iconos, marca
+from polyx.core.i18n import _, lazy
+from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
-from polyx.gui.widgets import LogoBadge
+from polyx.gui.widgets import LogoBadge, reset_central_widget
 
 from .state import TrainerState
 
 SIDEBAR_ITEMS = [
     # (icon name in polyx/gui/iconos.py, label)
-    ("modelo", tr("Modelo")),
-    ("dataset", tr("Dataset")),
-    ("ajustes", tr("Parámetros")),
-    ("augmentacion", tr("Augmentación")),
-    ("ejecutar", tr("Entrenar")),
-    ("evaluar", tr("Evaluar")),
-    ("comparar", tr("Comparar")),
-    ("exportar", tr("Exportar")),
-    ("reporte", tr("Informe")),
+    ("modelo", lazy("Model")),
+    ("dataset", lazy("Dataset")),
+    ("ajustes", lazy("Parameters")),
+    ("augmentacion", lazy("Augmentation")),
+    ("ejecutar", lazy("Train")),
+    ("evaluar", lazy("Evaluate")),
+    ("comparar", lazy("Compare")),
+    ("exportar", lazy("Export")),
+    ("reporte", lazy("Summary")),
 ]
 
 
@@ -77,17 +76,55 @@ class SidebarButton(QPushButton):
         )
 
 
-class TrainerWindow(QMainWindow):
+class TrainerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def __init__(self):
         super().__init__()
+        i18n_qt.activate()
         marca.titular(self, "entrenador")
         self.resize(1320, 840)
-        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
 
         self.state = TrainerState()
+        self._retranslation_pending = False
 
-        central = QWidget()
-        self.setCentralWidget(central)
+        self._build_ui()
+
+        # Status according to training state. Connected once: a language
+        # change rebuilds the widgets, not the window object.
+        self.state.train_started.connect(lambda: self._set_status(_("● Training…"), T.ACCENT))
+        self.state.train_finished.connect(lambda _unused: self._set_status(_("● Finished"), T.OK))
+        self.state.train_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
+        self.state.train_failed.connect(lambda _unused: self._set_status(_("● Error"), T.ERR))
+        self.state.train_finished.connect(lambda _unused: self._apply_pending_retranslation())
+        self.state.train_aborted.connect(self._apply_pending_retranslation)
+        self.state.train_failed.connect(lambda _unused: self._apply_pending_retranslation())
+
+    # ── Language ───────────────────────────────────────────────
+    def retranslate(self) -> None:
+        """Rebuild the pages so every text comes from the new catalog.
+
+        A training in progress owns a worker thread and the page that
+        listens to it, so the rebuild waits for it to finish instead of
+        orphaning the thread mid-run.
+        """
+        if not i18n_qt.is_alive(self):
+            return
+        if self.state.is_running():
+            self._retranslation_pending = True
+            return
+        index = self.stack.currentIndex()
+        self._build_ui(index)
+        marca.titular(self, "entrenador")
+        self._refresh_pages()
+
+    def _apply_pending_retranslation(self) -> None:
+        if self._retranslation_pending:
+            self._retranslation_pending = False
+            self.retranslate()
+
+    def _build_ui(self, index: int = 0) -> None:
+        self.setStyleSheet(T.GLOBAL_QSS + f"QMainWindow {{ background: {T.BG_SOFT}; }}")
+
+        central = reset_central_widget(self)
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -100,7 +137,7 @@ class TrainerWindow(QMainWindow):
         sb.setContentsMargins(14, 16, 14, 16)
         sb.setSpacing(4)
 
-        sb.addWidget(LogoBadge("POLY-X", "YOLO Trainer"))
+        sb.addWidget(LogoBadge("POLY-X", _("YOLO Trainer")))
         sb.addSpacing(12)
         sep = QFrame()
         sep.setFixedHeight(1)
@@ -118,12 +155,12 @@ class TrainerWindow(QMainWindow):
             self.sidebar_buttons.append(b)
         sb.addStretch(1)
 
-        self.lbl_status = QLabel(tr("● Listo"))
+        self.lbl_status = QLabel(_("● Ready"))
         self.lbl_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 9pt; padding: 4px 8px;")
         sb.addWidget(self.lbl_status)
 
         # Authorship credit
-        author = QLabel(tr("Diseñado por\nCristofher Ferrada\n2026"))
+        author = QLabel(_("Designed by\nCristofher Ferrada\n2026"))
         author.setAlignment(Qt.AlignCenter)
         author.setStyleSheet(
             f"color: {T.INK3}; font-size: 8.5pt; padding: 8px; "
@@ -140,14 +177,17 @@ class TrainerWindow(QMainWindow):
 
         self._build_pages()
         self.btn_group.idClicked.connect(self.stack.setCurrentIndex)
-        self.sidebar_buttons[0].setChecked(True)
-        self.stack.setCurrentIndex(0)
+        index = max(0, min(index, len(self.sidebar_buttons) - 1))
+        self.sidebar_buttons[index].setChecked(True)
+        self.stack.setCurrentIndex(index)
 
-        # Status according to training state
-        self.state.train_started.connect(lambda: self._set_status("● Entrenando…", T.ACCENT))
-        self.state.train_finished.connect(lambda _: self._set_status("● Finalizado", T.OK))
-        self.state.train_aborted.connect(lambda: self._set_status("● Detenido", T.WARN))
-        self.state.train_failed.connect(lambda _: self._set_status("● Error", T.ERR))
+    def _refresh_pages(self) -> None:
+        """Re-read the state so dynamic text is not left in the old language."""
+        for position in range(self.stack.count()):
+            page = self.stack.widget(position).widget()
+            refresh = getattr(page, "refresh", None)
+            if callable(refresh):
+                refresh()
 
     def _build_pages(self):
         from .pages.augmentation import AugmentationPage
