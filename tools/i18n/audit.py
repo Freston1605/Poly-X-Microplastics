@@ -55,6 +55,58 @@ EMPTY_TRANSLATION = "empty-translation"
 PLACEHOLDER_MISMATCH = "placeholder-mismatch"
 DYNAMIC_CALL = "dynamic-call"
 UNWRAPPED_STRING = "unwrapped-string"
+SPANISH_LITERAL = "spanish-literal"
+
+#: Letters that only Spanish copy carries. Their presence in a Python string
+#: constant means the text bypasses the catalog: English is the source
+#: language, so no shipped msgid needs them.
+_SPANISH_CHARS = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]")
+
+#: Out-of-scope and non-prose literals, matched exactly against the string.
+#: Each entry is ``(path, literal)`` and says why that string is not
+#: interface copy. Log messages are permanently out of scope, the calibration
+#: tokens are data that the viewer translates at the display site, and ``sí``
+#: is a truthy value the schema accepts. This list is deliberately exhaustive:
+#: a directory skip would also hide the leaks this check exists to find.
+_SPANISH_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
+    {
+        # The schema accepts Spanish truthy values when reading old files.
+        ("src/polyx/core/detection_run/schema.py", "sí"),
+        # Calibration-origin tokens, translated by the viewer when displayed.
+        ("src/polyx/gui/viewer/state.py", "línea"),
+        ("src/polyx/gui/viewer/state.py", "círculo"),
+        ("src/polyx/gui/viewer/window.py", "línea"),
+        ("src/polyx/gui/viewer/window.py", "círculo"),
+        # Trainer status stream: log messages are permanently out of scope.
+        (
+            "src/polyx/gui/trainer/runner.py",
+            "[ATENCION] GPU (CUDA/ROCm) no disponible — se forzará entrenamiento en CPU.",
+        ),
+        ("src/polyx/gui/trainer/runner.py", "[INFO] Entrenando en CPU (por configuración)."),
+        (
+            "src/polyx/gui/trainer/runner.py",
+            "[INFO] Solicitud de detención recibida: se parará al final de esta época.",
+        ),
+        (
+            "src/polyx/gui/trainer/runner.py",
+            (
+                "[ALERTA] Pediste GPU pero Ultralytics movió el modelo a CPU. Causas tipicas: "
+                "OOM al probar, AMP check fallido, o driver incompatible. Revisa la salida "
+                "arriba."
+            ),
+        ),
+        # Evaluation log widget: a log message, not interface prose.
+        ("src/polyx/gui/trainer/pages/evaluate.py", "[OK] Validación completada."),
+    }
+)
+
+#: Bibliography fragments: citations keep author surnames and titles verbatim.
+#: Matched as a substring so the surrounding HTML can change without editing
+#: this list, while a UI string that merely mentions an author still fails.
+_SPANISH_ALLOWED_FRAGMENTS: tuple[tuple[str, str], ...] = (
+    ("src/polyx/gui/report/sections.py", "<li>Pérez M, Parra S, Ferrada C"),
+    ("src/polyx/gui/trainer/pages/summary.py", "<li>Pérez M, Parra S, Ferrada C"),
+)
 
 #: Widget methods whose positional argument is visible text.
 _WIDGET_METHODS: dict[str, tuple[int, ...]] = {
@@ -182,7 +234,12 @@ class Finding:
 
 def audit_tree(root: Path) -> list[Finding]:
     """Run every check over a checkout and return the sorted findings."""
-    findings = audit_sources(root) + audit_template(root) + audit_catalogs(root)
+    findings = (
+        audit_sources(root)
+        + audit_spanish_literals(root)
+        + audit_template(root)
+        + audit_catalogs(root)
+    )
     return sorted(set(findings))
 
 
@@ -480,6 +537,64 @@ def audit_sources(root: Path) -> list[Finding]:
             findings.extend(_html_findings(relative, tree, markup_only=True))
 
     return findings
+
+
+def audit_spanish_literals(root: Path) -> list[Finding]:
+    """Fail on Spanish string constants that never reach a catalog.
+
+    The sink scan sees text passed to a Qt setter; it cannot see a Spanish
+    sentence assigned to a variable and rendered later. This walk reads every
+    string constant in ``src/polyx``, skips docstrings by AST kind, skips the
+    arguments of a translation call (Spanish belongs in ``.po``, not in
+    Python), and honours the small explicit allowlist above for log messages,
+    citations and data tokens. Everything else is a leak.
+    """
+    findings: list[Finding] = []
+    source_root = root / SOURCE
+    if not source_root.is_dir():
+        return findings
+
+    for path in sorted(source_root.rglob("*.py")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        relative = path.relative_to(root).as_posix()
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        docstrings = _docstring_ids(tree)
+        parents = _parents(tree)
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
+                continue
+            if id(node) in docstrings:
+                continue
+            if not _SPANISH_CHARS.search(node.value):
+                continue
+            if _inside_translation(node, parents):
+                continue
+            if _spanish_is_exempt(relative, node.value):
+                continue
+            findings.append(
+                Finding(
+                    relative,
+                    node.lineno,
+                    SPANISH_LITERAL,
+                    f"Spanish string literal bypasses the catalog: {node.value!r}",
+                )
+            )
+    return findings
+
+
+def _spanish_is_exempt(relative: str, literal: str) -> bool:
+    """Whether a literal is out of scope, non-prose or a known data token."""
+    if (relative, literal) in _SPANISH_ALLOWLIST:
+        return True
+    return any(
+        path == relative and fragment in literal for path, fragment in _SPANISH_ALLOWED_FRAGMENTS
+    )
 
 
 def _dynamic_findings(relative: str, tree: ast.AST) -> list[Finding]:
