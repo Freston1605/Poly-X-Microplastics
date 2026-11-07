@@ -24,7 +24,8 @@ said nothing about what broke.
 - **Recapture:** M006/S05, after the twelve raw Spanish report headings became
   English literals (`Muestra (imagen)` -> `Sample (image)`, the
   confusion-matrix headers, the comparison header and the size-by-class
-  headers).
+  headers). The runtime `tr()` dictionary that some of those strings came from
+  at the time is now retired; see ADR-0003.
 - **Recapture (PR #16, report package split):** the `<style>` block left
   `report_html.py` for `polyx/gui/report/report.css`.
 - **Ticket #73:** the `.sha256` files and the whole-file comparison were
@@ -33,11 +34,11 @@ said nothing about what broke.
 
 ## Language contract
 
-The baseline is in **English**. The capture script forces `POLYX_LOCALE=en`
-before importing any fixture or `polyx` module, and `tests/test_report_sections.py`
-selects English through `i18n.set_language` while it compares, so neither the
-capture nor the comparison depends on the machine locale or the saved
-preference.
+The baseline is in **English** and must stay that way. The capture script
+forces `POLYX_LOCALE=en` before importing any fixture or `polyx` module, and
+`tests/test_report_sections.py` selects English through `i18n.set_language`
+while it compares, so neither the capture nor the comparison depends on the
+machine locale or `~/.polyx_preferences.json`.
 
 ## Contents
 
