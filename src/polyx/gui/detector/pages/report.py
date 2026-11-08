@@ -461,7 +461,7 @@ class ReportPage(DetectorPage):
     def _sections_marked(self) -> list:
         return [sid for sid, chk in self.chk_sections.items() if chk.isChecked()]
 
-    def _write_html(self, out_path: Path, solo_images_2=None) -> Path:
+    def _write_html(self, out_path: Path, only_images=None) -> Path:
         """Generates the self-contained HTML (images in base64) at `out_path`.
 
         The report consumes the canonical ``RunResult`` of the current run;
@@ -474,7 +474,7 @@ class ReportPage(DetectorPage):
             run,
             out_path,
             sections=self._sections_marked(),
-            solo_images=solo_images_2,
+            only_images=only_images,
         )
         return out_path
 
@@ -533,7 +533,7 @@ class ReportPage(DetectorPage):
         try:
             for suffix_2, photos, label in jobs:  # noqa: B007
                 out_path = out_dir / f"informe_deteccion{suffix_2}.html"
-                self._write_html(out_path, solo_images_2=photos)
+                self._write_html(out_path, only_images=photos)
                 generated.append(out_path)
             self.lbl_status.setText(
                 "✓ "
@@ -610,7 +610,7 @@ class ReportPage(DetectorPage):
                     if not suffix_2
                     else pdf_base.with_name(pdf_base.stem + suffix_2 + ".pdf")
                 )
-                self._write_html(html_path, solo_images_2=photos)
+                self._write_html(html_path, only_images=photos)
                 if pdf_export.html_to_pdf(html_path, pdf_path):
                     facts.append(pdf_path)
                 else:

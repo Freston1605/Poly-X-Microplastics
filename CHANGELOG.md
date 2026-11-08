@@ -14,6 +14,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- The HTML report package is internal: its public surface is
+  `generate_report` plus the section catalog (`SECTIONS`, `IDS_SECTIONS`,
+  `PRESETS`, `anchor`), the batch precompute is a named immutable result and
+  every section has one uniform builder. Rendered reports are byte-identical.
 - `ruff-pre-commit` bumped to `v0.17.2` to match the locked ruff version.
 
 ## [2.0.0] - 2026-10-26

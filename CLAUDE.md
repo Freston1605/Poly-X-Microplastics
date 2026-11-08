@@ -92,16 +92,18 @@ src/                      # Source code (installable package)
         ├── pdf_export.py # HTML → PDF
         ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
-        ├── report/      # HTML report: render → sections → figures → machine/markup/samples/particle/registry
+        ├── report/      # HTML report: render → sections → figures → batch/machine/markup/samples/particle/registry
+        │   ├── __init__.py   # public surface: generate_report + section catalog
         │   ├── render.py     # generate_report: builds the document
-        │   ├── sections.py   # the section builders (HTML blocks)
+        │   ├── sections.py   # the section builders + ShapeBodies (HTML blocks)
+        │   ├── context.py    # ReportContext: the named inputs a builder receives
         │   ├── figures.py    # matplotlib figures (Agg)
+        │   ├── batch.py      # BatchMetrics + LotForms precomputes (pure, Qt-free)
         │   ├── machine.py    # equipment table, checkpoint training info
         │   ├── markup.py     # HTML primitives, CSS, tables
-        │   ├── samples.py    # sampling, ordering, batch aggregation
+        │   ├── samples.py    # sampling and ordering
         │   ├── particle.py   # particle card with mask overlay
-        │   ├── registry.py   # section catalog, anchors, document shell
-        │   └── stats.py      # re-export bridge over polyx.core.stats
+        │   └── registry.py   # section catalog, anchors, document shell
         ├── qt.py         # PySide6 guard (extra [gui])
         ├── detector/     # Module 2: Batch analysis
         │   ├── window.py, state.py, runner.py
@@ -151,6 +153,16 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 
 .github/workflows/        # ruff.yml, pre-commit.yml, ci.yml (tests + build), publish.yml
 ```
+
+> **The report package is internal.** `polyx.gui.report` exposes exactly
+> `generate_report`, `SECTIONS`, `IDS_SECTIONS`, `PRESETS` and `anchor`
+> (ADR-0005); the section builders, figures and precomputes are
+> implementation. `polyx.gui.report_html` is a five-name compatibility shim
+> over that surface, and it is what the GUI page, the CLI and the audit tool
+> import. A new report section is one catalog entry in `registry.py` plus one
+> builder `(ctx) -> str` in `sections.py`, named for what it renders; section
+> ids stay stable Spanish keys because they are HTML anchors, not user-facing
+> strings.
 
 ---
 

@@ -4,9 +4,6 @@
 document shell assembles cover, TOC and numbered sections; ``NUM`` is the
 placeholder replaced by the assembler so section builders need not know
 their final numbers.
-
-Re-exported from ``polyx.gui.report._common`` (removed in refactor) to keep the package surface
-stable (the 76-name contract) and because call sites import from there.
 """
 
 from __future__ import annotations
