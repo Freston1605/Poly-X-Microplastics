@@ -9,14 +9,15 @@ _common) instead of the cycle the package used to carry.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime
 from pathlib import Path
 
-from polyx.core.detection_run import RunStatus
+from polyx.core.detection_run import RunResult, RunStatus
 from polyx.core.i18n import _, pgettext
 
+from .batch import compute_batch_metrics, compute_lot_forms
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
-from .samples import _batch_metrics, _lot_forms
 from .sections import (
     _run_status_note,
     _section_calibration,
@@ -51,14 +52,14 @@ def _section_title(message_id: str) -> str:
 
 
 def _generate_report_impl(
-    run,
+    run: RunResult,
     output_path: Path,
     include_refs: bool = True,
     include_gallery: bool = True,
     max_gallery: int = 60,
     max_records: int = 12,
-    solo_images=None,
-    sections=None,
+    only_images: Collection[Path | str] | None = None,
+    sections: Collection[str] | None = None,
 ) -> Path:
     """Generates the HTML report from a canonical ``RunResult``.
 
@@ -66,7 +67,7 @@ def _generate_report_impl(
     Images go into the HTML itself in base64, so without a cap a large
     batch produced an unmanageable file (14.5 MB with just 4 images).
 
-    ``solo_imagenes`` narrows the report down to a set of paths. With
+    ``only_images`` narrows the report down to a set of paths. With
     ``None`` the whole batch is in. The filter is applied before anything
     is computed, so that the totals, the charts and the confusion matrix
     describe exactly the same subset being shown; if only the gallery
@@ -93,47 +94,42 @@ def _generate_report_impl(
     status_note = _run_status_note(run)
 
     # ── Batch metrics ──
-    # The precomputation block now lives in _metricas_de_lote; the impl only
-    # unpacks. The tuple order is the order in which the assembler
-    # consumes them, so the unpacking names the same variables as
-    # always.
-    (
-        results_2,
-        all_results,
-        total_imgs,
-        total_dets,
-        confs,
-        sizes,
-        avg_conf,
-        avg_size,
-        any_gt,
-        classes_batch,
-        per_class,
-    ) = _batch_metrics(run, solo_images)
+    # The named precompute lives in polyx.gui.report.batch; the assembler reads
+    # its fields by name instead of unpacking a positional tuple.
+    batch = compute_batch_metrics(run, only_images)
 
     # ── Error analysis: matrix + per-class metrics (main model) ──
-    err_section = _section_errors(run, results_2, any_gt)
+    err_section = _section_errors(run, batch.results_by_model, batch.has_gt)
 
     # ── Verdict and confidence sweep ──
-    verdict_html = _section_verdict(results_2, run)
+    verdict_html = _section_verdict(batch.results_by_model, run)
 
     # ── Models side by side, photo by photo ──
-    compare_html = _section_comparison(run, results_2)
+    compare_html = _section_comparison(run, batch.results_by_model)
 
     # ── Side-by-side gallery: Prediction vs Ground Truth ──
     gallery_html = _section_gallery(
-        results_2, run, classes_batch, max_gallery=max_gallery, include_gallery=include_gallery
+        batch.results_by_model,
+        run,
+        batch.classes,
+        max_gallery=max_gallery,
+        include_gallery=include_gallery,
     )
 
     # ── Aggregate figures ──
-    figures_html = _section_results(per_class, confs, sizes)
+    figures_html = _section_results(batch.per_class, batch.confidences, batch.sizes_um)
 
     # ── Methods ──
     methods_html, team_html, methods_for = _section_methods(
-        run, active, all_results, total_imgs, total_dets, any_gt
+        run,
+        active,
+        batch.all_results,
+        batch.image_count,
+        batch.detection_count,
+        batch.has_gt,
     )
 
-    count_html = _section_count(results_2, run, classes_batch)
+    count_html = _section_count(batch.results_by_model, run, batch.classes)
 
     refs_html = _section_references(include_refs)
 
@@ -144,21 +140,28 @@ def _generate_report_impl(
     # It is separated from `Resultados` because it answers another question: not how many
     # particles there are, but what shape they have. Morphotype and curvature are
     # variables that the microplastics literature reports and that the detector
-    # box cannot give. `formas` is computed once because the depth profile
+    # box cannot give. `shapes` is computed once because the depth profile
     # and the cards also consume it.
-    shapes, n_en_el_aro, n_formless = _lot_forms(run, all_results)
+    lot = compute_lot_forms(run, batch)
     # The depth profile only exists if the names carry the stretch.
-    depth_html = section_depth(shapes, all_results) if shapes else ""
-    shape_html, by_html_folder = _section_shape(run, shapes, n_en_el_aro, n_formless)
+    depth_html = section_depth(lot.shapes, batch.all_results) if lot.shapes else ""
+    shape_html, by_html_folder = _section_shape(run, lot.shapes, lot.ring_count, lot.formless_count)
     # ── Card for each particle ──
-    records_html = _section_records(run, shapes, max_records)
+    records_html = _section_records(run, lot.shapes, max_records)
 
     # ── Assemble HTML ──
     # Each block is (id, body). The body does NOT carry its <h2>: the title and
     # number are set by the assembler, which is the only one that knows which sections
     # survived the filter and therefore which number belongs to each one.
     bodies = {
-        "resumen": _section_summary(total_imgs, total_dets, avg_conf, avg_size, active, any_gt),
+        "resumen": _section_summary(
+            batch.image_count,
+            batch.detection_count,
+            batch.mean_confidence,
+            batch.mean_size_um,
+            active,
+            batch.has_gt,
+        ),
         "metodos": f"""
 <table class='data'><tr>{_("<th>Parameter</th><th>Value</th>")}</tr>{methods_html}</table>
 {team_html}
@@ -169,7 +172,7 @@ def _generate_report_impl(
         "profundidad": depth_html,
         "fichas": records_html,
         "resultados": figures_html,
-        "modelos": _section_models(run, results_2, all_results, any_gt),
+        "modelos": _section_models(run, batch.results_by_model, batch.all_results, batch.has_gt),
         "errores": err_section,
         "comparacion": f"{verdict_html}\n{compare_html}",
         "galeria": gallery_html,
@@ -196,14 +199,14 @@ def _generate_report_impl(
 
 
 def generate_report(
-    run,
+    run: RunResult,
     output_path: Path,
     include_refs: bool = True,
     include_gallery: bool = True,
     max_gallery: int = 60,
     max_records: int = 12,
-    solo_images=None,
-    sections=None,
+    only_images: Collection[Path | str] | None = None,
+    sections: Collection[str] | None = None,
 ) -> Path:
     """Generates the HTML report from a canonical ``RunResult``.
 
@@ -230,7 +233,7 @@ def generate_report(
         results_2=n_results,
         output=str(output_path),
         sections=sorted(sections) if sections else None,
-        solo_images=(len(solo_images) if solo_images is not None else None),
+        solo_images=(len(only_images) if only_images is not None else None),
     ):
         return _generate_report_impl(
             run,
@@ -239,6 +242,6 @@ def generate_report(
             include_gallery=include_gallery,
             max_gallery=max_gallery,
             max_records=max_records,
-            solo_images=solo_images,
+            only_images=only_images,
             sections=sections,
         )
