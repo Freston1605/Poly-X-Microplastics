@@ -2,23 +2,34 @@
 
 ## What the CI does
 
-A single GitHub Actions job (`.github/workflows/ci.yml`) runs on **every PR** and
-on every push to `main`:
+Three workflows run on **every PR** and on every push to `main`:
 
-1. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
-   `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`).
-2. Installs `requirements.txt` **with the exact pins** (`numpy==1.26.4`,
-   `ultralytics==8.3.40`, `PySide6==6.7.2`, …) on Python 3.11. If someone bumps a
-   dependency, CI flags it here, not in the lab.
-3. Runs the full suite: `python -m pytest -q` with `QT_QPA_PLATFORM=offscreen`
-   (the suite opens no windows; PySide6 is the only thing that asks for a
-   platform).
+- **`ruff.yml`** — `ruff check` and `ruff format --check` over `src/`, `tests/`,
+  `tools/` and `install/`, using the ruff version locked in `uv.lock`. It
+  installs no project dependencies, so it reports in seconds instead of after
+  the gate's suite. It runs the same two commands the gate runs, no more.
+- **`pre-commit.yml`** — runs every hook in `.pre-commit-config.yaml` with
+  `pre-commit run --all-files`, so a hook you never installed locally still
+  fails the PR.
+- **`ci.yml`** — the gate, plus the 3.12 suite and the wheel build:
+  1. Checks `uv.lock` is current and smoke-tests the installer scripts before
+     any dependency sync.
+  2. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
+     `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`) and syncs the locked
+     environment (`uv sync --locked --extra gui`) on Python 3.11.
+  3. Runs `python tools/check.py`: translation audit, palette rule, the full
+     suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. The gate is the
+     one owner of the checks, so a check added to `tools/check.py` cannot
+     silently miss CI. ty blocks on `src/polyx/core` + `src/polyx/cli`.
+  4. Types the GUI on the same 3.11 environment as an advisory step: it
+     reports and never fails the build.
+  5. A separate `test` job runs the suite on Python 3.12, and `build` builds
+     the wheel, loads the packaged catalogs and smoke-imports it.
 
-Beyond the suite, the job runs `ruff check` (lint), `ruff format --check`
-(formatting; line length 100 in `pyproject.toml`) and `ty` — type checking is
-blocking on `src/polyx/core` + `src/polyx/cli` and advisory on the GUI. A
-follow-up `build` job builds the wheel and smoke-imports it. Before pushing,
-run the same checks locally:
+`publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
+tags via Trusted Publishing.
+
+Before pushing, run the same checks locally:
 
 ```bash
 uv run ruff check src/ tests/ tools/ install/
@@ -76,24 +87,33 @@ python -m pytest -q          # inside the project .venv
 
 ## Debugging a red build
 
-1. Open the failed PR on GitHub and look at the red step:
-   - `Install pinned requirements` → someone changed a pin. pip's error says
-     which one. **Do not** relax the pin: `numpy>=2` breaks ultralytics 8.3.40
-     validation (they removed `np.trapz`), and bumping `PySide6` can change Qt
-     dialog behaviour.
-   - `Run test suite` → the failing test is printed with its assertion. The
-     suite is deterministic: if it passes locally it should pass in CI; if it
-     fails only in CI, check the language (`POLYX_LOCALE`) and the locale.
+1. Open the failed PR on GitHub and look at the red workflow or job:
+   - `Ruff` → run `uv run ruff check src/ tests/ tools/ install/` and
+     `uv run ruff format --check src/ tests/ tools/ install/`. Fix with
+     `ruff check --fix` / `ruff format`; do not reformat unrelated files.
+   - `pre-commit` → the hook name and its diff are in the log. Run
+     `uv run pre-commit run --all-files` locally; `pre-commit clean` resets a
+     stale hook environment.
+   - `CI` → `quality` → read the failing step. `Lockfile is current` means the
+     lock is stale: run `uv lock` and commit `uv.lock`. **Do not** relax a pin:
+     `numpy>=2` breaks ultralytics 8.3.40 validation (they removed `np.trapz`),
+     and bumping `PySide6` can change Qt dialog behaviour. `Run the gate` prints
+     the command that failed; reproduce it with `python tools/check.py`. The
+     `Type check (GUI)` step is advisory and never fails the build.
+   - `CI` → `test` → the failing test is printed with its assertion. The suite
+     is deterministic: if it passes locally it should pass in CI; if it fails
+     only in CI, check the language (`POLYX_LOCALE`) and the locale.
+   - `CI` → `build` → the wheel, the packaged catalogs or a smoke import
+     failed; the log names the command.
 2. Reproduce locally with the same command as the step (Linux above).
 3. Push the fix to the same branch: the job re-runs on its own, and the new push
    cancels the previous run.
 
 ## Local pre-commit guardrails
 
-CI runs the suite, ruff and ty; it does **not** run pre-commit. The hooks in
-`.pre-commit-config.yaml` are local guardrails that catch problems before a
-commit leaves your machine. Install them once in the dev environment, then run
-them manually at any time:
+The hooks in `.pre-commit-config.yaml` run locally and in the `pre-commit`
+workflow, so a hook that fails on your machine fails the PR too. Install them
+once in the dev environment, then run them manually at any time:
 
 ```bash
 uv sync --extra gui

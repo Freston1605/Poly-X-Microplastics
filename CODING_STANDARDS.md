@@ -52,8 +52,9 @@ Read by the review agent. Implementation guidance lives in `CLAUDE.md`.
 
 ## Review checklist
 
-Automated by the local hooks and the gate — these are the checks
-`.pre-commit-config.yaml` and `tools/check.py` actually run:
+Automated by the local hooks, the CI workflows and the gate — these are the
+checks `.pre-commit-config.yaml`, `.github/workflows/` and `tools/check.py`
+actually run:
 
 - [ ] `pytest` passes with zero failures and zero skips.
 - [ ] `ruff check` and `ruff format --check` are clean.

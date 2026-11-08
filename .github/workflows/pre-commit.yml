@@ -1,0 +1,33 @@
+# Run the same hooks contributors install locally, so a hook that was never
+# installed still fails the PR. `--only-dev` installs the dev group without the
+# project or its runtime dependencies: the hooks need pre-commit and the
+# standard library, not torch or PySide6.
+name: pre-commit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-commit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install pre-commit
+        run: uv sync --locked --only-dev
+
+      - name: Run hooks
+        run: uv run --no-sync pre-commit run --all-files --show-diff-on-failure
