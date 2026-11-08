@@ -58,6 +58,24 @@ with `load_run`; do not add a second schema. Pre-canonical folders
 (`summary.json` + `centroids.csv`, or the old GUI per-model labels) are legacy
 inputs, readable without migration.
 
+## Report section
+
+One numbered, self-contained part of the HTML report — summary, methods,
+gallery, and so on — chosen before the report is rendered. A section has a
+stable id that doubles as its HTML anchor, so a link into an archived report
+keeps working; the id is a key, not a translated word. Its visible title is a
+translated English message.
+_Avoid_: tab, chapter, page
+
+## Batch (report)
+
+The set of detections a report describes, after any narrowing to a chosen
+subset of images. Every total, figure and table in the document describes
+this same set; the report never mixes one batch's numbers with another
+batch's images.
+_Avoid_: run (the run is the recorded execution, which may be wider),
+selection
+
 ## GT (ground truth)
 
 The manual annotation of an image, stored as a YOLO `.txt`. An existing
