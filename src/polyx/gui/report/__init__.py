@@ -1,14 +1,14 @@
 """HTML report package: the one-way section-builder DAG.
 
-``render -> sections -> figures -> (machine/markup/samples/particle/registry)``
+``render -> sections -> figures -> (batch/machine/markup/samples/particle/registry)``
 is the dependency direction. Each module has a single responsibility:
-machine (provenance), markup (HTML primitives and CSS), samples (sampling,
-ordering, batch aggregation), particle (particle cards), registry (section
-catalog, anchors, document assembly). This module is the package's public
-surface: it re-exports the names the pre-split ``polyx.gui.report_html``
-module exposed. The 76-name contract is pinned by
-``tests/test_report_surface.py``; ``polyx.gui.report_html`` is a compatibility
-shim over this surface.
+batch (named batch and lot-shape precomputes), machine (provenance), markup
+(HTML primitives and CSS), samples (sampling and ordering), particle
+(particle cards), registry (section catalog, anchors, document assembly).
+This module is the package's public surface: it re-exports the names the
+pre-split ``polyx.gui.report_html`` module exposed. The 76-name contract is
+pinned by ``tests/test_report_surface.py``; ``polyx.gui.report_html`` is a
+compatibility shim over this surface.
 """
 
 from polyx.core.report_metrics import (

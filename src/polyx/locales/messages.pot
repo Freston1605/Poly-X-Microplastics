@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-07 13:51-0300\n"
+"POT-Creation-Date: 2026-11-08 16:51-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2921,21 +2921,21 @@ msgstr ""
 msgid "Microplastics detection suite by Nile Red fluorescence (254 nm) and AI (YOLO v8/v11)."
 msgstr ""
 
-#: src/polyx/gui/report/render.py:49
+#: src/polyx/gui/report/render.py:50
 msgctxt "report section"
 msgid "Summary"
 msgstr ""
 
-#: src/polyx/gui/report/render.py:163
+#: src/polyx/gui/report/render.py:166
 msgid "<th>Parameter</th><th>Value</th>"
 msgstr ""
 
-#: src/polyx/gui/report/render.py:224
+#: src/polyx/gui/report/render.py:227
 #, python-format
 msgid "report requires a finished run, not %(status)r"
 msgstr ""
 
-#: src/polyx/gui/report/samples.py:45
+#: src/polyx/gui/report/samples.py:40
 #, python-format
 msgid "Witness %(witness)s"
 msgstr ""

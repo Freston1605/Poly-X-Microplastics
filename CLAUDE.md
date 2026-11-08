@@ -92,13 +92,14 @@ src/                      # Source code (installable package)
         ├── pdf_export.py # HTML → PDF
         ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
-        ├── report/      # HTML report: render → sections → figures → machine/markup/samples/particle/registry
+        ├── report/      # HTML report: render → sections → figures → batch/machine/markup/samples/particle/registry
         │   ├── render.py     # generate_report: builds the document
         │   ├── sections.py   # the section builders (HTML blocks)
         │   ├── figures.py    # matplotlib figures (Agg)
+        │   ├── batch.py      # BatchMetrics + LotForms precomputes (pure, Qt-free)
         │   ├── machine.py    # equipment table, checkpoint training info
         │   ├── markup.py     # HTML primitives, CSS, tables
-        │   ├── samples.py    # sampling, ordering, batch aggregation
+        │   ├── samples.py    # sampling and ordering (temporary tuple shims)
         │   ├── particle.py   # particle card with mask overlay
         │   ├── registry.py   # section catalog, anchors, document shell
         │   └── stats.py      # re-export bridge over polyx.core.stats
