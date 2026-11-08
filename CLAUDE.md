@@ -149,7 +149,7 @@ models/                   # YOLO .pt weights (dev; in installs they go to user d
 runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
 data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
-.github/workflows/        # ci.yml (tests + build smoke), publish.yml (PyPI)
+.github/workflows/        # ruff.yml, pre-commit.yml, ci.yml (tests + build), publish.yml
 ```
 
 ---

@@ -1,0 +1,36 @@
+# Fast lint gate: ruff installs from the version locked in uv.lock and needs
+# no project dependencies, so it reports in seconds instead of after a full
+# `uv sync`. Scope matches the paths the gate passes to ruff in tools/check.py;
+# agent/ and legacy/ are excluded from pre-commit and are not linted here.
+name: Ruff
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ruff-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ruff check
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          version-file: uv.lock
+          src: src tests tools install
+
+      - name: ruff format
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          version-file: uv.lock
+          src: src tests tools install
+          args: "format --check --diff"
