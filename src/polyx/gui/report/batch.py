@@ -1,9 +1,11 @@
-"""Named, immutable batch precomputes for the HTML report (#84).
+"""Named batch precomputes for the HTML report (#84).
 
 ``BatchMetrics`` is the one batch-wide input every section reads, and
 ``LotForms`` is the one shape input the shape, depth and card sections read.
-Both are frozen dataclasses: a misspelled field fails loudly instead of
-silently reading the wrong tuple slot.
+Both are frozen dataclasses: the field bindings cannot be rebound after
+construction, so a misspelled field fails loudly instead of silently reading
+the wrong tuple slot. The lists and dicts they carry are still mutable
+objects, so freezing protects the names, not their contents.
 
 The module is pure and Qt-free. The calibration import stays lazy inside the
 lot-shape function, because the report must stay importable in the headless
@@ -21,6 +23,7 @@ from typing import TYPE_CHECKING
 from polyx.core.report_metrics import _classes_views
 
 if TYPE_CHECKING:
+    from polyx.core.detect.protocol import Instance as Detection
     from polyx.core.detection_run import ImageResult, RunResult
 
 
@@ -32,6 +35,9 @@ class BatchMetrics:
     image results) after the ``only_images`` filter, so the sections that read
     one model (counts, errors) and the sections that read all of them (models,
     methods, gallery) see the same subset.
+
+    Frozen stops a builder from rebinding a field; the dictionaries and lists
+    it points at remain the batch's own mutable containers.
     """
 
     results_by_model: dict[int, list[ImageResult]]
@@ -55,25 +61,14 @@ class LotForms:
     measured and that did not fall on the plate ring. ``ring_count`` says how
     many measured detections were set apart for falling on the ring, and
     ``formless_count`` how many predictions could not be segmented at all.
+
+    Frozen keeps the three names fixed; the ``shapes`` list itself is the one
+    the precompute built and is not copied.
     """
 
-    shapes: list[tuple[object, Path]]
+    shapes: list[tuple[Detection, Path]]
     ring_count: int
     formless_count: int
-
-
-@dataclass(frozen=True)
-class ShapeBodies:
-    """The two section bodies the shape pass produces in one go (#85).
-
-    ``forma`` is the particle-shape section and ``by_folder`` its companion
-    size-by-folder section. They are separate sections in the catalogue, but
-    share the per-class size grouping computed by the shape pass, so the
-    result is named instead of being split from a tuple by convention.
-    """
-
-    forma: str
-    by_folder: str
 
 
 def compute_batch_metrics(
@@ -132,14 +127,8 @@ def compute_lot_forms(run: RunResult, batch: BatchMetrics) -> LotForms:
 
     Reads ``batch.all_results`` so the shape sections see the same subset as
     every other section. The ``polyx.core.measure.calibration`` import stays
-    lazy inside :func:`_lot_forms_from_results`: it must not load at module
-    import time (S01 laziness gate).
+    lazy here: it must not load at module import time (S01 laziness gate).
     """
-    return _lot_forms_from_results(run, batch.all_results)
-
-
-def _lot_forms_from_results(run: RunResult, all_results: list[ImageResult]) -> LotForms:
-    """Build the lot-shape precompute from an already-filtered result list."""
     # ── What falls on the plate ring is not sample ──
     # The ring is a bright, continuous band, and the detector confuses it with
     # material. Since it also comes out huge, it entered among the largest: in one
@@ -151,6 +140,8 @@ def _lot_forms_from_results(run: RunResult, all_results: list[ImageResult]) -> L
     # removing detections from the count is a study decision and not the
     # report generator's. What is done is to declare how many were set apart.
     from polyx.core.measure.calibration import about_the_ring
+
+    all_results = batch.all_results
 
     def _on_the_ring(detection, image_path) -> bool:
         return about_the_ring(

@@ -697,10 +697,6 @@ EXACT_ALLOWLIST = frozenset(
         "SizeVerCursor",
         "ControlModifier",
         "mac_ver",
-        # Report section id pinned as a named result by ticket #85: the
-        # ShapeBodies field is the shape section's body, not a new Spanish
-        # local. Section ids stay locale-invariant keys.
-        "forma",
     }
 )
 

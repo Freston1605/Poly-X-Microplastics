@@ -95,7 +95,7 @@ src/                      # Source code (installable package)
         ├── report/      # HTML report: render → sections → figures → batch/machine/markup/samples/particle/registry
         │   ├── __init__.py   # public surface: generate_report + section catalog
         │   ├── render.py     # generate_report: builds the document
-        │   ├── sections.py   # the section builders (HTML blocks)
+        │   ├── sections.py   # the section builders + ShapeBodies (HTML blocks)
         │   ├── context.py    # ReportContext: the named inputs a builder receives
         │   ├── figures.py    # matplotlib figures (Agg)
         │   ├── batch.py      # BatchMetrics + LotForms precomputes (pure, Qt-free)
@@ -160,8 +160,9 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 > implementation. `polyx.gui.report_html` is a five-name compatibility shim
 > over that surface, and it is what the GUI page, the CLI and the audit tool
 > import. A new report section is one catalog entry in `registry.py` plus one
-> `build_<id>(ctx)` in `sections.py`; section ids stay stable Spanish keys
-> because they are HTML anchors, not user-facing strings.
+> builder `(ctx) -> str` in `sections.py`, named for what it renders; section
+> ids stay stable Spanish keys because they are HTML anchors, not user-facing
+> strings.
 
 ---
 
