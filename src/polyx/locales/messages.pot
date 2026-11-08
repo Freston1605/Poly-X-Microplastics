@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-08 17:43-0300\n"
+"POT-Creation-Date: 2026-11-08 18:31-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -363,7 +363,7 @@ msgstr ""
 
 #: src/polyx/core/report_simple.py:84 src/polyx/gui/detector/pages/compare.py:38
 #: src/polyx/gui/detector/pages/results.py:57 src/polyx/gui/report/figures.py:213
-#: src/polyx/gui/report/sections.py:305
+#: src/polyx/gui/report/sections.py:306
 msgid "Detections"
 msgstr ""
 
@@ -885,7 +885,7 @@ msgstr ""
 #: src/polyx/gui/detector/pages/compare.py:37 src/polyx/gui/detector/pages/gt_manual.py:677
 #: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:56
 #: src/polyx/gui/detector/review_dialog.py:93 src/polyx/gui/detector/window.py:29
-#: src/polyx/gui/report/sections.py:304
+#: src/polyx/gui/report/sections.py:305
 msgid "Images"
 msgstr ""
 
@@ -1118,7 +1118,7 @@ msgid "Model"
 msgstr ""
 
 #: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/results.py:157
-#: src/polyx/gui/report/sections.py:306
+#: src/polyx/gui/report/sections.py:307
 msgid "Mean conf."
 msgstr ""
 
@@ -2224,7 +2224,7 @@ msgstr ""
 msgid "Mean confidence"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:59 src/polyx/gui/report/sections.py:307
+#: src/polyx/gui/detector/pages/results.py:59 src/polyx/gui/report/sections.py:308
 msgid "Mean size (μm)"
 msgstr ""
 
@@ -2272,7 +2272,7 @@ msgstr ""
 msgid "Export detections CSV"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:146 src/polyx/gui/report/sections.py:265
+#: src/polyx/gui/detector/pages/results.py:146 src/polyx/gui/report/sections.py:266
 msgid "Per image"
 msgstr ""
 
@@ -2672,7 +2672,7 @@ msgstr ""
 msgid "Confidence histogram"
 msgstr ""
 
-#: src/polyx/gui/report/figures.py:238 src/polyx/gui/report/sections.py:1210
+#: src/polyx/gui/report/figures.py:238 src/polyx/gui/report/sections.py:1205
 msgid "Size distribution"
 msgstr ""
 
@@ -2708,7 +2708,7 @@ msgstr ""
 msgid "Ground Truth"
 msgstr ""
 
-#: src/polyx/gui/report/figures.py:522 src/polyx/gui/report/sections.py:398
+#: src/polyx/gui/report/figures.py:522 src/polyx/gui/report/sections.py:399
 #: src/polyx/gui/trainer/pages/summary.py:126
 msgid "Confusion matrix"
 msgstr ""
@@ -2782,7 +2782,7 @@ msgstr ""
 msgid "Compute capability"
 msgstr ""
 
-#: src/polyx/gui/report/machine.py:51 src/polyx/gui/report/sections.py:794
+#: src/polyx/gui/report/machine.py:51 src/polyx/gui/report/sections.py:793
 msgid "not available"
 msgstr ""
 
@@ -2921,12 +2921,12 @@ msgstr ""
 msgid "Microplastics detection suite by Nile Red fluorescence (254 nm) and AI (YOLO v8/v11)."
 msgstr ""
 
-#: src/polyx/gui/report/render.py:73
+#: src/polyx/gui/report/render.py:74
 msgctxt "report section"
 msgid "Summary"
 msgstr ""
 
-#: src/polyx/gui/report/render.py:181
+#: src/polyx/gui/report/render.py:194
 #, python-format
 msgid "report requires a finished run, not %(status)r"
 msgstr ""
@@ -2936,15 +2936,15 @@ msgstr ""
 msgid "Witness %(witness)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:119
+#: src/polyx/gui/report/sections.py:120
 msgid "Incomplete batch (failed run)."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:255
+#: src/polyx/gui/report/sections.py:256
 msgid ", the first active model."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:292
+#: src/polyx/gui/report/sections.py:293
 #, python-format
 msgid ""
 "<strong>%(images)s images</strong> were analysed with <strong>%(n)s YOLO %(models)s</strong> "
@@ -2953,61 +2953,61 @@ msgid ""
 "<strong>%(conf)s</strong>."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:535
+#: src/polyx/gui/report/sections.py:536
 msgid "<tr><th>Image</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:59
+#: src/polyx/gui/report/sections.py:60
 #, python-format
 msgid "stretch %(stretch)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:69
+#: src/polyx/gui/report/sections.py:70
 msgid "Computing hardware"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:70
+#: src/polyx/gui/report/sections.py:71
 msgid "<th>Component</th><th>Detail</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:103
+#: src/polyx/gui/report/sections.py:104
 msgid ""
 "<tr><th>Model</th><th>Base "
 "architecture</th><th>imgsz</th><th>batch</th><th>epochs</th><th>optimiser</th><th>Precision</th><th>Recall</th><th>mAP@50</th><th>mAP@50-95</th></tr>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:120
+#: src/polyx/gui/report/sections.py:121
 #, python-format
 msgid "The report describes only the results written before the error: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:125
+#: src/polyx/gui/report/sections.py:126
 msgid "Partial batch (aborted run)."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:126
+#: src/polyx/gui/report/sections.py:127
 msgid "The report describes only the images processed before the interruption."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:297
+#: src/polyx/gui/report/sections.py:298
 msgid "model"
 msgid_plural "models"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:401
+#: src/polyx/gui/report/sections.py:402
 msgid "Precision / recall / F1 per class"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:402
+#: src/polyx/gui/report/sections.py:403
 msgid "<th>Class</th><th>True Positives</th><th>False Positives</th><th>False Negatives</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:403
+#: src/polyx/gui/report/sections.py:404
 msgid "<th>Precision</th><th>Recall</th><th>F1</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:458
+#: src/polyx/gui/report/sections.py:459
 #, python-format
 msgid ""
 "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers "
@@ -3028,72 +3028,72 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:473
+#: src/polyx/gui/report/sections.py:474
 msgid "<th>Model</th><th>Images</th><th>Detections</th><th>Mean conf.</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:474
+#: src/polyx/gui/report/sections.py:475
 msgid "<th>True Positives</th><th>False Positives</th><th>False Negatives</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:475
+#: src/polyx/gui/report/sections.py:476
 msgid "<th>Misclassified</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:475
+#: src/polyx/gui/report/sections.py:476
 msgid "localisation"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:476
+#: src/polyx/gui/report/sections.py:477
 msgid "with class"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:895
+#: src/polyx/gui/report/sections.py:892
 #, python-format
 msgid "%(mean)s ± %(margin)s (95%% CI, n=%(n)s photographs)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:905
+#: src/polyx/gui/report/sections.py:902
 msgid "Models loaded"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:906
+#: src/polyx/gui/report/sections.py:903
 msgid "Minimum confidence"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:907
+#: src/polyx/gui/report/sections.py:904
 msgid "IoU NMS"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:908
+#: src/polyx/gui/report/sections.py:905
 msgid "IoU for matching true positives"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:909
+#: src/polyx/gui/report/sections.py:906
 msgid "Image size (imgsz)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:910
+#: src/polyx/gui/report/sections.py:907
 msgid "Device"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:911
+#: src/polyx/gui/report/sections.py:908
 msgid "μm per pixel"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:913
+#: src/polyx/gui/report/sections.py:910
 msgid "Size filter (μm)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:918
+#: src/polyx/gui/report/sections.py:915
 msgid "Images processed"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:919
+#: src/polyx/gui/report/sections.py:916
 msgid "Total detections"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1629
+#: src/polyx/gui/report/sections.py:1624
 msgid ""
 "<p class='caption' style='text-align:left'>The correlation is computed over the "
 "<strong>intervals</strong>, not over the particles: two particles from the same dish are not "
@@ -3102,131 +3102,139 @@ msgid ""
 "hold with so few intervals.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1658 src/polyx/gui/report/sections.py:1663
+#: src/polyx/gui/report/sections.py:1653 src/polyx/gui/report/sections.py:1658
 msgid "Size by folder"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1658
+#: src/polyx/gui/report/sections.py:1653
 msgid "source folder"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1766
+#: src/polyx/gui/report/sections.py:1778
 msgid "<th>Parameter</th><th>Value</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:61
+#: src/polyx/gui/report/sections.py:62
 #, python-format
 msgid "plate %(plate)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:209 src/polyx/gui/report/sections.py:1038
+#: src/polyx/gui/report/sections.py:210 src/polyx/gui/report/sections.py:1033
 #, python-format
 msgid "%(count)s image"
 msgid_plural "%(count)s images"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:225
+#: src/polyx/gui/report/sections.py:226
 msgid ""
 "<p>Dishes from the same depth interval are <strong>added together</strong>: they are subsamples "
 "of the same mass of sediment, not repeated photographs. The interval is the unit of "
 "analysis.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:228
+#: src/polyx/gui/report/sections.py:229
 msgid "Interval"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:239
+#: src/polyx/gui/report/sections.py:240
 msgid "Station"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:310
+#: src/polyx/gui/report/sections.py:311
 msgid ""
 "Error analysis against ground truth was included (true positives, false positives, false "
 "negatives and misclassified)."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:310
+#: src/polyx/gui/report/sections.py:311
 msgid "No ground truth was supplied, so no error metrics are reported."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:349
+#: src/polyx/gui/report/sections.py:350
 msgid ""
 "This report comes from a folder written before the canonical format. That folder stored per-"
 "image counts but not the ground-truth boxes, so the confusion matrix and per-class metrics "
 "cannot be rebuilt. These are the counts the run did record:"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:350
+#: src/polyx/gui/report/sections.py:351
 msgid "<th>Model</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:400
+#: src/polyx/gui/report/sections.py:401
 #, python-format
 msgid "Figure. Confusion matrix (main model: %(model)s, IoU = %(iou)s)."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:497
+#: src/polyx/gui/report/sections.py:498
 #, python-format
 msgid ""
 "<p><strong>Best performance: %(alias)s</strong>, with F1 %(f1)s at threshold %(threshold)s (P "
 "%(p)s · R %(r)s).</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:584
+#: src/polyx/gui/report/sections.py:585
 #, python-format
 msgid ""
 "<p><b>Best localisation F1:</b> %(alias)s (%(f1)s) — finding the particle, without requiring the"
 " polymer to be right. The with-class verdict is further up.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:866
+#: src/polyx/gui/report/sections.py:840
+msgid ""
+"<p>Each block shows, on the left, the model's detections (<em>bounding boxes</em> drawn by YOLO "
+"with their class and confidence) and, on the right, the real control labels (<em>ground "
+"truth</em>). This side-by-side view lets you judge visually where the model got it right or "
+"wrong.</p>"
+msgstr ""
+
+#: src/polyx/gui/report/sections.py:863
 msgid "Figure. Distribution of detections per class."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:868
+#: src/polyx/gui/report/sections.py:865
 msgid "Figure. Confidence histogram."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:870
+#: src/polyx/gui/report/sections.py:867
 msgid "Figure. Size distribution (equivalent diameter in μm)."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:901
+#: src/polyx/gui/report/sections.py:898
 msgid "(a single calibrated photograph, no CI)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:916
+#: src/polyx/gui/report/sections.py:913
 msgid "no filter"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:928
+#: src/polyx/gui/report/sections.py:925
 msgid "Minimum confidence to assign a polymer"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:931
+#: src/polyx/gui/report/sections.py:928
 msgid "Particles with no assignable polymer"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:975
+#: src/polyx/gui/report/sections.py:972
 #, python-format
 msgid "%(images)s images were processed with a total of %(detections)s detections."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1032
+#: src/polyx/gui/report/sections.py:1027
 msgid "measured on this photograph's Petri dish"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1033
+#: src/polyx/gui/report/sections.py:1028
 msgid "inherited from the crop (calibration index)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1034
+#: src/polyx/gui/report/sections.py:1029
 msgid "entered by hand in Parameters"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1061
+#: src/polyx/gui/report/sections.py:1056
 msgid ""
 "<p>The length reference is the nominal outer diameter of the Petri dish. The radius in pixels "
 "comes from a least-squares circle fitted to the sampled ring edge in 720 directions, with "
@@ -3234,39 +3242,39 @@ msgid ""
 "can be off by 12&nbsp;% and that error would enter every reported size in full.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1073
+#: src/polyx/gui/report/sections.py:1068
 msgid ""
 "<p>The scale was entered by hand in Parameters. It is not traced to a length standard, so any "
 "variation in shooting distance between photographs goes uncorrected.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1077
+#: src/polyx/gui/report/sections.py:1072
 msgid ""
 "<p>The scale is inherited from the calibration index, which associates it with each crop or "
 "plate. It is a declared value, not one measured on the photograph.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1291
+#: src/polyx/gui/report/sections.py:1286
 msgid "Per-image counts"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1293
+#: src/polyx/gui/report/sections.py:1288
 msgid "<th>Image</th><th>Total</th><th>Fibres</th><th>Particles</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1294
+#: src/polyx/gui/report/sections.py:1289
 msgid "<th>Median length<br>(µm)</th><th>Largest<br>(µm)</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1307
+#: src/polyx/gui/report/sections.py:1302
 msgid "<strong>No image has a scale</strong>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1338
+#: src/polyx/gui/report/sections.py:1333
 msgid "How length is measured"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1339
+#: src/polyx/gui/report/sections.py:1334
 msgid ""
 "<p>Every magnitude is measured on <strong>each particle's mask</strong>, not on the detector's "
 "box. The box of an elongated particle is almost empty and depends on how it happened to land: a "
@@ -3276,7 +3284,7 @@ msgid ""
 " —the 90th percentile inside it—.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1341
+#: src/polyx/gui/report/sections.py:1336
 msgid ""
 "<p><strong>The general criterion is the longest straight line that fits inside the "
 "particle</strong>, that is the greatest distance between two points of its outline: the "
@@ -3285,7 +3293,7 @@ msgid ""
 " particle happened to land in, and a jagged edge does not disturb it.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1343
+#: src/polyx/gui/report/sections.py:1338
 #, python-format
 msgid ""
 "<p><strong>That straight line stops working when the particle is contorted.</strong> In a bent "
@@ -3295,19 +3303,19 @@ msgid ""
 "that path follows the curve and returns the distance travelled.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1346
+#: src/polyx/gui/report/sections.py:1341
 msgid "<th>Particle shape</th><th>What is reported as length</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1347
+#: src/polyx/gui/report/sections.py:1342
 msgid "<td>Compact or irregular, but not bent</td><td>Maximum Feret (the longest straight line)</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1348
+#: src/polyx/gui/report/sections.py:1343
 msgid "<td>Elongated and contorted (fibre)</td><td>Geodesic diameter (follows the curve)</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1351
+#: src/polyx/gui/report/sections.py:1346
 msgid ""
 "<p>The distinction is made by <strong>thickness</strong>: the geodesic is used only if the "
 "length exceeds at least four times the particle's maximum inscribed thickness. The reason is "
@@ -3315,7 +3323,7 @@ msgid ""
 "crossing it, and the number is then inflated; in a thin fibre that cannot happen.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1353
+#: src/polyx/gui/report/sections.py:1348
 #, python-format
 msgid ""
 "<p>Checked against shapes of known size —straight bars, bars rotated 45&nbsp;°, arcs of 60, 120 "
@@ -3323,7 +3331,7 @@ msgid ""
 "<strong>median error of 0.8&nbsp;% and 4.7&nbsp;% in the worst case</strong>.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1357
+#: src/polyx/gui/report/sections.py:1352
 #, python-format
 msgid ""
 "<p><em>Touching particles.</em> Two particles in contact form a single blob, and measuring them "
@@ -3333,7 +3341,7 @@ msgid ""
 "27&nbsp;% overlap of the diameter, without splitting any particle that is a single piece.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1359
+#: src/polyx/gui/report/sections.py:1354
 #, python-format
 msgid ""
 "<p><em>Known limitations.</em> Two particles overlapping by more than 40&nbsp;% of their "
@@ -3342,44 +3350,44 @@ msgid ""
 " by up to 19&nbsp;% in the tightest case tested.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1361
+#: src/polyx/gui/report/sections.py:1356
 #, python-format
 msgid ""
 "<p>In %(n)s particles the particle could not be separated from the background; their size comes "
 "from the box and is not comparable with the rest.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1585
+#: src/polyx/gui/report/sections.py:1580
 msgid "the number of particles"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1632
+#: src/polyx/gui/report/sections.py:1627
 msgid ""
 "<th>Station</th><th>Interval</th><th>Dishes</th><th>Particles</th><th>With size</th><th>Median "
 "(µm)</th><th>Largest (µm)</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1664
+#: src/polyx/gui/report/sections.py:1659
 msgid ""
 "<p>Compares size across the folders of the analysed batch, each folder as a separate group. "
 "Useful when each folder is a sampling site, a station or a condition.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1685
+#: src/polyx/gui/report/sections.py:1680
 msgid "photograph"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:99
+#: src/polyx/gui/report/sections.py:100
 msgid ""
 "<p>Validation settings and metrics each weight was trained with, read from the <code>.pt</code> "
 "file itself.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:237
+#: src/polyx/gui/report/sections.py:238
 msgid "By station"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:261
+#: src/polyx/gui/report/sections.py:262
 msgid ""
 "<p><strong>Read it as a count, not as an evaluation.</strong> The model's column does not "
 "subtract false positives nor match box to box: it is how many particles of each polymer it "
@@ -3387,14 +3395,14 @@ msgid ""
 "error analysis is for.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:389
+#: src/polyx/gui/report/sections.py:390
 #, python-format
 msgid ""
 "No row for %(classes)s: it appears neither in the manual annotation nor among this batch's "
 "predictions, so there is no metric to report. The model is trained for that class all the same."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:509
+#: src/polyx/gui/report/sections.py:510
 #, python-format
 msgid ""
 "<p>The gap against %(other)s is <strong>%(d)s</strong> of F1. With a single training run per "
@@ -3402,37 +3410,49 @@ msgid ""
 "luck: it would take repeating with different seeds to claim one is better.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:540
+#: src/polyx/gui/report/sections.py:541
 msgid "dets"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:590
+#: src/polyx/gui/report/sections.py:591
 msgid ""
 "Without ground truth no winner can be declared: a model with more detections may be getting them"
 " right or making them up. Load annotations to obtain F1 per model."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:698
+#: src/polyx/gui/report/sections.py:699
 msgid ""
 "<p>Each model's detections image by image. The total can be dominated by a few dense "
 "photographs, so it is worth looking at the detail before choosing a model.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:708
+#: src/polyx/gui/report/sections.py:709
 msgid ""
 "Only one model was run, so there is no comparison. Load a second model in the Models tab to "
 "compare them over the same images."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:843
-msgid ""
-"<p>Each block shows, on the left, the model's detections (<em>bounding boxes</em> drawn by YOLO "
-"with their class and confidence) and, on the right, the real control labels (<em>ground "
-"truth</em>). This side-by-side view lets you judge visually where the model got it right or "
-"wrong.</p>"
+#: src/polyx/gui/report/sections.py:763
+#, python-format
+msgid "%(n)s detection by YOLO"
+msgid_plural "%(n)s detections by YOLO"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/polyx/gui/report/sections.py:791
+msgid "No ground truth for this image"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1043
+#: src/polyx/gui/report/sections.py:778 src/polyx/gui/report/sections.py:792
+msgid "Ground Truth (control)"
+msgstr ""
+
+#: src/polyx/gui/report/sections.py:809
+#, python-format
+msgid "model: %(model)s"
+msgstr ""
+
+#: src/polyx/gui/report/sections.py:1038
 #, python-format
 msgid ""
 "<p><strong>The scale is not shared by the whole batch:</strong> it varies %(var)s× between the "
@@ -3440,85 +3460,85 @@ msgid ""
 "using a single one for all of them would give sizes off by as much as %(pct)s%%.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1081
+#: src/polyx/gui/report/sections.py:1076
 msgid "<th>Source of the scale</th><th>Images</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1083
+#: src/polyx/gui/report/sections.py:1078
 msgid "<th>µm per pixel</th><th>Value</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1084 src/polyx/gui/report/sections.py:1213
+#: src/polyx/gui/report/sections.py:1079 src/polyx/gui/report/sections.py:1208
 msgid "<td>minimum</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1085 src/polyx/gui/report/sections.py:1215
+#: src/polyx/gui/report/sections.py:1080 src/polyx/gui/report/sections.py:1210
 msgid "<td>median</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1086 src/polyx/gui/report/sections.py:1217
+#: src/polyx/gui/report/sections.py:1081 src/polyx/gui/report/sections.py:1212
 msgid "<td>maximum</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1178
+#: src/polyx/gui/report/sections.py:1173
 msgid "<th>Morphotype</th><th>How many</th><th>%</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1179
+#: src/polyx/gui/report/sections.py:1174
 msgid "<td>Fibre (aspect ratio ≥ 3)</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1180
+#: src/polyx/gui/report/sections.py:1175
 msgid "<td>Particle (non-fibrous)</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1203
+#: src/polyx/gui/report/sections.py:1198
 msgid "Largest and smallest particle"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1205
+#: src/polyx/gui/report/sections.py:1200
 msgid "<th></th><th>Class</th><th>Length</th><th>Width</th><th>Area</th><th>Aspect</th><th>Curvature</th><th>Morphotype</th><th>Image</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1212
+#: src/polyx/gui/report/sections.py:1207
 msgid "<th>Statistic</th><th>Length (µm)</th>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1214
+#: src/polyx/gui/report/sections.py:1209
 msgid "<td>10th percentile</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1216
+#: src/polyx/gui/report/sections.py:1211
 msgid "<td>90th percentile</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1309
+#: src/polyx/gui/report/sections.py:1304
 #, python-format
 msgid "<strong>%(n)s of %(total)s images have no scale</strong> (%(which)s)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1355
+#: src/polyx/gui/report/sections.py:1350
 #, python-format
 msgid ""
 "<p><strong>%(n)s particles (%(pct)s %%) are contorted</strong>, meaning that their length "
 "exceeds their straight-line extent by more than 15&nbsp;%%.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1491
+#: src/polyx/gui/report/sections.py:1486
 #, python-format
 msgid "The <strong>%(fibres)s fibre and the %(others)s largest particles</strong> are shown"
 msgid_plural "The <strong>%(fibres)s fibres and the %(others)s largest particles</strong> are shown"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:1497
+#: src/polyx/gui/report/sections.py:1492
 #, python-format
 msgid ""
 "The <strong>%(others)s largest particles</strong> are shown. No fibre was detected in this "
 "batch, so the sample includes none"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1509
+#: src/polyx/gui/report/sections.py:1504
 msgid ""
 ". The split is deliberate: fibres are the case where the geodesic method comes into play —and "
 "they are a minority, so a sample taken at random might show none— and the largest of each type "
@@ -3526,11 +3546,11 @@ msgid ""
 "batch</strong>, but the selection that lets the method be checked where it can fail most.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1591
+#: src/polyx/gui/report/sections.py:1586
 msgid "the median size"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1624
+#: src/polyx/gui/report/sections.py:1619
 msgid ""
 "<p>The interval is the <strong>depth</strong> the sediment was taken from and, unlike an "
 "arbitrary folder, it is <em>ordered</em>. That makes it possible to ask about a trend —whether "
@@ -3538,23 +3558,23 @@ msgid ""
 "whether the groups differ.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1684
+#: src/polyx/gui/report/sections.py:1679
 #, python-format
 msgid "Size per photograph — %(folder)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1705
+#: src/polyx/gui/report/sections.py:1700
 #, python-format
 msgid ""
 " The %(n)s folders with the most particles are shown, out of the %(total)s that have more than "
 "one photograph."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:223
+#: src/polyx/gui/report/sections.py:224
 msgid "By depth interval"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:246
+#: src/polyx/gui/report/sections.py:247
 #, python-format
 msgid ""
 "%(n)s image does not follow the <code>interval.core</code> naming and is left out of the grouped"
@@ -3565,7 +3585,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:257
+#: src/polyx/gui/report/sections.py:258
 #, python-format
 msgid ""
 "<p>Particles counted in each sample, broken down by polymer. The <em>manual</em> column is the "
@@ -3573,24 +3593,42 @@ msgid ""
 "<strong>%(alias)s</strong>%(suffix)s</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:545
+#: src/polyx/gui/report/sections.py:546
 msgid "True Positives/False Positives/False Negatives"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:655
+#: src/polyx/gui/report/sections.py:656
 msgid "Figure. F1 per class. A model can win overall and lose on the polymer that matters."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:971
+#: src/polyx/gui/report/sections.py:761
+msgid "Model prediction"
+msgstr ""
+
+#: src/polyx/gui/report/sections.py:780
+#, python-format
+msgid "%(count)s real label"
+msgid_plural "%(count)s real labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/polyx/gui/report/sections.py:833
+#, python-format
+msgid ""
+"The first %(n)s images are shown, each with every model; %(omitted)s were left out of the "
+"gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
+msgstr ""
+
+#: src/polyx/gui/report/sections.py:968
 #, python-format
 msgid "Optical calibration was %(um)s μm/pixel. "
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1053
+#: src/polyx/gui/report/sections.py:1048
 msgid "<td>mean ± 95% CI</td>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1151
+#: src/polyx/gui/report/sections.py:1146
 #, python-format
 msgid ""
 "<strong>%(n)s of %(total)s particles (%(pct)s&nbsp;%%) have a size that needs checking</strong>:"
@@ -3601,7 +3639,7 @@ msgid ""
 "their cards."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1165
+#: src/polyx/gui/report/sections.py:1160
 #, python-format
 msgid ""
 "<strong>%(n)s detection falls on the dish's rim</strong> —beyond %(pct)s %% of the fitted "
@@ -3616,71 +3654,71 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/report/sections.py:1206
+#: src/polyx/gui/report/sections.py:1201
 msgid "Largest"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1207
+#: src/polyx/gui/report/sections.py:1202
 msgid "Smallest"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1245
+#: src/polyx/gui/report/sections.py:1240
 msgid ""
 "<table "
 "class='data'><tr><th>Class</th><th>n</th><th>smallest<br>(µm)</th><th>median<br>(µm)</th><th>largest<br>(µm)</th><th>Fibers</th></tr>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1322
+#: src/polyx/gui/report/sections.py:1317
 msgid ""
 "<p>To get one, in <em>Parameters</em>: tick <strong>«Measure the Petri dish»</strong> —each "
 "photograph then gets its own scale from the dish's rim, which is the most reliable route— or "
 "type a <strong>µm/pixel</strong> value"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1328
+#: src/polyx/gui/report/sections.py:1323
 msgid ""
 ". If it is already on, then in those particular photographs the dish's rim was not found: check "
 "that it is fully inside the frame."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1371
+#: src/polyx/gui/report/sections.py:1366
 msgid "An example: the largest particle, measured"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1375
+#: src/polyx/gui/report/sections.py:1370
 msgid "An example: the smallest particle, measured"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1449
+#: src/polyx/gui/report/sections.py:1444
 #, python-format
 msgid "measured by %(method)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1714
+#: src/polyx/gui/report/sections.py:1709
 #, python-format
 msgid ""
 "<p>Compares size across the individual photographs of one folder: for instance, whether size "
 "changes with depth or with the sampling moment within the same site.%(note)s</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:98
+#: src/polyx/gui/report/sections.py:99
 msgid "Training of each model"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:643
+#: src/polyx/gui/report/sections.py:644
 #, python-format
 msgid ""
 "Figure. Precision, recall and F1 of each model at threshold %(threshold)s, under both criteria. "
 "The gap between panels is the confusion between polymers."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:676
+#: src/polyx/gui/report/sections.py:677
 msgid ""
 "Figure. Detections per image of one model against the other; the diagonal is exact agreement. "
 "Symmetric-log scale, because almost every dish has few particles and a handful have hundreds."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:690
+#: src/polyx/gui/report/sections.py:691
 #, python-format
 msgid ""
 "Figure. F1 (with class) against the confidence threshold; the star marks each model's maximum. "
@@ -3688,34 +3726,7 @@ msgid ""
 " never computed."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:764
-#, python-format
-msgid "%(n)s detection by YOLO"
-msgid_plural "%(n)s detections by YOLO"
-msgstr[0] ""
-msgstr[1] ""
-
-#: src/polyx/gui/report/sections.py:792
-msgid "No ground truth for this image"
-msgstr ""
-
-#: src/polyx/gui/report/sections.py:779 src/polyx/gui/report/sections.py:793
-msgid "Ground Truth (control)"
-msgstr ""
-
-#: src/polyx/gui/report/sections.py:812
-#, python-format
-msgid "model: %(model)s"
-msgstr ""
-
-#: src/polyx/gui/report/sections.py:836
-#, python-format
-msgid ""
-"The first %(n)s images are shown, each with every model; %(omitted)s were left out of the "
-"gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
-msgstr ""
-
-#: src/polyx/gui/report/sections.py:952
+#: src/polyx/gui/report/sections.py:949
 #, python-format
 msgid ""
 "Automated detection was carried out with the YOLO model «%(models)s» (Ultralytics %(ul)s) at an "
@@ -3723,14 +3734,14 @@ msgid ""
 "IoU %(iou)s. "
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:963
+#: src/polyx/gui/report/sections.py:960
 #, python-format
 msgid ""
 "Error metrics were computed against independent manual annotation, matching predictions and "
 "labels at IoU ≥ %(iou)s. "
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1066
+#: src/polyx/gui/report/sections.py:1061
 #, python-format
 msgid ""
 "<strong>Uncertainty of the scale, and in which direction.</strong> The rim of the dish has a "
@@ -3744,65 +3755,54 @@ msgid ""
 " the outer edge is the larger of the two possible ones."
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1095
+#: src/polyx/gui/report/sections.py:1090
 msgid "Issues during calibration:"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1319
+#: src/polyx/gui/report/sections.py:1314
 msgid ""
 ", which is why their length shows as «—». The particles <em>were</em> measured —the counts and "
 "the shape columns are correct— but a measurement in pixels cannot be turned into micrometres "
 "without knowing how many µm each pixel is.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1445
+#: src/polyx/gui/report/sections.py:1440
 #, python-format
 msgid "width %(width)s µm"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1448
+#: src/polyx/gui/report/sections.py:1443
 #, python-format
 msgid "aspect %(aspect)s"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1455
+#: src/polyx/gui/report/sections.py:1450
 #, python-format
 msgid "%(pct)s %% of the line outside the outline"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1693
+#: src/polyx/gui/report/sections.py:1688
 #, python-format
 msgid "(%(n)s photographs)"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1713
+#: src/polyx/gui/report/sections.py:1708
 msgid "Size by photo, within each folder"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:762
-msgid "Model prediction"
-msgstr ""
-
-#: src/polyx/gui/report/sections.py:781
-#, python-format
-msgid "%(count)s real label"
-msgid_plural "%(count)s real labels"
-msgstr[0] ""
-msgstr[1] ""
-
-#: src/polyx/gui/report/sections.py:949
+#: src/polyx/gui/report/sections.py:946
 msgid "Summary of the settings used:"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1244
+#: src/polyx/gui/report/sections.py:1239
 msgid "Size by polymer type"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1472
+#: src/polyx/gui/report/sections.py:1467
 msgid "the mask ran outside the box and was clipped to it"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1501
+#: src/polyx/gui/report/sections.py:1496
 msgid ""
 "<p>Each particle with the number it carries in the annotated image, its crop and the measurement"
 " drawn <strong>on it</strong>: in yellow the Feret line, in magenta the geodesic path, whichever"
@@ -3810,7 +3810,7 @@ msgid ""
 "particle without marks, so you can judge whether the outline follows it.</p>"
 msgstr ""
 
-#: src/polyx/gui/report/sections.py:1504
+#: src/polyx/gui/report/sections.py:1499
 msgid ""
 "<p>On a <strong>concave</strong> particle the yellow line crosses outside the outline, and that "
 "is correct: Feret is the separation of two caliper jaws, not a path through the particle. So "

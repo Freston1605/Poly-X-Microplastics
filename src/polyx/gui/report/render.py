@@ -16,10 +16,11 @@ from pathlib import Path
 from polyx.core.detection_run import RunResult, RunStatus
 from polyx.core.i18n import _, pgettext
 
-from .batch import compute_batch_metrics, compute_lot_forms
+from .batch import LotForms, compute_batch_metrics, compute_lot_forms
 from .context import ReportContext
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
 from .sections import (
+    ShapeBodies,
     _run_status_note,
     build_calibration,
     build_comparison,
@@ -117,10 +118,22 @@ def _generate_report_impl(
 
     # ── Named precomputes ──
     # The batch metrics and the lot shapes live in polyx.gui.report.batch; the
-    # shape pass runs once and hands back both of its section bodies.
+    # shape pass runs once and hands back both of its section bodies. The lot
+    # and shape precomputes are paid for only by the sections that read them:
+    # a summary-only report never runs the shape pass (US20).
     batch = compute_batch_metrics(run, only_images)
-    lot = compute_lot_forms(run, batch)
-    shape_bodies = compute_shape_bodies(run, lot)
+    needs_lot = bool({"forma", "talla_carpetas", "profundidad", "fichas"} & requested)
+    needs_shape_bodies = bool({"forma", "talla_carpetas"} & requested)
+    lot = (
+        compute_lot_forms(run, batch)
+        if needs_lot
+        else LotForms(shapes=[], ring_count=0, formless_count=0)
+    )
+    shape_bodies = (
+        compute_shape_bodies(run, lot)
+        if needs_shape_bodies
+        else ShapeBodies(shape="", by_folder="")
+    )
     ctx = ReportContext(
         run=run,
         batch=batch,

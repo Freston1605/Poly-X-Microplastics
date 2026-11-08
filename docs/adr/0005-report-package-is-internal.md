@@ -40,12 +40,14 @@ The named inputs replace positional plumbing:
   the render caps, so a builder reads a named field instead of a tuple slot.
 - `BatchMetrics` and `LotForms` are frozen dataclasses computed once per
   report; a misspelled field fails loudly instead of silently reading the
-  wrong slot. `ShapeBodies` names the two bodies the shape pass produces, so
-  only the section that owns them knows how they split.
+  wrong slot. `ShapeBodies` names the two bodies the shape pass produces and
+  lives next to its producer in `sections.py`, so only the section that owns
+  them knows how they split.
 
-Every catalog id has one `build_<id>(ctx) -> str` builder; the assembler owns
+Every catalog id has one builder `(ctx) -> str`; the assembler owns
 the id-to-builder mapping, and section order stays in `SECTIONS`. A new
-section is one catalog entry plus one builder.
+section is one catalog entry plus one builder. The builders use semantic
+English names (`build_shape`, `build_size_by_folder`), not the section id.
 
 `polyx.gui.report_html` stays as a five-name compatibility alias whose
 `__file__` points at the package, so existing importers do not change.
@@ -76,7 +78,8 @@ visible titles are English `N_()` message ids resolved at render time.
   test (`set(SECTION_BUILDERS) == set(IDS_SECTIONS)`) fails if only one half
   is added.
 - Tests import submodules for the internal diagnostic seam
-  (`ReportContext` + `build_<id>`); the public seam stays `generate_report`.
+  (`ReportContext` + the per-section builders); the public seam stays
+  `generate_report`.
 - The frozen benign baseline remains the behavioural contract, so the
   refactor cannot quietly change output. The render is byte-identical and the
   baseline is not recaptured.
@@ -85,5 +88,4 @@ visible titles are English `N_()` message ids resolved at render time.
 - The batch precompute stays pure and Qt-free, and the calibration import
   stays lazy, so importing the report does not pull the scientific stack.
 
-Related: #83 (card), #84 (batch precompute), #85 (builders and context), #86
-(public surface), #87 (this record).
+Related: #83, #84, #85, #86, #87.

@@ -1,8 +1,10 @@
 """The named inputs every report section builder receives (#85).
 
-``ReportContext`` is frozen so a builder cannot mutate the batch while it
-renders, and the assembler builds one instance per report. It lives in its own
-module because both sides of the section seam need it: the assembler
+``ReportContext`` is frozen so a builder cannot rebind a field while it
+renders, and the assembler builds one instance per report. Freezing protects
+the bindings, not the contents: the lists and dicts the context points at are
+the batch's own containers. It lives in its own module because both sides of
+the section seam need it: the assembler
 (:mod:`polyx.gui.report.render`) constructs it and the builders
 (:mod:`polyx.gui.report.sections`) annotate their parameter with it. Keeping it
 here avoids a runtime import cycle between those two modules.
@@ -16,7 +18,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from polyx.core.detection_run import RunResult
 
-    from .batch import BatchMetrics, LotForms, ShapeBodies
+    from .batch import BatchMetrics, LotForms
+    from .sections import ShapeBodies
 
 
 @dataclass(frozen=True)

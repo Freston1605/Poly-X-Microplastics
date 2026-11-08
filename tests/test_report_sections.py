@@ -1,6 +1,6 @@
 """One builder per report section, fed by a ``ReportContext`` (#85).
 
-Every section id in the catalogue has exactly one ``build_<id>`` builder in
+Every section id in the catalogue has exactly one builder in
 ``polyx.gui.report.sections`` and one entry in the assembler's
 ``SECTION_BUILDERS`` mapping. A test builds the context from the benign
 fixture with the same precomputes production uses and calls one builder at a
@@ -122,13 +122,13 @@ def test_report_context_carries_the_named_inputs(tmp_path):
 
 def test_shape_bodies_is_a_frozen_named_result():
     """The shape section's two bodies come from one named, immutable result."""
-    from polyx.gui.report.batch import ShapeBodies
+    from polyx.gui.report.sections import ShapeBodies
 
-    assert [field.name for field in fields(ShapeBodies)] == ["forma", "by_folder"]
-    bodies = ShapeBodies(forma="forma", by_folder="by-folder")
-    assert (bodies.forma, bodies.by_folder) == ("forma", "by-folder")
+    assert [field.name for field in fields(ShapeBodies)] == ["shape", "by_folder"]
+    bodies = ShapeBodies(shape="shape", by_folder="by-folder")
+    assert (bodies.shape, bodies.by_folder) == ("shape", "by-folder")
     with pytest.raises(FrozenInstanceError):
-        bodies.forma = "other"
+        bodies.shape = "other"
 
 
 def test_section_builders_cover_every_section_id():
@@ -276,26 +276,21 @@ def test_shape_and_folder_bodies_come_from_the_shared_precompute(tmp_path):
     assert "<h2" not in shape_body
     assert NUM in shape_body
     assert folder_body == ""
-    assert shape_body == context.shape_bodies.forma
+    assert shape_body == context.shape_bodies.shape
     assert folder_body == context.shape_bodies.by_folder
 
 
-def test_shape_precompute_runs_once_for_both_builders(tmp_path, monkeypatch):
-    """Neither builder recomputes the shape bodies: the context owns them."""
+def test_builders_return_the_context_shape_bodies_verbatim(tmp_path):
+    """Both shape builders read the context sentinel; neither recomputes it."""
     import polyx.gui.report.sections as sections
+    from polyx.gui.report.sections import ShapeBodies
 
-    calls: list[int] = []
-    original = sections._section_shape
-
-    def counting_section_shape(*args, **kwargs):
-        calls.append(1)
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(sections, "_section_shape", counting_section_shape)
-    context = _benign_context(tmp_path)
-    assert sections.build_shape(context) == context.shape_bodies.forma
-    assert sections.build_size_by_folder(context) == context.shape_bodies.by_folder
-    assert len(calls) == 1
+    context = dataclasses.replace(
+        _benign_context(tmp_path),
+        shape_bodies=ShapeBodies(shape="<shape-body>", by_folder="<folder-body>"),
+    )
+    assert sections.build_shape(context) == "<shape-body>"
+    assert sections.build_size_by_folder(context) == "<folder-body>"
 
 
 def test_records_body_cards_and_sample_cap(tmp_path):
@@ -384,3 +379,88 @@ def test_the_assembler_builds_only_the_requested_sections(tmp_path, monkeypatch)
     assert called == ["errores"]
     html = (tmp_path / "errors.html").read_text(encoding="utf-8")
     assert "<h2 id='errors'>" not in html
+
+
+def test_the_assembler_precomputes_only_what_the_sections_need(tmp_path, monkeypatch):
+    """The lot shapes and shape bodies run only for sections that read them."""
+    import polyx.gui.report.render as render
+
+    calls: list[str] = []
+    real_lot = render.compute_lot_forms
+    real_bodies = render.compute_shape_bodies
+
+    def recording_lot(*args, **kwargs):
+        calls.append("lot")
+        return real_lot(*args, **kwargs)
+
+    def recording_bodies(*args, **kwargs):
+        calls.append("bodies")
+        return real_bodies(*args, **kwargs)
+
+    monkeypatch.setattr(render, "compute_lot_forms", recording_lot)
+    monkeypatch.setattr(render, "compute_shape_bodies", recording_bodies)
+
+    state = _benign_state(tmp_path)
+    render._generate_report_impl(state, tmp_path / "summary.html", sections=["resumen"])
+    assert calls == []
+
+    calls.clear()
+    render._generate_report_impl(state, tmp_path / "depth.html", sections=["profundidad"])
+    assert calls == ["lot"]
+
+    calls.clear()
+    render._generate_report_impl(state, tmp_path / "shape.html", sections=["forma"])
+    assert calls == ["lot", "bodies"]
+
+
+def test_include_refs_false_drops_the_references_section(tmp_path):
+    """``include_refs=False`` removes the anchor and the bibliography."""
+    from polyx.gui.report_html import generate_report
+
+    state = _benign_state(tmp_path)
+    included = generate_report(state, tmp_path / "refs.html", sections=["referencias"]).read_text(
+        encoding="utf-8"
+    )
+    assert "<h2 id='refs'>" in included
+    assert "doi.org/10.1371" in included
+
+    excluded = generate_report(
+        state,
+        tmp_path / "no-refs.html",
+        sections=["referencias"],
+        include_refs=False,
+    ).read_text(encoding="utf-8")
+    assert "<h2 id='refs'>" not in excluded
+    assert "doi.org/10.1371" not in excluded
+
+
+def test_include_gallery_false_drops_the_gallery_section(tmp_path):
+    """``include_gallery=False`` removes the anchor and the side-by-side blocks."""
+    import cv2
+    import numpy as np
+
+    from polyx.gui.report_html import generate_report
+
+    state = _benign_state(tmp_path)
+    ok, buf = cv2.imencode(".png", np.zeros((4, 4, 3), np.uint8))
+    assert ok
+    pred_path = tmp_path / "pred.png"
+    pred_path.write_bytes(buf.tobytes())
+    for rows in state.results.values():
+        for row in rows:
+            row.pred_path = pred_path
+
+    included = generate_report(state, tmp_path / "gallery.html", sections=["galeria"]).read_text(
+        encoding="utf-8"
+    )
+    assert "<h2 id='gallery'>" in included
+    assert "Model prediction" in included
+
+    excluded = generate_report(
+        state,
+        tmp_path / "no-gallery.html",
+        sections=["galeria"],
+        include_gallery=False,
+    ).read_text(encoding="utf-8")
+    assert "<h2 id='gallery'>" not in excluded
+    assert "Model prediction" not in excluded

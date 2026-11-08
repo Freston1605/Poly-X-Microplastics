@@ -76,6 +76,14 @@ batch's images.
 _Avoid_: run (the run is the recorded execution, which may be wider),
 selection
 
+## Shape bodies (report)
+
+The two section bodies the shape pass produces in one go: the particle-shape
+section and its size-by-folder companion. They share the per-class size
+grouping, so they are computed once and read from `ReportContext`. They live
+next to their producer in `polyx/gui/report/sections.py`.
+_Avoid_: form results, shape tuple
+
 ## GT (ground truth)
 
 The manual annotation of an image, stored as a YOLO `.txt`. An existing

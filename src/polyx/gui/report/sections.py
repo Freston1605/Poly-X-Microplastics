@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from polyx.core.stats import (
 from polyx.gui import theme as T
 
 from . import machine
-from .batch import LotForms, ShapeBodies
+from .batch import LotForms
 from .figures import (
     _fig_agreement_by_image,
     _fig_boxplot_groups,
@@ -718,134 +719,130 @@ def _section_gallery(
     run,
     classes_batch,
     max_gallery: int = 60,
-    include_gallery: bool = True,
 ) -> str:
     """Body of the 'galeria' section: side-by-side prediction vs Ground Truth.
 
     Returns the HTML body WITHOUT its ``<h2>`` title: the assembler owns the
-    heading and the section number. Empty when the gallery is disabled or no
-    candidate image has prediction bytes.
+    heading and the section number. Empty when no candidate image has
+    prediction bytes. Whether the section is requested at all is the
+    assembler's decision: it drops the section id from ``requested``.
     """
     # ── Side-by-side gallery: Prediction vs Ground Truth ──
     gallery_html = ""
     omitted = 0
-    if include_gallery:
-        blocks = []
-        # Gallery image cap: each one is embedded as base64, so
-        # without a limit a batch of several hundred produces a gigabyte HTML.
-        # It is grouped by image and not by model. Flattening model by model, the
-        # cap was exhausted inside the first one and the second never appeared in
-        # the gallery: with two models loaded only the photos from one were seen,
-        # which is precisely the visual side-by-side that is wanted. Now the cap counts
-        # images, and from each one all models enter, one below the other.
-        per_image: dict = {}
-        for mi in sorted(results_2):
-            for r in results_2[mi]:
-                per_image.setdefault(r.image_path, []).append((mi, r))
-        # Order by station/stretch/plate when the plate name
-        # allows it: the report is read following the core downwards, not in the
-        # arbitrary order in which the files were loaded.
-        order_imgs = sorted(per_image, key=_clue_order)
-        candidates = []
-        for path_2 in order_imgs[:max_gallery]:
-            candidates.extend(per_image[path_2])
-        omitted = max(0, len(per_image) - max_gallery)
-        for mi, r in candidates:
-            slot = run.models[mi]
-            if True:
-                # Prediction image (we prefer pred_png; otherwise the combined one)
-                pred_bytes = getattr(r, "pred_png", None) or r.annotated_png
-                if not pred_bytes:
-                    continue
-                left = (
-                    f"<figure><img src='{_uri_gallery(pred_bytes)}' />"
-                    f"<figcaption>{_('Model prediction')} · {_esc(slot.alias)}"
-                    f"<span class='sub'>"
-                    + ngettext(
-                        "%(n)s detection by YOLO",
-                        "%(n)s detections by YOLO",
-                        len(r.predictions),
-                    )
-                    % {"n": len(r.predictions)}
-                    + "</span>"
-                    "</figcaption></figure>"
-                )
-
-                # Ground Truth image (control)
-                gt_bytes = getattr(r, "gt_png", None)
-                if r.has_gt and gt_bytes:
-                    right = (
-                        f"<figure><img src='{_uri_gallery(gt_bytes)}' />"
-                        f"<figcaption>{_('Ground Truth (control)')}"
-                        f"<span class='sub'>"
-                        + ngettext(
-                            "%(count)s real label",
-                            "%(count)s real labels",
-                            len(r.gt),
-                        )
-                        % {"count": len(r.gt)}
-                        + "</span></figcaption></figure>"
-                    )
-                else:
-                    right = (
-                        f"<figure><div class='nogt'>"
-                        f"{_('No ground truth for this image')}</div>"
-                        f"<figcaption>{_('Ground Truth (control)')}"
-                        f"<span class='sub'>{_('not available')}</span>"
-                        f"</figcaption></figure>"
-                    )
-
-                # Photo header: name and, if the name allows it,
-                # which stretch and plate it comes from.
-                sample = _sample_of(r.image_path)
-                where = ""
-                if sample:
-                    station, range_value, plate = sample
-                    where = (
-                        " &nbsp;<span class='tag'>"
-                        + _clue_label(station, range_value, plate)
-                        + "</span>"
-                    )
-                meta = (
-                    f"<strong>{_esc(r.image_path.name)}</strong>{where}"
-                    "&nbsp;<span class='tag'>"
-                    + _("model: %(model)s") % {"model": _esc(slot.alias)}
-                    + "</span>"
-                )
-
-                # Photo table: particles per polymer. Matches and
-                # failures paired box by box are another question and live in
-                # the error analysis section.
-                table = _table_count(
-                    _count_per_class(r.gt) if r.has_gt else None,
-                    _count_per_class(r.predictions),
-                    classes_batch,
-                )
-
-                blocks.append(
-                    f"<div class='compare'><div class='compare-pair'>{left}{right}</div>"
-                    f"<div class='compare-meta'>{meta}</div>{table}</div>"
-                )
-
-        if blocks:
-            note = ""
-            if omitted:
-                n_shown = len({r.image_path for _unused, r in candidates})
-                note = (
-                    "<p class='caption'>"
-                    + _(
-                        "The first %(n)s images are shown, each with every model; %(omitted)s were left out of the gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
-                    )
-                    % {"n": n_shown, "omitted": omitted}
-                    + "</p>"
-                )
-            gallery_html = (
-                _(
-                    "<p>Each block shows, on the left, the model's detections (<em>bounding boxes</em> drawn by YOLO with their class and confidence) and, on the right, the real control labels (<em>ground truth</em>). This side-by-side view lets you judge visually where the model got it right or wrong.</p>"
-                )
-                + note
-                + "".join(blocks)
+    blocks = []
+    # Gallery image cap: each one is embedded as base64, so
+    # without a limit a batch of several hundred produces a gigabyte HTML.
+    # It is grouped by image and not by model. Flattening model by model, the
+    # cap was exhausted inside the first one and the second never appeared in
+    # the gallery: with two models loaded only the photos from one were seen,
+    # which is precisely the visual side-by-side that is wanted. Now the cap counts
+    # images, and from each one all models enter, one below the other.
+    per_image: dict = {}
+    for mi in sorted(results_2):
+        for r in results_2[mi]:
+            per_image.setdefault(r.image_path, []).append((mi, r))
+    # Order by station/stretch/plate when the plate name
+    # allows it: the report is read following the core downwards, not in the
+    # arbitrary order in which the files were loaded.
+    order_imgs = sorted(per_image, key=_clue_order)
+    candidates = []
+    for path_2 in order_imgs[:max_gallery]:
+        candidates.extend(per_image[path_2])
+    omitted = max(0, len(per_image) - max_gallery)
+    for mi, r in candidates:
+        slot = run.models[mi]
+        # Prediction image (we prefer pred_png; otherwise the combined one)
+        pred_bytes = getattr(r, "pred_png", None) or r.annotated_png
+        if not pred_bytes:
+            continue
+        left = (
+            f"<figure><img src='{_uri_gallery(pred_bytes)}' />"
+            f"<figcaption>{_('Model prediction')} · {_esc(slot.alias)}"
+            f"<span class='sub'>"
+            + ngettext(
+                "%(n)s detection by YOLO",
+                "%(n)s detections by YOLO",
+                len(r.predictions),
             )
+            % {"n": len(r.predictions)}
+            + "</span>"
+            "</figcaption></figure>"
+        )
+
+        # Ground Truth image (control)
+        gt_bytes = getattr(r, "gt_png", None)
+        if r.has_gt and gt_bytes:
+            right = (
+                f"<figure><img src='{_uri_gallery(gt_bytes)}' />"
+                f"<figcaption>{_('Ground Truth (control)')}"
+                f"<span class='sub'>"
+                + ngettext(
+                    "%(count)s real label",
+                    "%(count)s real labels",
+                    len(r.gt),
+                )
+                % {"count": len(r.gt)}
+                + "</span></figcaption></figure>"
+            )
+        else:
+            right = (
+                f"<figure><div class='nogt'>"
+                f"{_('No ground truth for this image')}</div>"
+                f"<figcaption>{_('Ground Truth (control)')}"
+                f"<span class='sub'>{_('not available')}</span>"
+                f"</figcaption></figure>"
+            )
+
+        # Photo header: name and, if the name allows it,
+        # which stretch and plate it comes from.
+        sample = _sample_of(r.image_path)
+        where = ""
+        if sample:
+            station, range_value, plate = sample
+            where = (
+                " &nbsp;<span class='tag'>" + _clue_label(station, range_value, plate) + "</span>"
+            )
+        meta = (
+            f"<strong>{_esc(r.image_path.name)}</strong>{where}"
+            "&nbsp;<span class='tag'>"
+            + _("model: %(model)s") % {"model": _esc(slot.alias)}
+            + "</span>"
+        )
+
+        # Photo table: particles per polymer. Matches and
+        # failures paired box by box are another question and live in
+        # the error analysis section.
+        table = _table_count(
+            _count_per_class(r.gt) if r.has_gt else None,
+            _count_per_class(r.predictions),
+            classes_batch,
+        )
+
+        blocks.append(
+            f"<div class='compare'><div class='compare-pair'>{left}{right}</div>"
+            f"<div class='compare-meta'>{meta}</div>{table}</div>"
+        )
+
+    if blocks:
+        note = ""
+        if omitted:
+            n_shown = len({r.image_path for _unused, r in candidates})
+            note = (
+                "<p class='caption'>"
+                + _(
+                    "The first %(n)s images are shown, each with every model; %(omitted)s were left out of the gallery to keep the file manageable. The metrics in the earlier sections do cover all of them."
+                )
+                % {"n": n_shown, "omitted": omitted}
+                + "</p>"
+            )
+        gallery_html = (
+            _(
+                "<p>Each block shows, on the left, the model's detections (<em>bounding boxes</em> drawn by YOLO with their class and confidence) and, on the right, the real control labels (<em>ground truth</em>). This side-by-side view lets you judge visually where the model got it right or wrong.</p>"
+            )
+            + note
+            + "".join(blocks)
+        )
     return gallery_html
 
 
@@ -979,15 +976,14 @@ def _section_methods(
     return methods_html, team_html, methods_for
 
 
-def _section_references(include_refs: bool = True) -> str:
+def _section_references() -> str:
     """Body of the 'referencias' section: static list of cited papers.
 
-    Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the section
-    is not included, so the assembler drops it like it does today.
+    Returns the HTML body WITHOUT its ``<h2>`` title. Whether the section is
+    requested at all is the assembler's decision: it drops the section id from
+    ``requested``.
     """
-    refs_html = ""
-    if include_refs:
-        refs_html = """
+    return """
         
         <ol>
           <li>Pérez M, Parra S, Ferrada C, Bravo M, Pérez PA, Quiroz W (2024).
@@ -1002,7 +998,6 @@ def _section_references(include_refs: bool = True) -> str:
               <a href='https://doi.org/10.4067/s0717-97072024000106082'>https://doi.org/10.4067/s0717-97072024000106082</a></li>
         </ol>
         """
-    return refs_html
 
 
 def _section_calibration(run) -> str:
@@ -1728,6 +1723,23 @@ def _size_per_folder(with_size):
 # the <h2> title (the assembler owns the heading and the number).
 
 
+@dataclass(frozen=True)
+class ShapeBodies:
+    """The two section bodies the shape pass produces in one go (#85).
+
+    ``shape`` is the particle-shape section and ``by_folder`` its companion
+    size-by-folder section. They are separate sections in the catalogue, but
+    share the per-class size grouping computed by the shape pass, so the
+    result is named instead of being split from a tuple by convention.
+
+    It lives next to :func:`compute_shape_bodies`, its only producer. Frozen
+    keeps the two names fixed; the strings themselves are immutable anyway.
+    """
+
+    shape: str
+    by_folder: str
+
+
 def compute_shape_bodies(run: RunResult, lot: LotForms) -> ShapeBodies:
     """Build the shape section's two bodies once, from the named precomputes.
 
@@ -1736,8 +1748,8 @@ def compute_shape_bodies(run: RunResult, lot: LotForms) -> ShapeBodies:
     keeps the two builders from repeating that work and from disagreeing about
     the same batch.
     """
-    forma, by_folder = _section_shape(run, lot.shapes, lot.ring_count, lot.formless_count)
-    return ShapeBodies(forma=forma, by_folder=by_folder)
+    shape, by_folder = _section_shape(run, lot.shapes, lot.ring_count, lot.formless_count)
+    return ShapeBodies(shape=shape, by_folder=by_folder)
 
 
 def build_summary(ctx: ReportContext) -> str:
@@ -1775,7 +1787,7 @@ def build_calibration(ctx: ReportContext) -> str:
 
 def build_shape(ctx: ReportContext) -> str:
     """Body of the ``forma`` section, read from the shared shape precompute."""
-    return ctx.shape_bodies.forma
+    return ctx.shape_bodies.shape
 
 
 def build_size_by_folder(ctx: ReportContext) -> str:
@@ -1837,8 +1849,8 @@ def build_count(ctx: ReportContext) -> str:
 def build_references(ctx: ReportContext) -> str:
     """Body of the ``referencias`` section.
 
-    ``include_refs`` is resolved by the assembler, which drops the section id
-    from the requested set; a requested reference builder always renders the
-    bibliography.
+    Whether the section is requested is resolved by the assembler, which drops
+    the section id from the requested set; a requested reference builder always
+    renders the bibliography.
     """
-    return _section_references(include_refs=True)
+    return _section_references()
