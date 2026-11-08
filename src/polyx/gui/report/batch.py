@@ -62,6 +62,20 @@ class LotForms:
     formless_count: int
 
 
+@dataclass(frozen=True)
+class ShapeBodies:
+    """The two section bodies the shape pass produces in one go (#85).
+
+    ``forma`` is the particle-shape section and ``by_folder`` its companion
+    size-by-folder section. They are separate sections in the catalogue, but
+    share the per-class size grouping computed by the shape pass, so the
+    result is named instead of being split from a tuple by convention.
+    """
+
+    forma: str
+    by_folder: str
+
+
 def compute_batch_metrics(
     run: RunResult, only_images: Iterable[Path | str] | None = None
 ) -> BatchMetrics:

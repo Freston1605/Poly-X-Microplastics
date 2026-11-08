@@ -1,42 +1,65 @@
-"""Report assembly: builds the document from the section constructors.
+"""Report assembly: builds the document from the section builders.
 
-The orchestration layer of the report: gathers the batch precomputations,
-calls every section constructor in order and wraps the result in the
-document shell. It is the only module that knows the section list, which
-keeps the dependency direction one-way (render -> sections -> figures ->
-_common) instead of the cycle the package used to carry.
+The orchestration layer of the report: gathers the named precomputes, builds
+one :class:`~polyx.gui.report.context.ReportContext`, and calls only the
+builders the caller requested, in catalogue order. It is the only module that
+knows the id -> builder mapping and the section list, which keeps the
+dependency direction one-way (render -> sections -> figures -> batch) instead
+of the cycle the package used to carry.
 """
 
 from __future__ import annotations
 
-from collections.abc import Collection
-from datetime import datetime
+from collections.abc import Callable, Collection
 from pathlib import Path
 
 from polyx.core.detection_run import RunResult, RunStatus
 from polyx.core.i18n import _, pgettext
 
 from .batch import compute_batch_metrics, compute_lot_forms
+from .context import ReportContext
 from .registry import IDS_SECTIONS, SECTIONS, _document_html
 from .sections import (
     _run_status_note,
-    _section_calibration,
-    _section_comparison,
-    _section_count,
-    _section_errors,
-    _section_gallery,
-    _section_methods,
-    _section_models,
-    _section_records,
-    _section_references,
-    _section_results,
-    _section_shape,
-    _section_summary,
-    _section_verdict,
-    section_depth,
+    build_calibration,
+    build_comparison,
+    build_count,
+    build_depth,
+    build_errors,
+    build_gallery,
+    build_methods,
+    build_models,
+    build_records,
+    build_references,
+    build_results,
+    build_shape,
+    build_size_by_folder,
+    build_summary,
+    compute_shape_bodies,
 )
 
 __all__ = ["_generate_report_impl", "generate_report"]
+
+# The id -> builder mapping. Section order stays in ``SECTIONS``; this mapping
+# only answers "which builder produces this section's body". The coverage
+# invariant ``set(SECTION_BUILDERS) == set(IDS_SECTIONS)`` is pinned by the
+# section tests.
+SECTION_BUILDERS: dict[str, Callable[[ReportContext], str]] = {
+    "resumen": build_summary,
+    "metodos": build_methods,
+    "calibracion": build_calibration,
+    "forma": build_shape,
+    "talla_carpetas": build_size_by_folder,
+    "profundidad": build_depth,
+    "fichas": build_records,
+    "resultados": build_results,
+    "modelos": build_models,
+    "errores": build_errors,
+    "comparacion": build_comparison,
+    "galeria": build_gallery,
+    "conteo": build_count,
+    "referencias": build_references,
+}
 
 
 def _section_title(message_id: str) -> str:
@@ -74,7 +97,7 @@ def _generate_report_impl(
     were filtered, the figures above would talk about one batch and the
     images about another.
 
-    ``secciones`` is the set of :data:`SECCIONES` identifiers to include;
+    ``sections`` is the set of :data:`SECTIONS` identifiers to include;
     ``None`` includes all of them. A requested section that has no
     content — errors without ground truth, for example — is skipped
     anyway: ticking it does not invent data that does not exist.
@@ -89,110 +112,41 @@ def _generate_report_impl(
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: F841
     active = list(run.models)
     status_note = _run_status_note(run)
 
-    # ── Batch metrics ──
-    # The named precompute lives in polyx.gui.report.batch; the assembler reads
-    # its fields by name instead of unpacking a positional tuple.
+    # ── Named precomputes ──
+    # The batch metrics and the lot shapes live in polyx.gui.report.batch; the
+    # shape pass runs once and hands back both of its section bodies.
     batch = compute_batch_metrics(run, only_images)
-
-    # ── Error analysis: matrix + per-class metrics (main model) ──
-    err_section = _section_errors(run, batch.results_by_model, batch.has_gt)
-
-    # ── Verdict and confidence sweep ──
-    verdict_html = _section_verdict(batch.results_by_model, run)
-
-    # ── Models side by side, photo by photo ──
-    compare_html = _section_comparison(run, batch.results_by_model)
-
-    # ── Side-by-side gallery: Prediction vs Ground Truth ──
-    gallery_html = _section_gallery(
-        batch.results_by_model,
-        run,
-        batch.classes,
-        max_gallery=max_gallery,
-        include_gallery=include_gallery,
-    )
-
-    # ── Aggregate figures ──
-    figures_html = _section_results(batch.per_class, batch.confidences, batch.sizes_um)
-
-    # ── Methods ──
-    methods_html, team_html, methods_for = _section_methods(
-        run,
-        active,
-        batch.all_results,
-        batch.image_count,
-        batch.detection_count,
-        batch.has_gt,
-    )
-
-    count_html = _section_count(batch.results_by_model, run, batch.classes)
-
-    refs_html = _section_references(include_refs)
-
-    # ── Scale calibration ──
-    calib_html = _section_calibration(run)
-
-    # ── Shape and size ──
-    # It is separated from `Resultados` because it answers another question: not how many
-    # particles there are, but what shape they have. Morphotype and curvature are
-    # variables that the microplastics literature reports and that the detector
-    # box cannot give. `shapes` is computed once because the depth profile
-    # and the cards also consume it.
     lot = compute_lot_forms(run, batch)
-    # The depth profile only exists if the names carry the stretch.
-    depth_html = section_depth(lot.shapes, batch.all_results) if lot.shapes else ""
-    shape_html, by_html_folder = _section_shape(run, lot.shapes, lot.ring_count, lot.formless_count)
-    # ── Card for each particle ──
-    records_html = _section_records(run, lot.shapes, max_records)
+    shape_bodies = compute_shape_bodies(run, lot)
+    ctx = ReportContext(
+        run=run,
+        batch=batch,
+        lot=lot,
+        shape_bodies=shape_bodies,
+        max_gallery=max_gallery,
+        max_records=max_records,
+    )
 
     # ── Assemble HTML ──
-    # Each block is (id, body). The body does NOT carry its <h2>: the title and
-    # number are set by the assembler, which is the only one that knows which sections
-    # survived the filter and therefore which number belongs to each one.
-    bodies = {
-        "resumen": _section_summary(
-            batch.image_count,
-            batch.detection_count,
-            batch.mean_confidence,
-            batch.mean_size_um,
-            active,
-            batch.has_gt,
-        ),
-        "metodos": f"""
-<table class='data'><tr>{_("<th>Parameter</th><th>Value</th>")}</tr>{methods_html}</table>
-{team_html}
-{methods_for}""",
-        "calibracion": calib_html,
-        "forma": shape_html,
-        "talla_carpetas": by_html_folder,
-        "profundidad": depth_html,
-        "fichas": records_html,
-        "resultados": figures_html,
-        "modelos": _section_models(run, batch.results_by_model, batch.all_results, batch.has_gt),
-        "errores": err_section,
-        "comparacion": f"{verdict_html}\n{compare_html}",
-        "galeria": gallery_html,
-        "conteo": count_html,
-        "referencias": refs_html,
-    }
+    # Each block is (id, translated title, body). The body does NOT carry its
+    # <h2>: the title and number are set by the document shell, which is the
+    # only one that knows which sections survived the filter and therefore
+    # which number belongs to each one. Only requested builders run, and an id
+    # whose body is empty is dropped: the checkbox was ticked but there was
+    # nothing to fill it with (errors without ground truth, for example).
+    alive = []
+    for sid, title in SECTIONS:
+        if sid not in requested:
+            continue
+        body = SECTION_BUILDERS[sid](ctx)
+        if body.strip():
+            alive.append((sid, _section_title(title), body))
 
-    # An id in ``pedidas`` with an empty body is dropped here: the checkbox was ticked but
-    # there was nothing to fill it with (errors without ground truth, count without samples).
-    # ``SECTIONS`` holds message ids. The interface already resolved them for its
-    # checkboxes; the document resolves them here against the active catalog, so a
-    # saved report keeps the language it was generated in.
-    alive = [
-        (sid, _section_title(title), bodies.get(sid, ""))
-        for sid, title in SECTIONS
-        if sid in requested and (bodies.get(sid) or "").strip()
-    ]
-
-    # Cover, table of contents, section numbering and footer live in _documento_html:
-    # the impl remains the ordered list of calls that feeds cuerpos.
+    # Cover, table of contents, section numbering and footer live in
+    # _document_html: the impl remains the ordered list of calls that feeds it.
     html = _document_html(alive, active, status_note)
     out_path.write_text(html, encoding="utf-8")
     return out_path
