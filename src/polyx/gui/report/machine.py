@@ -6,11 +6,10 @@ inside the body: the import-laziness gate
 (``tests/test_report_deferred_imports.py``) requires that importing the
 report package does not pay for them.
 
-They were re-exported from ``polyx.gui.report._common`` (removed in refactor) on purpose: the
-section builders read ``_team`` and ``_training_of`` through that module at
-call time, which is what lets the byte-identity fixtures pin the live
-equipment table to canonical rows (``tools/audit/capture_report_fixtures.py``
-patches exactly that attribute).
+The section builders read ``_team`` and ``_training_of`` through this module
+at call time, which is what lets the byte-identity fixtures pin the live
+equipment table to canonical rows
+(``tools/audit/capture_report_fixtures.py`` patches exactly that attribute).
 """
 
 from __future__ import annotations

@@ -4,10 +4,6 @@ Everything here turns report DATA into markup and nothing else: ``_esc`` for
 interpolated values, ``_report_css`` for the stylesheet, ``_img_b64`` /
 ``_uri_gallery`` for the base64 payloads that make the document
 self-contained, and the two table builders the sections compose.
-
-Re-exported from ``polyx.gui.report._common`` (removed in refactor) so the package surface
-(76-name contract, ``tests/test_report_surface.py``) and the section
-builders' ``from ._common import ...`` keep working unchanged.
 """
 
 from __future__ import annotations

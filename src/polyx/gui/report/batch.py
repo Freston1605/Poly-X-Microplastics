@@ -139,7 +139,7 @@ def compute_lot_forms(run: RunResult, batch: BatchMetrics) -> LotForms:
 
 
 def _lot_forms_from_results(run: RunResult, all_results: list[ImageResult]) -> LotForms:
-    """The tuple-view compatibility shim's entry point until ticket #86."""
+    """Build the lot-shape precompute from an already-filtered result list."""
     # ── What falls on the plate ring is not sample ──
     # The ring is a bright, continuous band, and the detector confuses it with
     # material. Since it also comes out huge, it entered among the largest: in one

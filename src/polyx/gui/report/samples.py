@@ -2,9 +2,7 @@
 
 Plate/station naming (Loa river), ``_sample_of``, ``_clue_order`` and
 ``choose_records`` (the biased fiber-aware sample) live here. The batch and
-lot-shape precomputes moved to :mod:`polyx.gui.report.batch` (#84); the
-``_batch_metrics`` and ``_lot_forms`` wrappers below keep the old tuple shape
-only until ticket #86 retires the 76-name surface.
+lot-shape precomputes live in :mod:`polyx.gui.report.batch`.
 """
 
 from __future__ import annotations
@@ -12,8 +10,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from polyx.core.i18n import _
-
-from .batch import _lot_forms_from_results, compute_batch_metrics
 
 # The plates from the Loa river are named `<tramo>.<testigo>` with an `x`/`xx` suffix for
 # the second and third plate of the same stretch. Crops add `__f<row>c<col>`.
@@ -103,36 +99,3 @@ def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
         leftovers = [t for t in fibers + others if id(t[0]) not in ya]
         chosen += leftovers[: max_records - len(chosen)]
     return chosen
-
-
-def _lot_forms(run, all_results):
-    """Deprecated 3-tuple view over :func:`polyx.gui.report.batch.compute_lot_forms`.
-
-    Temporary compatibility shim: the 76-name surface pins this name and the
-    section tests read the tuple. Ticket #86 retires both.
-    """
-    forms = _lot_forms_from_results(run, all_results)
-    return forms.shapes, forms.ring_count, forms.formless_count
-
-
-def _batch_metrics(run, only_images):
-    """Deprecated 11-tuple view over :func:`polyx.gui.report.batch.compute_batch_metrics`.
-
-    Temporary compatibility shim: the 76-name surface pins this name and the
-    section tests read the tuple. Ticket #86 retires both. The tuple order is
-    the order the old assembler unpacked, and the batch module owns the values.
-    """
-    metrics = compute_batch_metrics(run, only_images)
-    return (
-        metrics.results_by_model,
-        metrics.all_results,
-        metrics.image_count,
-        metrics.detection_count,
-        metrics.confidences,
-        metrics.sizes_um,
-        metrics.mean_confidence,
-        metrics.mean_size_um,
-        metrics.has_gt,
-        metrics.classes,
-        metrics.per_class,
-    )

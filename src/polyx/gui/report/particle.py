@@ -7,9 +7,6 @@ Feret/geodesic for comparison. It uses the SAME ``box_margin`` as
 ``tests/test_aligned_mask.py``), keeps heavy imports lazy (cv2,
 ``polyx.core.measure.*``) and returns ``""`` on any failure so the
 report never crashes over a bad crop.
-
-Re-exported from ``polyx.gui.report._common`` (removed in refactor) for the package surface and
-call sites.
 """
 
 from __future__ import annotations

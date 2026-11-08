@@ -11,7 +11,7 @@ Estas pruebas fijan el reparto para que no se pierda al editar el informe.
 
 from __future__ import annotations
 
-from polyx.gui.report_html import choose_records
+from polyx.gui.report.samples import choose_records
 
 
 class _Det:
