@@ -9,7 +9,7 @@ _common) instead of the cycle the package used to carry.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Collection
 from datetime import datetime
 from pathlib import Path
 
@@ -58,8 +58,8 @@ def _generate_report_impl(
     include_gallery: bool = True,
     max_gallery: int = 60,
     max_records: int = 12,
-    only_images: Iterable[Path | str] | None = None,
-    sections: Iterable[str] | None = None,
+    only_images: Collection[Path | str] | None = None,
+    sections: Collection[str] | None = None,
 ) -> Path:
     """Generates the HTML report from a canonical ``RunResult``.
 
@@ -205,8 +205,8 @@ def generate_report(
     include_gallery: bool = True,
     max_gallery: int = 60,
     max_records: int = 12,
-    only_images: Iterable[Path | str] | None = None,
-    sections: Iterable[str] | None = None,
+    only_images: Collection[Path | str] | None = None,
+    sections: Collection[str] | None = None,
 ) -> Path:
     """Generates the HTML report from a canonical ``RunResult``.
 
