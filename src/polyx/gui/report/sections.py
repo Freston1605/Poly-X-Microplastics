@@ -1,7 +1,10 @@
 """Sections."""
 
+from __future__ import annotations
+
 from collections import Counter
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -21,6 +24,7 @@ from polyx.core.stats import (
 from polyx.gui import theme as T
 
 from . import machine
+from .batch import LotForms, ShapeBodies
 from .figures import (
     _fig_agreement_by_image,
     _fig_boxplot_groups,
@@ -41,6 +45,11 @@ from .registry import NUM
 from .samples import _MAX_FOLDER_PER_PHOTO, _ORDER_STATION, _clue_order, _sample_of, choose_records
 
 _common = machine
+
+if TYPE_CHECKING:
+    from polyx.core.detection_run import RunResult
+
+    from .context import ReportContext
 
 
 def _clue_label(station: str, stretch: str, plate: str | None = None) -> str:
@@ -1097,9 +1106,9 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
     stay intact). ``por_carpeta_html`` is built in the same pass because it
     shares the per-class size grouping computed here, but it is its own
     optional section in the report (see SECCIONES) and never lands inside
-    ``forma_html``. ``formas`` arrives precomputed from
-    :func:`_formas_de_lote` because the depth profile and the particle
-    fichas read the same list.
+    ``forma_html``. ``shapes`` arrives precomputed from
+    :func:`polyx.gui.report.batch.compute_lot_forms` because the depth profile
+    and the particle fichas read the same list.
     """
     record_elderly = None
     record_minor = None
@@ -1711,3 +1720,127 @@ def _size_per_folder(with_size):
                 + "".join(parts_photo)
             )
     return by_html_folder
+
+
+# ────────────────────────────────────────────────────────────────────
+# ── Section builders ─────────────────────────────────────────────────────
+# Every section id in the catalogue has one builder fed by a ReportContext.
+# The assembler owns the id -> builder mapping and the section order; the
+# builders only turn their slice of the context into the section body, without
+# the <h2> title (the assembler owns the heading and the number).
+
+
+def compute_shape_bodies(run: RunResult, lot: LotForms) -> ShapeBodies:
+    """Build the shape section's two bodies once, from the named precomputes.
+
+    ``forma`` and ``talla_carpetas`` are separate sections, but the shape pass
+    computes the per-class size grouping they both need. Running it once here
+    keeps the two builders from repeating that work and from disagreeing about
+    the same batch.
+    """
+    forma, by_folder = _section_shape(run, lot.shapes, lot.ring_count, lot.formless_count)
+    return ShapeBodies(forma=forma, by_folder=by_folder)
+
+
+def build_summary(ctx: ReportContext) -> str:
+    """Body of the ``resumen`` section."""
+    return _section_summary(
+        ctx.batch.image_count,
+        ctx.batch.detection_count,
+        ctx.batch.mean_confidence,
+        ctx.batch.mean_size_um,
+        list(ctx.run.models),
+        ctx.batch.has_gt,
+    )
+
+
+def build_methods(ctx: ReportContext) -> str:
+    """Body of the ``metodos`` section: table, team and redacted paragraph."""
+    methods_html, team_html, methods_for = _section_methods(
+        ctx.run,
+        list(ctx.run.models),
+        ctx.batch.all_results,
+        ctx.batch.image_count,
+        ctx.batch.detection_count,
+        ctx.batch.has_gt,
+    )
+    return f"""
+<table class='data'><tr>{_("<th>Parameter</th><th>Value</th>")}</tr>{methods_html}</table>
+{team_html}
+{methods_for}"""
+
+
+def build_calibration(ctx: ReportContext) -> str:
+    """Body of the ``calibracion`` section."""
+    return _section_calibration(ctx.run)
+
+
+def build_shape(ctx: ReportContext) -> str:
+    """Body of the ``forma`` section, read from the shared shape precompute."""
+    return ctx.shape_bodies.forma
+
+
+def build_size_by_folder(ctx: ReportContext) -> str:
+    """Body of the ``talla_carpetas`` section, from the same precompute."""
+    return ctx.shape_bodies.by_folder
+
+
+def build_depth(ctx: ReportContext) -> str:
+    """Body of the ``profundidad`` section; empty when the names carry no depth."""
+    if not ctx.lot.shapes:
+        return ""
+    return section_depth(ctx.lot.shapes, ctx.batch.all_results)
+
+
+def build_records(ctx: ReportContext) -> str:
+    """Body of the ``fichas`` section."""
+    return _section_records(ctx.run, ctx.lot.shapes, ctx.max_records)
+
+
+def build_results(ctx: ReportContext) -> str:
+    """Body of the ``resultados`` section."""
+    return _section_results(ctx.batch.per_class, ctx.batch.confidences, ctx.batch.sizes_um)
+
+
+def build_models(ctx: ReportContext) -> str:
+    """Body of the ``modelos`` section."""
+    return _section_models(
+        ctx.run, ctx.batch.results_by_model, ctx.batch.all_results, ctx.batch.has_gt
+    )
+
+
+def build_errors(ctx: ReportContext) -> str:
+    """Body of the ``errores`` section."""
+    return _section_errors(ctx.run, ctx.batch.results_by_model, ctx.batch.has_gt)
+
+
+def build_comparison(ctx: ReportContext) -> str:
+    """Body of the ``comparacion`` section: verdict plus per-photo comparison."""
+    verdict_html = _section_verdict(ctx.batch.results_by_model, ctx.run)
+    compare_html = _section_comparison(ctx.run, ctx.batch.results_by_model)
+    return f"{verdict_html}\n{compare_html}"
+
+
+def build_gallery(ctx: ReportContext) -> str:
+    """Body of the ``galeria`` section."""
+    return _section_gallery(
+        ctx.batch.results_by_model,
+        ctx.run,
+        ctx.batch.classes,
+        max_gallery=ctx.max_gallery,
+    )
+
+
+def build_count(ctx: ReportContext) -> str:
+    """Body of the ``conteo`` section."""
+    return _section_count(ctx.batch.results_by_model, ctx.run, ctx.batch.classes)
+
+
+def build_references(ctx: ReportContext) -> str:
+    """Body of the ``referencias`` section.
+
+    ``include_refs`` is resolved by the assembler, which drops the section id
+    from the requested set; a requested reference builder always renders the
+    bibliography.
+    """
+    return _section_references(include_refs=True)
