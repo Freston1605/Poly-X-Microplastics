@@ -23,7 +23,7 @@ import pytest
 
 import polyx.core.measure as M
 from polyx.core.detect.protocol import Instance as Detection
-from polyx.gui.report_html import _record_particle
+from polyx.gui.report.particle import _record_particle
 
 
 def _foto_con_particula(tmp_path, cx=300, cy=200, r=34):
@@ -105,9 +105,9 @@ def test_el_margen_del_recorte_es_el_mismo_en_los_dos_sitios(lado_x, lado_y):
     """
     import inspect
 
-    from polyx.gui import report_html
+    from polyx.gui.report import particle
 
-    fuente = inspect.getsource(report_html._record_particle)
+    fuente = inspect.getsource(particle._record_particle)
     assert "margen_de_caja(" in fuente, (
         "la ficha volvio a calcularse su propio margen; tiene que usar "
         "margen_de_caja() o el contorno saldra corrido"

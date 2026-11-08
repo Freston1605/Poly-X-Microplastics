@@ -44,8 +44,6 @@ from .particle import _record_particle
 from .registry import NUM
 from .samples import _MAX_FOLDER_PER_PHOTO, _ORDER_STATION, _clue_order, _sample_of, choose_records
 
-_common = machine
-
 if TYPE_CHECKING:
     from polyx.core.detection_run import RunResult
 
@@ -66,7 +64,7 @@ def _clue_label(station: str, stretch: str, plate: str | None = None) -> str:
 
 def _section_team(active) -> str:
     """Table of components and of how each loaded model was trained."""
-    rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in _common._team())
+    rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in machine._team())
     html = (
         f"<h3>@@N@@.1 {_('Computing hardware')}</h3>"
         f"<table class='data'><tr>{_('<th>Component</th><th>Detail</th>')}</tr>"
@@ -77,7 +75,7 @@ def _section_team(active) -> str:
     for s in active:
         if s.path is None:
             continue
-        info = _common._training_of(Path(s.path))
+        info = machine._training_of(Path(s.path))
         if info:
             training_runs.append((s.alias, info))
     if not training_runs:

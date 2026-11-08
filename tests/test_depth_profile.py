@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from polyx.gui import report_html as R
+from polyx.core import stats as R
 
 
 @pytest.fixture(autouse=True)

@@ -62,13 +62,11 @@ from pathlib import Path
 
 import pytest
 
-from polyx.gui.report_html import (
-    _figure_calibration,
-    _generate_report_impl,
-    _section_team,
-    _table_count,
-    _table_width,
-)
+from polyx.gui.report import sections
+from polyx.gui.report.figures import _figure_calibration
+from polyx.gui.report.markup import _table_count, _table_width
+from polyx.gui.report.render import _generate_report_impl
+from polyx.gui.report.sections import _section_team
 
 # ── P001: par de cadenas hostil de referencia ──
 ALIAS_HOSTIL = "<img src=x onerror=alert(1)>"
@@ -217,7 +215,7 @@ def test_seccion_conteo_escapa_la_intro_del_modelo_y_la_fila_de_imagen(rh, tmp_p
     from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = rh._section_count(st.results, st, classes=["PET"])
+    html = sections._section_count(st.results, st, classes=["PET"])
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -241,7 +239,7 @@ def test_seccion_conteo_con_nomenclatura_de_pauta_escapa_el_segmento_hostil(rh, 
 
     nombre_pauta = "2.3x__A&amp;B<img src=x onerror=alert(2)>.png"
     st = estado_hostil(directorio=tmp_path / "fotos", nombres=[nombre_pauta])
-    html = rh._section_count(st.results, st, classes=["PET"])
+    html = sections._section_count(st.results, st, classes=["PET"])
 
     assert nombre_pauta not in html
     assert _e(nombre_pauta) in html
