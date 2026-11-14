@@ -574,6 +574,13 @@ A `.txt` file is written **only** when the image is marked as reviewed or when a
 is drawn. Skimming past does not create a file: recording an image that was barely
 glanced at as "reviewed with zero" would falsify the census.
 
+**Split layout.** Opening `images/train` reads and writes `labels/train/` through
+the YOLO-label codec (`polyx.core.labels`), never next to the photo. Legacy
+same-directory labels are still read and counted as reviewed, unmarking removes
+the file the codec found, and the `(n)` in the list counts the same file. For the
+conventional layout `classes.txt` is written once at the dataset root; a plain
+folder keeps one per folder that holds labels.
+
 **Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
 unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
 selected box · `Ctrl+Z/Y` undo/redo · wheel zoom · middle-button pan.
