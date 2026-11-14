@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 20:40-0300\n"
+"POT-Creation-Date: 2026-11-14 20:58-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -700,7 +700,7 @@ msgid "MODULES"
 msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:329
-#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:680
+#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:677
 #: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:158
 #: src/polyx/gui/viewer/window.py:558
 msgid "● Ready"
@@ -1438,7 +1438,7 @@ msgstr "No se pudo abrir la imagen."
 msgid "Class:"
 msgstr "Clase:"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:856 src/polyx/gui/labeler/window.py:656
+#: src/polyx/gui/detector/pages/gt_manual.py:856 src/polyx/gui/labeler/window.py:653
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
@@ -2757,7 +2757,7 @@ msgstr "Pre-anotando"
 msgid "● Pre-annotation complete"
 msgstr "● Pre-anotación completa"
 
-#: src/polyx/gui/labeler/window.py:679
+#: src/polyx/gui/labeler/window.py:676
 msgid "● Autosaved"
 msgstr "● Autoguardado"
 
@@ -2808,20 +2808,20 @@ msgstr "Sobrescribir"
 msgid "This image already has annotations. Overwrite them with the model?"
 msgstr "Esta imagen ya tiene anotaciones. ¿Sobrescribir con el modelo?"
 
-#: src/polyx/gui/labeler/window.py:613
+#: src/polyx/gui/labeler/window.py:610
 #, python-format
 msgid "%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left"
 msgstr "%(done)d / %(total)d revisadas  (%(percent)d%%)   faltan %(remaining)d"
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:623
 msgid "Counting complete"
 msgstr "Conteo completo"
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:623
 msgid "There are no unreviewed images left."
 msgstr "No quedan imágenes sin revisar."
 
-#: src/polyx/gui/labeler/window.py:661
+#: src/polyx/gui/labeler/window.py:658
 msgid "No annotations"
 msgstr "Sin anotaciones"
 

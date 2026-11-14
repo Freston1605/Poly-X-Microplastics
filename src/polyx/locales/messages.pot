@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 20:40-0300\n"
+"POT-Creation-Date: 2026-11-14 20:58-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -679,7 +679,7 @@ msgid "MODULES"
 msgstr ""
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:329
-#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:680
+#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:677
 #: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:158
 #: src/polyx/gui/viewer/window.py:558
 msgid "● Ready"
@@ -1373,7 +1373,7 @@ msgstr ""
 msgid "Class:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:856 src/polyx/gui/labeler/window.py:656
+#: src/polyx/gui/detector/pages/gt_manual.py:856 src/polyx/gui/labeler/window.py:653
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
@@ -2553,7 +2553,7 @@ msgstr ""
 msgid "● Pre-annotation complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:679
+#: src/polyx/gui/labeler/window.py:676
 msgid "● Autosaved"
 msgstr ""
 
@@ -2604,20 +2604,20 @@ msgstr ""
 msgid "This image already has annotations. Overwrite them with the model?"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:613
+#: src/polyx/gui/labeler/window.py:610
 #, python-format
 msgid "%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:623
 msgid "Counting complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:623
 msgid "There are no unreviewed images left."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:661
+#: src/polyx/gui/labeler/window.py:658
 msgid "No annotations"
 msgstr ""
 
