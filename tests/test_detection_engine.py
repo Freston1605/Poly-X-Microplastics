@@ -274,6 +274,28 @@ def test_ground_truth_is_read_once_and_matched_per_model(tmp_path, monkeypatch):
     assert loaded.results[1][0].gt_path and loaded.results[1][0].gt_path.is_file()
 
 
+def test_split_ground_truth_is_found_through_the_conventional_layout(tmp_path):
+    image = write_plate(tmp_path / "ds" / "images" / "train" / "plate.png")
+    width = height = 160
+    x1, y1, x2, y2 = TOP_BOX
+    label = tmp_path / "ds" / "labels" / "train" / "plate.txt"
+    label.parent.mkdir(parents=True)
+    label.write_text(
+        f"0 {(x1 + x2) / 2 / width:.6f} {(y1 + y2) / 2 / height:.6f} "
+        f"{(x2 - x1) / width:.6f} {(y2 - y1) / height:.6f}\n",
+        encoding="utf-8",
+    )
+
+    result = run_detection(
+        make_config([image], [FakeDetector(boxes=(TOP_BOX, BOTTOM_BOX))], tmp_path / "run")
+    )
+
+    item = result.results[0][0]
+    assert item.has_gt  # the sibling labels/ folder of images/ was found
+    assert item.gt_path is not None and item.gt_path.is_file()
+    assert (item.tp, item.fp, item.fn, item.miscls) == (1, 1, 0, 0)
+
+
 def test_callbacks_report_each_result_after_its_files_exist(tmp_path):
     images = [
         write_plate(tmp_path / "photos" / "a.png"),
