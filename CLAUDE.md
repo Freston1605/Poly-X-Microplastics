@@ -66,7 +66,7 @@ src/                      # Source code (installable package)
     │   ├── yolo_wrap.py  # YOLO wrapper (Detection, YoloModel)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
-    │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
+    │   ├── labels.py     # YOLO-label codec: the only label I/O (.txt, classes.txt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
     │   ├── detection_run/  # Canonical detection-run engine, folder and result
@@ -76,7 +76,7 @@ src/                      # Source code (installable package)
     │   ├── detect/       # YOLO inference
     │   ├── measure/      # Segmentation and sizes over the mask
     │   ├── calibration/  # μm/pixel calibration
-    │   ├── data/         # Dataset loading/validation
+    │   ├── data/         # Dataset loading/validation (no label codec)
     │   ├── quality/      # Metrics, assignment, abstractness
     │   └── provenance/   # Run traceability
     ├── locales/          # gettext: messages.pot + <tag>/LC_MESSAGES/messages.po
@@ -783,6 +783,24 @@ results.csv + curves
     ↓
 <user data dir>/runs_train/<run name>/
 ```
+
+### Labels, classes.txt and data.yaml
+
+`polyx.core.labels` is the only module that reads or writes a YOLO `.txt`
+label file or its folder layout. Every consumer imports it directly — the
+Viewer, the GT page, the Labeller, the headless engine, the dataset audit
+and the Trainer page — and neither `polyx.core` nor `polyx.core.data`
+re-exports label I/O of its own. `polyx.core.data` is reserved for the
+dataset module; it holds no second codec.
+
+- **`classes.txt`** is the codec's class-name fallback: one file at the
+  dataset root for a conventional split layout, one per folder for a plain
+  folder. `read_labels` resolves it from the label path, so a caller never
+  passes the path itself.
+- **`data.yaml`** is not the codec's. The dataset module owns the dataset's
+  class names in YAML and passes them to the codec as `class_names`; the
+  codec never parses YAML. Class-name precedence: explicit `class_names` →
+  `data.yaml` names → `classes.txt` → `STUDY_CLASSES`.
 
 ---
 
