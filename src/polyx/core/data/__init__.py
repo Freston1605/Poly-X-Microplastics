@@ -1,17 +1,8 @@
-"""Data formats and label I/O."""
+"""Dataset loading and validation.
 
-from .labels import (
-    classes_txt_path,
-    read_classes_txt,
-    read_labels,
-    write_classes_txt,
-    write_labels,
-)
-
-__all__ = [
-    "classes_txt_path",
-    "read_classes_txt",
-    "read_labels",
-    "write_classes_txt",
-    "write_labels",
-]
+This package is the future home of the dataset module, which will own
+``data.yaml`` class names and pass them to the YOLO-label codec
+(``polyx.core.labels``) as ``class_names``. It holds no label I/O of its
+own: the codec is the single owner of the ``.txt`` format and its folder
+conventions.
+"""
