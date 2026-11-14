@@ -31,6 +31,18 @@ its folder conventions for the whole program: parse, serialize, locate
 the EXIF-safe image size. One contract, one owner — no module
 re-implements the format.
 
+The conventional layout pairs a dataset root's `images/` with a sibling
+`labels/`, mirroring the relative subpath (`images/train/a.jpg` ↔
+`labels/train/a.txt`); no split name is hard-coded. Reads prefer the
+conventional file and fall back to a legacy same-directory or nested
+`labels/` file with a warning; writes go to the conventional location, or
+next to the image in a plain folder. An explicit GT folder is a flat
+override (flat read, then mirrored read, flat write). `classes.txt` lives
+at the dataset root for a split layout and in the folder itself for a
+plain one. `data.yaml` is not the codec's: the dataset module owns YAML
+class names and passes them in as `class_names`, so the codec never parses
+YAML.
+
 ## Detection run
 
 One execution of the canonical engine (`polyx/core/detection_run`) over a set
