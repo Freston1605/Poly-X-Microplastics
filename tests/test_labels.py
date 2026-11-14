@@ -9,6 +9,7 @@ stop being re-derived per module and the dialects stay compatible.
 
 from __future__ import annotations
 
+import importlib
 import logging
 import sys
 from pathlib import Path
@@ -367,3 +368,51 @@ def test_classes_txt_round_trip_preserves_order(tmp_path):
 def test_read_classes_treats_a_blank_file_as_absent(tmp_path):
     (tmp_path / "classes.txt").write_text("\n   \n", encoding="utf-8")
     assert L.read_classes(tmp_path) == ["PET", "PP", "LDPE"]
+
+
+# ── One owner: the duplicate codec is gone ────────────────────────────────
+
+
+def test_the_duplicate_data_codec_is_deleted():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx" / "core"
+    assert not (source / "data" / "labels.py").exists()
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("polyx.core.data.labels")
+
+
+def test_the_data_package_stays_for_the_dataset_module():
+    import polyx.core.data as data
+
+    assert data.__file__ is not None
+    for name in (
+        "read_labels",
+        "write_labels",
+        "classes_txt_path",
+        "read_classes_txt",
+        "write_classes_txt",
+    ):
+        assert not hasattr(data, name), f"polyx.core.data must not re-export {name}"
+
+
+def test_the_core_root_does_not_reexport_label_io():
+    import polyx.core as core
+
+    for name in (
+        "read_labels",
+        "write_labels",
+        "classes_txt_path",
+        "read_classes_txt",
+        "write_classes_txt",
+    ):
+        assert not hasattr(core, name), f"polyx.core must not re-export {name}"
+        assert name not in core.__all__, f"polyx.core.__all__ must not list {name}"
+
+
+def test_no_module_imports_the_deleted_codec():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
+    offenders = [
+        str(path.relative_to(source))
+        for path in source.rglob("*.py")
+        if "data.labels" in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == []
