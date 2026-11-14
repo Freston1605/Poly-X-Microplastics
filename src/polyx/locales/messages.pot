@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-08 18:31-0300\n"
+"POT-Creation-Date: 2026-11-14 20:38-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -442,145 +442,145 @@ msgid ""
 "threshold %(threshold).2f"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:186
+#: src/polyx/core/quality/dataset_audit.py:171
 msgid "data.yaml not found"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:223
+#: src/polyx/core/quality/dataset_audit.py:208
 #, python-format
 msgid "class %(id)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:279
+#: src/polyx/core/quality/dataset_audit.py:264
 msgid "No classes defined"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:279
+#: src/polyx/core/quality/dataset_audit.py:264
 msgid "The data.yaml has no 'names' key."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:283
+#: src/polyx/core/quality/dataset_audit.py:268
 msgid "Empty train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:284
+#: src/polyx/core/quality/dataset_audit.py:269
 msgid "The train folder exists but contains no images."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:289
+#: src/polyx/core/quality/dataset_audit.py:274
 msgid "Empty val"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:290
+#: src/polyx/core/quality/dataset_audit.py:275
 msgid "The val folder exists but contains no images → metrics cannot be measured."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:304
+#: src/polyx/core/quality/dataset_audit.py:289
 msgid ""
 "These classes have examples in train but ZERO in val. mAP will not measure their performance (it"
 " will give you a false sense of success). Add images of these classes to the validation split."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:315
+#: src/polyx/core/quality/dataset_audit.py:300
 msgid ""
 "The validation set contains a single class even though the model learns several. Multiclass "
 "metrics are not valid."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:428
+#: src/polyx/core/quality/dataset_audit.py:413
 msgid "With so few images the metrics are unstable. Aim for ≥ 10-20."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:436
+#: src/polyx/core/quality/dataset_audit.py:421
 msgid "No dataset problems detected"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:437
+#: src/polyx/core/quality/dataset_audit.py:422
 msgid "Class distribution, validation and format all look correct."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:192
+#: src/polyx/core/quality/dataset_audit.py:177
 msgid "Could not read data.yaml"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:303
+#: src/polyx/core/quality/dataset_audit.py:288
 #, python-format
 msgid "Classes without validation: %(classes)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:313
+#: src/polyx/core/quality/dataset_audit.py:298
 #, python-format
 msgid "Single-class validation (%(class)s)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:331
+#: src/polyx/core/quality/dataset_audit.py:316
 msgid "Strong class imbalance in train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:395
+#: src/polyx/core/quality/dataset_audit.py:380
 msgid "Boxes with width/height ~0. Check the annotation."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:402
+#: src/polyx/core/quality/dataset_audit.py:387
 msgid "Badly normalised labels; YOLO will interpret them wrongly."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:409
+#: src/polyx/core/quality/dataset_audit.py:394
 msgid "The same box repeated within one file."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:416
+#: src/polyx/core/quality/dataset_audit.py:401
 msgid "They will be trained as background (no objects). Confirm this is intentional."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:427
+#: src/polyx/core/quality/dataset_audit.py:412
 #, python-format
 msgid "Very small validation set (%(count)d images)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:242
+#: src/polyx/core/quality/dataset_audit.py:227
 #, python-format
 msgid "No %(split)s split declared"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:243
+#: src/polyx/core/quality/dataset_audit.py:228
 #, python-format
 msgid "The data.yaml has no '%(split)s' key. Ultralytics needs it to train and measure metrics."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:332
+#: src/polyx/core/quality/dataset_audit.py:317
 #, python-format
 msgid ""
 "“%(top)s” has %(top_count)d boxes and “%(bottom)s” only %(bottom_count)d (%(ratio).0f× more). "
 "Consider balancing or using class weights."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:393
+#: src/polyx/core/quality/dataset_audit.py:378
 #, python-format
 msgid "Degenerate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:400
+#: src/polyx/core/quality/dataset_audit.py:385
 #, python-format
 msgid "Coordinates outside [0,1] in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:407
+#: src/polyx/core/quality/dataset_audit.py:392
 #, python-format
 msgid "Duplicate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:414
+#: src/polyx/core/quality/dataset_audit.py:399
 #, python-format
 msgid "Images with no label in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:253
+#: src/polyx/core/quality/dataset_audit.py:238
 #, python-format
 msgid "%(split)s path does not exist"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:254
+#: src/polyx/core/quality/dataset_audit.py:239
 #, python-format
 msgid ""
 "The data.yaml points to “%(path)s”, which does not exist on this computer. This usually happens "
@@ -588,25 +588,25 @@ msgid ""
 "relative paths)."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:355
+#: src/polyx/core/quality/dataset_audit.py:340
 #, python-format
 msgid "“%(class)s”: little diversity"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:356
+#: src/polyx/core/quality/dataset_audit.py:341
 #, python-format
 msgid ""
 "%(percent).0f%% of its boxes come from a single image (%(image)s). The model may overfit to that"
 " scene."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:380
+#: src/polyx/core/quality/dataset_audit.py:365
 msgid ""
 "Their boxes are the same size, so the model can only tell them apart by colour/texture. If they "
 "also look alike, expect confusion between the two."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:378
+#: src/polyx/core/quality/dataset_audit.py:363
 #, python-format
 msgid "“%(first)s” and “%(second)s” are almost identical in size"
 msgstr ""
@@ -973,7 +973,7 @@ msgid_plural "✓ Saved: %(path)s  (%(count)d boxes)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/review_dialog.py:330 src/polyx/gui/trainer/pages/dataset.py:135
+#: src/polyx/gui/detector/review_dialog.py:330 src/polyx/gui/trainer/pages/dataset.py:109
 #: src/polyx/gui/trainer/window.py:28
 msgid "Dataset"
 msgstr ""
@@ -4191,201 +4191,201 @@ msgstr ""
 msgid "Box loss"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:136
+#: src/polyx/gui/trainer/pages/dataset.py:110
 msgid ""
 "Load your data.yaml. We validate the structure, count images and show a preview with boxes. If "
 "your dataset is not divided, use Auto-split."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:130 src/polyx/gui/trainer/pages/dataset.py:445
+#: src/polyx/gui/trainer/pages/dataset.py:104 src/polyx/gui/trainer/pages/dataset.py:419
 msgid "(empty)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:144
+#: src/polyx/gui/trainer/pages/dataset.py:118
 msgid "data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:148
+#: src/polyx/gui/trainer/pages/dataset.py:122
 msgid "Path to data.yaml…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:157 src/polyx/gui/trainer/pages/dataset.py:509
+#: src/polyx/gui/trainer/pages/dataset.py:131 src/polyx/gui/trainer/pages/dataset.py:475
 msgid "No data.yaml loaded."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:163
+#: src/polyx/gui/trainer/pages/dataset.py:137
 msgid "Counts per split"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:167
+#: src/polyx/gui/trainer/pages/dataset.py:141
 msgid "Train: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:169
+#: src/polyx/gui/trainer/pages/dataset.py:143
 msgid "Val: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:171
+#: src/polyx/gui/trainer/pages/dataset.py:145
 msgid "Test: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:173
+#: src/polyx/gui/trainer/pages/dataset.py:147
 msgid "Classes: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:181
+#: src/polyx/gui/trainer/pages/dataset.py:155
 msgid "Preview (6 random images with boxes)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:190
+#: src/polyx/gui/trainer/pages/dataset.py:164
 msgid "6 more"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:197
+#: src/polyx/gui/trainer/pages/dataset.py:171
 msgid "Auto-split (if your dataset is not divided)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:199
+#: src/polyx/gui/trainer/pages/dataset.py:173
 msgid ""
 "Takes a folder with images/ and labels/ and generates train/val/test automatically with a new "
 "data.yaml. It does not move files: it uses .txt lists."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:210
+#: src/polyx/gui/trainer/pages/dataset.py:184
 msgid "Root folder containing images/ and labels/…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:236
+#: src/polyx/gui/trainer/pages/dataset.py:210
 msgid "Auto-split + generate data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:249
+#: src/polyx/gui/trainer/pages/dataset.py:223
 msgid "Dataset validation"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:251
+#: src/polyx/gui/trainer/pages/dataset.py:225
 msgid "Checks that the dataset is sound before training. It runs automatically when data.yaml is loaded."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:262
+#: src/polyx/gui/trainer/pages/dataset.py:236
 msgid "data.yaml loaded and valid"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:263
+#: src/polyx/gui/trainer/pages/dataset.py:237
 msgid "Train split with images"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:264
+#: src/polyx/gui/trainer/pages/dataset.py:238
 msgid "Val split with images"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:265
+#: src/polyx/gui/trainer/pages/dataset.py:239
 msgid "Labels found (≥ 80 %)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:266
+#: src/polyx/gui/trainer/pages/dataset.py:240
 msgid "Classes defined in YAML"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:267
+#: src/polyx/gui/trainer/pages/dataset.py:241
 msgid "Valid training parameters"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:282
+#: src/polyx/gui/trainer/pages/dataset.py:256
 msgid "Validate now"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:288
+#: src/polyx/gui/trainer/pages/dataset.py:262
 msgid "In-depth analysis"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:326 src/polyx/gui/trainer/pages/evaluate.py:153
+#: src/polyx/gui/trainer/pages/dataset.py:300 src/polyx/gui/trainer/pages/evaluate.py:153
 msgid "Select data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:326 src/polyx/gui/trainer/pages/evaluate.py:153
+#: src/polyx/gui/trainer/pages/dataset.py:300 src/polyx/gui/trainer/pages/evaluate.py:153
 msgid "YAML (*.yaml *.yml)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:333
+#: src/polyx/gui/trainer/pages/dataset.py:307
 msgid "Root folder with images/ and labels/"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:642 src/polyx/gui/trainer/pages/dataset.py:649
-#: src/polyx/gui/trainer/pages/dataset.py:659 src/polyx/gui/trainer/pages/dataset.py:665
-#: src/polyx/gui/trainer/pages/dataset.py:714
+#: src/polyx/gui/trainer/pages/dataset.py:608 src/polyx/gui/trainer/pages/dataset.py:615
+#: src/polyx/gui/trainer/pages/dataset.py:625 src/polyx/gui/trainer/pages/dataset.py:631
+#: src/polyx/gui/trainer/pages/dataset.py:680
 msgid "Auto-split"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:220
+#: src/polyx/gui/trainer/pages/dataset.py:194
 msgid "Train %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:225
+#: src/polyx/gui/trainer/pages/dataset.py:199
 msgid "Val %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:230
+#: src/polyx/gui/trainer/pages/dataset.py:204
 msgid "Test %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:343
+#: src/polyx/gui/trainer/pages/dataset.py:317
 msgid "✗ File not found."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:374
+#: src/polyx/gui/trainer/pages/dataset.py:348
 #, python-format
 msgid "Train: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:375
+#: src/polyx/gui/trainer/pages/dataset.py:349
 #, python-format
 msgid "Val: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:376
+#: src/polyx/gui/trainer/pages/dataset.py:350
 #, python-format
 msgid "Test: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:378
+#: src/polyx/gui/trainer/pages/dataset.py:352
 #, python-format
 msgid "Classes (%(count)d): %(names)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:529
+#: src/polyx/gui/trainer/pages/dataset.py:495
 msgid "No images in train."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:537
+#: src/polyx/gui/trainer/pages/dataset.py:503
 msgid "No images in val."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:561
+#: src/polyx/gui/trainer/pages/dataset.py:527
 msgid "Could not access the train split."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:572
+#: src/polyx/gui/trainer/pages/dataset.py:538
 msgid "The YAML has no 'names' key."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:596
+#: src/polyx/gui/trainer/pages/dataset.py:562
 msgid "Model, hyperparameters and augmentation within range."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:642
+#: src/polyx/gui/trainer/pages/dataset.py:608
 msgid "Select the root folder first."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:659
+#: src/polyx/gui/trainer/pages/dataset.py:625
 msgid "No images were found in images/."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:665
+#: src/polyx/gui/trainer/pages/dataset.py:631
 msgid "The percentages add up to more than 100."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:715
+#: src/polyx/gui/trainer/pages/dataset.py:681
 #, python-format
 msgid ""
 "Ready:\n"
@@ -4396,65 +4396,65 @@ msgid ""
 "Generated: %(path)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:413
+#: src/polyx/gui/trainer/pages/dataset.py:387
 msgid ""
 "(the train folder\n"
 "was not found)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:436
+#: src/polyx/gui/trainer/pages/dataset.py:410
 msgid ""
 "(no images\n"
 "in train)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:526
+#: src/polyx/gui/trainer/pages/dataset.py:492
 #, python-format
 msgid "%(count)s image in train."
 msgid_plural "%(count)s images in train."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:534
+#: src/polyx/gui/trainer/pages/dataset.py:500
 #, python-format
 msgid "%(count)s image in val."
 msgid_plural "%(count)s images in val."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:559
+#: src/polyx/gui/trainer/pages/dataset.py:525
 msgid "No images were found to review."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:570
+#: src/polyx/gui/trainer/pages/dataset.py:536
 #, python-format
 msgid "Classes: %(names)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:620
+#: src/polyx/gui/trainer/pages/dataset.py:586
 msgid "  ⚠️ no val"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:623
+#: src/polyx/gui/trainer/pages/dataset.py:589
 msgid "Distribution per class &nbsp; — &nbsp; "
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:650
+#: src/polyx/gui/trainer/pages/dataset.py:616
 #, python-format
 msgid "Does not exist: %(path)s. You need images/ and labels/ inside the folder."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:349
+#: src/polyx/gui/trainer/pages/dataset.py:323
 #, python-format
 msgid "✗ Error parsing YAML: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:555
+#: src/polyx/gui/trainer/pages/dataset.py:521
 #, python-format
 msgid "%(pct).0f %% of images have a label (%(with_label)s/%(reviewed)s reviewed)."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:607
+#: src/polyx/gui/trainer/pages/dataset.py:573
 #, python-format
 msgid "Could not analyse: %(error)s"
 msgstr ""
