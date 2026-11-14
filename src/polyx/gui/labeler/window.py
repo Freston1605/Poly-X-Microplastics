@@ -569,12 +569,9 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             return f"○  {img.name}"
         n = len(self.state._annotations.get(str(img), []))
         if count_2 and str(img) not in self.state._annotations:
-            # Without loading into memory: it counts the lines of the .txt directly
-            txt = self.state._label_path_for(img)
-            try:
-                n = sum(1 for l in txt.read_text(encoding="utf-8").splitlines() if l.strip())  # noqa: E741
-            except OSError:
-                n = 0
+            # Without loading into memory: count the boxes of the same file
+            # the codec found (conventional or legacy), not a guessed path.
+            n = self.state.box_count_for(img)
         return f"✓  {img.name}  ({n})" if n else f"·  {img.name}  (0)"
 
     def _process_thumbs(self):

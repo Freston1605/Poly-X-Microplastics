@@ -14,6 +14,8 @@ from PySide6.QtCore import QObject, Signal
 from polyx.core.labels import (
     STUDY_CLASSES,
     BBox,
+    classes_dir_for,
+    find_label_file,
     label_path_for,
     read_boxes,
     write_classes,
@@ -110,7 +112,9 @@ class LabelerState(QObject):
         self._redo_stacks.clear()
         # Restores progress from previous sessions: a .txt on disk means
         # that the image was already reviewed, whether or not it has boxes.
-        self._reviewed = {str(p) for p in imgs if label_path_for(p).exists()}
+        # The codec decides which file that is: the conventional
+        # labels/<split>/ one or a legacy same-directory file.
+        self._reviewed = {str(p) for p in imgs if find_label_file(p) is not None}
         self.images_loaded.emit(imgs)
         if imgs:
             self.current_idx = -1  # force goto to emit image_changed
@@ -151,9 +155,16 @@ class LabelerState(QObject):
             self._save_labels_for(img, self.current_boxes, force=True)
         else:
             self._reviewed.discard(key)
-            txt = label_path_for(img)
-            if txt.exists() and not self.current_boxes:
-                txt.unlink()
+            # Withdraw the datum: remove the file the codec found, wherever
+            # it lives (conventional or legacy). Keeping the boxes in memory
+            # would let the next save recreate the file we just removed.
+            found = find_label_file(img)
+            if found is not None:
+                found.unlink(missing_ok=True)
+            self._annotations[key] = []
+            self._undo_stacks.pop(key, None)
+            self._redo_stacks.pop(key, None)
+            self.annotations_changed.emit()
         self.progress_changed.emit()
 
     def n_reviewed(self) -> int:
@@ -193,24 +204,31 @@ class LabelerState(QObject):
         key = str(img)
         if key in self._annotations:
             return
-        txt = label_path_for(img)
         boxes: list[BBox] = []
-        if txt.exists():
+        txt = find_label_file(img)
+        if txt is not None:
             boxes, _malformed = read_boxes(txt)
         self._annotations[key] = boxes
 
-    def save_classes_txt(self):
-        """Writes classes.txt at the root and in every subfolder with images.
+    def box_count_for(self, img: Path) -> int:
+        """How many boxes the label file the codec found holds (0 if none)."""
+        txt = find_label_file(img)
+        if txt is None:
+            return 0
+        boxes, _malformed = read_boxes(txt)
+        return len(boxes)
 
-        With nested folders (one directory per control, `testigo`) the root
-        is not enough: the YOLO tools look for classes.txt next to the
-        labels.
+    def save_classes_txt(self):
+        """Writes classes.txt where the labels of the loaded images live.
+
+        The codec resolves the destination: for a split layout every label
+        folder resolves to the one dataset root, so the file is written
+        once; a plain folder keeps one ``classes.txt`` per folder that holds
+        labels (the YOLO tools look for it next to them).
         """
         if not self.images:
             return
-        destinations = {label_path_for(p).parent for p in self.images}
-        if self.root_folder is not None:
-            destinations.add(self.root_folder)
+        destinations = {classes_dir_for(label_path_for(p).parent) for p in self.images}
         for d in destinations:
             with contextlib.suppress(OSError):
                 write_classes(d, self.class_names)
