@@ -836,7 +836,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         try:
             from polyx.core.detect.protocol import read_yolo_txt
             from polyx.core.image_io import read_image
-            from polyx.core.labels import read_classes
+            from polyx.core.labels import classes_dir_for, read_classes
 
             bgr = read_image(img)
 
@@ -845,7 +845,10 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             height, width_2 = bgr.shape[:2]
 
-            names = {i: n for i, n in enumerate(read_classes(txt.parent))}  # noqa: C416
+            # Run predictions live in <run>/<alias>/labels/ and the writer
+            # puts classes.txt in <run>/<alias>/: resolve the governing
+            # folder, not the label folder.
+            names = dict(enumerate(read_classes(classes_dir_for(txt.parent))))
 
             dets = read_yolo_txt(txt, width_2, height, names)
 

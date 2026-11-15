@@ -71,6 +71,38 @@ def test_viewer_load_labels_reads_the_split_label_and_dataset_classes(qapp, tmp_
     assert "plate.txt" in window.lbl_status.text()
 
 
+def test_viewer_run_load_reads_classes_from_the_model_folder(qapp, tmp_path, monkeypatch):
+    """Run labels live in <alias>/labels/; their classes.txt lives in <alias>/."""
+    pytest.importorskip("PySide6")
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    photo = _png(tmp_path / "photos" / "plate.png")
+    run = tmp_path / "runs" / "detect_20260101"
+    model = run / "alpha"
+    labels = model / "labels"
+    labels.mkdir(parents=True)
+    (model / "classes.txt").write_text("HDPE\nPS\n", encoding="utf-8")
+    (labels / "0000_plate.txt").write_text(
+        "0 0.5 0.5 0.2 0.2\n1 0.25 0.25 0.1 0.1\n", encoding="utf-8"
+    )
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(run))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: pytest.fail("warning dialog"))
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: pytest.fail("info dialog"))
+
+    window = ViewerWindow()
+    try:
+        window.state.images = [photo]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
+
+    assert [det.class_name for det in window.state.detections] == ["HDPE", "PS"]
+
+
 # ── Detector GT page ──────────────────────────────────────────────────────
 
 
