@@ -30,6 +30,8 @@ import os
 import sys
 from pathlib import Path
 
+import cv2
+import numpy as np
 import pytest
 
 _RAIZ = Path(__file__).resolve().parents[1]
@@ -38,6 +40,46 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 os.environ.setdefault("POLYX_LOCALE", "es")
+
+
+def split_dataset(
+    root: Path,
+    splits: dict[str, dict[str, str | None]],
+    *,
+    names: tuple[str, ...] = ("PET", "PP"),
+    suffix: str = ".png",
+    classes: bool = False,
+    data_yaml: bool = False,
+) -> Path:
+    """Build a conventional dataset (``images/<split>`` beside ``labels/<split>``).
+
+    ``splits`` maps a split name to its images as ``{stem: label text}``; a
+    ``None`` value writes the image without a label. The folders are created
+    for every declared split even when it holds no image, so a test can add
+    files later. ``classes`` writes the dataset-root ``classes.txt``;
+    ``data_yaml`` writes a ``data.yaml`` declaring the splits and ``names``.
+    Returns the dataset root.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    for split, images in splits.items():
+        images_dir = root / "images" / split
+        labels_dir = root / "labels" / split
+        images_dir.mkdir(parents=True, exist_ok=True)
+        labels_dir.mkdir(parents=True, exist_ok=True)
+        for stem, label_text in images.items():
+            ok, buf = cv2.imencode(suffix, np.zeros((40, 60, 3), dtype=np.uint8))
+            assert ok
+            (images_dir / f"{stem}{suffix}").write_bytes(bytes(buf))
+            if label_text is not None:
+                (labels_dir / f"{stem}.txt").write_text(label_text, encoding="utf-8")
+
+    if classes:
+        (root / "classes.txt").write_text("\n".join(names) + "\n", encoding="utf-8")
+    if data_yaml:
+        lines = ["path: .", *(f"{split}: images/{split}" for split in splits), "names:"]
+        lines += [f"  {index}: {name}" for index, name in enumerate(names)]
+        (root / "data.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return root
 
 
 @pytest.fixture(autouse=True)

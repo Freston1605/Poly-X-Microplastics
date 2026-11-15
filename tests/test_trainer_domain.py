@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from polyx.gui.trainer.dominio import create_real_only_yaml
+from tests.conftest import split_dataset
 
 REAL = "real__"
 LAB = "lab__"
@@ -18,18 +19,8 @@ LAB = "lab__"
 
 def make_dataset(root: Path, images: dict[str, str | None]) -> Path:
     """A split dataset; the value is the label text, or ``None`` for none."""
-    images_dir = root / "images" / "val"
-    labels_dir = root / "labels" / "val"
-    images_dir.mkdir(parents=True, exist_ok=True)
-    labels_dir.mkdir(parents=True, exist_ok=True)
-    for name, label_text in images.items():
-        (images_dir / f"{name}.jpg").write_bytes(b"\xff\xd8\xff\xd9")
-        if label_text is not None:
-            (labels_dir / f"{name}.txt").write_text(label_text, encoding="utf-8")
-
-    yaml_path = root / "data.yaml"
-    yaml_path.write_text("path: .\nval: images/val\nnames:\n  0: PET\n", encoding="utf-8")
-    return yaml_path
+    split_dataset(root, {"val": images}, suffix=".jpg", data_yaml=True)
+    return root / "data.yaml"
 
 
 def test_split_layout_label_is_linked_into_the_real_subset(tmp_path: Path):
@@ -67,15 +58,13 @@ def test_image_without_label_is_linked_without_a_label_file(tmp_path: Path):
 
 def test_legacy_same_directory_label_is_found_by_the_codec(tmp_path: Path):
     """A label next to the image (no conventional ``labels/val``) is still linked."""
-    root = tmp_path / "dataset"
+    root = split_dataset(
+        tmp_path / "dataset", {"val": {f"{REAL}a": None}}, suffix=".jpg", data_yaml=True
+    )
     images_dir = root / "images" / "val"
-    images_dir.mkdir(parents=True)
-    (images_dir / f"{REAL}a.jpg").write_bytes(b"\xff\xd8\xff\xd9")
     (images_dir / f"{REAL}a.txt").write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
-    yaml_path = root / "data.yaml"
-    yaml_path.write_text("path: .\nval: images/val\nnames:\n  0: PET\n", encoding="utf-8")
 
-    output = create_real_only_yaml(yaml_path, tmp_path / "out")
+    output = create_real_only_yaml(root / "data.yaml", tmp_path / "out")
 
     assert output is not None
     assert (tmp_path / "out" / "labels" / "val" / f"{REAL}a.txt").exists()

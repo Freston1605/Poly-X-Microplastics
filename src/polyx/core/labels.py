@@ -58,6 +58,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import cv2
 import numpy as np
@@ -187,7 +188,7 @@ def read_boxes(txt_path: str | Path) -> tuple[list[BBox], int]:
                 else:
                     boxes.append(box)
     except Exception as exc:  # noqa: BLE001
-        logger_for("detector").warning("read_boxes failed: %s", exc)
+        logger_for("labels").warning("read_boxes failed: %s", exc)
     return boxes, malformed
 
 
@@ -229,7 +230,6 @@ class _LabelLayout:
     images_root: Path | None
     labels_root: Path | None
     rel_dir: Path
-    gt_folder: Path | None
 
     @property
     def has_split(self) -> bool:
@@ -252,22 +252,21 @@ class _LabelLayout:
         return self.image_path.parent / "labels" / f"{self.image_path.stem}.txt"
 
 
-def _layout_for(image_path: Path, gt_folder: Path | None = None) -> _LabelLayout:
+def _layout_for(image_path: Path) -> _LabelLayout:
     """Resolve the split/plain convention for ``image_path``."""
     images_root = _nearest_named(image_path.parent, "images")
     if images_root is None:
-        return _LabelLayout(image_path, None, None, Path(), gt_folder)
+        return _LabelLayout(image_path, None, None, Path())
     return _LabelLayout(
         image_path,
         images_root,
         images_root.parent / "labels",
         image_path.parent.relative_to(images_root),
-        gt_folder,
     )
 
 
-def _warn_legacy(path: Path, kind: str) -> None:
-    logger_for("detector").warning(
+def _warn_legacy(path: Path, kind: Literal["same-directory", "nested"]) -> None:
+    logger_for("labels").warning(
         "legacy %s label used: %s (conventional layout mirrors images/ to labels/)",
         kind,
         path,
@@ -283,7 +282,7 @@ def find_label_file(image_path: Path, gt_folder: Path | None = None) -> Path | N
     a plain folder — a nested ``labels/`` file. Legacy hits are read but
     logged as warnings; nothing is moved or deleted.
     """
-    layout = _layout_for(image_path, gt_folder)
+    layout = _layout_for(image_path)
     stem = image_path.stem
     if gt_folder is not None:
         flat = gt_folder / f"{stem}.txt"
@@ -309,6 +308,23 @@ def find_label_file(image_path: Path, gt_folder: Path | None = None) -> Path | N
     return None
 
 
+def label_dir_for(image_path: Path, gt_folder: Path | None = None) -> Path:
+    """The folder :func:`label_path_for` writes to, without creating it.
+
+    An explicit GT folder wins (flat write), then the conventional
+    ``labels/<relpath>/`` of an ``images`` ancestor, then the image's own
+    folder for a plain one. Pure: it resolves the destination only, so a
+    caller can read the ``classes.txt`` that governs it before writing.
+    """
+    layout = _layout_for(image_path)
+    if gt_folder is not None:
+        return gt_folder
+    if layout.has_split:
+        assert layout.labels_root is not None
+        return layout.labels_root / layout.rel_dir
+    return image_path.parent
+
+
 def label_path_for(image_path: Path, gt_folder: Path | None = None) -> Path:
     """The write-side mirror of :func:`find_label_file` (folders created).
 
@@ -316,14 +332,7 @@ def label_path_for(image_path: Path, gt_folder: Path | None = None) -> Path:
     ``labels/<relpath>/`` of an ``images`` ancestor, then the image's own
     folder for a plain one. A split layout never writes next to the image.
     """
-    layout = _layout_for(image_path, gt_folder)
-    if gt_folder is not None:
-        out_dir = gt_folder
-    elif layout.has_split:
-        assert layout.labels_root is not None
-        out_dir = layout.labels_root / layout.rel_dir
-    else:
-        out_dir = image_path.parent
+    out_dir = label_dir_for(image_path, gt_folder)
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir / f"{image_path.stem}.txt"
 
@@ -343,19 +352,26 @@ def classes_dir_for(labels_dir: Path) -> Path:
 def image_path_for(label_path: Path, extensions: tuple[str, ...] = IMAGE_EXTS) -> Path | None:
     """The image that belongs to a label file, or ``None``.
 
-    Mirrors the label folder back to ``images/`` (or, for a plain folder,
-    looks in the label's own folder) and returns the first existing image
-    with the same stem and a known extension.
+    Mirrors the label folder back to ``images/`` and returns the first
+    existing image with the same stem and a known extension. A nested legacy
+    label (``sueltas/labels/plate.txt``) is read by
+    :func:`find_label_file` for the plain folder's image, so the mirrored
+    search falls back to the label's own folder and to that plain folder.
     """
+    folders: list[Path] = []
     labels_root = _nearest_named(label_path.parent, "labels")
     if labels_root is not None:
-        folder = labels_root.parent / "images" / label_path.parent.relative_to(labels_root)
+        rel_dir = label_path.parent.relative_to(labels_root)
+        folders.append(labels_root.parent / "images" / rel_dir)
+        folders.append(label_path.parent)
+        folders.append(labels_root.parent / rel_dir)
     else:
-        folder = label_path.parent
-    for extension in extensions:
-        candidate = folder / f"{label_path.stem}{extension}"
-        if candidate.exists():
-            return candidate
+        folders.append(label_path.parent)
+    for folder in folders:
+        for extension in extensions:
+            candidate = folder / f"{label_path.stem}{extension}"
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -435,7 +451,7 @@ def read_label_file(
                         )
                     )
     except Exception as exc:  # noqa: BLE001
-        logger_for("detector").warning("read_label_file failed: %s", exc)
+        logger_for("labels").warning("read_label_file failed: %s", exc)
     return instances, malformed
 
 
@@ -529,6 +545,7 @@ __all__ = [
     "find_label_file",
     "format_line",
     "image_path_for",
+    "label_dir_for",
     "label_path_for",
     "parse_box_line",
     "read_boxes",

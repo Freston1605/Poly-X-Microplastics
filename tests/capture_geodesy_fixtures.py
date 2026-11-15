@@ -51,7 +51,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import polyx.core.measure as measure
-from polyx.core.labels import read_label_file
+from polyx.core.labels import read_classes, read_label_file
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.
@@ -247,20 +247,8 @@ def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> 
 def _read_annotations(txt_path: Path, image_bgr: np.ndarray, classes_path: Path) -> list:
     """Read one image's annotations through the codec, ignoring bad lines."""
     height, width = image_bgr.shape[:2]
-    return read_label_file(txt_path, width, height, _load_classes(classes_path))[0]
-
-
-def _load_classes(path: Path) -> dict[int, str]:
-    """classes.txt: una linea de nombre por id, en orden."""
-    names: dict[int, str] = {}
-    if path.exists():
-        try:
-            for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
-                if line.strip():
-                    names[i] = line.strip()
-        except UnicodeDecodeError:
-            pass
-    return names
+    class_names = dict(enumerate(read_classes(classes_path.parent)))
+    return read_label_file(txt_path, width, height, class_names)[0]
 
 
 def imprimir_resumen(resumen: dict) -> None:

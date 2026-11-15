@@ -156,14 +156,12 @@ class LabelerState(QObject):
         else:
             self._reviewed.discard(key)
             # Withdraw the datum: remove the file the codec found, wherever
-            # it lives (conventional or legacy). Keeping the boxes in memory
-            # would let the next save recreate the file we just removed.
+            # it lives (conventional or legacy). The drawing stays in memory:
+            # it is the operator's work, so Ctrl+Z keeps working, and a
+            # drawn-on image is data — moving on may save it again.
             found = find_label_file(img)
             if found is not None:
                 found.unlink(missing_ok=True)
-            self._annotations[key] = []
-            self._undo_stacks.pop(key, None)
-            self._redo_stacks.pop(key, None)
             self.annotations_changed.emit()
         self.progress_changed.emit()
 
@@ -211,12 +209,32 @@ class LabelerState(QObject):
         self._annotations[key] = boxes
 
     def box_count_for(self, img: Path) -> int:
-        """How many boxes the label file the codec found holds (0 if none)."""
+        """How many boxes the image has: the in-memory drawing or the file.
+
+        A cached drawing wins, because it is what the operator currently
+        sees; otherwise the count comes from the file the codec found.
+        """
+        key = str(img)
+        if key in self._annotations:
+            return len(self._annotations[key])
         txt = find_label_file(img)
         if txt is None:
             return 0
         boxes, _malformed = read_boxes(txt)
         return len(boxes)
+
+    def has_annotations_for(self, img: Path) -> bool:
+        """Whether the image already has a drawing cached in memory."""
+        return str(img) in self._annotations
+
+    def set_annotations_for(self, img: Path, boxes: list[BBox]) -> None:
+        """Cache a drawing for an image that is not the current one.
+
+        Used by batch pre-annotation, which walks the whole list without
+        navigating; the current image's edits go through
+        :meth:`set_current_boxes` so they push undo.
+        """
+        self._annotations[str(img)] = list(boxes)
 
     def save_classes_txt(self):
         """Writes classes.txt where the labels of the loaded images live.
