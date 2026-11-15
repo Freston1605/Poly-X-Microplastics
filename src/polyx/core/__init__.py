@@ -6,13 +6,6 @@ computational engine. It is safe to import in headless environments
 """
 
 from . import data, detect, quality
-from .data.labels import (
-    classes_txt_path,
-    read_classes_txt,
-    read_labels,
-    write_classes_txt,
-    write_labels,
-)
 from .detect import (
     Detections,
     DetectionSource,
@@ -121,12 +114,6 @@ __all__ = [  # noqa: RUF022
     "metrics",
     "assignment",
     "dataset_audit",
-    # data
-    "read_labels",
-    "write_labels",
-    "classes_txt_path",
-    "write_classes_txt",
-    "read_classes_txt",
 ]
 
 __version__ = "2.0.0"

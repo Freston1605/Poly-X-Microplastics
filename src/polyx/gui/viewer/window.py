@@ -834,8 +834,8 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         txt = candidates[0]
 
         try:
-            from polyx.core.detect.protocol import read_yolo_txt
             from polyx.core.image_io import read_image
+            from polyx.core.labels import classes_dir_for, read_classes, read_label_file
 
             bgr = read_image(img)
 
@@ -844,9 +844,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             height, width_2 = bgr.shape[:2]
 
-            names = {i: n for i, n in enumerate(self._class_names(txt.parent))}  # noqa: C416
+            # Run predictions live in <run>/<alias>/labels/ and the writer
+            # puts classes.txt in <run>/<alias>/: resolve the governing
+            # folder, not the label folder.
+            names = dict(enumerate(read_classes(classes_dir_for(txt.parent))))
 
-            dets = read_yolo_txt(txt, width_2, height, names)
+            dets = read_label_file(txt, width_2, height, names)[0]
 
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(
@@ -898,7 +901,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             QMessageBox.information(
                 self,
                 _("No labels"),
-                _("There is no label file next to the image:\n%(name)s")
+                _("There is no label file for the image:\n%(name)s")
                 % {"name": img.with_suffix(".txt").name},
             )
 
@@ -939,20 +942,6 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             % {"count": len(dets), "file": txt.name, "warning": warning_2},
             T.WARN if malformed else T.OK,
         )
-
-    @staticmethod
-    def _class_names(folder_2: Path) -> list[str]:
-        """Reads classes.txt from the folder; if it is not there, it uses the study's classes."""
-
-        f = folder_2 / "classes.txt"
-
-        if f.exists():
-            names = [l.strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
-
-            if names:
-                return names
-
-        return ["PET", "PP", "LDPE"]
 
     def _on_detections_changed(self, dets: list):
 

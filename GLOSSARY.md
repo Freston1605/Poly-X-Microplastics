@@ -28,8 +28,24 @@ older versions, not the location. Decided in ADR-0001.
 The module (`polyx/core/labels.py`) that owns the YOLO `.txt` format and
 its folder conventions for the whole program: parse, serialize, locate
 (the `images/` ↔ `labels/` mapping, both directions), `classes.txt`, and
-the EXIF-safe image size. One contract, one owner — no module
-re-implements the format.
+the EXIF-safe image size. One contract, one owner: it is the only import
+path for label I/O, and no module — including `polyx.core.data` — carries
+a second codec or re-exports these names from the package roots.
+
+The conventional layout pairs a dataset root's `images/` with a sibling
+`labels/`, mirroring the relative subpath (`images/train/a.jpg` ↔
+`labels/train/a.txt`); no split name is hard-coded. Reads prefer the
+conventional file and fall back to a legacy same-directory or nested
+`labels/` file with a warning; writes go to the conventional location, or
+next to the image in a plain folder. An explicit GT folder is a flat
+override (flat read, then mirrored read, flat write). `classes.txt` lives
+at the dataset root for a split layout and in the folder itself for a
+plain one. `data.yaml` is not the codec's and the codec does not read it
+today. Class-name precedence today is explicit `class_names` →
+`classes.txt` → `STUDY_CLASSES`; the planned dataset module
+(`polyx/core/data/`, still empty) will own the YAML names and pass them in
+as `class_names`, adding the `data.yaml` step once it lands. The codec never
+parses YAML.
 
 ## Detection run
 

@@ -6,6 +6,34 @@ confidence column), locate (the ``images/`` <-> ``labels/`` folder
 convention, both directions), ``classes.txt`` handling, and — at the file
 level — the EXIF-safe image size that normalized coordinates depend on.
 
+Folder contract
+---------------
+
+The conventional Ultralytics layout is a dataset root holding ``images/``
+and ``labels/`` side by side, each with the same relative subpath per image
+(``images/train/a.jpg`` -> ``labels/train/a.txt``). The codec resolves the
+*nearest ancestor named* ``images`` (case-insensitive) to its sibling
+``labels/`` and preserves the relative subpath; no split name is ever
+hard-coded, so ``train``, ``val``, ``test`` and any custom folder work
+alike. A folder with no ``images`` ancestor is a *plain* folder: its labels
+live next to the images, with a nested ``labels/`` file accepted as a
+legacy fallback.
+
+Reads prefer the conventional location, then fall back to a legacy
+same-directory file and — in plain folders — to a nested ``labels/`` file,
+logging a warning whenever a legacy file is used. Writes always go to the
+conventional location for a split layout (never next to the image) and to
+the image's own folder for a plain one. An explicit GT folder is a flat
+override: flat read first, mirrored read second, flat write.
+
+``classes.txt`` is folder-local: for a split layout the dataset root (the
+parent of ``labels/``) owns one file, and any path under ``labels/``
+resolves to it; a plain folder keeps its own ``classes.txt``.
+
+``data.yaml`` is deliberately outside this module: the dataset module owns
+YAML class names and passes them in as explicit ``class_names``. The codec
+never parses YAML; ``classes.txt`` is its folder-local fallback.
+
 Two currencies, on purpose:
 
 - :class:`BBox` — the normalized box (``cx, cy, w, h`` in ``[0, 1]``), the
@@ -30,11 +58,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import cv2
 import numpy as np
 
 from polyx.core.detect.protocol import Instance, size_image
+from polyx.core.paths import IMAGE_EXTS
 from polyx.core.provenance.observability import logger_for
 
 # The study's classes. One definition: every reader falls back to this when
@@ -158,7 +188,7 @@ def read_boxes(txt_path: str | Path) -> tuple[list[BBox], int]:
                 else:
                     boxes.append(box)
     except Exception as exc:  # noqa: BLE001
-        logger_for("detector").warning("read_boxes failed: %s", exc)
+        logger_for("labels").warning("read_boxes failed: %s", exc)
     return boxes, malformed
 
 
@@ -178,45 +208,131 @@ def write_lines(txt_path: Path, boxes: list[BBox], include_conf: bool = False) -
 # ── The folder contract, both directions ──────────────────────────────────
 
 
-def find_label_file(image_path: Path, gt_folder: Path | None = None) -> Path | None:
-    """Find the label file that belongs to an image, or ``None``.
-
-    Search order: the explicit GT folder (when the caller declared one),
-    next to the image, then the sibling ``labels/`` of an ``images/``
-    folder — the YOLO dataset convention the Labeller writes.
-    """
-    stem = image_path.stem
-    candidates: list[Path] = []
-    if gt_folder is not None:
-        candidates.append(gt_folder / f"{stem}.txt")
-    candidates.append(image_path.parent / f"{stem}.txt")
-    if image_path.parent.name.lower() == "images":
-        candidates.append(image_path.parent.parent / "labels" / f"{stem}.txt")
-    else:
-        candidates.append(image_path.parent / "labels" / f"{stem}.txt")
-    for candidate in candidates:
-        if candidate.exists():
+def _nearest_named(start: Path, name: str) -> Path | None:
+    """The nearest ancestor of ``start`` (inclusive) named ``name``."""
+    for candidate in (start, *start.parents):
+        if candidate.name.lower() == name:
             return candidate
     return None
 
 
-# Legacy name (pre-codec): kept so ``polyx.core.detect.protocol`` can
-# re-export it and old imports keep working.
-find_gt_for_image = find_label_file
+@dataclass(frozen=True)
+class _LabelLayout:
+    """The folder convention resolved for one image path.
+
+    ``images_root`` is the nearest ``images`` ancestor and ``labels_root`` its
+    sibling ``labels/``; ``rel_dir`` is the subpath below ``images_root`` that
+    the label mirrors. A plain folder has neither root and an empty
+    ``rel_dir``.
+    """
+
+    image_path: Path
+    images_root: Path | None
+    labels_root: Path | None
+    rel_dir: Path
+
+    @property
+    def has_split(self) -> bool:
+        return self.images_root is not None and self.labels_root is not None
+
+    @property
+    def conventional(self) -> Path | None:
+        """The conventional label path, or ``None`` for a plain folder."""
+        if not self.has_split:
+            return None
+        assert self.labels_root is not None
+        return self.labels_root / self.rel_dir / f"{self.image_path.stem}.txt"
+
+    @property
+    def same_dir(self) -> Path:
+        return self.image_path.parent / f"{self.image_path.stem}.txt"
+
+    @property
+    def nested(self) -> Path:
+        return self.image_path.parent / "labels" / f"{self.image_path.stem}.txt"
+
+
+def _layout_for(image_path: Path) -> _LabelLayout:
+    """Resolve the split/plain convention for ``image_path``."""
+    images_root = _nearest_named(image_path.parent, "images")
+    if images_root is None:
+        return _LabelLayout(image_path, None, None, Path())
+    return _LabelLayout(
+        image_path,
+        images_root,
+        images_root.parent / "labels",
+        image_path.parent.relative_to(images_root),
+    )
+
+
+def _warn_legacy(path: Path, kind: Literal["same-directory", "nested"]) -> None:
+    logger_for("labels").warning(
+        "legacy %s label used: %s (conventional layout mirrors images/ to labels/)",
+        kind,
+        path,
+    )
+
+
+def find_label_file(image_path: Path, gt_folder: Path | None = None) -> Path | None:
+    """Find the label file that belongs to an image, or ``None``.
+
+    Precedence: the explicit GT folder (flat read first, then the mirrored
+    ``<gt>/<relpath>/<stem>.txt``), the conventional sibling ``labels/`` of
+    the nearest ``images`` ancestor, a legacy same-directory file, and — for
+    a plain folder — a nested ``labels/`` file. Legacy hits are read but
+    logged as warnings; nothing is moved or deleted.
+    """
+    layout = _layout_for(image_path)
+    stem = image_path.stem
+    if gt_folder is not None:
+        flat = gt_folder / f"{stem}.txt"
+        if flat.exists():
+            return flat
+        if layout.has_split:
+            mirrored = gt_folder / layout.rel_dir / f"{stem}.txt"
+            if mirrored.exists():
+                return mirrored
+
+    conventional = layout.conventional
+    if conventional is not None and conventional.exists():
+        return conventional
+
+    if layout.same_dir.exists():
+        if layout.has_split:
+            _warn_legacy(layout.same_dir, "same-directory")
+        return layout.same_dir
+
+    if not layout.has_split and layout.nested.exists():
+        _warn_legacy(layout.nested, "nested")
+        return layout.nested
+    return None
+
+
+def label_dir_for(image_path: Path, gt_folder: Path | None = None) -> Path:
+    """The folder :func:`label_path_for` writes to, without creating it.
+
+    An explicit GT folder wins (flat write), then the conventional
+    ``labels/<relpath>/`` of an ``images`` ancestor, then the image's own
+    folder for a plain one. Pure: it resolves the destination only, so a
+    caller can read the ``classes.txt`` that governs it before writing.
+    """
+    layout = _layout_for(image_path)
+    if gt_folder is not None:
+        return gt_folder
+    if layout.has_split:
+        assert layout.labels_root is not None
+        return layout.labels_root / layout.rel_dir
+    return image_path.parent
 
 
 def label_path_for(image_path: Path, gt_folder: Path | None = None) -> Path:
     """The write-side mirror of :func:`find_label_file` (folders created).
 
-    Same contract, inverse direction: an explicit GT folder wins, then the
-    sibling ``labels/`` of an ``images/`` folder, then next to the image.
+    An explicit GT folder wins (flat write), then the conventional
+    ``labels/<relpath>/`` of an ``images`` ancestor, then the image's own
+    folder for a plain one. A split layout never writes next to the image.
     """
-    if gt_folder is not None:
-        out_dir = gt_folder
-    elif image_path.parent.name.lower() == "images":
-        out_dir = image_path.parent.parent / "labels"
-    else:
-        out_dir = image_path.parent
+    out_dir = label_dir_for(image_path, gt_folder)
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir / f"{image_path.stem}.txt"
 
@@ -224,12 +340,39 @@ def label_path_for(image_path: Path, gt_folder: Path | None = None) -> Path:
 def classes_dir_for(labels_dir: Path) -> Path:
     """Where the ``classes.txt`` that governs ``labels_dir`` lives.
 
-    YOLO tools look for it next to the labels: the parent of a folder named
-    ``labels/``, the folder itself otherwise.
+    Any path under a ``labels/`` ancestor resolves to the dataset root (the
+    parent of ``labels/``); everything else keeps its own folder.
     """
-    if labels_dir.name.lower() == "labels":
-        return labels_dir.parent
+    labels_root = _nearest_named(labels_dir, "labels")
+    if labels_root is not None:
+        return labels_root.parent
     return labels_dir
+
+
+def image_path_for(label_path: Path, extensions: tuple[str, ...] = IMAGE_EXTS) -> Path | None:
+    """The image that belongs to a label file, or ``None``.
+
+    Mirrors the label folder back to ``images/`` and returns the first
+    existing image with the same stem and a known extension. A nested legacy
+    label (``sueltas/labels/plate.txt``) is read by
+    :func:`find_label_file` for the plain folder's image, so the mirrored
+    search falls back to the label's own folder and to that plain folder.
+    """
+    folders: list[Path] = []
+    labels_root = _nearest_named(label_path.parent, "labels")
+    if labels_root is not None:
+        rel_dir = label_path.parent.relative_to(labels_root)
+        folders.append(labels_root.parent / "images" / rel_dir)
+        folders.append(label_path.parent)
+        folders.append(labels_root.parent / rel_dir)
+    else:
+        folders.append(label_path.parent)
+    for folder in folders:
+        for extension in extensions:
+            candidate = folder / f"{label_path.stem}{extension}"
+            if candidate.exists():
+                return candidate
+    return None
 
 
 # ── Full reader (polygon-aware, Instance currency) ────────────────────────
@@ -308,24 +451,8 @@ def read_label_file(
                         )
                     )
     except Exception as exc:  # noqa: BLE001
-        logger_for("detector").warning("read_label_file failed: %s", exc)
+        logger_for("labels").warning("read_label_file failed: %s", exc)
     return instances, malformed
-
-
-def read_yolo_txt(
-    txt_path: str | Path,
-    img_w: int,
-    img_h: int,
-    class_names: dict[int, str],
-) -> list[Instance]:
-    """Legacy entry point, signature and behaviour unchanged.
-
-    Kept so existing callers and the ``polyx.core.detect.protocol``
-    re-export keep working; new code should use :func:`read_label_file`
-    (which also reports malformed lines).
-    """
-    instances, _malformed = read_label_file(txt_path, img_w, img_h, class_names)
-    return instances
 
 
 # ── High level: locate + EXIF-safe size in one call ───────────────────────
@@ -341,7 +468,9 @@ def read_labels(
     Locates the file (:func:`find_label_file`), resolves the image size the
     way the whole program agrees on (:func:`size_image` — EXIF-aware,
     header-only), and falls back to :data:`STUDY_CLASSES` when no
-    ``classes.txt`` governs the file. Raises ``ValueError`` when the image
+    ``classes.txt`` governs the file. The governing folder is
+    :func:`classes_dir_for` of the label's folder, so a split layout reads
+    the dataset-root ``classes.txt``. Raises ``ValueError`` when the image
     size cannot be read, because normalized coordinates without a real
     size are silently wrong — that error must be loud.
     """
@@ -352,7 +481,7 @@ def read_labels(
     if wh is None or wh[0] <= 0 or wh[1] <= 0:
         raise ValueError(f"could not read image size: {image_path.name}")
     if class_names is None:
-        class_names = dict(enumerate(read_classes(txt_path.parent)))
+        class_names = dict(enumerate(read_classes(classes_dir_for(txt_path.parent))))
     return read_label_file(txt_path, wh[0], wh[1], class_names)
 
 
@@ -413,16 +542,16 @@ __all__ = [
     "BBox",
     "bbox_from",
     "classes_dir_for",
-    "find_gt_for_image",
     "find_label_file",
     "format_line",
+    "image_path_for",
+    "label_dir_for",
     "label_path_for",
     "parse_box_line",
     "read_boxes",
     "read_classes",
     "read_label_file",
     "read_labels",
-    "read_yolo_txt",
     "to_instance",
     "write_classes",
     "write_labels",

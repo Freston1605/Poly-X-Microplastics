@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-08 18:31-0300\n"
+"POT-Creation-Date: 2026-11-14 22:10-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -442,145 +442,156 @@ msgid ""
 "threshold %(threshold).2f"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:186
+#: src/polyx/core/quality/dataset_audit.py:174
 msgid "data.yaml not found"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:223
+#: src/polyx/core/quality/dataset_audit.py:211
 #, python-format
 msgid "class %(id)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:279
+#: src/polyx/core/quality/dataset_audit.py:267
 msgid "No classes defined"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:279
+#: src/polyx/core/quality/dataset_audit.py:267
 msgid "The data.yaml has no 'names' key."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:283
+#: src/polyx/core/quality/dataset_audit.py:271
 msgid "Empty train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:284
+#: src/polyx/core/quality/dataset_audit.py:272
 msgid "The train folder exists but contains no images."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:289
+#: src/polyx/core/quality/dataset_audit.py:277
 msgid "Empty val"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:290
+#: src/polyx/core/quality/dataset_audit.py:278
 msgid "The val folder exists but contains no images → metrics cannot be measured."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:304
+#: src/polyx/core/quality/dataset_audit.py:292
 msgid ""
 "These classes have examples in train but ZERO in val. mAP will not measure their performance (it"
 " will give you a false sense of success). Add images of these classes to the validation split."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:315
+#: src/polyx/core/quality/dataset_audit.py:303
 msgid ""
 "The validation set contains a single class even though the model learns several. Multiclass "
 "metrics are not valid."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:428
+#: src/polyx/core/quality/dataset_audit.py:414
+msgid ""
+"Those lines were skipped. A YOLO-seg polygon line is valid YOLO but not a detection box, so the "
+"audit counts boxes only."
+msgstr ""
+
+#: src/polyx/core/quality/dataset_audit.py:426
 msgid "With so few images the metrics are unstable. Aim for ≥ 10-20."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:436
+#: src/polyx/core/quality/dataset_audit.py:434
 msgid "No dataset problems detected"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:437
+#: src/polyx/core/quality/dataset_audit.py:435
 msgid "Class distribution, validation and format all look correct."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:192
+#: src/polyx/core/quality/dataset_audit.py:180
 msgid "Could not read data.yaml"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:303
+#: src/polyx/core/quality/dataset_audit.py:291
 #, python-format
 msgid "Classes without validation: %(classes)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:313
+#: src/polyx/core/quality/dataset_audit.py:301
 #, python-format
 msgid "Single-class validation (%(class)s)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:331
+#: src/polyx/core/quality/dataset_audit.py:319
 msgid "Strong class imbalance in train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:395
+#: src/polyx/core/quality/dataset_audit.py:383
 msgid "Boxes with width/height ~0. Check the annotation."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:402
+#: src/polyx/core/quality/dataset_audit.py:390
 msgid "Badly normalised labels; YOLO will interpret them wrongly."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:409
+#: src/polyx/core/quality/dataset_audit.py:397
 msgid "The same box repeated within one file."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:416
+#: src/polyx/core/quality/dataset_audit.py:404
 msgid "They will be trained as background (no objects). Confirm this is intentional."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:427
+#: src/polyx/core/quality/dataset_audit.py:413
+#, python-format
+msgid "Label lines that are not detection boxes: %(count)d"
+msgstr ""
+
+#: src/polyx/core/quality/dataset_audit.py:425
 #, python-format
 msgid "Very small validation set (%(count)d images)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:242
+#: src/polyx/core/quality/dataset_audit.py:230
 #, python-format
 msgid "No %(split)s split declared"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:243
+#: src/polyx/core/quality/dataset_audit.py:231
 #, python-format
 msgid "The data.yaml has no '%(split)s' key. Ultralytics needs it to train and measure metrics."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:332
+#: src/polyx/core/quality/dataset_audit.py:320
 #, python-format
 msgid ""
 "“%(top)s” has %(top_count)d boxes and “%(bottom)s” only %(bottom_count)d (%(ratio).0f× more). "
 "Consider balancing or using class weights."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:393
+#: src/polyx/core/quality/dataset_audit.py:381
 #, python-format
 msgid "Degenerate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:400
+#: src/polyx/core/quality/dataset_audit.py:388
 #, python-format
 msgid "Coordinates outside [0,1] in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:407
+#: src/polyx/core/quality/dataset_audit.py:395
 #, python-format
 msgid "Duplicate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:414
+#: src/polyx/core/quality/dataset_audit.py:402
 #, python-format
 msgid "Images with no label in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:253
+#: src/polyx/core/quality/dataset_audit.py:241
 #, python-format
 msgid "%(split)s path does not exist"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:254
+#: src/polyx/core/quality/dataset_audit.py:242
 #, python-format
 msgid ""
 "The data.yaml points to “%(path)s”, which does not exist on this computer. This usually happens "
@@ -588,25 +599,25 @@ msgid ""
 "relative paths)."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:355
+#: src/polyx/core/quality/dataset_audit.py:343
 #, python-format
 msgid "“%(class)s”: little diversity"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:356
+#: src/polyx/core/quality/dataset_audit.py:344
 #, python-format
 msgid ""
 "%(percent).0f%% of its boxes come from a single image (%(image)s). The model may overfit to that"
 " scene."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:380
+#: src/polyx/core/quality/dataset_audit.py:368
 msgid ""
 "Their boxes are the same size, so the model can only tell them apart by colour/texture. If they "
 "also look alike, expect confusion between the two."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:378
+#: src/polyx/core/quality/dataset_audit.py:366
 #, python-format
 msgid "“%(first)s” and “%(second)s” are almost identical in size"
 msgstr ""
@@ -679,7 +690,7 @@ msgid "MODULES"
 msgstr ""
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:329
-#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:680
+#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:671
 #: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:158
 #: src/polyx/gui/viewer/window.py:558
 msgid "● Ready"
@@ -878,11 +889,11 @@ msgstr ""
 msgid "Detection review — Poly-X"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:662 src/polyx/gui/detector/review_dialog.py:73
+#: src/polyx/gui/detector/pages/gt_manual.py:664 src/polyx/gui/detector/review_dialog.py:73
 msgid "Fit (F)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/compare.py:37 src/polyx/gui/detector/pages/gt_manual.py:677
+#: src/polyx/gui/detector/pages/compare.py:37 src/polyx/gui/detector/pages/gt_manual.py:679
 #: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:56
 #: src/polyx/gui/detector/review_dialog.py:93 src/polyx/gui/detector/window.py:29
 #: src/polyx/gui/report/sections.py:305
@@ -893,11 +904,11 @@ msgstr ""
 msgid "Click and drag to draw · wheel: zoom · Space+drag: pan · Del: delete box."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:717 src/polyx/gui/detector/review_dialog.py:121
+#: src/polyx/gui/detector/pages/gt_manual.py:719 src/polyx/gui/detector/review_dialog.py:121
 msgid "←  Previous"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:720 src/polyx/gui/detector/review_dialog.py:124
+#: src/polyx/gui/detector/pages/gt_manual.py:722 src/polyx/gui/detector/review_dialog.py:124
 msgid "Next  →"
 msgstr ""
 
@@ -958,11 +969,11 @@ msgid "·  %(verdict)s"
 msgstr ""
 
 #: src/polyx/gui/detector/pages/results.py:628 src/polyx/gui/detector/review_dialog.py:293
-#: src/polyx/gui/viewer/window.py:854 src/polyx/gui/viewer/window.py:914
+#: src/polyx/gui/viewer/window.py:857 src/polyx/gui/viewer/window.py:917
 msgid "Error"
 msgstr ""
 
-#: src/polyx/gui/detector/review_dialog.py:293 src/polyx/gui/viewer/window.py:914
+#: src/polyx/gui/detector/review_dialog.py:293 src/polyx/gui/viewer/window.py:917
 msgid "Could not read the image."
 msgstr ""
 
@@ -973,7 +984,7 @@ msgid_plural "✓ Saved: %(path)s  (%(count)d boxes)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/review_dialog.py:330 src/polyx/gui/trainer/pages/dataset.py:135
+#: src/polyx/gui/detector/review_dialog.py:330 src/polyx/gui/trainer/pages/dataset.py:109
 #: src/polyx/gui/trainer/window.py:28
 msgid "Dataset"
 msgstr ""
@@ -1041,8 +1052,8 @@ msgstr ""
 msgid "Models"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:635 src/polyx/gui/detector/pages/gt_manual.py:890
-#: src/polyx/gui/detector/pages/gt_manual.py:902 src/polyx/gui/detector/window.py:30
+#: src/polyx/gui/detector/pages/gt_manual.py:637 src/polyx/gui/detector/pages/gt_manual.py:915
+#: src/polyx/gui/detector/pages/gt_manual.py:927 src/polyx/gui/detector/window.py:30
 msgid "Manual GT"
 msgstr ""
 
@@ -1307,111 +1318,111 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:636
+#: src/polyx/gui/detector/pages/gt_manual.py:638
 msgid ""
 "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to "
 "resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · "
 "Ctrl+Z/Y: undo/redo · ←/→: previous/next image (autosaves)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:644
+#: src/polyx/gui/detector/pages/gt_manual.py:646
 msgid "Annotation"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:649
+#: src/polyx/gui/detector/pages/gt_manual.py:651
 msgid "(no image selected)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:697
+#: src/polyx/gui/detector/pages/gt_manual.py:699
 msgid "Ready. Click and drag to draw."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:707
+#: src/polyx/gui/detector/pages/gt_manual.py:709
 msgid "Save ground truth (.txt YOLO)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:724
+#: src/polyx/gui/detector/pages/gt_manual.py:726
 msgid "Undo"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:728
+#: src/polyx/gui/detector/pages/gt_manual.py:730
 msgid "Redo"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:733
+#: src/polyx/gui/detector/pages/gt_manual.py:735
 msgid "Delete selection"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:737 src/polyx/gui/detector/pages/gt_manual.py:850
+#: src/polyx/gui/detector/pages/gt_manual.py:739 src/polyx/gui/detector/pages/gt_manual.py:873
 msgid "Clear all"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:742
+#: src/polyx/gui/detector/pages/gt_manual.py:744
 msgid "0 boxes"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:842
+#: src/polyx/gui/detector/pages/gt_manual.py:865
 #, python-format
 msgid "Delete the %(count)d box on this image?"
 msgid_plural "Delete the %(count)d boxes on this image?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:847
+#: src/polyx/gui/detector/pages/gt_manual.py:870
 msgid "(You can undo with Ctrl+Z)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:916
+#: src/polyx/gui/detector/pages/gt_manual.py:941
 msgid "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:207
+#: src/polyx/gui/detector/pages/gt_manual.py:209
 msgid "Could not open the image."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:655
+#: src/polyx/gui/detector/pages/gt_manual.py:657
 msgid "Class:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:836 src/polyx/gui/labeler/window.py:656
+#: src/polyx/gui/detector/pages/gt_manual.py:859 src/polyx/gui/labeler/window.py:647
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:890
+#: src/polyx/gui/detector/pages/gt_manual.py:915
 msgid "Select an image first."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:903
+#: src/polyx/gui/detector/pages/gt_manual.py:928
 msgid ""
 "No boxes have been drawn. Save this image as reviewed with zero particles? Any previous "
 "annotation will be overwritten."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:920
+#: src/polyx/gui/detector/pages/gt_manual.py:945
 #, python-format
 msgid "✓ Saved to: %(path)s%(warning)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:861
+#: src/polyx/gui/detector/pages/gt_manual.py:884
 #, python-format
 msgid "Could not read the size of %(name)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:882
+#: src/polyx/gui/detector/pages/gt_manual.py:907
 msgid "Autosaved."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:885 src/polyx/gui/viewer/window.py:1363
+#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1352
 msgid "Error while saving"
 msgstr ""
 
 #: src/polyx/gui/detector/pages/images.py:32
 msgid ""
-"Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in "
-"the same folder or in a sibling 'labels/' folder, they are loaded and enable error analysis."
+"Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in a"
+" sibling 'labels/' folder that mirrors 'images/', they are loaded and enable error analysis."
 msgstr ""
 
 #: src/polyx/gui/detector/pages/images.py:41
@@ -1440,9 +1451,10 @@ msgstr ""
 
 #: src/polyx/gui/detector/pages/images.py:77
 msgid ""
-"If left empty, .txt files are looked up next to each image and in a sibling /labels/ folder. An "
-"image that has ground truth is included in the error analysis (True Positives, False Positives "
-"and False Negatives); otherwise only the model's detections are reported."
+"If left empty, .txt files are looked up in a sibling /labels/ folder that mirrors /images/ (for "
+"example, images/train and labels/train), and next to each image. An image that has ground truth "
+"is included in the error analysis (True Positives, False Positives and False Negatives); "
+"otherwise only the model's detections are reported."
 msgstr ""
 
 #: src/polyx/gui/detector/pages/images.py:87
@@ -1474,7 +1486,7 @@ msgstr ""
 msgid "Folder"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:558
+#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:556
 #, python-format
 msgid "%(count)d image"
 msgid_plural "%(count)d images"
@@ -2549,11 +2561,11 @@ msgstr ""
 msgid "Pre-annotating"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:502
+#: src/polyx/gui/labeler/window.py:500
 msgid "● Pre-annotation complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:679
+#: src/polyx/gui/labeler/window.py:670
 msgid "● Autosaved"
 msgstr ""
 
@@ -2587,7 +2599,7 @@ msgstr ""
 msgid "● Folder loaded"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:434 src/polyx/gui/viewer/window.py:1455
+#: src/polyx/gui/labeler/window.py:434 src/polyx/gui/viewer/window.py:1444
 msgid "● Model loaded"
 msgstr ""
 
@@ -2604,20 +2616,20 @@ msgstr ""
 msgid "This image already has annotations. Overwrite them with the model?"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:613
+#: src/polyx/gui/labeler/window.py:604
 #, python-format
 msgid "%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:617
 msgid "Counting complete"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:626
+#: src/polyx/gui/labeler/window.py:617
 msgid "There are no unreviewed images left."
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:661
+#: src/polyx/gui/labeler/window.py:652
 msgid "No annotations"
 msgstr ""
 
@@ -4191,201 +4203,201 @@ msgstr ""
 msgid "Box loss"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:136
+#: src/polyx/gui/trainer/pages/dataset.py:110
 msgid ""
 "Load your data.yaml. We validate the structure, count images and show a preview with boxes. If "
 "your dataset is not divided, use Auto-split."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:130 src/polyx/gui/trainer/pages/dataset.py:445
+#: src/polyx/gui/trainer/pages/dataset.py:104 src/polyx/gui/trainer/pages/dataset.py:419
 msgid "(empty)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:144
+#: src/polyx/gui/trainer/pages/dataset.py:118
 msgid "data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:148
+#: src/polyx/gui/trainer/pages/dataset.py:122
 msgid "Path to data.yaml…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:157 src/polyx/gui/trainer/pages/dataset.py:509
+#: src/polyx/gui/trainer/pages/dataset.py:131 src/polyx/gui/trainer/pages/dataset.py:475
 msgid "No data.yaml loaded."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:163
+#: src/polyx/gui/trainer/pages/dataset.py:137
 msgid "Counts per split"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:167
+#: src/polyx/gui/trainer/pages/dataset.py:141
 msgid "Train: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:169
+#: src/polyx/gui/trainer/pages/dataset.py:143
 msgid "Val: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:171
+#: src/polyx/gui/trainer/pages/dataset.py:145
 msgid "Test: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:173
+#: src/polyx/gui/trainer/pages/dataset.py:147
 msgid "Classes: —"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:181
+#: src/polyx/gui/trainer/pages/dataset.py:155
 msgid "Preview (6 random images with boxes)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:190
+#: src/polyx/gui/trainer/pages/dataset.py:164
 msgid "6 more"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:197
+#: src/polyx/gui/trainer/pages/dataset.py:171
 msgid "Auto-split (if your dataset is not divided)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:199
+#: src/polyx/gui/trainer/pages/dataset.py:173
 msgid ""
 "Takes a folder with images/ and labels/ and generates train/val/test automatically with a new "
 "data.yaml. It does not move files: it uses .txt lists."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:210
+#: src/polyx/gui/trainer/pages/dataset.py:184
 msgid "Root folder containing images/ and labels/…"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:236
+#: src/polyx/gui/trainer/pages/dataset.py:210
 msgid "Auto-split + generate data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:249
+#: src/polyx/gui/trainer/pages/dataset.py:223
 msgid "Dataset validation"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:251
+#: src/polyx/gui/trainer/pages/dataset.py:225
 msgid "Checks that the dataset is sound before training. It runs automatically when data.yaml is loaded."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:262
+#: src/polyx/gui/trainer/pages/dataset.py:236
 msgid "data.yaml loaded and valid"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:263
+#: src/polyx/gui/trainer/pages/dataset.py:237
 msgid "Train split with images"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:264
+#: src/polyx/gui/trainer/pages/dataset.py:238
 msgid "Val split with images"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:265
+#: src/polyx/gui/trainer/pages/dataset.py:239
 msgid "Labels found (≥ 80 %)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:266
+#: src/polyx/gui/trainer/pages/dataset.py:240
 msgid "Classes defined in YAML"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:267
+#: src/polyx/gui/trainer/pages/dataset.py:241
 msgid "Valid training parameters"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:282
+#: src/polyx/gui/trainer/pages/dataset.py:256
 msgid "Validate now"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:288
+#: src/polyx/gui/trainer/pages/dataset.py:262
 msgid "In-depth analysis"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:326 src/polyx/gui/trainer/pages/evaluate.py:153
+#: src/polyx/gui/trainer/pages/dataset.py:300 src/polyx/gui/trainer/pages/evaluate.py:153
 msgid "Select data.yaml"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:326 src/polyx/gui/trainer/pages/evaluate.py:153
+#: src/polyx/gui/trainer/pages/dataset.py:300 src/polyx/gui/trainer/pages/evaluate.py:153
 msgid "YAML (*.yaml *.yml)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:333
+#: src/polyx/gui/trainer/pages/dataset.py:307
 msgid "Root folder with images/ and labels/"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:642 src/polyx/gui/trainer/pages/dataset.py:649
-#: src/polyx/gui/trainer/pages/dataset.py:659 src/polyx/gui/trainer/pages/dataset.py:665
-#: src/polyx/gui/trainer/pages/dataset.py:714
+#: src/polyx/gui/trainer/pages/dataset.py:608 src/polyx/gui/trainer/pages/dataset.py:615
+#: src/polyx/gui/trainer/pages/dataset.py:625 src/polyx/gui/trainer/pages/dataset.py:631
+#: src/polyx/gui/trainer/pages/dataset.py:680
 msgid "Auto-split"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:220
+#: src/polyx/gui/trainer/pages/dataset.py:194
 msgid "Train %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:225
+#: src/polyx/gui/trainer/pages/dataset.py:199
 msgid "Val %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:230
+#: src/polyx/gui/trainer/pages/dataset.py:204
 msgid "Test %:"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:343
+#: src/polyx/gui/trainer/pages/dataset.py:317
 msgid "✗ File not found."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:374
+#: src/polyx/gui/trainer/pages/dataset.py:348
 #, python-format
 msgid "Train: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:375
+#: src/polyx/gui/trainer/pages/dataset.py:349
 #, python-format
 msgid "Val: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:376
+#: src/polyx/gui/trainer/pages/dataset.py:350
 #, python-format
 msgid "Test: %(count)d"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:378
+#: src/polyx/gui/trainer/pages/dataset.py:352
 #, python-format
 msgid "Classes (%(count)d): %(names)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:529
+#: src/polyx/gui/trainer/pages/dataset.py:495
 msgid "No images in train."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:537
+#: src/polyx/gui/trainer/pages/dataset.py:503
 msgid "No images in val."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:561
+#: src/polyx/gui/trainer/pages/dataset.py:527
 msgid "Could not access the train split."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:572
+#: src/polyx/gui/trainer/pages/dataset.py:538
 msgid "The YAML has no 'names' key."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:596
+#: src/polyx/gui/trainer/pages/dataset.py:562
 msgid "Model, hyperparameters and augmentation within range."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:642
+#: src/polyx/gui/trainer/pages/dataset.py:608
 msgid "Select the root folder first."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:659
+#: src/polyx/gui/trainer/pages/dataset.py:625
 msgid "No images were found in images/."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:665
+#: src/polyx/gui/trainer/pages/dataset.py:631
 msgid "The percentages add up to more than 100."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:715
+#: src/polyx/gui/trainer/pages/dataset.py:681
 #, python-format
 msgid ""
 "Ready:\n"
@@ -4396,65 +4408,65 @@ msgid ""
 "Generated: %(path)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:413
+#: src/polyx/gui/trainer/pages/dataset.py:387
 msgid ""
 "(the train folder\n"
 "was not found)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:436
+#: src/polyx/gui/trainer/pages/dataset.py:410
 msgid ""
 "(no images\n"
 "in train)"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:526
+#: src/polyx/gui/trainer/pages/dataset.py:492
 #, python-format
 msgid "%(count)s image in train."
 msgid_plural "%(count)s images in train."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:534
+#: src/polyx/gui/trainer/pages/dataset.py:500
 #, python-format
 msgid "%(count)s image in val."
 msgid_plural "%(count)s images in val."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:559
+#: src/polyx/gui/trainer/pages/dataset.py:525
 msgid "No images were found to review."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:570
+#: src/polyx/gui/trainer/pages/dataset.py:536
 #, python-format
 msgid "Classes: %(names)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:620
+#: src/polyx/gui/trainer/pages/dataset.py:586
 msgid "  ⚠️ no val"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:623
+#: src/polyx/gui/trainer/pages/dataset.py:589
 msgid "Distribution per class &nbsp; — &nbsp; "
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:650
+#: src/polyx/gui/trainer/pages/dataset.py:616
 #, python-format
 msgid "Does not exist: %(path)s. You need images/ and labels/ inside the folder."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:349
+#: src/polyx/gui/trainer/pages/dataset.py:323
 #, python-format
 msgid "✗ Error parsing YAML: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:555
+#: src/polyx/gui/trainer/pages/dataset.py:521
 #, python-format
 msgid "%(pct).0f %% of images have a label (%(with_label)s/%(reviewed)s reviewed)."
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/dataset.py:607
+#: src/polyx/gui/trainer/pages/dataset.py:573
 #, python-format
 msgid "Could not analyse: %(error)s"
 msgstr ""
@@ -5221,8 +5233,8 @@ msgid "  No image  —  Not calibrated"
 msgstr ""
 
 #: src/polyx/gui/viewer/window.py:232 src/polyx/gui/viewer/window.py:672
-#: src/polyx/gui/viewer/window.py:778 src/polyx/gui/viewer/window.py:889
-#: src/polyx/gui/viewer/window.py:1311 src/polyx/gui/viewer/window.py:1332
+#: src/polyx/gui/viewer/window.py:778 src/polyx/gui/viewer/window.py:892
+#: src/polyx/gui/viewer/window.py:1300 src/polyx/gui/viewer/window.py:1321
 msgid "No image"
 msgstr ""
 
@@ -5284,11 +5296,11 @@ msgstr ""
 msgid "✕  Cancel calibration"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:439 src/polyx/gui/viewer/window.py:1317
+#: src/polyx/gui/viewer/window.py:439 src/polyx/gui/viewer/window.py:1306
 msgid "Not calibrated"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:459 src/polyx/gui/viewer/window.py:1166
+#: src/polyx/gui/viewer/window.py:459 src/polyx/gui/viewer/window.py:1155
 msgid "All classes"
 msgstr ""
 
@@ -5324,11 +5336,11 @@ msgstr ""
 msgid "Run folder (runs/detect_...)"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1210
+#: src/polyx/gui/viewer/window.py:1199
 msgid "● Calibration mode active"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1338
+#: src/polyx/gui/viewer/window.py:1327
 msgid "Output folder"
 msgstr ""
 
@@ -5364,7 +5376,7 @@ msgstr ""
 msgid "● Model ready"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:672 src/polyx/gui/viewer/window.py:889
+#: src/polyx/gui/viewer/window.py:672 src/polyx/gui/viewer/window.py:892
 msgid "Open an image first."
 msgstr ""
 
@@ -5372,7 +5384,7 @@ msgstr ""
 msgid "Open the original photo first."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:804 src/polyx/gui/viewer/window.py:863
+#: src/polyx/gui/viewer/window.py:804 src/polyx/gui/viewer/window.py:866
 msgid "No predictions"
 msgstr ""
 
@@ -5384,117 +5396,117 @@ msgstr ""
 msgid "This photo was analysed with several models. Which one do you want to review?"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:864
+#: src/polyx/gui/viewer/window.py:867
 msgid "The file is empty: that photo had no detections."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:874
+#: src/polyx/gui/viewer/window.py:877
 #, python-format
 msgid "● %(n)s predictions loaded from %(c)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:900
+#: src/polyx/gui/viewer/window.py:903
 msgid "No labels"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:923
+#: src/polyx/gui/viewer/window.py:926
 #, python-format
 msgid "  (%(count)d unreadable line)"
 msgid_plural "  (%(count)d unreadable lines)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:934
+#: src/polyx/gui/viewer/window.py:937
 #, python-format
 msgid "● %(count)d label loaded from %(file)s%(warning)s"
 msgid_plural "● %(count)d labels loaded from %(file)s%(warning)s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:966
+#: src/polyx/gui/viewer/window.py:955
 #, python-format
 msgid "%(count)d detection"
 msgid_plural "%(count)d detections"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1029
+#: src/polyx/gui/viewer/window.py:1018
 #, python-format
 msgid "%(count)s particle"
 msgid_plural "%(count)s particles"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1038
+#: src/polyx/gui/viewer/window.py:1027
 msgid "(uncalibrated: sizes in pixels only)"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1101
+#: src/polyx/gui/viewer/window.py:1090
 msgid "This particle could not be separated from the background"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1123
+#: src/polyx/gui/viewer/window.py:1112
 #, python-format
 msgid ""
 "Particle #%(number)s · %(class)s · %(morphotype)s   —   left: no marks · right: green = measured"
 " contour, yellow = Feret, magenta = geodesic"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1138
+#: src/polyx/gui/viewer/window.py:1127
 #, python-format
 msgid "measured by  %(method)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1147
+#: src/polyx/gui/viewer/window.py:1136
 #, python-format
 msgid "Feret       %(value)8.1f px"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1148
+#: src/polyx/gui/viewer/window.py:1137
 #, python-format
 msgid "geodesic    %(value)8.1f px"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1149
+#: src/polyx/gui/viewer/window.py:1138
 #, python-format
 msgid "aspect      %(aspect)8.1f   curvature %(curvature).2f"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1203
+#: src/polyx/gui/viewer/window.py:1192
 msgid ""
 "Click 2 points on\n"
 "a known reference."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1207
+#: src/polyx/gui/viewer/window.py:1196
 msgid ""
 "Click 3 points on the edge\n"
 "of a circular object of known size."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1251
+#: src/polyx/gui/viewer/window.py:1240
 msgid "Calibration — Line"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1252
+#: src/polyx/gui/viewer/window.py:1241
 msgid "Real length of the marked line (μm):"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1291
+#: src/polyx/gui/viewer/window.py:1280
 #, python-format
 msgid "%(value).4f μm/px  (%(mode)s)"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1298
+#: src/polyx/gui/viewer/window.py:1287
 #, python-format
 msgid "● Calibration applied: %(value).4f μm/px"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1332
+#: src/polyx/gui/viewer/window.py:1321
 msgid "No image is open."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1359
+#: src/polyx/gui/viewer/window.py:1348
 msgid "Saved"
 msgstr ""
 
@@ -5528,80 +5540,80 @@ msgstr ""
 msgid "could not read the image"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:901
+#: src/polyx/gui/viewer/window.py:904
 #, python-format
 msgid ""
-"There is no label file next to the image:\n"
+"There is no label file for the image:\n"
 "%(name)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1027
+#: src/polyx/gui/viewer/window.py:1016
 #, python-format
 msgid "%(count)s fibre"
 msgid_plural "%(count)s fibres"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1033
+#: src/polyx/gui/viewer/window.py:1022
 #, python-format
 msgid "%(count)s unmeasured"
 msgid_plural "%(count)s unmeasured"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1139
+#: src/polyx/gui/viewer/window.py:1128
 #, python-format
 msgid "length      %(value)8.1f px"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1145
+#: src/polyx/gui/viewer/window.py:1134
 #, python-format
 msgid "width       %(value)8.1f px"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1154
+#: src/polyx/gui/viewer/window.py:1143
 #, python-format
 msgid "warning: %(message)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1228
+#: src/polyx/gui/viewer/window.py:1217
 #, python-format
 msgid "Click %(count)d more point."
 msgid_plural "Click %(count)d more points."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1270
+#: src/polyx/gui/viewer/window.py:1259
 msgid "Calibration — Circle"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1271
+#: src/polyx/gui/viewer/window.py:1260
 msgid ""
 "Real diameter of the circular object (μm):\n"
 "100 mm Petri dish → 100000"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1287
+#: src/polyx/gui/viewer/window.py:1276
 msgid "line"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1288
+#: src/polyx/gui/viewer/window.py:1277
 msgid "circle"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1356
+#: src/polyx/gui/viewer/window.py:1345
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1359
+#: src/polyx/gui/viewer/window.py:1348
 #, python-format
 msgid ""
 "Files saved to:\n"
 "%(folder)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1365
+#: src/polyx/gui/viewer/window.py:1354
 msgid "● Error while saving"
 msgstr ""
 
@@ -5627,22 +5639,22 @@ msgid ""
 "Lower the inference resolution or untick “Use GPU”."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:855
+#: src/polyx/gui/viewer/window.py:858
 #, python-format
 msgid "Could not read the predictions: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1141
+#: src/polyx/gui/viewer/window.py:1130
 #, python-format
 msgid "  x %(scale).4f um/px = %(size).0f um"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1146
+#: src/polyx/gui/viewer/window.py:1135
 #, python-format
 msgid "  = %(size).0f um"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1458
+#: src/polyx/gui/viewer/window.py:1447
 #, python-format
 msgid "● Error: %(error)s"
 msgstr ""

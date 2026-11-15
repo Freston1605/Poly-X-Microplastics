@@ -17,8 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from polyx.core.i18n import _
-
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
+from polyx.core.labels import find_label_file, read_boxes
+from polyx.core.paths import IMAGE_EXTS
 
 LEVEL_OK = "ok"
 LEVEL_WARN = "warn"
@@ -73,19 +73,6 @@ def _resolve_split(yaml_dir: Path, data: dict, split_value) -> Path | None:
     return (yaml_dir / p).resolve()
 
 
-def _label_for(img: Path) -> Path | None:
-    parts = list(img.parts)
-    for i in range(len(parts) - 1, -1, -1):
-        if parts[i].lower() == "images":
-            cand = Path(*(parts[:i] + ["labels"] + parts[i + 1 :])).with_suffix(".txt")  # noqa: RUF005
-            return cand if cand.exists() else None
-    sib = img.parent.parent / "labels" / (img.stem + ".txt")
-    if sib.exists():
-        return sib
-    same = img.with_suffix(".txt")
-    return same if same.exists() else None
-
-
 def _iter_images(split_path: Path | None, yaml_dir: Path, root: Path) -> list[Path]:
     if split_path is None or not split_path.exists():
         return []
@@ -110,43 +97,43 @@ def _iter_images(split_path: Path | None, yaml_dir: Path, root: Path) -> list[Pa
 
 
 def _scan_split(images: list[Path]) -> dict:
-    """Reads labels of a split. Returns per-class counts, box stats and issues."""
+    """Reads labels of a split. Returns per-class counts, box stats and issues.
+
+    Labels are located and parsed by the label codec, so the split layout and
+    the polygon dialect are understood in one place: a YOLO-seg polygon line
+    is valid YOLO but not a box, and the codec's box reader counts it
+    malformed instead of misreading its first four coordinates as a box. The
+    count is returned so the audit can report it instead of dropping it.
+    """
     per_class: dict[int, int] = defaultdict(int)
     areas: dict[int, list[float]] = defaultdict(list)
     per_class_per_img: dict[int, dict[str, int]] = defaultdict(
         lambda: defaultdict(int)
     )  # class -> {img: n}
-    degenerate = out_range = duplicates = empty = no_label = 0
+    degenerate = out_range = duplicates = empty = no_label = malformed = 0
     n_imgs = len(images)
     for img in images:
-        lp = _label_for(img)
+        lp = find_label_file(img)
         if lp is None:
             no_label += 1
             continue
+        boxes, malformed_lines = read_boxes(lp)
+        malformed += malformed_lines
         seen = set()
-        n_boxes = 0
-        for line in lp.read_text(encoding="utf-8", errors="ignore").splitlines():
-            parts = line.split()
-            if len(parts) < 5:
-                continue
-            try:
-                c = int(float(parts[0]))
-                cx, cy, w, h = (float(x) for x in parts[1:5])
-            except ValueError:
-                continue
-            n_boxes += 1
+        for box in boxes:
+            c = box.class_id
             per_class[c] += 1
             per_class_per_img[c][img.name] += 1
-            areas[c].append(w * h)
-            if w <= 0 or h <= 0 or w < 1e-4 or h < 1e-4:
+            areas[c].append(box.w * box.h)
+            if box.w <= 0 or box.h <= 0 or box.w < 1e-4 or box.h < 1e-4:
                 degenerate += 1
-            if not (0 <= cx <= 1 and 0 <= cy <= 1 and 0 <= w <= 1 and 0 <= h <= 1):
+            if not (0 <= box.cx <= 1 and 0 <= box.cy <= 1 and 0 <= box.w <= 1 and 0 <= box.h <= 1):
                 out_range += 1
-            key = (c, round(cx, 5), round(cy, 5), round(w, 5), round(h, 5))
+            key = (c, round(box.cx, 5), round(box.cy, 5), round(box.w, 5), round(box.h, 5))
             if key in seen:
                 duplicates += 1
             seen.add(key)
-        if n_boxes == 0:
+        if not boxes:
             empty += 1
     return dict(  # noqa: C408
         per_class=dict(per_class),
@@ -157,6 +144,7 @@ def _scan_split(images: list[Path]) -> dict:
         duplicates=duplicates,
         empty=empty,
         no_label=no_label,
+        malformed=malformed,
         n_imgs=n_imgs,
     )
 
@@ -418,6 +406,16 @@ class _Auditor:
                         "intentional."
                     ),
                 )
+        malformed = sum(scan["malformed"] for scan in self.scans.values())
+        if malformed:
+            audit.add(
+                LEVEL_WARN,
+                _("Label lines that are not detection boxes: %(count)d") % {"count": malformed},
+                _(
+                    "Those lines were skipped. A YOLO-seg polygon line is valid YOLO "
+                    "but not a detection box, so the audit counts boxes only."
+                ),
+            )
 
     def _check_val_size(self) -> None:
         audit, vl = self.audit, self.vl

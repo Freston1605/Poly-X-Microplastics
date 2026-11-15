@@ -66,7 +66,7 @@ src/                      # Source code (installable package)
     │   ├── yolo_wrap.py  # YOLO wrapper (Detection, YoloModel)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
-    │   ├── labels.py     # YOLO-label codec (.txt parse/serialize/locate, classes.txt)
+    │   ├── labels.py     # YOLO-label codec: the only label I/O (.txt, classes.txt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
     │   ├── detection_run/  # Canonical detection-run engine, folder and result
@@ -76,7 +76,7 @@ src/                      # Source code (installable package)
     │   ├── detect/       # YOLO inference
     │   ├── measure/      # Segmentation and sizes over the mask
     │   ├── calibration/  # μm/pixel calibration
-    │   ├── data/         # Dataset loading/validation
+    │   ├── data/         # Dataset loading/validation (no label codec)
     │   ├── quality/      # Metrics, assignment, abstractness
     │   └── provenance/   # Run traceability
     ├── locales/          # gettext: messages.pot + <tag>/LC_MESSAGES/messages.po
@@ -574,6 +574,13 @@ A `.txt` file is written **only** when the image is marked as reviewed or when a
 is drawn. Skimming past does not create a file: recording an image that was barely
 glanced at as "reviewed with zero" would falsify the census.
 
+**Split layout.** Opening `images/train` reads and writes `labels/train/` through
+the YOLO-label codec (`polyx.core.labels`), never next to the photo. Legacy
+same-directory labels are still read and counted as reviewed, unmarking removes
+the file the codec found, and the `(n)` in the list counts the same file. For the
+conventional layout `classes.txt` is written once at the dataset root; a plain
+folder keeps one per folder that holds labels.
+
 **Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
 unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
 selected box · `Ctrl+Z/Y` undo/redo · wheel zoom · middle-button pan.
@@ -783,6 +790,26 @@ results.csv + curves
     ↓
 <user data dir>/runs_train/<run name>/
 ```
+
+### Labels, classes.txt and data.yaml
+
+`polyx.core.labels` is the only module that reads or writes a YOLO `.txt`
+label file or its folder layout. Every consumer imports it directly — the
+Viewer, the GT page, the Labeller, the headless engine, the dataset audit
+and the Trainer page — and neither `polyx.core` nor `polyx.core.data`
+re-exports label I/O of its own. `polyx.core.data` is reserved — it is still
+empty — for the planned dataset module; it holds no second codec.
+
+- **`classes.txt`** is the codec's class-name fallback: one file at the
+  dataset root for a conventional split layout, one per folder for a plain
+  folder. `read_labels` resolves it from the label path, so a caller never
+  passes the path itself.
+- **`data.yaml`** is not the codec's, and the codec does not read it today.
+  Class-name precedence today is explicit `class_names` → `classes.txt` →
+  `STUDY_CLASSES`. The planned dataset module (`polyx.core.data`) will own
+  the dataset's YAML class names and pass them to the codec as
+  `class_names`, adding a `data.yaml` step to that precedence once it lands;
+  even then the codec will never parse YAML.
 
 ---
 

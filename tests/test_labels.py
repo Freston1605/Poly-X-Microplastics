@@ -9,6 +9,8 @@ stop being re-derived per module and the dialects stay compatible.
 
 from __future__ import annotations
 
+import importlib
+import logging
 import sys
 from pathlib import Path
 
@@ -36,6 +38,39 @@ def _png(path: Path, width: int = 100, height: int = 100) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_png_bytes(width, height))
     return path
+
+
+class _RecordHandler(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+def _capture_warnings(monkeypatch) -> list[logging.LogRecord]:
+    """Route the codec's logger to an in-memory handler."""
+    handler = _RecordHandler()
+    logger = logging.getLogger("polyx.test.labels")
+    logger.handlers = [handler]
+    logger.setLevel(logging.WARNING)
+    logger.propagate = False
+    monkeypatch.setattr(L, "logger_for", lambda _module: logger)
+    return handler.records
+
+
+def test_the_codec_logs_to_its_own_journal(monkeypatch, tmp_path):
+    """Every module keeps its own JSONL journal (CONTRIBUTING)."""
+    modules: list[str] = []
+    logger = logging.getLogger("polyx.test.labels")
+    monkeypatch.setattr(L, "logger_for", lambda module: modules.append(module) or logger)
+
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    (img.parent / "pic.txt").write_text("", encoding="utf-8")
+    L.find_label_file(img)
+
+    assert modules == ["labels"]
 
 
 # ── Lines (pure) ──────────────────────────────────────────────────────────
@@ -126,23 +161,62 @@ def test_read_boxes_counts_malformed_and_polygon_lines_without_boxing_them(tmp_p
 # ── The folder contract, both directions ──────────────────────────────────
 
 
-def test_find_label_file_precedence(tmp_path):
-    images = tmp_path / "images"
-    images.mkdir()
-    img = images / "pic.png"
-    img.write_bytes(b"png")
+def test_split_layout_maps_images_split_to_labels_split(tmp_path):
+    """The nearest ``images/`` ancestor mirrors to a sibling ``labels/``."""
+    for split in ("train", "val", "test", "custom-split"):
+        img = _png(tmp_path / "ds" / "images" / split / "plate.png")
+        assert L.label_path_for(img) == tmp_path / "ds" / "labels" / split / "plate.txt"
+        assert not (img.parent / "plate.txt").exists()  # never next to the image
+
+        txt = L.label_path_for(img)
+        L.write_lines(txt, [L.BBox(0, 0.5, 0.5, 0.2, 0.2)])
+        assert L.find_label_file(img) == txt
+
+
+def test_split_layout_preserves_a_nested_relative_subpath(tmp_path):
+    img = _png(tmp_path / "ds" / "images" / "batch-07" / "day-2" / "plate.png")
+    expected = tmp_path / "ds" / "labels" / "batch-07" / "day-2" / "plate.txt"
+    assert L.label_path_for(img) == expected
+    L.write_lines(expected, [])
+    assert L.find_label_file(img) == expected
+
+
+def test_find_label_file_prefers_conventional_over_legacy(tmp_path):
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    conventional = tmp_path / "ds" / "labels" / "train" / "pic.txt"
+    legacy = img.parent / "pic.txt"
     gt_folder = tmp_path / "gt"
-    gt_folder.mkdir()
-    labels_dir = tmp_path / "labels"
-    labels_dir.mkdir()
 
     assert L.find_label_file(img, gt_folder) is None  # nothing written yet
-    (labels_dir / "pic.txt").write_text("", encoding="utf-8")
-    assert L.find_label_file(img, None) == labels_dir / "pic.txt"  # sibling labels/
-    (images / "pic.txt").write_text("", encoding="utf-8")
-    assert L.find_label_file(img, None) == images / "pic.txt"  # same dir beats labels/
+    legacy.write_text("", encoding="utf-8")
+    assert L.find_label_file(img, None) == legacy  # legacy is still read
+
+    conventional.parent.mkdir(parents=True)
+    conventional.write_text("", encoding="utf-8")
+    assert L.find_label_file(img, None) == conventional  # conventional wins
+
+    gt_folder.mkdir()
     (gt_folder / "pic.txt").write_text("", encoding="utf-8")
     assert L.find_label_file(img, gt_folder) == gt_folder / "pic.txt"  # explicit wins
+
+
+def test_explicit_gt_reads_flat_before_mirrored(tmp_path):
+    img = _png(tmp_path / "ds" / "images" / "train" / "plate.png")
+    conventional = tmp_path / "ds" / "labels" / "train" / "plate.txt"
+    L.write_lines(conventional, [L.BBox(1, 0.5, 0.5, 0.1, 0.1)])
+
+    gt = tmp_path / "gt"
+    gt.mkdir()
+    assert L.find_label_file(img, gt) == conventional  # empty GT falls through
+
+    mirrored = gt / "train" / "plate.txt"
+    mirrored.parent.mkdir()
+    mirrored.write_text("", encoding="utf-8")
+    assert L.find_label_file(img, gt) == mirrored  # mirrored GT is readable
+
+    flat = gt / "plate.txt"
+    flat.write_text("", encoding="utf-8")
+    assert L.find_label_file(img, gt) == flat  # flat read precedes mirrored
 
 
 def test_label_path_for_mirrors_the_convention(tmp_path):
@@ -150,18 +224,69 @@ def test_label_path_for_mirrors_the_convention(tmp_path):
     plain.mkdir()
     assert L.label_path_for(plain / "pic.png") == plain / "pic.txt"
 
-    images = tmp_path / "ds" / "images"
-    images.mkdir(parents=True)
-    assert L.label_path_for(images / "pic.png") == tmp_path / "ds" / "labels" / "pic.txt"
-    assert (tmp_path / "ds" / "labels").is_dir()  # created on demand
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    assert L.label_path_for(img) == tmp_path / "ds" / "labels" / "train" / "pic.txt"
+    assert (tmp_path / "ds" / "labels" / "train").is_dir()  # created on demand
+    assert not (img.parent / "pic.txt").exists()
 
     gt = tmp_path / "gt"
-    assert L.label_path_for(images / "pic.png", gt) == gt / "pic.txt"
+    assert L.label_path_for(img, gt) == gt / "pic.txt"  # GT writes are flat
 
 
-def test_classes_dir_for_places_the_file_beside_labels():
+def test_classes_dir_for_resolves_any_path_under_labels():
     assert L.classes_dir_for(Path("datos/labels")) == Path("datos")
+    assert L.classes_dir_for(Path("datos/labels/train")) == Path("datos")
+    assert L.classes_dir_for(Path("datos/labels/train/sub")) == Path("datos")
     assert L.classes_dir_for(Path("datos")) == Path("datos")
+
+
+def test_image_path_for_finds_the_mirrored_image(tmp_path):
+    img = _png(tmp_path / "ds" / "images" / "train" / "plate.jpg")
+    txt = tmp_path / "ds" / "labels" / "train" / "plate.txt"
+    txt.parent.mkdir(parents=True)
+    txt.write_text("", encoding="utf-8")
+
+    assert L.image_path_for(txt) == img
+    assert L.image_path_for(txt, extensions=(".png",)) is None
+    img.unlink()
+    assert L.image_path_for(txt) is None
+
+
+def test_image_path_for_plain_folder_finds_the_same_directory_image(tmp_path):
+    img = _png(tmp_path / "sueltas" / "plate.png")
+    txt = tmp_path / "sueltas" / "plate.txt"
+    txt.write_text("", encoding="utf-8")
+    assert L.image_path_for(txt) == img
+
+
+def test_image_path_for_finds_the_image_of_a_nested_legacy_label(tmp_path):
+    """A plain folder's ``labels/<stem>.txt`` maps back to the folder's image."""
+    img = _png(tmp_path / "sueltas" / "plate.png")
+    txt = tmp_path / "sueltas" / "labels" / "plate.txt"
+    txt.parent.mkdir()
+    txt.write_text("", encoding="utf-8")
+
+    # The forward read this reverse direction must mirror.
+    assert L.find_label_file(img) == txt
+    assert L.image_path_for(txt) == img
+
+
+def test_legacy_same_directory_and_nested_labels_are_read_with_a_warning(tmp_path, monkeypatch):
+    records = _capture_warnings(monkeypatch)
+
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    legacy = img.parent / "pic.txt"
+    legacy.write_text("", encoding="utf-8")
+    assert L.find_label_file(img) == legacy
+    assert any("legacy" in record.getMessage() for record in records)
+
+    records.clear()
+    plain_img = _png(tmp_path / "sueltas" / "pic.png")
+    nested = plain_img.parent / "labels" / "pic.txt"
+    nested.parent.mkdir()
+    nested.write_text("", encoding="utf-8")
+    assert L.find_label_file(plain_img) == nested
+    assert any("legacy" in record.getMessage() for record in records)
 
 
 # ── Full reader (polygon-aware, Instance currency) ────────────────────────
@@ -186,12 +311,10 @@ def test_read_label_file_detection_and_polygon(tmp_path):
     assert (poly.x1, poly.y1, poly.x2, poly.y2) == pytest.approx((10, 10, 20, 20))
 
 
-def test_legacy_read_yolo_txt_keeps_its_signature(tmp_path):
-    txt = tmp_path / "pic.txt"
-    txt.write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
-    dets = L.read_yolo_txt(txt, 100, 100, {0: "PET"})
-    assert len(dets) == 1
-    assert dets[0].class_name == "PET"
+def test_codec_exposes_only_the_canonical_names():
+    for legacy in ("find_gt_for_image", "read_yolo_txt"):
+        assert not hasattr(L, legacy), f"polyx.core.labels must not expose {legacy}"
+        assert legacy not in L.__all__, f"polyx.core.labels.__all__ must not list {legacy}"
 
 
 # ── High level: locate + EXIF-safe size in one call ───────────────────────
@@ -218,6 +341,26 @@ def test_read_labels_finds_labeller_layout_and_study_classes(tmp_path):
     (labels / "pic.txt").write_text("2 0.5 0.5 0.2 0.2\n", encoding="utf-8")
     instances, _ = L.read_labels(tmp_path / "images" / "pic.png")
     assert instances[0].class_name == "LDPE"  # the study's classes, as fallback
+
+
+def test_read_labels_uses_the_dataset_root_classes_txt(tmp_path):
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    txt = tmp_path / "ds" / "labels" / "train" / "pic.txt"
+    txt.parent.mkdir(parents=True)
+    txt.write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+    (tmp_path / "ds" / "classes.txt").write_text("ALPHA\nBETA\n", encoding="utf-8")
+
+    instances, _ = L.read_labels(img)
+    assert instances[0].class_name == "ALPHA"
+
+
+def test_read_labels_keeps_per_folder_classes_in_plain_folders(tmp_path):
+    img = _png(tmp_path / "sueltas" / "pic.png")
+    (tmp_path / "sueltas" / "pic.txt").write_text("1 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+    (tmp_path / "sueltas" / "classes.txt").write_text("ONE\nTWO\n", encoding="utf-8")
+
+    instances, _ = L.read_labels(img)
+    assert instances[0].class_name == "TWO"
 
 
 def test_read_labels_without_label_file_is_empty(tmp_path):
@@ -248,3 +391,62 @@ def test_classes_txt_round_trip_preserves_order(tmp_path):
 def test_read_classes_treats_a_blank_file_as_absent(tmp_path):
     (tmp_path / "classes.txt").write_text("\n   \n", encoding="utf-8")
     assert L.read_classes(tmp_path) == ["PET", "PP", "LDPE"]
+
+
+# ── One owner: the duplicate codec is gone ────────────────────────────────
+
+
+def test_the_duplicate_data_codec_is_deleted():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx" / "core"
+    assert not (source / "data" / "labels.py").exists()
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("polyx.core.data.labels")
+
+
+def test_the_data_package_stays_for_the_dataset_module():
+    import polyx.core.data as data
+
+    assert data.__file__ is not None
+    for name in (
+        "read_labels",
+        "write_labels",
+        "classes_txt_path",
+        "read_classes_txt",
+        "write_classes_txt",
+    ):
+        assert not hasattr(data, name), f"polyx.core.data must not re-export {name}"
+
+
+def test_the_core_root_does_not_reexport_label_io():
+    import polyx.core as core
+
+    for name in (
+        "read_labels",
+        "write_labels",
+        "classes_txt_path",
+        "read_classes_txt",
+        "write_classes_txt",
+    ):
+        assert not hasattr(core, name), f"polyx.core must not re-export {name}"
+        assert name not in core.__all__, f"polyx.core.__all__ must not list {name}"
+
+
+def test_no_module_imports_the_deleted_codec():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
+    offenders = [
+        str(path.relative_to(source))
+        for path in source.rglob("*.py")
+        if "data.labels" in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == []
+
+
+def test_no_module_uses_the_legacy_label_aliases():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
+    offenders = [
+        str(path.relative_to(source))
+        for path in source.rglob("*.py")
+        if "find_gt_for_image" in path.read_text(encoding="utf-8")
+        or "read_yolo_txt" in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == []

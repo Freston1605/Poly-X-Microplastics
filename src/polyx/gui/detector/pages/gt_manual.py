@@ -59,7 +59,9 @@ from polyx.core.labels import (
     bbox_from,
     classes_dir_for,
     find_label_file,
+    label_dir_for,
     label_path_for,
+    read_classes,
     read_label_file,
     write_classes,
     write_lines,
@@ -816,7 +818,13 @@ class GTManualPage(DetectorPage):
         self.lbl_image_name.setText(path.name)
         existing: list[Detection] = []
         gt_txt = find_label_file(path, self.state.gt_folder)
+        # Where a save would go: that folder's classes.txt governs a fresh
+        # dataset, so opening it after another never inherits its names.
+        names = read_classes(classes_dir_for(label_dir_for(path, self.state.gt_folder)))
         if gt_txt:
+            # The dataset root owns the class names: a split layout keeps one
+            # classes.txt next to images/ and labels/, so every split agrees.
+            names = read_classes(classes_dir_for(gt_txt.parent))
             # Same dimensions the detector uses: header-only and EXIF-aware,
             # so the frame matches the one the boxes were annotated on.
             wh = size_image(path)
@@ -825,11 +833,26 @@ class GTManualPage(DetectorPage):
                     gt_txt,
                     wh[0],
                     wh[1],
-                    dict(enumerate(STUDY_CLASSES)),
+                    dict(enumerate(names)),
                 )
+        self._set_class_names(names)
         self.canvas.load_image(path, existing)
         self._on_boxes_changed()
         self.canvas.setFocus()
+
+    def _set_class_names(self, names: list[str]) -> None:
+        """Keep the canvas and the class picker on the dataset's class names."""
+        if not names:
+            return
+        combo_names = [self.combo_class.itemText(i) for i in range(self.combo_class.count())]
+        if self.canvas.class_names == names and combo_names == names:
+            return
+        self.canvas.set_class_names(names)
+        self.combo_class.blockSignals(True)
+        self.combo_class.clear()
+        self.combo_class.addItems(names)
+        self.combo_class.setCurrentIndex(self.canvas.active_class)
+        self.combo_class.blockSignals(False)
 
     def _on_boxes_changed(self):
         n = len(self.canvas.boxes)
@@ -867,9 +890,11 @@ class GTManualPage(DetectorPage):
 
         # classes.txt next to the labels — but only when there is none yet:
         # overwriting would corrupt a dataset that annotates other classes.
+        # ``classes_dir_for`` puts it once at the dataset root for a split
+        # layout, so labels/train and labels/val share one list.
         cls_dir = classes_dir_for(out_path.parent)
         if not (cls_dir / "classes.txt").exists():
-            write_classes(cls_dir)
+            write_classes(cls_dir, self.canvas.class_names)
         return out_path
 
     def _auto_save(self, path: Path, silent: bool = False):

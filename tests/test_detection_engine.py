@@ -274,6 +274,58 @@ def test_ground_truth_is_read_once_and_matched_per_model(tmp_path, monkeypatch):
     assert loaded.results[1][0].gt_path and loaded.results[1][0].gt_path.is_file()
 
 
+def test_split_ground_truth_is_found_through_the_conventional_layout(tmp_path, monkeypatch):
+    """Ticket #92: a run over images/<split> reads labels/<split>."""
+    dataset = tmp_path / "dataset"
+    image = write_plate(dataset / "images" / "train" / "plate.png")
+    width = height = 160
+
+    def label_line(box: tuple[float, float, float, float]) -> str:
+        x1, y1, x2, y2 = box
+        return (
+            f"0 {(x1 + x2) / 2 / width:.6f} {(y1 + y2) / 2 / height:.6f} "
+            f"{(x2 - x1) / width:.6f} {(y2 - y1) / height:.6f}\n"
+        )
+
+    label = dataset / "labels" / "train" / "plate.txt"
+    label.parent.mkdir(parents=True)
+    label.write_text(label_line(TOP_BOX), encoding="utf-8")
+    # A legacy file next to the image must lose to the conventional label.
+    (image.parent / "plate.txt").write_text(label_line(BOTTOM_BOX), encoding="utf-8")
+
+    read_paths: list[Path] = []
+    original = engine_module.read_label_file
+
+    def counted(path, *args, **kwargs):
+        read_paths.append(Path(path))
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(engine_module, "read_label_file", counted)
+    result = run_detection(
+        make_config([image], [FakeDetector(boxes=(TOP_BOX, BOTTOM_BOX))], tmp_path / "run")
+    )
+
+    item = result.results[0][0]
+    assert read_paths == [label]
+    assert item.has_gt is True
+    assert [gt.class_id for gt in item.gt] == [0]
+    assert (item.tp, item.fp, item.fn, item.miscls) == (1, 1, 0, 0)
+    # The GT view is rendered from the split-layout label, not the decoy.
+    assert item.gt_path is not None and item.gt_path.name == "0000_plate_gt.png"
+    assert item.gt_path.is_file()
+
+    payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
+    assert payload["images"][0]["has_gt"] is True
+    assert len(payload["images"][0]["gt"]) == 1
+    assert payload["images"][0]["models"][0]["tp"] == 1
+
+    loaded = load_run(result.run_dir)
+    assert loaded.results[0][0].has_gt is True
+    assert len(loaded.results[0][0].gt) == 1
+    assert loaded.results[0][0].gt_path is not None
+    assert loaded.results[0][0].gt_path.is_file()
+
+
 def test_callbacks_report_each_result_after_its_files_exist(tmp_path):
     images = [
         write_plate(tmp_path / "photos" / "a.png"),

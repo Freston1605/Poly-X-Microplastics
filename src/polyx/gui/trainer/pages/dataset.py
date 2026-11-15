@@ -6,7 +6,7 @@ import random
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QFileDialog,
     QGridLayout,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import _, lazy, ngettext
+from polyx.core.labels import find_label_file, read_boxes
 from polyx.core.paths import IMAGE_EXTS
 from polyx.core.quality.dataset_audit import (
     LEVEL_ERROR,
@@ -90,33 +91,6 @@ def _count_split(yaml_dir: Path, data: dict, split_value) -> int:
         except Exception:  # noqa: BLE001
             return 0
     return 0
-
-
-def _find_label_for(img_path: Path) -> Path | None:
-    """Finds the YOLO .txt of an image, following the Ultralytics convention:
-    replaces the 'images' segment with 'labels' in the path."""
-    # 1) Replace 'images' -> 'labels' in the path
-    parts = list(img_path.parts)
-    for i in range(len(parts) - 1, -1, -1):
-        if parts[i].lower() == "images":
-            new_parts = parts[:i] + ["labels"] + parts[i + 1 :]  # noqa: RUF005
-            candidate = Path(*new_parts).with_suffix(".txt")
-            if candidate.exists():
-                return candidate
-            break
-    # 2) Same directory
-    same = img_path.with_suffix(".txt")
-    if same.exists():
-        return same
-    # 3) labels/ sibling of the parent
-    sibling = img_path.parent.parent / "labels" / (img_path.stem + ".txt")
-    if sibling.exists():
-        return sibling
-    # 4) labels/ inside the same directory
-    nested = img_path.parent / "labels" / (img_path.stem + ".txt")
-    if nested.exists():
-        return nested
-    return None
 
 
 class _PreviewTile(QLabel):
@@ -449,31 +423,23 @@ class DatasetPage(TrainerPage):
         if pm.isNull():
             tile.setText("✗")
             return
-        # Look for YOLO .txt files with the Ultralytics convention
+        # The codec owns the images/ -> labels/ mapping and the box dialect.
         boxes = []
-        label_path = _find_label_for(img_path)
+        label_path = find_label_file(img_path)
         if label_path is not None:
-            try:
-                for line in label_path.read_text(encoding="utf-8").splitlines():
-                    parts = line.strip().split()
-                    if len(parts) >= 5:
-                        cid = int(float(parts[0]))
-                        cx, cy, w, h = [float(x) for x in parts[1:5]]
-                        boxes.append((cid, cx, cy, w, h))
-            except Exception:  # noqa: BLE001, S110
-                pass
+            boxes, _malformed = read_boxes(label_path)
         # draw
-        img = QImage(pm)
+        img = pm.toImage()
         painter = QPainter(img)
         painter.setRenderHint(QPainter.Antialiasing)
         names = self.state.dataset.class_names
-        for cid, cx, cy, w, h in boxes:
-            name = names[cid] if cid < len(names) else str(cid)
+        for box in boxes:
+            name = names[box.class_id] if box.class_id < len(names) else str(box.class_id)
             color = T.class_qcolor(name)
             painter.setPen(QPen(color, max(2, img.width() // 300)))
-            x = (cx - w / 2) * img.width()
-            y = (cy - h / 2) * img.height()
-            painter.drawRect(int(x), int(y), int(w * img.width()), int(h * img.height()))
+            x = (box.cx - box.w / 2) * img.width()
+            y = (box.cy - box.h / 2) * img.height()
+            painter.drawRect(int(x), int(y), int(box.w * img.width()), int(box.h * img.height()))
         painter.end()
         scaled = QPixmap.fromImage(img).scaled(
             tile.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
@@ -546,7 +512,7 @@ class DatasetPage(TrainerPage):
                 for ext in IMAGE_EXTS:
                     imgs.extend(list(train_abs.rglob(f"*{ext}"))[:50])
             if imgs:
-                with_label = sum(1 for img in imgs if _find_label_for(img))
+                with_label = sum(1 for img in imgs if find_label_file(img))
                 pct = with_label / len(imgs) * 100
                 ok_labels = pct >= 80
                 self._set_check(
