@@ -27,7 +27,18 @@ Three workflows run on **every PR** and on every push to `main`:
      the wheel, loads the packaged catalogs and smoke-imports it.
 
 `publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
-tags via Trusted Publishing.
+tags via Trusted Publishing. A tag run starts with a `gate` job that calls
+`ci.yml` through `workflow_call` — the same suite every PR runs — so a tag on a
+red commit cannot reach PyPI, where a version number is spent forever. The build
+job then rejects a tag whose commit is not on `main`, checks that the tag names
+the version in the built wheel, and `release` attaches the same files to a
+GitHub release. A manual run from the Actions UI is a rehearsal: it runs the
+gate and builds the distributions but uploads nothing.
+
+Every `uses:` is pinned to a commit SHA with its release in a comment, and
+`.github/dependabot.yml` opens one grouped PR a week for patch and minor action
+bumps — each major gets its own PR, with its migration notes. A pinned action
+that nobody updates is just an old action.
 
 Before pushing, run the same checks locally:
 
@@ -39,7 +50,9 @@ uv run ty check src/polyx/core src/polyx/cli
 
 After editing dependencies, run `uv lock` and commit the lock: CI runs
 `uv lock --check`, and the suite asserts every declared package is present in
-`uv.lock`.
+`uv.lock`. The uv version itself is pinned by `required-version` in
+`pyproject.toml`, and the workflows install exactly that version, so bumping uv
+means re-locking in the same commit.
 
 The whole gate — translation audit, suite, ruff and ty — in one command,
 from any checkout or git worktree:

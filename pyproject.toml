@@ -111,6 +111,10 @@ exclude = [
 path = "src/polyx/__init__.py"
 
 [tool.uv]
+# The workflows install exactly this uv: setup-uv reads `required-version`
+# when no version input is given, so the lockfile is always written and read
+# by the same resolver. Bumping it means re-locking in the same commit.
+required-version = "==0.11.9"
 # Keep the dev/CI lock aligned with the tested stack. torch/torchvision are
 # not declared as direct dependencies (ultralytics pulls them in and the
 # installer picks the CUDA wheel per GPU), but the resolver must not drift

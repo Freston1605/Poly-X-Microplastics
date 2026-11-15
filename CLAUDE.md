@@ -151,7 +151,9 @@ models/                   # YOLO .pt weights (dev; in installs they go to user d
 runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
 data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
-.github/workflows/        # ruff.yml, pre-commit.yml, ci.yml (tests + build), publish.yml
+.github/workflows/        # ci.yml (gate, suite, wheel), ruff.yml, pre-commit.yml,
+                          # publish.yml (v* tag → PyPI + GitHub release)
+.github/dependabot.yml    # weekly action bumps; every `uses:` is SHA-pinned
 ```
 
 > **The report package is internal.** `polyx.gui.report` exposes exactly
