@@ -8,16 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import Literal, Protocol
 
 import numpy as np
-
-if TYPE_CHECKING:
-    # Legacy names, resolved lazily below (see ``__getattr__``). Declared
-    # here (redundant-alias form = re-export) so type checkers see them as
-    # module attributes.
-    from polyx.core.labels import find_gt_for_image as find_gt_for_image
-    from polyx.core.labels import read_yolo_txt as read_yolo_txt
 
 
 @dataclass
@@ -270,25 +263,6 @@ def policy_tiling(
         "lado": side,
         "umbral_px": int(threshold_px),
     }
-
-
-def __getattr__(name: str):
-    """Legacy re-exports from the YOLO-label codec.
-
-    ``read_yolo_txt`` and ``find_gt_for_image`` moved to
-    :mod:`polyx.core.labels` — this module is contracts, not implementation.
-    Resolved lazily so the import stays one-directional (labels imports
-    ``Instance`` from here).
-    """
-    if name == "read_yolo_txt":
-        from polyx.core.labels import read_yolo_txt
-
-        return read_yolo_txt
-    if name == "find_gt_for_image":
-        from polyx.core.labels import find_gt_for_image
-
-        return find_gt_for_image
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def equal_area_diameter(area: float) -> float:

@@ -16,7 +16,8 @@ import cv2
 import numpy as np
 import pytest
 
-from polyx.core.detect.protocol import Instance, find_gt_for_image, read_yolo_txt
+from polyx.core.detect.protocol import Instance
+from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.quality.metrics import mask_iou, match_image
 
 # A cross-shaped polygon: its bounding box is the whole (200x150) frame,
@@ -62,11 +63,11 @@ def _write_image(path, w: int = 200, h: int = 150) -> None:
 # ── Polygon GT parsing ──────────────────────────────────────────────────
 
 
-def test_read_yolo_txt_polygon_mask_is_filled(tmp_path):
+def test_read_label_file_polygon_mask_is_filled(tmp_path):
     txt = tmp_path / "img1.txt"
     # class + four (x, y) pairs: a square from 20% to 80% of the frame
     txt.write_text("0 0.2 0.2 0.8 0.2 0.8 0.8 0.2 0.8\n", encoding="utf-8")
-    inst = read_yolo_txt(txt, 100, 100, {0: "particle"})
+    inst = read_label_file(txt, 100, 100, {0: "particle"})[0]
     assert len(inst) == 1
     d = inst[0]
     assert d.mask_source == "gt-polygon"
@@ -79,10 +80,10 @@ def test_read_yolo_txt_polygon_mask_is_filled(tmp_path):
     assert d.x2 == pytest.approx(80.0)
 
 
-def test_read_yolo_txt_detection_branch_unchanged(tmp_path):
+def test_read_label_file_detection_branch_unchanged(tmp_path):
     txt = tmp_path / "img1.txt"
     txt.write_text("0 0.5 0.5 0.2 0.1\n", encoding="utf-8")
-    inst = read_yolo_txt(txt, 100, 100, {0: "particle"})
+    inst = read_label_file(txt, 100, 100, {0: "particle"})[0]
     assert len(inst) == 1
     d = inst[0]
     assert d.x1 == pytest.approx(40.0) and d.x2 == pytest.approx(60.0)
@@ -90,10 +91,10 @@ def test_read_yolo_txt_detection_branch_unchanged(tmp_path):
     assert d.mask_source is None
 
 
-def test_read_yolo_txt_cross_polygon_bbox_covers_shape(tmp_path):
+def test_read_label_file_cross_polygon_bbox_covers_shape(tmp_path):
     txt = tmp_path / "img1.txt"
     txt.write_text(_cross_polygon_txt(), encoding="utf-8")
-    inst = read_yolo_txt(txt, 200, 150, {0: "particle"})
+    inst = read_label_file(txt, 200, 150, {0: "particle"})[0]
     assert len(inst) == 1
     d = inst[0]
     assert (d.x1, d.y1, d.x2, d.y2) == (0.0, 0.0, 200.0, 150.0)
@@ -205,11 +206,19 @@ def test_eval_write_report_creates_parents(tmp_path):
 # ── GT lookup helper ────────────────────────────────────────────────────
 
 
-def test_find_gt_for_image_matches_stem(tmp_path):
+def test_find_label_file_matches_stem(tmp_path):
     image_dir = tmp_path / "photos"
     image_dir.mkdir()
     _write_image(image_dir / "img1.png")
     labels = tmp_path / "labels"
     labels.mkdir()
     (labels / "img1.txt").write_text("0 0.5 0.5 0.1 0.1\n", encoding="utf-8")
-    assert find_gt_for_image(image_dir / "img1.png", labels) == labels / "img1.txt"
+    assert find_label_file(image_dir / "img1.png", labels) == labels / "img1.txt"
+
+
+def test_detection_protocol_does_not_reexport_codec_names():
+    import polyx.core.detect.protocol as protocol
+
+    for legacy in ("find_gt_for_image", "read_yolo_txt"):
+        with pytest.raises(AttributeError):
+            getattr(protocol, legacy)

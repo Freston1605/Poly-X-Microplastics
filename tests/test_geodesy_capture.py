@@ -73,13 +73,13 @@ def _escribir_labels(
     H: int,
     cajas: list[tuple[int, float, float, float, float, float]],
 ) -> Path:
-    """Escribe el .txt en el layout EXACTO de runner._guardar_labels.
+    """Write the .txt in the EXACT layout of runner._guardar_labels.
 
-    Se reimplementan a mano las 6 columnas (class cx cy w h conf, en
-    coordenadas normalizadas) en lugar de importar detector/runner.py: ese
-    modulo arrastra PySide6/Qt y este test solo puede depender de
-    numpy/cv2/pytest. El formato es el que ``read_yolo_txt`` espera y el que
-    ``_guardar_labels`` escribe (Dominio compartido).
+    The six columns (class cx cy w h conf, in normalized coordinates) are
+    reimplemented by hand instead of importing detector/runner.py: that
+    module drags PySide6/Qt in, and this test may only depend on
+    numpy/cv2/pytest. The format is the one ``read_label_file`` expects and
+    the one ``_guardar_labels`` writes (shared domain).
     """
     carpeta_labels.mkdir(parents=True, exist_ok=True)
     lineas = []
