@@ -23,6 +23,8 @@ from pathlib import Path
 
 import yaml
 
+from polyx.core.labels import find_label_file
+
 REAL_PREFIX = "real__"
 LAB_PREFIX = "lab__"
 
@@ -72,16 +74,6 @@ def can_reselect(data_yaml: Path) -> bool:
     return c["real"] > 0 and c["lab"] > 0
 
 
-def _label_for(image: Path) -> Path:
-    """Path of an image's .txt, with the images/ -> labels/ convention."""
-    parts_2 = list(image.parts)
-    for i in range(len(parts_2) - 1, -1, -1):
-        if parts_2[i] == "images":
-            parts_2[i] = "labels"
-            break
-    return Path(*parts_2).with_suffix(".txt")
-
-
 def _link(origin: Path, destination: Path) -> None:
     """Hard link when possible; copy otherwise (other volume, no permissions)."""
     import os
@@ -122,8 +114,8 @@ def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Path | None
         if not img.exists():
             continue
         _link(img, img_dir / img.name)
-        label_path = _label_for(img)
-        if label_path.exists():
+        label_path = find_label_file(img)
+        if label_path is not None:
             _link(label_path, lbl_dir / label_path.name)
 
     cfg = yaml.safe_load(data_yaml.read_text(encoding="utf-8")) or {}
