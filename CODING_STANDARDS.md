@@ -39,6 +39,12 @@ Read by the review agent. Implementation guidance lives in `CLAUDE.md`.
 - `cv2.imdecode`/`imencode` over `np.fromfile`, never `imread`/`imwrite`
   (accented paths fail on Windows).
 
+## Label I/O
+
+- Go through `polyx.core.labels` (`find_label_file`, `label_path_for`,
+  `read_labels`, `write_labels`, `read_classes`, `write_classes`). Do not
+  re-derive the `images/` → `labels/` mapping or read `classes.txt` by hand.
+
 ## OS-specific code
 
 - Nothing OS-specific outside `polyx.core.platform`.
@@ -49,12 +55,15 @@ Read by the review agent. Implementation guidance lives in `CLAUDE.md`.
   are not being migrated, but new code follows the rule).
 - Run with the project `.venv`. Full suite must pass with zero failures
   and zero skips before calling anything done.
+- Use the shared fixtures in `tests/conftest.py` — `qapp` and any shared
+  dataset builder — instead of redefining them per module.
 
 ## Review checklist
 
 Automated by the local hooks, the CI workflows and the gate — these are the
 checks `.pre-commit-config.yaml`, `.github/workflows/` and `tools/check.py`
-actually run:
+actually run. For a review-only run, `python tools/check.py --static` executes
+the audit, palette, ruff and ty without the suite:
 
 - [ ] `pytest` passes with zero failures and zero skips.
 - [ ] `ruff check` and `ruff format --check` are clean.
@@ -85,3 +94,4 @@ Review-only — the tooling cannot see these, so the reviewer must:
       `polyx.core.annotate` constants).
 - [ ] Docs (`CLAUDE.md`, `GLOSSARY.md`) updated in the same PR as behaviour
       changes.
+- [ ] Docs describe today's behaviour; a planned module is marked as planned.

@@ -1,58 +1,130 @@
-# Publicacion en PyPI mediante Trusted Publishing (OIDC): no hay token que
-# filtrar ni rotar. Disparo por tag v* (p.ej. `git tag v2.0.0 && git push
-# --tags`) o manualmente desde la UI de Actions.
+# Publishing to PyPI through Trusted Publishing (OIDC): there is no token to
+# leak or rotate. Triggered by a `v*` tag (e.g. `git tag v2.0.0 && git push
+# --tags`) or manually from the Actions UI, which is a dry run: it runs the
+# gate and builds the distributions but uploads nothing.
 #
-# Antes de la primera ejecucion hay que crear el proyecto en PyPI y anadir
-# este repositorio como "publisher" (Settings -> Publishing -> Add a new
-# publisher), con environment "pypi". Sin eso el job falla con 403 al subir.
+# Before the first run, create the project on PyPI and register this
+# repository as a publisher (Settings -> Publishing -> Add a new publisher)
+# with environment "pypi". Without that the upload fails with 403.
 name: Publish
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write   # requerido por Trusted Publishing
+
+# A publish is never cancelled halfway: a partially uploaded release is worse
+# than a queued one. Let runs queue instead of killing each other.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  # The same gate every PR runs. A tag on a red commit can no longer reach
+  # PyPI, where a version number is spent forever.
+  gate:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
+    needs: gate
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.11'
-          cache: pip
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      # A tag anywhere builds and uploads nothing: PyPI only accepts a commit
+      # that main already carries, so a stray or diverged tag cannot ship code
+      # that never reached main.
+      - name: Tag is reachable from main
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${GITHUB_SHA}" --jq .status)
+          echo "main...${GITHUB_SHA}: ${status}"
+          case "$status" in
+            ahead|identical|behind) ;;
+            *) echo "::error::Tag commit is not on main (compare status: ${status})."; exit 1 ;;
+          esac
+
       - name: Build sdist and wheel
+        run: uv build --out-dir dist
+
+      # The tag names the release; the wheel carries the version that PyPI
+      # reserves. Compare the built artifact, not the source: it is what ships.
+      - name: Built version matches the tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          pip install build
-          python -m build -o dist
-      - name: Verify the tag matches the package version
-        run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          VER=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['dynamic'] and __import__('re').search(r'__version__\\s*=\\s*\"([^\"]+)\"', open('src/polyx/__init__.py').read()).group(1))")
-          echo "tag=$TAG package=$VER"
-          test "$TAG" = "$VER"
-      - uses: actions/upload-artifact@v4
+          wheel=$(ls dist/*.whl)
+          version=$(python3 -c 'import sys; print(sys.argv[1].rsplit("/", 1)[-1].split("-")[1])' "$wheel")
+          tag="${GITHUB_REF_NAME#v}"
+          echo "tag=${tag} wheel=${version}"
+          test "${tag}" = "${version}"
+
+      - name: Upload the distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/*
+          retention-days: 7
+          if-no-files-found: error
 
   publish:
     needs: build
+    # Manual runs stop after the build: they are a rehearsal, not a release.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     environment:
       name: pypi
       url: https://pypi.org/p/polyx-microplastics
     permissions:
-      id-token: write
+      id-token: write   # Trusted Publishing, plus the Sigstore attestations
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist
+
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          print-hash: true
+
+  release:
+    needs: [build, publish]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write   # create the GitHub release for this tag
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      # PyPI is the distribution channel; the release is the human-readable
+      # record of what shipped, with the same files attached.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          --verify-tag
+          --title "$GITHUB_REF_NAME"
+          --generate-notes
+          dist/*
