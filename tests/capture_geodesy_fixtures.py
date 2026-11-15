@@ -51,7 +51,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import polyx.core.measure as measure
-from polyx.core.detect.protocol import read_yolo_txt
+from polyx.core.labels import read_label_file
 
 # Sufijos de foto que cv2 puede abrir. El resto de ficheros bajo --fotos se
 # ignoran sin riesgo: ahi pueden vivir excels, txts de conteo manual, informes.
@@ -159,14 +159,14 @@ def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> 
     for alias in sorted(runs.iterdir()):
         if not alias.is_dir():
             continue
-        carpeta_labels = alias / "labels"
-        if not carpeta_labels.is_dir():
+        labels_dir = alias / "labels"
+        if not labels_dir.is_dir():
             continue
-        for ruta_txt in sorted(carpeta_labels.glob("*.txt")):
+        for txt_path in sorted(labels_dir.glob("*.txt")):
             resumen["labels"] += 1
             # El runner escribe NNNN_<stem>.txt; el stem de la foto es lo que
             # sigue al primer guion bajo de 4 cifras.
-            stem = ruta_txt.stem
+            stem = txt_path.stem
             imgstem = _stem_de_label(stem)
             if not imgstem:
                 resumen["saltadas"][SK_TXT_SIN_STEM] = (
@@ -186,12 +186,10 @@ def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> 
                 )
                 continue
             resumen["fotos_encontradas"] += 1
-            alto, ancho = img_bgr.shape[:2]
             try:
-                clases = _cargar_classes(alias / "classes.txt")
-                dets = read_yolo_txt(ruta_txt, ancho, alto, clases)
+                dets = _read_annotations(txt_path, img_bgr, alias / "classes.txt")
             except Exception as exc:  # noqa: BLE001 - todo lo parseable va por SK_*
-                resumen["saltadas"][f"{SK_ERROR} (read_yolo_txt: {type(exc).__name__})"] = (
+                resumen["saltadas"][f"{SK_ERROR} (read_label_file: {type(exc).__name__})"] = (
                     resumen["saltadas"].get(SK_ERROR, 0) + 1
                 )
                 continue
@@ -246,17 +244,23 @@ def capturar(runs: Path, fotos: Path, destino: Path, reforzar: bool = False) -> 
     return resumen
 
 
-def _cargar_classes(ruta: Path) -> dict[int, str]:
+def _read_annotations(txt_path: Path, image_bgr: np.ndarray, classes_path: Path) -> list:
+    """Read one image's annotations through the codec, ignoring bad lines."""
+    height, width = image_bgr.shape[:2]
+    return read_label_file(txt_path, width, height, _load_classes(classes_path))[0]
+
+
+def _load_classes(path: Path) -> dict[int, str]:
     """classes.txt: una linea de nombre por id, en orden."""
-    nombres: dict[int, str] = {}
-    if ruta.exists():
+    names: dict[int, str] = {}
+    if path.exists():
         try:
-            for i, linea in enumerate(ruta.read_text(encoding="utf-8").splitlines()):
-                if linea.strip():
-                    nombres[i] = linea.strip()
+            for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+                if line.strip():
+                    names[i] = line.strip()
         except UnicodeDecodeError:
             pass
-    return nombres
+    return names
 
 
 def imprimir_resumen(resumen: dict) -> None:

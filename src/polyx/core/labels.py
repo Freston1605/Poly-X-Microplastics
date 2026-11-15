@@ -309,11 +309,6 @@ def find_label_file(image_path: Path, gt_folder: Path | None = None) -> Path | N
     return None
 
 
-# Legacy name (pre-codec): kept so ``polyx.core.detect.protocol`` can
-# re-export it and old imports keep working.
-find_gt_for_image = find_label_file
-
-
 def label_path_for(image_path: Path, gt_folder: Path | None = None) -> Path:
     """The write-side mirror of :func:`find_label_file` (folders created).
 
@@ -444,22 +439,6 @@ def read_label_file(
     return instances, malformed
 
 
-def read_yolo_txt(
-    txt_path: str | Path,
-    img_w: int,
-    img_h: int,
-    class_names: dict[int, str],
-) -> list[Instance]:
-    """Legacy entry point, signature and behaviour unchanged.
-
-    Kept so existing callers and the ``polyx.core.detect.protocol``
-    re-export keep working; new code should use :func:`read_label_file`
-    (which also reports malformed lines).
-    """
-    instances, _malformed = read_label_file(txt_path, img_w, img_h, class_names)
-    return instances
-
-
 # ── High level: locate + EXIF-safe size in one call ───────────────────────
 
 
@@ -547,7 +526,6 @@ __all__ = [
     "BBox",
     "bbox_from",
     "classes_dir_for",
-    "find_gt_for_image",
     "find_label_file",
     "format_line",
     "image_path_for",
@@ -557,7 +535,6 @@ __all__ = [
     "read_classes",
     "read_label_file",
     "read_labels",
-    "read_yolo_txt",
     "to_instance",
     "write_classes",
     "write_labels",

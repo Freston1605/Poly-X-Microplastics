@@ -107,7 +107,7 @@ as PNG overlays + RLE in the run folder alongside `centroids.csv`.
 
 ### 2.6 Ground-truth format is box-only
 
-`read_yolo_txt` parses `class cx cy w h`. Segmentation GT is polygon or RLE.
+`read_label_file` parses `class cx cy w h`. Segmentation GT is polygon or RLE.
 Metrics (`metrics.py` `match_image` uses IoU on boxes) cannot score mask IoU.
 
 **Recommendation:** extend GT reading to optional polygon lines (YOLO-seg format:

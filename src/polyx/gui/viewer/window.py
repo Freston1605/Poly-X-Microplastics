@@ -834,9 +834,8 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         txt = candidates[0]
 
         try:
-            from polyx.core.detect.protocol import read_yolo_txt
             from polyx.core.image_io import read_image
-            from polyx.core.labels import classes_dir_for, read_classes
+            from polyx.core.labels import classes_dir_for, read_classes, read_label_file
 
             bgr = read_image(img)
 
@@ -850,7 +849,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             # folder, not the label folder.
             names = dict(enumerate(read_classes(classes_dir_for(txt.parent))))
 
-            dets = read_yolo_txt(txt, width_2, height, names)
+            dets = read_label_file(txt, width_2, height, names)[0]
 
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(

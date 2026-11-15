@@ -286,12 +286,10 @@ def test_read_label_file_detection_and_polygon(tmp_path):
     assert (poly.x1, poly.y1, poly.x2, poly.y2) == pytest.approx((10, 10, 20, 20))
 
 
-def test_legacy_read_yolo_txt_keeps_its_signature(tmp_path):
-    txt = tmp_path / "pic.txt"
-    txt.write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
-    dets = L.read_yolo_txt(txt, 100, 100, {0: "PET"})
-    assert len(dets) == 1
-    assert dets[0].class_name == "PET"
+def test_codec_exposes_only_the_canonical_names():
+    for legacy in ("find_gt_for_image", "read_yolo_txt"):
+        assert not hasattr(L, legacy), f"polyx.core.labels must not expose {legacy}"
+        assert legacy not in L.__all__, f"polyx.core.labels.__all__ must not list {legacy}"
 
 
 # ── High level: locate + EXIF-safe size in one call ───────────────────────
@@ -414,5 +412,16 @@ def test_no_module_imports_the_deleted_codec():
         str(path.relative_to(source))
         for path in source.rglob("*.py")
         if "data.labels" in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == []
+
+
+def test_no_module_uses_the_legacy_label_aliases():
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
+    offenders = [
+        str(path.relative_to(source))
+        for path in source.rglob("*.py")
+        if "find_gt_for_image" in path.read_text(encoding="utf-8")
+        or "read_yolo_txt" in path.read_text(encoding="utf-8")
     ]
     assert offenders == []
