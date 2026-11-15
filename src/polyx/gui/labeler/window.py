@@ -484,15 +484,13 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 break
             pd.setValue(i)
             pd.setLabelText(f"{i + 1}/{total}: {img_path.name}")
-            key = str(img_path)
             # Only annotate the empty ones
-            existing = self.state._annotations.get(key)
-            if existing:
+            if self.state.has_annotations_for(img_path):
                 continue
             try:
                 dets = self._pre_model.predict_auto(str(img_path), **self._pre_annotation_params())
                 boxes = self._dets_to_boxes(dets, img_path)
-                self.state._annotations[key] = boxes
+                self.state.set_annotations_for(img_path, boxes)
                 self.state._save_labels_for(img_path, boxes)
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -552,7 +550,7 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def _on_images_loaded(self, imgs: list):
         self.img_list.clear()
         for img in imgs:
-            item = QListWidgetItem(self._text_item(img, count_2=True))
+            item = QListWidgetItem(self._text_item(img))
             self.img_list.addItem(item)
         self.lbl_count.setText(
             ngettext("%(count)d image", "%(count)d images", len(imgs)) % {"count": len(imgs)}
@@ -563,15 +561,11 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._thumb_timer.start(0)
         self._update_progress()
 
-    def _text_item(self, img: Path, count_2: bool = False) -> str:
+    def _text_item(self, img: Path) -> str:
         """Status mark: ✓ with particles · reviewed, empty · ○ not reviewed."""
         if not self.state.is_reviewed(img):
             return f"○  {img.name}"
-        n = len(self.state._annotations.get(str(img), []))
-        if count_2 and str(img) not in self.state._annotations:
-            # Without loading into memory: count the boxes of the same file
-            # the codec found (conventional or legacy), not a guessed path.
-            n = self.state.box_count_for(img)
+        n = self.state.box_count_for(img)
         return f"✓  {img.name}  ({n})" if n else f"·  {img.name}  (0)"
 
     def _process_thumbs(self):

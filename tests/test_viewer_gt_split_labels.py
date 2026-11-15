@@ -8,37 +8,22 @@ photo. These tests pin the two consumers to the codec's folder contract.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-import cv2
-import numpy as np
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _ROOT / "src"
-if _SRC.is_dir() and str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
-
-
-def _png(path: Path, width: int = 100, height: int = 100) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    img = np.zeros((height, width, 3), dtype=np.uint8)
-    ok, buf = cv2.imencode(".png", img)
-    assert ok
-    path.write_bytes(bytes(buf))
-    return path
+from tests.conftest import split_dataset
 
 
 def _split_dataset(root: Path, names: tuple[str, ...] = ("HDPE", "PS")) -> tuple[Path, Path]:
     """A conventional dataset: images/train + labels/train + root classes.txt."""
-    root.mkdir(parents=True, exist_ok=True)
-    (root / "classes.txt").write_text("\n".join(names) + "\n", encoding="utf-8")
-    image = _png(root / "images" / "train" / "plate.png")
-    label = root / "labels" / "train" / "plate.txt"
-    label.parent.mkdir(parents=True, exist_ok=True)
-    label.write_text("0 0.5 0.5 0.2 0.2\n1 0.25 0.25 0.1 0.1\n", encoding="utf-8")
-    return image, label
+    split_dataset(
+        root,
+        {"train": {"plate": "0 0.5 0.5 0.2 0.2\n1 0.25 0.25 0.1 0.1\n"}},
+        names=names,
+        classes=True,
+    )
+    return root / "images" / "train" / "plate.png", root / "labels" / "train" / "plate.txt"
 
 
 # ── Viewer ────────────────────────────────────────────────────────────────
@@ -78,7 +63,16 @@ def test_viewer_run_load_reads_classes_from_the_model_folder(qapp, tmp_path, mon
 
     from polyx.gui.viewer.window import ViewerWindow
 
-    photo = _png(tmp_path / "photos" / "plate.png")
+    photo = tmp_path / "photos" / "plate.png"
+    photo.parent.mkdir(parents=True)
+    # A real, decodable photo: the viewer sizes it before reading the run.
+    import cv2
+    import numpy as np
+
+    ok, buf = cv2.imencode(".png", np.zeros((100, 100, 3), dtype=np.uint8))
+    assert ok
+    photo.write_bytes(bytes(buf))
+
     run = tmp_path / "runs" / "detect_20260101"
     model = run / "alpha"
     labels = model / "labels"
@@ -154,8 +148,8 @@ def test_gt_page_writes_classes_txt_once_at_the_dataset_root(qapp, tmp_path):
     from polyx.core.detect.yolo import Detection
     from polyx.gui.detector.state import DetectorState
 
-    root = tmp_path / "dataset"
-    image = _png(root / "images" / "train" / "plate.png")
+    root = split_dataset(tmp_path / "dataset", {"train": {"plate": None}})
+    image = root / "images" / "train" / "plate.png"
 
     state = DetectorState()
     state.images = [image]
@@ -180,8 +174,8 @@ def test_gt_page_auto_save_skips_an_empty_review(qapp, tmp_path):
     pytest.importorskip("PySide6")
     from polyx.gui.detector.state import DetectorState
 
-    root = tmp_path / "dataset"
-    image = _png(root / "images" / "train" / "plate.png")
+    root = split_dataset(tmp_path / "dataset", {"train": {"plate": None}})
+    image = root / "images" / "train" / "plate.png"
 
     state = DetectorState()
     state.images = [image]
@@ -190,7 +184,46 @@ def test_gt_page_auto_save_skips_an_empty_review(qapp, tmp_path):
         assert page.canvas.boxes == []
         page._auto_save(image)
 
-        assert not (root / "labels").exists()
+        assert not any(root.rglob("*.txt"))
         assert not (root / "images" / "train" / "plate.txt").exists()
+    finally:
+        page.close()
+
+
+def test_gt_page_does_not_stamp_another_datasets_classes(qapp, tmp_path):
+    """A fresh dataset after another must not inherit its class names."""
+    pytest.importorskip("PySide6")
+    from polyx.core.detect.yolo import Detection
+    from polyx.core.labels import STUDY_CLASSES
+    from polyx.gui.detector.state import DetectorState
+
+    first = split_dataset(
+        tmp_path / "first",
+        {"train": {"plate": "0 0.5 0.5 0.2 0.2\n"}},
+        names=("HDPE", "PS"),
+        classes=True,
+    )
+    fresh = split_dataset(tmp_path / "fresh", {"train": {"plate": None}})
+    first_image = first / "images" / "train" / "plate.png"
+    fresh_image = fresh / "images" / "train" / "plate.png"
+
+    state = DetectorState()
+    state.images = [first_image, fresh_image]
+    page = _gt_page(state)
+    try:
+        assert page.canvas.class_names[:2] == ["HDPE", "PS"]
+
+        # Opening the fresh dataset drops the previous dataset's names.
+        page.list.setCurrentRow(1)
+        assert page.canvas.class_names == STUDY_CLASSES
+
+        # Saving it writes the study classes, never the foreign ones.
+        page._save_to_txt(
+            fresh_image,
+            [Detection(class_id=0, class_name="PET", conf=1.0, x1=10, y1=10, x2=30, y2=30)],
+        )
+        written = (fresh / "classes.txt").read_text(encoding="utf-8")
+        assert written == "\n".join(STUDY_CLASSES) + "\n"
+        assert "HDPE" not in written
     finally:
         page.close()

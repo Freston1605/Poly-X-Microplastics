@@ -14,12 +14,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import pytest
-from PySide6.QtGui import QImage
-
 from polyx.gui.trainer.pages import dataset as dataset_page
 from polyx.gui.trainer.pages.dataset import DatasetPage
 from polyx.gui.trainer.state import TrainerState
+from tests.conftest import split_dataset
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -27,37 +25,14 @@ PET_BOX = "0 0.5 0.5 0.10 0.10"
 POLYGON = "0 0.1 0.1 0.9 0.1 0.9 0.9 0.1 0.9"
 
 
-def make_image(path: Path) -> Path:
-    """A real, loadable image: the preview needs a non-null QPixmap."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    image = QImage(40, 30, QImage.Format_RGB32)
-    image.fill(0xFFFFFFFF)
-    assert image.save(str(path))
-    return path
-
-
 def make_dataset(root: Path, *, label_text: str) -> Path:
     """A one-image conventional dataset: ``images/train`` + ``labels/train``."""
-    (root / "images" / "train").mkdir(parents=True, exist_ok=True)
-    (root / "labels" / "train").mkdir(parents=True, exist_ok=True)
-    make_image(root / "images" / "train" / "particle.png")
-    (root / "labels" / "train" / "particle.txt").write_text(label_text, encoding="utf-8")
-    yaml_path = root / "data.yaml"
-    yaml_path.write_text(
-        "path: .\ntrain: images/train\nval: images/train\nnames:\n  0: PET\n  1: PP\n",
-        encoding="utf-8",
+    split_dataset(
+        root,
+        {"train": {"particle": label_text}, "val": {"particle": label_text}},
+        data_yaml=True,
     )
-    return yaml_path
-
-
-@pytest.fixture
-def qapp():
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
+    return root / "data.yaml"
 
 
 class _PainterRecorder:

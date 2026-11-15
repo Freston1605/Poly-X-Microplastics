@@ -4,7 +4,8 @@ A conventional dataset (``images/<split>`` beside ``labels/<split>``) must
 report the class and box statistics the audit has always reported, and a
 YOLO-seg polygon line must not be counted as a detection box: the polygon
 dialect is valid YOLO but not a box, so the codec's box reader counts it
-malformed instead of mangling its first four coordinates into a box.
+malformed instead of mangling its first four coordinates into a box. The
+audit reports those lines as a warning rather than dropping them silently.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from polyx.core.quality.dataset_audit import LEVEL_WARN, audit_dataset
+from tests.conftest import split_dataset
 
 PET_BOX = "0 0.5 0.5 0.10 0.10"
 PP_BOX = "1 0.5 0.5 0.30 0.30"
@@ -27,21 +29,13 @@ def make_dataset(
     val_labels: list[str] | None = None,
 ) -> Path:
     """A conventional YOLO dataset: ``images/<split>`` + ``labels/<split>``."""
-    for split, labels in (("train", train_labels), ("val", val_labels or train_labels)):
-        images_dir = root / "images" / split
-        labels_dir = root / "labels" / split
-        images_dir.mkdir(parents=True, exist_ok=True)
-        labels_dir.mkdir(parents=True, exist_ok=True)
-        for i, text in enumerate(labels):
-            (images_dir / f"{split}_{i}.jpg").write_bytes(b"\xff\xd8\xff\xd9")
-            (labels_dir / f"{split}_{i}.txt").write_text(text, encoding="utf-8")
-
-    yaml_path = root / "data.yaml"
-    yaml_path.write_text(
-        "path: .\ntrain: images/train\nval: images/val\nnames:\n  0: PET\n  1: PP\n",
-        encoding="utf-8",
-    )
-    return yaml_path
+    val = train_labels if val_labels is None else val_labels
+    splits = {
+        "train": {f"train_{i}": text for i, text in enumerate(train_labels)},
+        "val": {f"val_{i}": text for i, text in enumerate(val)},
+    }
+    split_dataset(root, splits, suffix=".jpg", data_yaml=True)
+    return root / "data.yaml"
 
 
 def test_audit_finds_conventional_split_labels(tmp_path: Path):
@@ -80,3 +74,13 @@ def test_audit_does_not_count_a_polygon_line_as_a_box(tmp_path: Path):
     assert audit.per_class["val"] == {"PET": 1}
     # If the polygon were misread as a box its 0.9 x 0.1 area would shift this.
     assert audit.box_area_median["PET"] == pytest.approx(0.01)
+    # The one polygon per split is reported instead of silently discarded.
+    malformed = [
+        finding
+        for finding in audit.findings
+        if finding.level == LEVEL_WARN and "YOLO-seg" in finding.detail
+    ]
+    assert malformed, audit.findings
+    assert "2" in malformed[0].title, malformed[0].title
+    # The explanation names the dialect; it survives the locale.
+    assert "YOLO-seg" in malformed[0].detail

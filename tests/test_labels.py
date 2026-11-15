@@ -60,6 +60,19 @@ def _capture_warnings(monkeypatch) -> list[logging.LogRecord]:
     return handler.records
 
 
+def test_the_codec_logs_to_its_own_journal(monkeypatch, tmp_path):
+    """Every module keeps its own JSONL journal (CONTRIBUTING)."""
+    modules: list[str] = []
+    logger = logging.getLogger("polyx.test.labels")
+    monkeypatch.setattr(L, "logger_for", lambda module: modules.append(module) or logger)
+
+    img = _png(tmp_path / "ds" / "images" / "train" / "pic.png")
+    (img.parent / "pic.txt").write_text("", encoding="utf-8")
+    L.find_label_file(img)
+
+    assert modules == ["labels"]
+
+
 # ── Lines (pure) ──────────────────────────────────────────────────────────
 
 
@@ -243,6 +256,18 @@ def test_image_path_for_plain_folder_finds_the_same_directory_image(tmp_path):
     img = _png(tmp_path / "sueltas" / "plate.png")
     txt = tmp_path / "sueltas" / "plate.txt"
     txt.write_text("", encoding="utf-8")
+    assert L.image_path_for(txt) == img
+
+
+def test_image_path_for_finds_the_image_of_a_nested_legacy_label(tmp_path):
+    """A plain folder's ``labels/<stem>.txt`` maps back to the folder's image."""
+    img = _png(tmp_path / "sueltas" / "plate.png")
+    txt = tmp_path / "sueltas" / "labels" / "plate.txt"
+    txt.parent.mkdir()
+    txt.write_text("", encoding="utf-8")
+
+    # The forward read this reverse direction must mirror.
+    assert L.find_label_file(img) == txt
     assert L.image_path_for(txt) == img
 
 

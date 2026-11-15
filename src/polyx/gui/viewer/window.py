@@ -901,7 +901,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             QMessageBox.information(
                 self,
                 _("No labels"),
-                _("There is no label file next to the image:\n%(name)s")
+                _("There is no label file for the image:\n%(name)s")
                 % {"name": img.with_suffix(".txt").name},
             )
 

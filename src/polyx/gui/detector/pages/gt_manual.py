@@ -59,6 +59,7 @@ from polyx.core.labels import (
     bbox_from,
     classes_dir_for,
     find_label_file,
+    label_dir_for,
     label_path_for,
     read_classes,
     read_label_file,
@@ -817,7 +818,9 @@ class GTManualPage(DetectorPage):
         self.lbl_image_name.setText(path.name)
         existing: list[Detection] = []
         gt_txt = find_label_file(path, self.state.gt_folder)
-        names = list(self.canvas.class_names)
+        # Where a save would go: that folder's classes.txt governs a fresh
+        # dataset, so opening it after another never inherits its names.
+        names = read_classes(classes_dir_for(label_dir_for(path, self.state.gt_folder)))
         if gt_txt:
             # The dataset root owns the class names: a split layout keeps one
             # classes.txt next to images/ and labels/, so every split agrees.

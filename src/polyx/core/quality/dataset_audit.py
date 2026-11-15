@@ -102,21 +102,23 @@ def _scan_split(images: list[Path]) -> dict:
     Labels are located and parsed by the label codec, so the split layout and
     the polygon dialect are understood in one place: a YOLO-seg polygon line
     is valid YOLO but not a box, and the codec's box reader counts it
-    malformed instead of misreading its first four coordinates as a box.
+    malformed instead of misreading its first four coordinates as a box. The
+    count is returned so the audit can report it instead of dropping it.
     """
     per_class: dict[int, int] = defaultdict(int)
     areas: dict[int, list[float]] = defaultdict(list)
     per_class_per_img: dict[int, dict[str, int]] = defaultdict(
         lambda: defaultdict(int)
     )  # class -> {img: n}
-    degenerate = out_range = duplicates = empty = no_label = 0
+    degenerate = out_range = duplicates = empty = no_label = malformed = 0
     n_imgs = len(images)
     for img in images:
         lp = find_label_file(img)
         if lp is None:
             no_label += 1
             continue
-        boxes, _malformed = read_boxes(lp)
+        boxes, malformed_lines = read_boxes(lp)
+        malformed += malformed_lines
         seen = set()
         for box in boxes:
             c = box.class_id
@@ -142,6 +144,7 @@ def _scan_split(images: list[Path]) -> dict:
         duplicates=duplicates,
         empty=empty,
         no_label=no_label,
+        malformed=malformed,
         n_imgs=n_imgs,
     )
 
@@ -403,6 +406,16 @@ class _Auditor:
                         "intentional."
                     ),
                 )
+        malformed = sum(scan["malformed"] for scan in self.scans.values())
+        if malformed:
+            audit.add(
+                LEVEL_WARN,
+                _("Label lines that are not detection boxes: %(count)d") % {"count": malformed},
+                _(
+                    "Those lines were skipped. A YOLO-seg polygon line is valid YOLO "
+                    "but not a detection box, so the audit counts boxes only."
+                ),
+            )
 
     def _check_val_size(self) -> None:
         audit, vl = self.audit, self.vl
