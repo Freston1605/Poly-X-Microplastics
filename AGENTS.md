@@ -39,10 +39,11 @@ The review checklist for these rules is
 - **Docs ship with the behaviour** — manual text and CLAUDE.md updates
   ride in the same PR as the change that makes them true; the worktree
   never carries uncommitted doc updates across builds.
-- **Run the gate with `python tools/check.py`** — translation audit, suite,
-  ruff and the ty engine check, from any checkout or worktree. Wait until
-  the **full suite passes with zero failures and zero skips** before
-  calling anything done.
+- **Run the gate with `uv run --locked --extra gui python tools/check.py`**
+  (or the project `.venv` interpreter; system `python` may lack PySide6) —
+  translation audit, suite, ruff and the ty engine check, from any checkout
+  or worktree. Wait until the **full suite passes with zero failures and
+  zero skips** before calling anything done.
 - **Branch from `origin/main`**, never from a merged feature-branch tip:
   this repo squash-merges, so old tips are not ancestors and produce
   phantom PR conflicts.
