@@ -1,18 +1,24 @@
-# Lint-de-test masa minima: instalar las versiones exactas del proyecto
-# (el pin numpy==1.26.4 es fragil: sube numpy o ultralytics y hay que saberlo
-# aqui, no en la maquina del estudio), correr el pytest completo sin ventanas.
+# Minimal lint-and-test pipeline: install the exact versions from uv.lock (the
+# numpy==1.26.4 pin is fragile: bump numpy or ultralytics and it must be known
+# here, not on the studio machine), then run the full pytest suite without
+# windows.
+#
+# This workflow is also the publish gate: `publish.yml` calls it through
+# `workflow_call`, so a tag can only reach PyPI after the same suite passes.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:   # manual run to reproduce a failure on any branch
+  workflow_call:       # publish.yml gates on this suite
 
 permissions:
   contents: read
 
-# Un empujon nuevo a la misma ref cancela la corrida anterior: los
-# resultados viejos ya no dicen nada.
+# A new push to the same ref cancels the previous run: the old results no
+# longer say anything.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -20,14 +26,17 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.11'
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -44,7 +53,7 @@ jobs:
           python -m py_compile install/bootstrap.py install/gpu.py install/update.py install/versions.py
           uv run --locked pytest -q tests/test_install.py
 
-      # requirements.txt se mantiene como manifiesto de usuario final (SETUP.bat).
+      # requirements.txt is kept as the end-user manifest (SETUP.bat).
       - name: Sync dependencies
         run: uv sync --locked --python 3.11 --extra gui
 
@@ -69,35 +78,36 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       # 3.11 is covered by the gate in the quality job; this job adds 3.12.
       matrix:
         python-version: ['3.12']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      # La suite importa PySide6 (theme, report_html) hasta con QT
-      # offscreen: Qt gui necesita estas librerias compartidas aunque no
-      # haya pantalla.
+      # The suite imports PySide6 (theme, report_html) even with QT offscreen:
+      # Qt needs these shared libraries even when there is no display.
       - name: Qt runtime libs (headless CI)
         run: sudo apt-get update && sudo apt-get install -y
              libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
       - name: Sync dependencies
         run: uv sync --locked --python ${{ matrix.python-version }} --extra gui
 
-      # offscreen: la suite no abre ventanas pero PySide6 pide una
-      # plataforma. MPLCONFIGDIR: matplotlib quiere un config dir
-      # escribible en un runner recien creado.
+      # offscreen: the suite opens no windows but PySide6 asks for a platform.
+      # MPLCONFIGDIR: matplotlib wants a writable config dir on a fresh runner.
       - name: Run test suite
         run: >-
           QT_QPA_PLATFORM=offscreen
@@ -106,19 +116,22 @@ jobs:
 
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     needs: [quality, test]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Qt runtime libs (headless CI)
         run: sudo apt-get update && sudo apt-get install -y
              libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.11'
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -148,6 +161,18 @@ jobs:
       - name: Smoke-test the [gui] extra
         run: |
           WHEEL=$(ls dist/*.whl)
-          /tmp/smoke/bin/pip install --quiet "$WHEEL[gui]"
+          /tmp/smoke/bin/pip install --quiet "${WHEEL}[gui]"
           /tmp/smoke/bin/python -c "from polyx.gui.qt import qt_available, require_qt; require_qt(); print('qt_available:', qt_available())"
           /tmp/smoke/bin/python -c "import polyx.gui.launcher; print('gui launcher imports OK')"
+
+      # The wheel a PR produced is now downloadable from the run page, so a
+      # reviewer can test it without rebuilding. `wheel`, not `dist`: the
+      # publish workflow uploads its own `dist` in the same run when it calls
+      # this workflow as its gate, and artifact names must not collide.
+      - name: Upload the built wheel and sdist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wheel
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
