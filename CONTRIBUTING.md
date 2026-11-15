@@ -46,6 +46,7 @@ from any checkout or git worktree:
 
 ```bash
 python tools/check.py                              # full suite, serial
+python tools/check.py --static                     # review: audit, palette, ruff, ty
 python tools/check.py tests/test_annotate.py -q    # one file, serial
 python tools/check.py --parallel                   # full suite, one worker per core
 python tools/check.py tests/test_annotate.py --parallel=4 -q

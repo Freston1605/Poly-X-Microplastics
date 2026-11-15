@@ -135,3 +135,28 @@ def test_incomplete_worktree_interpreter_is_skipped(tmp_path):
 
     assert chosen == complete
     assert skipped == [incomplete]
+
+
+def test_static_skips_the_suite(monkeypatch):
+    gate = _gate_module()
+    monkeypatch.setattr(gate.shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+
+    commands = gate._commands(Path("/python"), [], [], static=True)
+
+    assert all("pytest" not in command for command in commands)
+    assert any("check_i18n.py" in part for command in commands for part in command)
+    assert any("ruff" in command for command in commands)
+    assert any("ty" in command for command in commands)
+
+
+def test_static_rejects_pytest_arguments():
+    result = subprocess.run(
+        [sys.executable, str(_GATE), "--static", "tests/test_labels.py"],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "--static" in result.stderr

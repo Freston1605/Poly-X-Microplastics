@@ -11,7 +11,10 @@ A partial environment created by ``uv run`` without the GUI extra is skipped in
 favour of the main checkout's interpreter, with a warning.
 
 Usage:
-    python tools/check.py [--parallel[=N]] [pytest args...]
+    python tools/check.py [--static] [--parallel[=N]] [pytest args...]
+
+``--static`` runs the translation audit, palette, ruff and ty without the
+suite: the review-time gate.
 
 ``--parallel`` is an explicit opt-in: it runs the tests under pytest-xdist
 with ``-n auto``, or ``-n N`` when given as ``--parallel=N``. Omit it and the
@@ -127,17 +130,28 @@ def _split_parallel(argv: list[str]) -> tuple[list[str], list[str]]:
     return forwarded, worker_args
 
 
-def _commands(python: Path, xdist_args: list[str], pytest_args: list[str]) -> list[list[str]]:
-    """The gate's commands, in the order they should fail."""
+def _commands(
+    python: Path, xdist_args: list[str], pytest_args: list[str], *, static: bool = False
+) -> list[list[str]]:
+    """The gate's commands, in the order they should fail.
+
+    ``static`` skips the suite: the audit, palette, ruff and ty are the
+    checks a review needs, without the multi-minute pytest run.
+    """
     commands = [
         # Fast and deterministic: a stale catalog fails before the suite runs.
         [str(python), str(ROOT / "tools" / "check_i18n.py")],
         [str(python), str(ROOT / "tools" / "check_palette_fallbacks.py")],
-        [str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args],
-        [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
-        [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
     ]
+    if not static:
+        commands.append([str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args])
+    commands.extend(
+        [
+            [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
+            [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
+            [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
+        ]
+    )
     uv = shutil.which("uv")
     if uv is not None:
         # The interpreter may come from another checkout, so the gate cannot
@@ -148,7 +162,13 @@ def _commands(python: Path, xdist_args: list[str], pytest_args: list[str]) -> li
 
 
 def main(argv: list[str]) -> int:
+    static = "--static" in argv
+    if static:
+        argv = [argument for argument in argv if argument != "--static"]
     pytest_args, xdist_args = _split_parallel(argv)
+    if static and (pytest_args or xdist_args):
+        print("--static runs the non-pytest checks; drop the pytest arguments.", file=sys.stderr)
+        return 2
     python = _python()
     env = os.environ.copy()
     source = str(ROOT / "src")
@@ -158,7 +178,7 @@ def main(argv: list[str]) -> int:
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["VIRTUAL_ENV"] = str(python.parent.parent)
 
-    commands = _commands(python, xdist_args, pytest_args)
+    commands = _commands(python, xdist_args, pytest_args, static=static)
     if not any(Path(command[0]).name == "uv" for command in commands):
         print(
             "uv not found: skipping the lockfile check; CI still runs `uv lock --check`.",
