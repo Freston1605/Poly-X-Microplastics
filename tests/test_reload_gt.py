@@ -151,6 +151,58 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def test_reload_finds_split_layout_gt_without_an_explicit_folder(qapp, tmp_path):
+    """Ticket #92: the reload path resolves labels/<split> exactly like the run.
+
+    The image lives under ``images/train`` and the label under
+    ``labels/train``; no GT folder is selected, so the conventional layout is
+    the only lookup that can find it. A legacy same-directory decoy proves the
+    conventional label wins, and the recomputed counts prove the boxes came
+    from that file.
+    """
+    dataset = tmp_path / "dataset"
+    image = _plate(dataset / "images" / "train" / "plate.png")
+    label = dataset / "labels" / "train" / "plate.txt"
+    label.parent.mkdir(parents=True)
+    label.write_text(_TXT_BOX, encoding="utf-8")
+    (image.parent / "plate.txt").write_text("0 0.2 0.2 0.1 0.1\n", encoding="utf-8")
+
+    st = DetectorState()
+    slot = st.model_slots[0]
+    slot.alias = "m0"
+    slot.path = tmp_path / "best.pt"
+    slot.loaded = SimpleNamespace(names={0: "PET"})
+    st.gt_folder = None
+    st.run_dir = tmp_path / "run"
+    st.run_dir.mkdir()
+    st.images = [image]
+    st.calibrations = {}
+
+    prediction = Detection(class_id=0, class_name="PET", conf=0.9, x1=20, y1=20, x2=80, y2=80)
+    prediction.number = 1
+    stale_gt = Detection(class_id=0, class_name="PET", conf=1.0, x1=5, y1=5, x2=25, y2=25)
+    result = ImageResult(
+        model_idx=0, image_path=image, predictions=[prediction], gt=[stale_gt], has_gt=True
+    )
+    st.results = {0: [result]}
+
+    summary = reload_gt(st)
+
+    assert summary["sin_gt"] == []
+    assert summary["cambiadas"] == ["plate.png"]
+    assert summary["recalculadas"] == 1
+    assert result.has_gt is True
+    assert len(result.gt) == 1
+    assert result.gt[0].class_name == "PET"
+    # The conventional label's box is centred at (50, 50), not the decoy's.
+    assert result.gt[0].cx == pytest.approx(50.0)
+    assert result.gt[0].cy == pytest.approx(50.0)
+    assert (result.tp, result.fp, result.fn) == (0, 1, 1)
+    assert result.gt_path is not None and result.gt_path.name == "0000_plate_gt.png"
+    assert result.gt_path.is_file()
+    assert result.annotated_path is not None and result.annotated_path.is_file()
+
+
 def test_reload_redraw_golden_combined_and_gt_views(qapp, tmp_path):
     """Characterization golden of the GT reload's redrawn views.
 
