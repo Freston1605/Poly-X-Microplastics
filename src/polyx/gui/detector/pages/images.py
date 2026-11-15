@@ -17,8 +17,8 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.detect.protocol import find_gt_for_image
 from polyx.core.i18n import _, lazy, ngettext
+from polyx.core.labels import find_label_file
 from polyx.core.paths import IMAGE_EXTS
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -30,7 +30,7 @@ class ImagesPage(DetectorPage):
     STEP_N = 2
     STEP_TITLE = lazy("Images")
     STEP_DESCRIPTION = lazy(
-        "Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in the same folder or in a sibling 'labels/' folder, they are loaded and enable error analysis."
+        "Select individual images or a folder. If you have ground truth labels in YOLO format (.txt) in a sibling 'labels/' folder that mirrors 'images/', they are loaded and enable error analysis."
     )
 
     def __init__(self, state, parent=None):
@@ -75,7 +75,7 @@ class ImagesPage(DetectorPage):
 
         hint = QLabel(
             _(
-                "If left empty, .txt files are looked up next to each image and in a sibling /labels/ folder. An image that has ground truth is included in the error analysis (True Positives, False Positives and False Negatives); otherwise only the model's detections are reported."
+                "If left empty, .txt files are looked up in a sibling /labels/ folder that mirrors /images/ (for example, images/train and labels/train), and next to each image. An image that has ground truth is included in the error analysis (True Positives, False Positives and False Negatives); otherwise only the model's detections are reported."
             )
         )
         hint.setWordWrap(True)
@@ -175,7 +175,7 @@ class ImagesPage(DetectorPage):
         for r, p in enumerate(imgs):
             self.table.setItem(r, 0, QTableWidgetItem(p.name))
             self.table.setItem(r, 1, QTableWidgetItem(str(p.parent)))
-            gt = find_gt_for_image(p, self.state.gt_folder)
+            gt = find_label_file(p, self.state.gt_folder)
             item = QTableWidgetItem("✓" if gt else "—")
             item.setTextAlignment(Qt.AlignCenter)
             if gt:
