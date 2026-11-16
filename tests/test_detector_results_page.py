@@ -45,17 +45,6 @@ from tests.match_fixtures import (  # noqa: E402
 )
 
 
-@pytest.fixture
-def english():
-    """Pin the source language: the criterion labels are the report's words."""
-    from polyx.core import i18n
-
-    previous = i18n.language()
-    assert i18n.set_language("en")
-    yield
-    i18n.set_language(previous)
-
-
 def _page_for(state: DetectorState) -> ResultsPage:
     page = ResultsPage(state)
     page.refresh()
@@ -307,8 +296,28 @@ def test_results_sweep_keeps_the_run_s_mask_rule(qapp, tmp_path):
     assert f1 == pytest.approx(2 / 3)
 
 
-def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, english):
+def test_results_page_renders_the_display_name_not_the_alias(qapp, tmp_path, selected_language):
+    """#124: a generated alias is a folder key; the page speaks prose."""
+    from PySide6.QtCore import Qt
+
+    selected_language("en")
+    state = DetectorState()
+    state.model_slots[0].alias = "model_1"
+    state.model_slots[0].alias_generated = True
+    state.model_slots[0].path = tmp_path / "m0.pt"
+    state.results = {0: [misclassified_result(tmp_path / "plate.png")]}
+    page = _page_for(state)
+
+    assert page.table.item(0, 0).text() == "Model 1"
+    # The stable alias stays in UserRole: the annotated folder is named after it.
+    assert page.table.item(0, 0).data(Qt.UserRole) == "model_1"
+    assert "Model 1 — conf" in page.lbl_sugg.text()
+    assert "model_1" not in page.lbl_sugg.text()
+
+
+def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, selected_language):
     """The KPI says localisation; the advice says with class; neither guesses."""
+    selected_language("en")
     state = DetectorState()
     state.model_slots[0].alias = "m0"
     state.model_slots[0].path = tmp_path / "m0.pt"
@@ -330,10 +339,11 @@ def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, english)
     assert "localisation" not in page.lbl_sugg.text()
 
 
-def test_report_and_page_agree_on_one_fixture(qapp, tmp_path, english):
+def test_report_and_page_agree_on_one_fixture(qapp, tmp_path, selected_language):
     """The report's two F1 columns and the page's KPI read one decision."""
     from polyx.gui.report.sections import _section_models
 
+    selected_language("en")
     run = misclassified_run(tmp_path)
     result = run.results[0][0]
     state = DetectorState()

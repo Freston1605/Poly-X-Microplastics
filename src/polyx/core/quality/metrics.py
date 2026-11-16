@@ -79,6 +79,13 @@ class MatchResult:
     fp_idx: list[int] = field(default_factory=list)  # indices into preds
     fn_idx: list[int] = field(default_factory=list)  # indices into gts
     miscls_pairs: list[tuple[int, int]] = field(default_factory=list)
+    #: ``False`` when only the four counters survived and the pair indices did
+    #: not: a folder reopened from disk whose stored counters cannot be
+    #: reproduced (a mask-matched run has no masks in ``detections.csv``) still
+    #: knows *how many* errors it made, but not *which* boxes were paired. A
+    #: reader that draws a matrix or a list must not treat those counts as an
+    #: identity it can index, or it would apply a rule the run did not use.
+    has_identity: bool = field(default=True, compare=False, repr=False)
 
 
 def match_image(

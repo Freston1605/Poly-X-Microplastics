@@ -36,17 +36,6 @@ from polyx.core.detection_run.operating_point import (  # noqa: E402
 from tests.match_fixtures import misclassified_result  # noqa: E402
 
 
-@pytest.fixture
-def english():
-    """Pin the source language: these tests name the criteria as the report does."""
-    from polyx.core import i18n
-
-    previous = i18n.language()
-    assert i18n.set_language("en")
-    yield
-    i18n.set_language(previous)
-
-
 def _det(
     class_id: int,
     conf: float,
@@ -139,7 +128,8 @@ def test_prf1_is_the_one_arithmetic_helper():
 # ── Recommending an operating point ──────────────────────────────────────
 
 
-def test_recommend_names_its_criterion(tmp_path, english):
+def test_recommend_names_its_criterion(tmp_path, selected_language):
+    selected_language("en")
     result = misclassified_result(tmp_path / "plate.png")
 
     assert recommend([result]).criterion is Criterion.WITH_CLASS
@@ -167,6 +157,37 @@ def test_recommend_returns_best_observed_threshold(tmp_path):
         "recall",
         "f1",
     }
+
+
+def test_recommend_sweeps_every_observed_threshold(tmp_path):
+    """The best threshold is not skipped by a coarse candidate grid.
+
+    Fifty-two distinct confidences exist, and the true maximum sits on a
+    candidate the old ``[::len // 25]`` subsampling never visited (0.10): the
+    false positive at 0.04 is cut at 0.10, while 0.11 already loses a true
+    positive.
+    """
+    predictions = [_det(0, 0.04, (0, 0, 10, 10))]  # the false positive
+    gt = []
+    for index, confidence in enumerate(
+        (round(0.10 + step * 0.01, 2) for step in range(51)), start=1
+    ):
+        x = float(index * 20)
+        predictions.append(_det(0, confidence, (x, 0, x + 10, 10)))
+        gt.append(_det(0, 1.0, (x, 0, x + 10, 10)))
+    result = ImageResult(
+        image_path=tmp_path / "plate.png",
+        model_idx=0,
+        predictions=predictions,
+        gt=gt,
+        has_gt=True,
+    )
+    assert len({round(p.conf, 2) for p in predictions}) == 52
+
+    best = recommend([result], Criterion.WITH_CLASS)
+
+    assert best.threshold == pytest.approx(0.10)
+    assert best.f1 == pytest.approx(1.0)
 
 
 def test_recommend_without_ground_truth_is_an_empty_score(tmp_path):

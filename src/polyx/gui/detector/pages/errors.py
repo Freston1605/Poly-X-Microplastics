@@ -66,6 +66,12 @@ class ErrorsPage(DetectorPage):
 
         # ── Error table ──
         c2, l2 = self.card(_("Boxes with errors"), "errores")
+        # Counts without an identity are not an empty list: the folder kept how
+        # many errors there were but not which box produced them.
+        self.lbl_identity = QLabel("")
+        self.lbl_identity.setWordWrap(True)
+        self.lbl_identity.setStyleSheet(f"color: {T.INK3}; font-size: 9.5pt; border: none;")
+        l2.addWidget(self.lbl_identity)
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(
             [
@@ -97,7 +103,7 @@ class ErrorsPage(DetectorPage):
         self.combo_model.addItem(_("All"), -1)
         for i, slot in enumerate(self.state.model_slots):
             if slot.path is not None:
-                self.combo_model.addItem(display_name(slot.alias, slot.alias_default, i), i)
+                self.combo_model.addItem(display_name(slot.alias, slot.alias_generated, i), i)
         self.combo_model.blockSignals(False)
 
     def refresh(self):
@@ -108,33 +114,45 @@ class ErrorsPage(DetectorPage):
             type_code = "ALL"
         model_filter = self.combo_model.currentData()
         rows = []
+        without_identity = 0
 
         for mi, rs in state.results.items():
             if model_filter is not None and model_filter != -1 and mi != model_filter:
                 continue
-            alias = state.model_slots[mi].alias
+            slot = state.model_slots[mi]
+            label = display_name(slot.alias, slot.alias_generated, mi)
+            alias = slot.alias
             for r in rs:
                 # The run's own decision: re-matching here would let the page
                 # apply a rule the run did not use (box IoU on a mask-matched
                 # run) and show errors that were never counted.
                 m = r.match
-                if not r.has_gt or m is None:
+                if not r.has_gt:
+                    continue
+                if m is None or not m.has_identity:
+                    # The counters survive without the pairs; listing nothing
+                    # would read as "no errors" for an image that had some.
+                    if r.tp or r.fp or r.fn or r.miscls:
+                        without_identity += 1
                     continue
                 # False Positives
                 if type_code in ("ALL", "FP"):
                     for pi in m.fp_idx:
                         d = r.predictions[pi]
-                        rows.append((alias, r.image_path, "FP", "—", d.class_name, f"{d.conf:.2f}"))
+                        rows.append(
+                            (label, alias, r.image_path, "FP", "—", d.class_name, f"{d.conf:.2f}")
+                        )
                 # False Negatives
                 if type_code in ("ALL", "FN"):
                     for gi in m.fn_idx:
                         d = r.gt[gi]
-                        rows.append((alias, r.image_path, "FN", d.class_name, "—", "—"))
+                        rows.append((label, alias, r.image_path, "FN", d.class_name, "—", "—"))
                 # Misclassified
                 if type_code in ("ALL", "MISCLS"):
                     for pi, gi in m.miscls_pairs:
                         rows.append(
                             (
+                                label,
                                 alias,
                                 r.image_path,
                                 "MISCLS",
@@ -147,13 +165,23 @@ class ErrorsPage(DetectorPage):
         self.lbl_count.setText(
             ngettext("%(count)d error", "%(count)d errors", len(rows)) % {"count": len(rows)}
         )
+        self.lbl_identity.setText(
+            ngettext(
+                "%(count)d image has ground truth and error counts, but the folder does not record which box was paired with which, so its errors cannot be listed.",
+                "%(count)d images have ground truth and error counts, but the folder does not record which box was paired with which, so their errors cannot be listed.",
+                without_identity,
+            )
+            % {"count": without_identity}
+            if without_identity
+            else ""
+        )
         self.table.setRowCount(len(rows))
         badge_colors = {"FP": T.WARN, "FN": T.ERR, "MISCLS": T.VIO}
         label_by_code = {"FP": LABEL_FP, "FN": LABEL_FN, "MISCLS": LABEL_MISCLS}
         from PySide6.QtGui import QBrush, QColor
 
-        for i, (alias, p, code, cgt, cpr, cf) in enumerate(rows):
-            self.table.setItem(i, 0, QTableWidgetItem(alias))
+        for i, (label, alias, p, code, cgt, cpr, cf) in enumerate(rows):
+            self.table.setItem(i, 0, QTableWidgetItem(label))
             self.table.setItem(i, 1, QTableWidgetItem(p.name))
             it = QTableWidgetItem(str(label_by_code.get(code, code)))
             it.setTextAlignment(Qt.AlignCenter)
