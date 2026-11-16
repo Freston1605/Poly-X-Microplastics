@@ -9,14 +9,15 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from polyx.core.detection_run.operating_point import Criterion, Score, criterion_label
 from polyx.core.i18n import _, lazy
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 
 from ._base import DetectorPage
 
-
-def _safe_div(a, b):
-    return a / b if b else 0.0
+#: The summary table shows the run's own decision under one criterion, and its
+#: F1 column says which: two different rules both labelled "F1" was the defect.
+SCORE_CRITERION = Criterion.LOCALISATION
 
 
 class ComparePage(DetectorPage):
@@ -40,7 +41,7 @@ class ComparePage(DetectorPage):
                 str(LABEL_TP),
                 str(LABEL_FP),
                 str(LABEL_FN),
-                "F1",
+                _("F1 (%(criterion)s)") % {"criterion": criterion_label(SCORE_CRITERION)},
             ]
         )
         self.tbl_summary.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -75,12 +76,7 @@ class ComparePage(DetectorPage):
             n_img = len({x.image_path for x in rs})
             n_det = sum(len(x.predictions) for x in rs)
             confs = [p.conf for x in rs for p in x.predictions]
-            tp = sum(x.tp for x in rs)
-            fp = sum(x.fp for x in rs)
-            fn = sum(x.fn for x in rs)
-            prec = _safe_div(tp, tp + fp)
-            rec = _safe_div(tp, tp + fn)
-            f1 = _safe_div(2 * prec * rec, prec + rec)
+            measured = Score.from_decision(rs, SCORE_CRITERION, state.params.conf)
             cm = sum(confs) / len(confs) if confs else 0
             self.tbl_summary.setItem(r, 0, QTableWidgetItem(slot.alias))
             for col, v in enumerate(
@@ -88,10 +84,10 @@ class ComparePage(DetectorPage):
                     n_img,
                     n_det,
                     f"{cm:.3f}",
-                    tp,
-                    fp,
-                    fn,
-                    f"{f1:.3f}" if any(x.has_gt for x in rs) else "—",
+                    measured.tp,
+                    measured.fp,
+                    measured.fn,
+                    f"{measured.f1:.3f}" if any(x.has_gt for x in rs) else "—",
                 ],
                 start=1,
             ):

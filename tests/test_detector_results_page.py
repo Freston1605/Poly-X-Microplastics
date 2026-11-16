@@ -31,6 +31,7 @@ from polyx.gui.detector.state import DetectorState  # noqa: E402
 from tests.match_fixtures import (  # noqa: E402
     matched_result,
     misclassified_result,
+    misclassified_run,
 )
 
 
@@ -111,3 +112,29 @@ def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, english)
     assert page.lbl_rec.text() == f"Recall (localisation):  {localisation.recall:.3f}"
     assert "with class" in page.lbl_sugg.text()
     assert "localisation" not in page.lbl_sugg.text()
+
+
+def test_report_and_page_agree_on_one_fixture(qapp, tmp_path, english):
+    """The report's two F1 columns and the page's KPI read one decision."""
+    from polyx.gui.report.sections import _section_models
+
+    run = misclassified_run(tmp_path)
+    result = run.results[0][0]
+    state = DetectorState()
+    state.model_slots[0].alias = run.models[0].alias
+    state.model_slots[0].path = run.models[0].path
+    state.params = run.params
+    state.results = run.results
+    page = _page_for(state)
+
+    localisation = Score.from_decision([result], Criterion.LOCALISATION, run.params.conf)
+    with_class = Score.from_decision([result], Criterion.WITH_CLASS, run.params.conf)
+    body = _section_models(run, run.results, [result], True)
+
+    # Both figures come from the same counters and are named where they appear.
+    assert localisation.f1 == pytest.approx(1.0)
+    assert with_class.f1 == pytest.approx(0.5)
+    assert f"<td class='r'>{localisation.f1:.3f}</td>" in body
+    assert f"<td class='r'>{with_class.f1:.3f}</td>" in body
+    assert "localisation" in body and "with class" in body
+    assert page.kpi_f1.lbl_value.text() == f"{localisation.f1:.3f}"
