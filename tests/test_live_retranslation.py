@@ -76,6 +76,14 @@ def _results_page(window):
     raise AssertionError("results page not found")
 
 
+def _manual_gt_page(window):
+    for index in range(window.stack.count()):
+        page = window.stack.widget(index).widget()
+        if type(page).__name__ == "GTManualPage":
+            return page
+    raise AssertionError("manual GT page not found")
+
+
 def _write_image(path: Path) -> Path:
     """A real PNG: the Viewer decodes the file, so a path alone is not loaded."""
     import cv2
@@ -705,6 +713,7 @@ def test_labeler_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     assert "Load model…" in _texts(window)
     assert window.state.images == images
     assert window.state.current_idx == 1
+    assert window.img_list.currentRow() == 1
     assert window._pre_model is model
     window.deleteLater()
 
@@ -747,21 +756,24 @@ def test_viewer_keeps_the_loaded_image_visible_across_a_switch(qapp, tmp_path):
     from polyx.gui.viewer.window import ViewerWindow
 
     image = _write_image(tmp_path / "placa.png")
+    earlier = _write_image(tmp_path / "otra.png")
     i18n.set_language("es")
     window = ViewerWindow()
     window.resize(1200, 800)
     window.show()
-    window.state.images = [image]
-    window.state.current_idx = 0
+    window.state.images = [earlier, image]
+    window.state.current_idx = 1
     window.state.image_loaded.emit(image)
     qapp.processEvents()
     assert window.canvas.has_image()
+    assert window.lbl_nav.text() == "2 / 2"
 
     i18n.set_language("en")
     qapp.processEvents()
 
-    assert window.state.images == [image]
-    assert window.state.current_idx == 0
+    assert window.state.images == [earlier, image]
+    assert window.state.current_idx == 1
+    assert window.lbl_nav.text() == "2 / 2"
     assert window.canvas.has_image(), "the rebuilt canvas lost the loaded image"
     window.deleteLater()
 
@@ -823,6 +835,7 @@ def test_detector_keeps_the_loaded_slots_and_detection_set_across_a_switch(qapp,
     window = DetectorWindow()
     state = window.state
     state.images = images
+    state.gt_image = images[1]
     state.model_slots[0].path = reference_path
     state.model_slots[0].alias = "reference"
     state.model_slots[0].alias_default = False
@@ -851,6 +864,10 @@ def test_detector_keeps_the_loaded_slots_and_detection_set_across_a_switch(qapp,
     assert state.results is detections
     assert state.results[2][0].predictions[0].class_name == "PET"
     assert window.stack.currentIndex() == 5
+    assert state.gt_image == images[1]
+    manual = _manual_gt_page(window)
+    assert manual.list.currentRow() == 1
+    assert manual.lbl_image_name.text() == images[1].name
 
     results = _results_page(window)
     assert results.table.rowCount() == 2
