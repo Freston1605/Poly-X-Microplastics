@@ -978,6 +978,12 @@ The five default labels, identity-mapped. See `docs/agents/triage-labels.md`.
 
 Single-context. See `docs/agents/domain.md`.
 
+### Repository settings
+
+The protections that are not YAML — release-tag ruleset, action-SHA pinning,
+private vulnerability reporting, Dependabot alerts — and how to re-apply them.
+See `docs/agents/repository-settings.md`.
+
 ---
 
 ## 📞 Contact
