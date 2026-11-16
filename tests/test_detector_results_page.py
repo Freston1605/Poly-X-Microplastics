@@ -23,7 +23,7 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
 
 from polyx.gui.detector.pages.results import ResultsPage  # noqa: E402
 from polyx.gui.detector.state import DetectorState  # noqa: E402
-from tests.match_fixtures import matched_result  # noqa: E402
+from tests.match_fixtures import matched_result, matched_run  # noqa: E402
 
 
 def test_results_kpis_are_the_counters_of_the_run_s_match(qapp, tmp_path):
@@ -63,3 +63,41 @@ def test_results_sweep_keeps_the_run_s_mask_rule(qapp, tmp_path):
     assert precision == pytest.approx(0.5)
     assert recall == pytest.approx(1.0)
     assert f1 == pytest.approx(2 / 3)
+
+
+def test_results_reload_gt_is_one_core_call_with_progress(qapp, tmp_path, monkeypatch):
+    """The page is a progress dialog plus one call; it measures nothing itself.
+
+    The reload's sequence -- resolve labels, measure, match, draw, republish --
+    belongs to the core. If this page ever grew its own copy again, replacing
+    the core function with a stub would leave the page still working.
+    """
+    import polyx.gui.detector.pages.results as results_page
+    from polyx.core.detection_run import ReloadSummary
+
+    state = DetectorState()
+    state.model_slots[0].alias = "m0"
+    state.model_slots[0].path = tmp_path / "m0.pt"
+    run = matched_run(tmp_path)
+    state.run_result = run
+    state.results = {0: run.results[0]}
+    state.gt_folder = tmp_path / "gt"
+    page = ResultsPage(state)
+
+    calls: list[tuple] = []
+
+    def fake_reload(run_arg, *, gt_folder=None, progress=None):
+        calls.append((run_arg, gt_folder, progress))
+        assert progress is not None
+        progress(1, 1, "plate.png")
+        return ReloadSummary(
+            revisited=1, changed=[Path(run_arg.images[0])], missing_gt=[], recalculated=1
+        )
+
+    monkeypatch.setattr(results_page, "reload_ground_truth", fake_reload)
+    page._reload_gt()
+
+    assert len(calls) == 1
+    assert calls[0][0] is run
+    assert calls[0][1] == state.gt_folder
+    assert "plate.png" in page.lbl_recharge.text()
