@@ -61,8 +61,12 @@ path rather than a different, weaker path. The install uses uv:
 
 ```bash
 uv venv /tmp/smoke --python 3.11
-uv pip install --python /tmp/smoke/bin/python "dist/*.whl[gui]"
+WHEEL=$(ls dist/*.whl)
+uv pip install --python /tmp/smoke/bin/python "${WHEEL}[gui]"
 ```
+
+The wheel is resolved into `WHEEL` first because the extra has to be appended to
+the real filename: a quoted glob would hand uv the literal `dist/*.whl[gui]`.
 
 One install with the extra proves the base distribution and the GUI surface
 together, and uv resolves from the archive the job already restores instead of

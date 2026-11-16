@@ -10,7 +10,8 @@ rules:
   # ci.yml as `./.github/workflows/ci.yml`; switching it is a one-line edit in
   # that file and belongs to the change that rewrites the publish workflow, so
   # the finding is ignored by file and stays visible as a follow-up instead of
-  # blocking every pull request meanwhile.
+  # blocking every pull request meanwhile. The follow-up is issue #108, which
+  # switches the call and removes this entry.
   self-repository:
     ignore:
       - publish.yml

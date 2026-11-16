@@ -28,6 +28,15 @@ def _config() -> dict:
     return yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
 
 
+def pyproject() -> dict:
+    """The parsed ``pyproject.toml``.
+
+    ``tests/test_console_scripts.py`` reads the same file, so the parse lives
+    here once instead of in a second copy that could drift.
+    """
+    return tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+
+
 def test_config_file_ends_with_a_newline():
     assert CONFIG.read_text(encoding="utf-8").endswith("\n")
 
@@ -122,7 +131,7 @@ def _development_requirements() -> list[str]:
     optional ``dev`` extra the README installs. Both are doors into a
     development environment, so both must agree on ruff.
     """
-    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    data = pyproject()
     return [
         *data["dependency-groups"]["dev"],
         *data["project"]["optional-dependencies"]["dev"],
@@ -152,7 +161,7 @@ def test_ruff_is_pinned_to_the_version_the_hooks_install():
 
 
 def test_dev_dependencies_declare_pre_commit_once():
-    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    data = pyproject()
 
     groups = {
         "dependency-groups.dev": data["dependency-groups"]["dev"],

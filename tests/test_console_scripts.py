@@ -13,12 +13,10 @@ distribution that is not installed at all is a failure, not a skip.
 
 from __future__ import annotations
 
-import tomllib
 from importlib.metadata import EntryPoint, distribution
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-PYPROJECT = ROOT / "pyproject.toml"
+from tests.test_pre_commit_config import pyproject
+
 DISTRIBUTION = "polyx-microplastics"
 GROUP = "console_scripts"
 
@@ -76,7 +74,7 @@ def resolve_problems(scripts: dict[str, str], load=_load_target) -> list[str]:
 
 
 def test_every_console_script_is_installed_and_resolves():
-    declared = declared_scripts(tomllib.loads(PYPROJECT.read_text(encoding="utf-8")))
+    declared = declared_scripts(pyproject())
     installed = {
         entry.name: entry.value
         for entry in distribution(DISTRIBUTION).entry_points

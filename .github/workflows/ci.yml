@@ -1,5 +1,5 @@
 # The pipeline: the gate (`quality`), the 3.12 suite, the packaging job, and
-# the two jobs that check the pipeline itself. It installs the exact versions
+# the two read-only jobs beside the gate. It installs the exact versions
 # from uv.lock (the numpy==1.26.4 pin is fragile: bump numpy or ultralytics
 # and it must be known here, not on the studio machine).
 #
@@ -194,6 +194,13 @@ jobs:
             echo "running ${script} --help"
             "/tmp/smoke/bin/${script}" --help >/dev/null
           done
+          # The subcommand dispatch is a second path into the `polyx` entry
+          # point: `polyx train` and `polyx detect` resolve a subparser that a
+          # bare `polyx --help` never enters.
+          for subcommand in train detect; do
+            echo "running polyx ${subcommand} --help"
+            /tmp/smoke/bin/polyx "${subcommand}" --help >/dev/null
+          done
           /tmp/smoke/bin/python -c "from polyx.gui.qt import qt_available, require_qt; require_qt(); print('qt_available:', qt_available())"
           /tmp/smoke/bin/python -c "import polyx.gui.launcher; print('gui launcher imports OK')"
 
@@ -209,15 +216,15 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  # --- the pipeline checks itself -------------------------------------------
+  # --- read-only, beside the gate -------------------------------------------
   #
   # Both jobs below run *beside* the gate, never in front of it: neither needs
   # another job and nothing needs them, so they cannot lengthen the
   # pull-request verdict. They are jobs here rather than workflows of their own
-  # because neither asks for a write permission, which is what would justify
-  # their own trigger set and their own pinning burden. They also run when
-  # publish.yml calls this workflow; the dependency review is skipped there
-  # because it needs pull-request context.
+  # because both hold `contents: read` and nothing more: a write permission is
+  # what would justify their own trigger set and their own pinning burden. They
+  # also run when publish.yml calls this workflow; the dependency review is
+  # skipped there because it needs pull-request context.
 
   dependency-review:
     # Exact pins stop a dependency from drifting, not from being vulnerable,

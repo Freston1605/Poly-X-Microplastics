@@ -11,7 +11,7 @@ Three words, used the same way everywhere:
   suite, ruff and ty, run by `python tools/check.py`. The gate is the
   contract, and it is the only owner of those checks.
 - **pipeline** — `ci.yml` as a whole: the gate, the 3.12 suite, the packaging
-  job and the two jobs that check the pipeline itself.
+  job and the two read-only jobs beside the gate.
 
 `publish.yml` runs the pipeline; it does not keep its own copy of the checks.
 
@@ -20,9 +20,10 @@ Two workflows run on **every PR** and on every push to `main`:
 - **`pre-commit.yml`** — the preview: it runs the hooks in
   `.pre-commit-config.yaml` with `pre-commit run --all-files`, so a hook you
   never installed locally still fails the PR. It skips `ruff-check` and
-  `ruff-format` (`SKIP`), because the gate owns ruff; the two ruff hooks run
-  with auto-fix (`--fix`), so in CI they would rewrite files instead of
-  reporting them. They stay in the configuration for local use.
+  `ruff-format` (`SKIP`), because the gate owns ruff: `ruff-check` runs with
+  `--fix`, and `ruff-format` rewrites the file in place, so in CI both would
+  change files instead of reporting them. They stay in the configuration for
+  local use.
 - **`ci.yml`** — the pipeline, which is the gate plus the checks around it:
   1. Checks `uv.lock` is current and smoke-tests the installer scripts before
      any dependency sync.
@@ -54,9 +55,9 @@ environment and installs the wheel with the `[gui]` extra, then every CLI
 console script starts with `--help` and the GUI imports. One definition, in
 `ci.yml`; ADR-0006 says why.
 
-Two more `ci.yml` jobs make the pipeline check itself. Both run **beside** the
-gate — neither waits for another job and nothing waits for them — so they add a
-line to the checks list but not a second to the verdict:
+Two more `ci.yml` jobs run read-only beside the gate. Neither waits for another
+job and nothing waits for them, so they add a line to the checks list but not a
+second to the verdict:
 
 - **`dependency-review`** — on pull requests only, diffs the resolved
   dependency set against the base branch and fails when the diff introduces a
