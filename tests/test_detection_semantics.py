@@ -18,6 +18,7 @@ import pytest
 
 from polyx.cli import detect as cli_detect
 from polyx.core.detect.protocol import Instance
+from polyx.core.detect.tiling import TilingDecision, TilingMode, TilingPlan, describe_tiling
 from polyx.core.detection_run import (
     CalibrationPolicy,
     ModelSpec,
@@ -127,17 +128,17 @@ class TilingDetector(FakeDetector):
             record.clear()
             record.update(
                 {
-                    "ancho": 160,
-                    "alto": 160,
-                    "troceado": self.tiled,
+                    "width": 160,
+                    "height": 160,
+                    "tiled": self.tiled,
                     "plan": (
-                        {
-                            "tile": 64,
-                            "overlap": float(kwargs.get("overlap", 0.25)),
-                            "n_tiles": 4,
-                            "lado": 160,
-                            "umbral_px": 0,
-                        }
+                        TilingPlan(
+                            tile=64,
+                            overlap=float(kwargs.get("overlap", 0.25)),
+                            n_tiles=4,
+                            side=160,
+                            threshold_px=0,
+                        )
                         if self.tiled
                         else None
                     ),
@@ -160,21 +161,33 @@ def test_tiling_policy_from_run_params_is_passed_and_recorded(tmp_path):
     result = run_detection(make_config([image], [detector], tmp_path / "run", params=params))
 
     _path, call = detector.calls[0]
-    assert call["tiling"] == "siempre"
+    assert call["tiling"] is TilingMode.ALWAYS
     assert call["threshold_px"] == 1234
     assert call["tile"] == 64
     assert call["overlap"] == 0.5
     assert isinstance(call["record"], dict)
 
     image_result = result.results[0][0]
-    assert "4 tiles of 64 px" in image_result.tiling
-    assert "50% overlap" in image_result.tiling
+    plan = TilingPlan(tile=64, overlap=0.5, n_tiles=4, side=160, threshold_px=0)
+    assert image_result.tiling_plan == plan
+    assert image_result.tiling == describe_tiling(
+        TilingDecision(mode=TilingMode.ALWAYS, width=160, height=160, plan=plan)
+    )
     assert result.execution[0].tiled_images == 1
     assert result.execution[0].imgsz_used == [64]
 
     payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
-    assert payload["images"][0]["models"][0]["tiling"] == image_result.tiling
+    recorded = payload["images"][0]["models"][0]
+    assert recorded["tiling"] == image_result.tiling
+    assert recorded["tiling_plan"] == {
+        "tile": 64,
+        "overlap": 0.5,
+        "n_tiles": 4,
+        "side": 160,
+        "threshold_px": 0,
+    }
     assert load_run(result.run_dir).results[0][0].tiling == image_result.tiling
+    assert load_run(result.run_dir).results[0][0].tiling_plan == image_result.tiling_plan
 
 
 def test_untiled_photo_records_no_tiling_description(tmp_path):
@@ -444,7 +457,7 @@ def test_cli_exposes_tiling_and_detection_semantics_flags(tmp_path, monkeypatch)
 
     assert code == 0
     run = load_run(output)
-    assert run.params.tiling == "siempre"
+    assert run.params.tiling is TilingMode.ALWAYS
     assert run.params.tiling_threshold_px == 1234
     assert run.params.tiling_tile == 64
     assert run.params.tiling_overlap == pytest.approx(0.5)
@@ -453,7 +466,7 @@ def test_cli_exposes_tiling_and_detection_semantics_flags(tmp_path, monkeypatch)
     assert run.params.conf_assignment == pytest.approx(0.8)
 
     _path, call = detector.calls[0]
-    assert call["tiling"] == "siempre"
+    assert call["tiling"] is TilingMode.ALWAYS
     assert call["threshold_px"] == 1234
     assert call["tile"] == 64
     assert call["overlap"] == pytest.approx(0.5)

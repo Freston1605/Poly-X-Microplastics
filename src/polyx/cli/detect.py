@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 
 from polyx.core.detect import make_detector
+from polyx.core.detect.tiling import TILING_VALUES, TilingMode
 from polyx.core.detection_run import (
     CALIBRATION_MODES,
     CalibrationPolicy,
@@ -125,8 +126,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-measure-shape", action="store_true")
     parser.add_argument(
         "--tiling",
-        choices=("auto", "always", "never"),
-        default="auto",
+        type=_tiling_argument,
+        default=TilingMode.AUTO,
+        metavar="{auto,always,never}",
         help=_("tiling policy: auto by photo size, always, or never (default: auto)"),
     )
     parser.add_argument(
@@ -217,14 +219,19 @@ def _resolve_calibration_mode(args) -> str:
     return str(args.calibrate)
 
 
-def _backend_tiling(choice: str) -> str:
-    """Translate the English CLI choice to the detector backend's values.
+def _tiling_argument(value: str) -> TilingMode:
+    """Map the English flag to a mode, still accepting the deprecated spellings.
 
-    ``predict_auto`` and ``RunParams`` keep the historical ``siempre`` /
-    ``nunca`` values; only the developer-facing flag is English. This is a
-    translation at the boundary, not a second tiling policy.
+    ``siempre`` and ``nunca`` are hidden aliases: an old script keeps working,
+    but ``--help`` only advertises the English choices and the value that
+    leaves this function is already the mode the rest of the program uses.
     """
-    return {"always": "siempre", "never": "nunca"}.get(choice, "auto")
+    text = str(value).strip().lower()
+    if text not in TILING_VALUES:
+        raise argparse.ArgumentTypeError(
+            _("invalid tiling mode: %(value)s (choose auto, always or never)") % {"value": value}
+        )
+    return TilingMode.parse(text)
 
 
 def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
@@ -236,7 +243,7 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
         size_min_um=args.size_min_um,
         size_max_um=args.size_max_um,
         conf_assignment=args.conf_assignment,
-        tiling=_backend_tiling(args.tiling),
+        tiling=args.tiling,
         tiling_threshold_px=args.tiling_threshold_px,
         tiling_tile=args.tiling_tile,
         tiling_overlap=args.tiling_overlap,

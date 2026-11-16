@@ -10,9 +10,14 @@ import numpy as np
 
 from polyx.core.detect.protocol import (
     Instance,
-    _tile_starts,
-    policy_tiling,
     size_image,
+)
+from polyx.core.detect.tiling import (
+    TilingDecision,
+    TilingMode,
+    _tile_starts,
+    decide_tiling,
+    policy_tiling,  # noqa: F401  re-exported: tests import it from here
 )
 from polyx.core.image_io import read_image
 from polyx.core.provenance.observability import event, logger_for
@@ -310,7 +315,7 @@ class YoloModel:
         iou: float = 0.45,
         imgsz: int = 1280,
         device: str = "0",
-        tiling: str = "auto",
+        tiling: TilingMode | str = TilingMode.AUTO,
         threshold_px: int = 2000,
         tile: int = 0,
         overlap: float = 0.25,
@@ -320,45 +325,53 @@ class YoloModel:
     ) -> list[Detection]:
         """Infers with or without tiling according to the photo's size, hands-free.
 
-        ``troceo``: ``"auto"`` decides on the longer side against
-        ``umbral_px``; ``"siempre"`` forces tiling; ``"nunca"`` forces the
-        single pass.
+        ``tiling``: ``AUTO`` decides on the longer side against
+        ``threshold_px``; ``ALWAYS`` forces tiling; ``NEVER`` forces the single
+        pass. The English value is the interface one; a deprecated Spanish
+        value from an old caller is normalised once, here.
 
-        If ``registro`` is passed, it is filled with the decision taken so it
-        can be declared in the report: counting 500 particles with tiling or
+        If ``record`` is passed, it is filled with the decision taken so it can
+        be declared in the report: counting 500 particles with tiling or
         without it is not the same method, and the number does not mean the
-        same thing.
+        same thing. The keys are English (``width``, ``height``, ``tiled``,
+        ``plan``) and ``plan`` is a :class:`TilingPlan` or ``None``.
         """
         wh = size_image(image_path)
-        plan = None
-        if tiling == "nunca" or wh is None:
-            plan = None
-        elif tiling == "siempre":
-            plan = policy_tiling(wh[0], wh[1], imgsz, threshold_px=0, tile=tile, overlap=overlap)
-        else:
-            plan = policy_tiling(
-                wh[0], wh[1], imgsz, threshold_px=threshold_px, tile=tile, overlap=overlap
+        mode = TilingMode.parse(tiling)
+        decision = (
+            TilingDecision(mode=mode, width=0, height=0, plan=None)
+            if wh is None
+            else decide_tiling(
+                wh[0],
+                wh[1],
+                imgsz,
+                mode=mode,
+                threshold_px=threshold_px,
+                tile=tile,
+                overlap=overlap,
             )
+        )
 
         if record is not None:
             record.clear()
             record.update(
                 {
-                    "ancho": wh[0] if wh else 0,
-                    "alto": wh[1] if wh else 0,
-                    "troceado": plan is not None,
-                    "plan": plan,
+                    "width": decision.width,
+                    "height": decision.height,
+                    "tiled": decision.tiled,
+                    "plan": decision.plan,
                 }
             )
 
+        plan = decision.plan
         if plan is None:
             return self.predict(image_path, conf=conf, iou=iou, imgsz=imgsz, device=device)
         return self.predict_sliced(
             image_path,
             conf=conf,
             iou=iou,
-            tile=plan["tile"],
-            overlap=plan["overlap"],
+            tile=plan.tile,
+            overlap=plan.overlap,
             device=device,
             agnostic_nms=agnostic_nms,
             imgsz=imgsz,

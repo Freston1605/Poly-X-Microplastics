@@ -16,8 +16,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from polyx.core.detect.protocol import size_image
+from polyx.core.detect.tiling import TilingMode, decide_tiling, describe_tiling
 from polyx.core.detection_run import display_name
-from polyx.core.i18n import _, lazy, ngettext
+from polyx.core.i18n import _, lazy
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
 from polyx.gui import theme as T
@@ -82,9 +84,11 @@ class RunPage(DetectorPage):
         self._refresh_warning_tiling()
 
     def _refresh_warning_tiling(self):
-        """Summarizes whether the photos will be tiled, and how much longer it will take."""
-        from polyx.core.detect.yolo import policy_tiling, size_image
+        """Summarizes whether the photos will be tiled, and how much longer it will take.
 
+        The plan sentence comes from the decision module; this page only adds
+        the duration estimate it is here to warn about.
+        """
         p = self.state.params
         if not self.state.images:
             self.lbl_tiling.setText("")
@@ -95,7 +99,7 @@ class RunPage(DetectorPage):
             self.lbl_tiling.setText("")
             return
 
-        if p.tiling == "nunca":
+        if TilingMode.parse(p.tiling) is TilingMode.NEVER:
             self.lbl_tiling.setText(
                 _(
                     "Tiling disabled: each photo enters whole at imgsz %(imgsz)s. In large photos, small particles may vanish when rescaled."
@@ -104,16 +108,17 @@ class RunPage(DetectorPage):
             )
             return
 
-        plan = policy_tiling(
+        decision = decide_tiling(
             wh[0],
             wh[1],
             p.imgsz,
-            threshold_px=0 if p.tiling == "siempre" else p.tiling_threshold_px,
+            mode=p.tiling,
+            threshold_px=p.tiling_threshold_px,
             tile=p.tiling_tile,
             overlap=p.tiling_overlap,
         )
 
-        if plan is None:
+        if decision.plan is None:
             self.lbl_tiling.setText(
                 _(
                     "The photos (%(width)s×%(height)s px) do not reach the %(threshold)s px threshold: they are analysed in one piece."
@@ -122,18 +127,10 @@ class RunPage(DetectorPage):
             )
         else:
             self.lbl_tiling.setText(
-                ngettext(
-                    "⚠ Large photos (%(width)s×%(height)s px): they will be analysed as %(count)d tile of %(tile)s px with %(overlap)d%% overlap. It will take about %(count)d× longer.<br>Tiling is only so the model can detect: results and the report are delivered on the complete photo.",
-                    "⚠ Large photos (%(width)s×%(height)s px): they will be analysed as %(count)d tiles of %(tile)s px with %(overlap)d%% overlap. It will take about %(count)d× longer.<br>Tiling is only so the model can detect: results and the report are delivered on the complete photo.",
-                    plan["n_tiles"],
+                _(
+                    "⚠ Large photos: they will be analysed as %(plan)s. It will take about %(count)d× longer.<br>Tiling is only so the model can detect: results and the report are delivered on the complete photo."
                 )
-                % {
-                    "width": wh[0],
-                    "height": wh[1],
-                    "count": plan["n_tiles"],
-                    "tile": plan["tile"],
-                    "overlap": int(plan["overlap"] * 100),
-                }
+                % {"plan": describe_tiling(decision), "count": decision.plan.n_tiles}
             )
 
     def __init__(self, state, parent=None):
