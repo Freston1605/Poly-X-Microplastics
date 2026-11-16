@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 18:10-0300\n"
+"POT-Creation-Date: 2026-11-16 18:11-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1016,7 +1016,7 @@ msgstr "Predicciones: %(count)d"
 msgid "·  %(verdict)s"
 msgstr "·  %(verdict)s"
 
-#: src/polyx/gui/detector/pages/results.py:595 src/polyx/gui/detector/review_dialog.py:293
+#: src/polyx/gui/detector/pages/results.py:599 src/polyx/gui/detector/review_dialog.py:293
 #: src/polyx/gui/viewer/window.py:861 src/polyx/gui/viewer/window.py:921
 msgid "Error"
 msgstr "Error"
@@ -2505,11 +2505,11 @@ msgstr "Cancelar"
 msgid "Reload GT"
 msgstr "Recargar GT"
 
-#: src/polyx/gui/detector/pages/results.py:585
+#: src/polyx/gui/detector/pages/results.py:589
 msgid "Export CSV"
 msgstr "Exportar CSV"
 
-#: src/polyx/gui/detector/pages/results.py:585
+#: src/polyx/gui/detector/pages/results.py:589
 msgid "CSV (*.csv)"
 msgstr "CSV (*.csv)"
 
@@ -2557,29 +2557,29 @@ msgstr ""
 msgid "Cancelled halfway: press again to finish."
 msgstr "Se canceló a mitad: vuelve a pulsar para terminar."
 
-#: src/polyx/gui/detector/pages/results.py:547 src/polyx/gui/report/figures.py:236
+#: src/polyx/gui/detector/pages/results.py:551 src/polyx/gui/report/figures.py:236
 msgid "Equivalent diameter (μm)"
 msgstr "Diámetro equivalente (μm)"
 
-#: src/polyx/gui/detector/pages/results.py:548 src/polyx/gui/report/figures.py:225
+#: src/polyx/gui/detector/pages/results.py:552 src/polyx/gui/report/figures.py:225
 #: src/polyx/gui/report/figures.py:237
 msgid "Frequency"
 msgstr "Frecuencia"
 
-#: src/polyx/gui/detector/pages/results.py:549
+#: src/polyx/gui/detector/pages/results.py:553
 msgid "Size distribution by class"
 msgstr "Distribución de tamaños por clase"
 
-#: src/polyx/gui/detector/pages/results.py:619 src/polyx/gui/detector/pages/results.py:636
-#: src/polyx/gui/detector/pages/results.py:643
+#: src/polyx/gui/detector/pages/results.py:623 src/polyx/gui/detector/pages/results.py:640
+#: src/polyx/gui/detector/pages/results.py:647
 msgid "Review"
 msgstr "Revisar"
 
-#: src/polyx/gui/detector/pages/results.py:619
+#: src/polyx/gui/detector/pages/results.py:623
 msgid "Select a row from the table below first."
 msgstr "Selecciona primero una fila de la tabla de abajo."
 
-#: src/polyx/gui/detector/pages/results.py:636
+#: src/polyx/gui/detector/pages/results.py:640
 msgid "That image has no detections to review."
 msgstr "Esa imagen no tiene detecciones que revisar."
 
@@ -2606,13 +2606,13 @@ msgstr "(%(count)s sin .txt de control.)"
 #: src/polyx/gui/detector/pages/results.py:439
 #, python-format
 msgid ""
-"➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): "
-"it is the same operating point and the comparison stays clean. Change it in Parameters and run "
-"again."
+"➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f, "
+"%(criterion)s): it is the same operating point and the comparison stays clean. Change it in "
+"Parameters and run again."
 msgstr ""
 "➜ Cada modelo prefiere un umbral distinto. Usa %(threshold).2f para los dos (F1 medio "
-"%(mean).3f): es el mismo punto de operación y la comparación queda limpia. Cámbialo en "
-"Parámetros y vuelve a Ejecutar."
+"%(mean).3f, %(criterion)s): es el mismo punto de operación y la comparación queda limpia. "
+"Cámbialo en Parámetros y vuelve a Ejecutar."
 
 #: src/polyx/gui/detector/pages/results.py:410
 #, python-format
@@ -2632,7 +2632,7 @@ msgstr ""
 "✓ %(head)s  Es el mejor del rango explorado; por debajo de %(threshold)g no hay detecciones "
 "calculadas y no se recuperan filtrando."
 
-#: src/polyx/gui/detector/pages/results.py:446
+#: src/polyx/gui/detector/pages/results.py:450
 #, python-format
 msgid ""
 "➜ Change the confidence to %(threshold).2f in Parameters and run again before generating the "
@@ -2641,22 +2641,22 @@ msgstr ""
 "➜ Cambia la confianza a %(threshold).2f en Parámetros y vuelve a Ejecutar antes de generar el "
 "informe."
 
-#: src/polyx/gui/detector/pages/results.py:453
+#: src/polyx/gui/detector/pages/results.py:457
 #, python-format
 msgid "➜ Confidence %(threshold)g is already a good operating point. You can generate the report."
 msgstr "➜ La confianza %(threshold)g ya es el punto de operación bueno. Puedes generar el informe."
 
-#: src/polyx/gui/detector/pages/results.py:558 src/polyx/gui/trainer/pages/train.py:106
+#: src/polyx/gui/detector/pages/results.py:562 src/polyx/gui/trainer/pages/train.py:106
 #, python-format
 msgid "matplotlib is not available: %(error)s"
 msgstr "matplotlib no disponible: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:595
+#: src/polyx/gui/detector/pages/results.py:599
 #, python-format
 msgid "Could not save: %(error)s"
 msgstr "No se pudo guardar: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:643
+#: src/polyx/gui/detector/pages/results.py:647
 #, python-format
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"

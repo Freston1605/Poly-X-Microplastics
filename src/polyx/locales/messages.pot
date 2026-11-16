@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 18:10-0300\n"
+"POT-Creation-Date: 2026-11-16 18:11-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -976,7 +976,7 @@ msgstr ""
 msgid "·  %(verdict)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:595 src/polyx/gui/detector/review_dialog.py:293
+#: src/polyx/gui/detector/pages/results.py:599 src/polyx/gui/detector/review_dialog.py:293
 #: src/polyx/gui/viewer/window.py:861 src/polyx/gui/viewer/window.py:921
 msgid "Error"
 msgstr ""
@@ -2320,11 +2320,11 @@ msgstr ""
 msgid "Reload GT"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:585
+#: src/polyx/gui/detector/pages/results.py:589
 msgid "Export CSV"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:585
+#: src/polyx/gui/detector/pages/results.py:589
 msgid "CSV (*.csv)"
 msgstr ""
 
@@ -2366,29 +2366,29 @@ msgstr ""
 msgid "Cancelled halfway: press again to finish."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:547 src/polyx/gui/report/figures.py:236
+#: src/polyx/gui/detector/pages/results.py:551 src/polyx/gui/report/figures.py:236
 msgid "Equivalent diameter (μm)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:548 src/polyx/gui/report/figures.py:225
+#: src/polyx/gui/detector/pages/results.py:552 src/polyx/gui/report/figures.py:225
 #: src/polyx/gui/report/figures.py:237
 msgid "Frequency"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:549
+#: src/polyx/gui/detector/pages/results.py:553
 msgid "Size distribution by class"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:619 src/polyx/gui/detector/pages/results.py:636
-#: src/polyx/gui/detector/pages/results.py:643
+#: src/polyx/gui/detector/pages/results.py:623 src/polyx/gui/detector/pages/results.py:640
+#: src/polyx/gui/detector/pages/results.py:647
 msgid "Review"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:619
+#: src/polyx/gui/detector/pages/results.py:623
 msgid "Select a row from the table below first."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:636
+#: src/polyx/gui/detector/pages/results.py:640
 msgid "That image has no detections to review."
 msgstr ""
 
@@ -2415,9 +2415,9 @@ msgstr ""
 #: src/polyx/gui/detector/pages/results.py:439
 #, python-format
 msgid ""
-"➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): "
-"it is the same operating point and the comparison stays clean. Change it in Parameters and run "
-"again."
+"➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f, "
+"%(criterion)s): it is the same operating point and the comparison stays clean. Change it in "
+"Parameters and run again."
 msgstr ""
 
 #: src/polyx/gui/detector/pages/results.py:410
@@ -2434,29 +2434,29 @@ msgid ""
 "detections and they cannot be recovered by filtering."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:446
+#: src/polyx/gui/detector/pages/results.py:450
 #, python-format
 msgid ""
 "➜ Change the confidence to %(threshold).2f in Parameters and run again before generating the "
 "report."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:453
+#: src/polyx/gui/detector/pages/results.py:457
 #, python-format
 msgid "➜ Confidence %(threshold)g is already a good operating point. You can generate the report."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:558 src/polyx/gui/trainer/pages/train.py:106
+#: src/polyx/gui/detector/pages/results.py:562 src/polyx/gui/trainer/pages/train.py:106
 #, python-format
 msgid "matplotlib is not available: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:595
+#: src/polyx/gui/detector/pages/results.py:599
 #, python-format
 msgid "Could not save: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:643
+#: src/polyx/gui/detector/pages/results.py:647
 #, python-format
 msgid "Could not open the Viewer: %(error)s"
 msgstr ""
