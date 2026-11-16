@@ -158,6 +158,33 @@ def qapp():
     yield app
 
 
+@pytest.fixture(autouse=True)
+def _drain_trainer_threads():
+    """Release Trainer workers a case registered but did not outlive.
+
+    The registry is module state. A finished ``QThread`` left there is
+    destroyed during interpreter shutdown, after the ``QApplication``, and
+    that can segfault. Wait for the registered threads after each case and
+    empty the set while Qt is still alive. A thread that is still running is
+    left alone: deleting it would abort, and the case that left it is the
+    one that has to account for it.
+    """
+    yield
+    base = sys.modules.get("polyx.gui.trainer.pages._base")
+    live = getattr(base, "_live_threads", None)
+    if live is None:
+        return
+    for thread in list(live):
+        is_running = getattr(thread, "isRunning", None)
+        if callable(is_running) and is_running():
+            wait = getattr(thread, "wait", None)
+            if callable(wait):
+                wait(5000)
+        is_running = getattr(thread, "isRunning", None)
+        if not callable(is_running) or not is_running():
+            live.discard(thread)
+
+
 @pytest.fixture
 def no_update_check(monkeypatch):
     """Keep the launcher's background GitHub check out of a test.
