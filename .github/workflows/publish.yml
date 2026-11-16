@@ -30,11 +30,10 @@ jobs:
   # "gate" is the local check runner inside that workflow (the `quality` job),
   # and one word should not name two jobs.
   #
-  # `$/` is GitHub's self-repository form: the call resolves to this
-  # repository at the commit that is running, so it cannot resolve to a stale
-  # checkout and it carries no `@ref` to keep current. github.com only —
-  # GitHub Enterprise Server does not accept it. actionlint 1.7.12 cannot
-  # parse the form yet; the one narrow ignore is in .github/actionlint.yaml.
+  # `$/` is GitHub's self-repository form: the call resolves to this repository
+  # at the commit that is running, so it cannot resolve to a stale checkout and
+  # it carries no `@ref` to keep current. actionlint's one exception for the
+  # form, and why it is github.com-only, live in .github/actionlint.yaml.
   ci:
     uses: $/.github/workflows/ci.yml
     permissions:

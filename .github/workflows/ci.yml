@@ -308,10 +308,8 @@ jobs:
           shellcheck --version | sed -n '2p'
           uvx zizmor==1.32.0 --version
 
-      # actionlint reads .github/actionlint.yaml on its own. That file carries
-      # one narrow ignore: the `$/` reusable-workflow call in publish.yml,
-      # which actionlint 1.7.12 cannot parse (upstream issue #760). Nothing
-      # else is ignored and no severity is changed.
+      # actionlint reads .github/actionlint.yaml on its own: one ignore scoped
+      # to publish.yml's `$/` call, documented there with its removal trigger.
       - name: actionlint (workflow expressions and shell)
         run: actionlint .github/workflows/*.yml
 

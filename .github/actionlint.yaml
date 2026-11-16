@@ -1,22 +1,16 @@
-# actionlint's configuration for the workflow-lint job in ci.yml.
+# The single actionlint exception, and its only owner.
 #
-# One documented exception, and nothing else: no severity change, no
-# `--ignore` on other kinds, no relaxed check. `publish.yml` calls its gate as
-# `$/.github/workflows/ci.yml` — GitHub's self-repository form for a reusable
-# workflow in the same repository at the running commit — which is the form
-# zizmor asks for and the reason no zizmor exception exists any more.
+# publish.yml calls its gate as `$/.github/workflows/ci.yml`. GitHub accepts
+# that form on github.com only, and actionlint 1.7.12 predates it
+# (rhysd/actionlint#760), so it reads the call as a malformed `workflow-call`.
+# `paths` binds the ignore to that one file, and the pattern requires the whole
+# `$/.github/workflows/<file>.yml` shape: any other workflow, reference form or
+# message still fails.
 #
-# actionlint 1.7.12 predates `$/` and reports that call as a malformed
-# `workflow-call`: upstream issue
-# https://github.com/rhysd/actionlint/issues/760 ("Support "$/" in `uses:`").
-# The pattern below matches that message only: it requires the quoted call to
-# start with `$/`, so a `./...` or `owner/repo/...` call keeps failing as
-# before, and every other message in every workflow stays fatal.
-#
-# Remove this file's `ignore` entry with the first actionlint release that
-# parses `$/`: the message stops being produced, and a stale pattern would
-# hide a regression in the reference form.
+# Delete this file with the first actionlint release that parses `$/`: the
+# message stops being produced, and a stale ignore would hide a regression in
+# the reference form.
 paths:
-  .github/workflows/*.yml:
+  .github/workflows/publish.yml:
     ignore:
-      - 'reusable workflow call "\$/[^"]+" at "uses" is not following the format'
+      - '^reusable workflow call "\$/\.github/workflows/[^"/]+\.yml" at "uses" is not following the format'
