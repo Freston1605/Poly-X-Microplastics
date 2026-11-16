@@ -151,8 +151,10 @@ models/                   # YOLO .pt weights (dev; in installs they go to user d
 runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
 data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
-.github/workflows/        # ci.yml (gate, suite, wheel), ruff.yml, pre-commit.yml,
-                          # publish.yml (v* tag → PyPI + GitHub release)
+.github/workflows/        # ci.yml (pipeline: gate, 3.12 suite, packaging,
+                          # dependency review, workflow lint),
+                          # pre-commit.yml (preview), publish.yml (v* tag →
+                          # PyPI + GitHub release; ADR-0006)
 .github/dependabot.yml    # weekly action bumps; every `uses:` is SHA-pinned
 ```
 
@@ -977,6 +979,12 @@ The five default labels, identity-mapped. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Single-context. See `docs/agents/domain.md`.
+
+### Repository settings
+
+The protections that are not YAML — release-tag ruleset, action-SHA pinning,
+private vulnerability reporting, Dependabot alerts — and how to re-apply them.
+See `docs/agents/repository-settings.md`.
 
 ---
 

@@ -2,38 +2,103 @@
 
 ## What the CI does
 
-Three workflows run on **every PR** and on every push to `main`:
+Three words, used the same way everywhere:
 
-- **`ruff.yml`** — `ruff check` and `ruff format --check` over `src/`, `tests/`,
-  `tools/` and `install/`, using the ruff version locked in `uv.lock`. It
-  installs no project dependencies, so it reports in seconds instead of after
-  the gate's suite. It runs the same two commands the gate runs, no more.
-- **`pre-commit.yml`** — runs every hook in `.pre-commit-config.yaml` with
-  `pre-commit run --all-files`, so a hook you never installed locally still
-  fails the PR.
-- **`ci.yml`** — the gate, plus the 3.12 suite and the wheel build:
+- **preview** — the local hooks, run by `pre-commit.yml`. Fast, and not
+  authoritative: it catches a format or convention mistake before the gate
+  looks at it.
+- **gate** — `quality` in `ci.yml`: translation audit, palette rule, the full
+  suite, ruff and ty, run by `python tools/check.py`. The gate is the
+  contract, and it is the only owner of those checks.
+- **pipeline** — `ci.yml` as a whole: the gate, the 3.12 suite, the packaging
+  job and the two read-only jobs beside the gate.
+
+`publish.yml` runs the pipeline; it does not keep its own copy of the checks.
+
+Two workflows run on **every PR** and on every push to `main`:
+
+- **`pre-commit.yml`** — the preview: it runs the hooks in
+  `.pre-commit-config.yaml` with `pre-commit run --all-files`, so a hook you
+  never installed locally still fails the PR. It skips `ruff-check` and
+  `ruff-format` (`SKIP`), because the gate owns ruff: `ruff-check` runs with
+  `--fix`, and `ruff-format` rewrites the file in place, so in CI both would
+  change files instead of reporting them. They stay in the configuration for
+  local use.
+- **`ci.yml`** — the pipeline, which is the gate plus the checks around it:
   1. Checks `uv.lock` is current and smoke-tests the installer scripts before
      any dependency sync.
   2. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
      `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`) and syncs the locked
      environment (`uv sync --locked --extra gui`) on Python 3.11.
-  3. Runs `python tools/check.py`: translation audit, palette rule, the full
-     suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. The gate is the
-     one owner of the checks, so a check added to `tools/check.py` cannot
-     silently miss CI. ty blocks on `src/polyx/core` + `src/polyx/cli`.
+  3. Runs the gate: `python tools/check.py` — translation audit, palette rule,
+     the full suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. Ruff
+     included, at the version pinned in the development group, so a check
+     added to `tools/check.py` cannot silently miss CI. ty blocks on
+     `src/polyx/core` + `src/polyx/cli`. The suite also reads the console
+     scripts from the installed distribution metadata, compares them with
+     `[project.scripts]` and imports every target, so a broken entry point
+     fails the pull request rather than a release.
   4. Types the GUI on the same 3.11 environment as an advisory step: it
      reports and never fails the build.
-  5. A separate `test` job runs the suite on Python 3.12, and `build` builds
-     the wheel, loads the packaged catalogs and smoke-imports it.
+  5. A separate `test` job runs the suite on Python 3.12.
+  6. A `build` job depends on the gate only. It builds the wheel and sdist,
+     runs `tools/check_wheel.py` against the wheel — the compiled Spanish
+     catalog is inside and the pseudo-locale is not — and uploads the wheel as
+     the run artifact. On a pull request it installs no Qt libraries and
+     creates no virtual environment, so it starts beside the 3.12 suite
+     instead of after it.
+
+Everything that installs the built distribution runs when the event is **not a
+pull request** — a `v*` tag, a push to `main`, or a manual run of
+`publish.yml`: uv creates the
+environment and installs the wheel with the `[gui]` extra, then every CLI
+console script starts with `--help` and the GUI imports. One definition, in
+`ci.yml`; ADR-0006 says why.
+
+Two more `ci.yml` jobs run read-only beside the gate. Neither waits for another
+job and nothing waits for them, so they add a line to the checks list but not a
+second to the verdict:
+
+- **`dependency-review`** — on pull requests only, diffs the resolved
+  dependency set against the base branch and fails when the diff introduces a
+  package with a known advisory (`fail-on-severity: low`). Keeping exact pins
+  says nothing about whether those pins are vulnerable; this is the check that
+  reads them. Python dependency graphs include `uv.lock`, so a lock bump is
+  reviewed like any other dependency change. It posts nothing in the pull
+  request: that would need `pull-requests: write`, and the job is read-only.
+- **`workflow-lint`** — `actionlint` over `.github/workflows/*.yml`, which
+  checks the `${{ }}` expressions and, because `shellcheck` sits on `PATH`,
+  the shell inside every `run:` block; then `zizmor`, which audits the security
+  posture (unpinned action refs, `${{ }}` interpolated into a script, excess
+  permissions). Both run from pinned artifacts: actionlint's release tarball
+  and shellcheck's, each verified against the published SHA-256, and zizmor
+  through `uvx zizmor==<version>`. One finding is ignored and named in
+  `.github/zizmor.yml`; everything else at any severity fails the PR.
+
+The same two commands run locally, and they are the fast loop for a workflow
+change:
+
+```bash
+actionlint .github/workflows/*.yml   # with shellcheck on PATH
+uvx zizmor==1.32.0 .github/workflows/
+```
 
 `publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
-tags via Trusted Publishing. A tag run starts with a `gate` job that calls
-`ci.yml` through `workflow_call` — the same suite every PR runs — so a tag on a
-red commit cannot reach PyPI, where a version number is spent forever. The build
-job then rejects a tag whose commit is not on `main`, checks that the tag names
-the version in the built wheel, and `release` attaches the same files to a
-GitHub release. A manual run from the Actions UI is a rehearsal: it runs the
-gate and builds the distributions but uploads nothing.
+tags via Trusted Publishing. A tag run starts with a job named `ci` that calls
+`ci.yml` through `workflow_call` — the same pipeline every PR runs, which is why
+"gate" is the local check runner and nothing else. A tag on a red commit
+therefore cannot reach PyPI, where a version number is spent forever. The
+`build` job then rejects a tag whose commit is not on `main`, checks that the
+tag names the version in the built wheel, and `release` attaches the same files
+to a GitHub release.
+
+So the split is: **a pull request proves the source** — the gate — **and the
+packaging invariant the source tree cannot see** (the compiled catalog is in
+the wheel, the pseudo-locale is not); **a tag proves the distribution**: the
+wheel installs into a clean environment with uv, every CLI console script
+starts, and the GUI imports. A manual run of `publish.yml` from the Actions UI
+is a rehearsal: it runs the whole pipeline, including the installed-wheel
+smoke, then builds the distributions and uploads nothing to PyPI.
 
 Every `uses:` is pinned to a commit SHA with its release in a comment, and
 `.github/dependabot.yml` opens one grouped PR a week for patch and minor action
@@ -102,9 +167,6 @@ python -m pytest -q          # inside the project .venv
 ## Debugging a red build
 
 1. Open the failed PR on GitHub and look at the red workflow or job:
-   - `Ruff` → run `uv run ruff check src/ tests/ tools/ install/` and
-     `uv run ruff format --check src/ tests/ tools/ install/`. Fix with
-     `ruff check --fix` / `ruff format`; do not reformat unrelated files.
    - `pre-commit` → the hook name and its diff are in the log. Run
      `uv run pre-commit run --all-files` locally; `pre-commit clean` resets a
      stale hook environment.
@@ -112,13 +174,30 @@ python -m pytest -q          # inside the project .venv
      lock is stale: run `uv lock` and commit `uv.lock`. **Do not** relax a pin:
      `numpy>=2` breaks ultralytics 8.3.40 validation (they removed `np.trapz`),
      and bumping `PySide6` can change Qt dialog behaviour. `Run the gate` prints
-     the command that failed; reproduce it with `python tools/check.py`. The
+     the command that failed; reproduce it with `python tools/check.py`. A ruff
+     failure is that step too: run `uv run ruff check src/ tests/ tools/ install/`
+     and `uv run ruff format --check src/ tests/ tools/ install/`, fix with
+     `ruff check --fix` / `ruff format`, and leave unrelated files alone. The
      `Type check (GUI)` step is advisory and never fails the build.
    - `CI` → `test` → the failing test is printed with its assertion. The suite
      is deterministic: if it passes locally it should pass in CI; if it fails
      only in CI, check the language (`POLYX_LOCALE`) and the locale.
-   - `CI` → `build` → the wheel, the packaged catalogs or a smoke import
-     failed; the log names the command.
+   - `CI` → `build` → the wheel build, the packaged-catalog check, or — on a
+     tag, on a push to `main`, or on a manual publish run — the wheel install
+     and console-script smoke.
+     Reproduce the catalog check with `uv build -o dist` and
+     `python tools/check_wheel.py dist/*.whl`; a missing `messages.mo` means
+     the build hook did not run or Hatchling filtered the artifact.
+   - `CI` → `workflow-lint` → the finding names the file, line and column.
+     `expression` means a `${{ }}` that does not resolve (a missing `needs:`, a
+     typo); `shellcheck` means the shell inside a `run:` block; a bare zizmor
+     title (`template-injection`, `unpinned-uses`, `artipacked`) is the audit
+     it came from. Reproduce with the two commands above, on the files you
+     changed.
+   - `CI` → `dependency-review` → the log lists the advisory, the package and
+     the version that introduced it. Bump past the patched version if there is
+     one; if the package cannot move, the honest fix is a documented exception
+     in the workflow, not a weaker threshold.
 2. Reproduce locally with the same command as the step (Linux above).
 3. Push the fix to the same branch: the job re-runs on its own, and the new push
    cancels the previous run.
@@ -126,8 +205,10 @@ python -m pytest -q          # inside the project .venv
 ## Local pre-commit guardrails
 
 The hooks in `.pre-commit-config.yaml` run locally and in the `pre-commit`
-workflow, so a hook that fails on your machine fails the PR too. Install them
-once in the dev environment, then run them manually at any time:
+workflow, so a hook that fails on your machine fails the PR too. The two ruff
+hooks are the exception: CI skips them because the gate runs ruff, and locally
+they auto-fix (`ruff check --fix`, `ruff format`). Install them once in the dev
+environment, then run them manually at any time:
 
 ```bash
 uv sync --extra gui

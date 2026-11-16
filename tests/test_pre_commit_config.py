@@ -21,10 +21,20 @@ PYPROJECT = ROOT / "pyproject.toml"
 
 LOCAL_IDS = {"english-added-lines", "i18n-audit", "no-hardcoded-fallback"}
 SHELL_TOKENS = ("&&", "||", "|", ";", ">", "<", "$(", "`")
+RUFF_REPOSITORY = "https://github.com/astral-sh/ruff-pre-commit"
 
 
 def _config() -> dict:
     return yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+
+
+def pyproject() -> dict:
+    """The parsed ``pyproject.toml``.
+
+    ``tests/test_console_scripts.py`` reads the same file, so the parse lives
+    here once instead of in a second copy that could drift.
+    """
+    return tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
 
 
 def test_config_file_ends_with_a_newline():
@@ -45,6 +55,13 @@ def _hook(hooks: list[dict], hook_id: str) -> dict:
 
 def _dependency_name(requirement: str) -> str:
     return re.split(r"[<>=!~\[; ]", requirement, maxsplit=1)[0].lower()
+
+
+def _ruff_hook_version() -> str:
+    """The version the ruff hooks install, leading ``v`` included."""
+    repos = [repo for repo in _config()["repos"] if repo["repo"] == RUFF_REPOSITORY]
+    assert len(repos) == 1, "there must be exactly one ruff hook repository"
+    return repos[0]["rev"]
 
 
 def test_every_local_hook_uses_only_stdlib_and_in_repo_modules():
@@ -102,17 +119,49 @@ def test_palette_hook_keeps_its_whole_tree_scope():
 
 def test_ruff_hooks_are_present_with_the_expected_ids():
     config = _config()
-    repos = [
-        repo
-        for repo in config["repos"]
-        if repo["repo"] == "https://github.com/astral-sh/ruff-pre-commit"
-    ]
+    repos = [repo for repo in config["repos"] if repo["repo"] == RUFF_REPOSITORY]
     assert len(repos) == 1
     assert [hook["id"] for hook in repos[0]["hooks"]] == ["ruff-check", "ruff-format"]
 
 
+def _development_requirements() -> list[str]:
+    """Every development requirement the pyproject declares.
+
+    The same list appears twice: the dependency group the gate syncs and the
+    optional ``dev`` extra the README installs. Both are doors into a
+    development environment, so both must agree on ruff.
+    """
+    data = pyproject()
+    return [
+        *data["dependency-groups"]["dev"],
+        *data["project"]["optional-dependencies"]["dev"],
+    ]
+
+
+def test_ruff_is_pinned_to_the_version_the_hooks_install():
+    """The preview and the gate run one ruff version.
+
+    The gate runs ``python -m ruff`` from the development group; the hooks
+    install their own interpreter from ``ruff-pre-commit``. Nothing else ties
+    the two, so an exact pin plus this test is what keeps a hook that passes
+    locally from failing the gate on the version alone.
+    """
+    hook_version = _ruff_hook_version().removeprefix("v")
+
+    requirements = [
+        requirement
+        for requirement in _development_requirements()
+        if _dependency_name(requirement) == "ruff"
+    ]
+
+    assert requirements, "the pyproject declares no ruff requirement"
+    assert all(requirement == f"ruff=={hook_version}" for requirement in requirements), (
+        f"pin ruff exactly at the hooks' {hook_version}: {requirements}"
+    )
+
+
 def test_dev_dependencies_declare_pre_commit_once():
-    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    data = pyproject()
 
     groups = {
         "dependency-groups.dev": data["dependency-groups"]["dev"],

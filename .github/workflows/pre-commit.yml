@@ -32,5 +32,12 @@ jobs:
       - name: Install pre-commit
         run: uv sync --locked --only-dev
 
+      # The gate in ci.yml owns ruff: `python tools/check.py` runs both ruff
+      # commands from the development group, pinned to the same version the
+      # hooks install. Skip the two ruff hooks here so the preview does not
+      # enforce that check a second time (and auto-fix files in CI); they stay
+      # in .pre-commit-config.yaml for local use.
       - name: Run hooks
+        env:
+          SKIP: ruff-check,ruff-format
         run: uv run --no-sync pre-commit run --all-files --show-diff-on-failure

@@ -5,8 +5,9 @@
 # The uv lockfile is deliberately not listed here: the scientific stack is
 # pinned on purpose (ultralytics 8.3.x needs numpy<2), so automatic bumps would
 # open PRs that cannot pass. Update it by hand with `uv lock` and the matrix
-# run. Enable the `uv` ecosystem once the pins are loosened, and enable
-# Dependabot alerts + security updates in the repository settings.
+# run. Enable the `uv` ecosystem once the pins are loosened. Dependabot alerts
+# and security updates are already on in the repository settings, recorded in
+# docs/agents/repository-settings.md.
 version: 2
 updates:
   - package-ecosystem: github-actions

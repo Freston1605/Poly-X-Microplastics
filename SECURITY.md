@@ -11,7 +11,14 @@
 
 Please **do not** open a public GitHub issue for security problems.
 
-Email the maintainer at **cristofher.ferrada@pucv.cl** with:
+Report it privately, either way:
+
+- GitHub's
+  [private vulnerability report](https://github.com/Freston1605/Poly-X-Microplastics/security/advisories/new)
+  (repository **Security** tab → *Report a vulnerability*), or
+- email the maintainer at **cristofher.ferrada@pucv.cl**.
+
+Include:
 
 - a description of the issue and its impact,
 - steps to reproduce (or a proof of concept),
