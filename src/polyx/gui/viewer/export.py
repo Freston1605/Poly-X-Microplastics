@@ -86,7 +86,7 @@ def csv_rows(dets: list[Detection], um_per_px: float | None) -> list[list[str]]:
                 f"{_box_diam_px(det):.2f}",
                 f"{det.diam_um:.2f}" if sized else "",
                 f"{det.area_um2:.2f}" if sized and det.area_um2 is not None else "",
-                det.size_source if sized else "",
+                (det.size_source or "") if sized else "",
             ]
         )
     return rows
