@@ -1094,11 +1094,11 @@ msgstr "✓ Buena"
 msgid "✗ Bad"
 msgstr "✗ Mala"
 
-#: src/polyx/gui/detector/runner.py:183
+#: src/polyx/gui/detector/runner.py:191
 msgid "No models loaded."
 msgstr "No hay modelos cargados."
 
-#: src/polyx/gui/detector/runner.py:186
+#: src/polyx/gui/detector/runner.py:194
 msgid "No images selected."
 msgstr "No hay imágenes seleccionadas."
 
