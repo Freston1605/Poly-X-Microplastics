@@ -8,8 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QPointF, Signal
 
 from polyx.core.detect.yolo import Detection
-
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
+from polyx.core.paths import IMAGE_EXTS
 
 
 class ViewerState(QObject):

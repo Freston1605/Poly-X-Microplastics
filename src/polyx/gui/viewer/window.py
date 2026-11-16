@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.annotate import find_run_labels
 from polyx.core.i18n import _, ngettext
-from polyx.core.paths import RUNS_DIR
+from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
@@ -594,7 +594,11 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def _open_image(self):
 
         path, _unused = QFileDialog.getOpenFileName(
-            self, _("Open image"), "", _("Images (*.jpg *.jpeg *.png *.bmp *.tiff *.tif)")
+            self,
+            _("Open image"),
+            "",
+            _("Images (%(patterns)s)")
+            % {"patterns": " ".join(f"*{extension}" for extension in IMAGE_EXTS)},
         )
 
         if path:
@@ -1419,9 +1423,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             for u in ev.mimeData().urls():
                 p = u.toLocalFile().lower()
 
-                if p.endswith(".pt") or any(
-                    p.endswith(e) for e in (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
-                ):
+                if p.endswith(".pt") or any(p.endswith(e) for e in IMAGE_EXTS):
                     ev.acceptProposedAction()
 
                     return
@@ -1446,7 +1448,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 except Exception as e:  # noqa: BLE001
                     self._set_status(_("● Error: %(error)s") % {"error": e}, T.ERR)
 
-            elif path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}:
+            elif path.suffix.lower() in IMAGE_EXTS:
                 self.state.load_single(path)
 
                 self.nav_frame.setVisible(False)
