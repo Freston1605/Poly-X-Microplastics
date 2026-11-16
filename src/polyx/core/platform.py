@@ -94,6 +94,24 @@ def open_in_system(path_2: str | Path) -> bool:
         return False
 
 
+# ── File names ──
+#: Characters Windows rejects in a file name. The path separators are here too:
+#: a safe name is one component of a folder, never a path (ADR-0004).
+INVALID_FILENAME_CHARS = frozenset('<>:"/\\|?*')
+
+#: Names Windows keeps for devices; a folder called ``CON`` cannot be created.
+RESERVED_FILENAME_NAMES = frozenset(
+    {
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        *(f"COM{i}" for i in range(1, 10)),
+        *(f"LPT{i}" for i in range(1, 10)),
+    }
+)
+
+
 # ── Compute device ──
 
 DEVICE_CUDA = "0"

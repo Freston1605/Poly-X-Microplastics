@@ -238,7 +238,9 @@ class RunPage(DetectorPage):
         # a folder key, the generated default reads as the translated label.
         for i, slot in enumerate(active):
             if i < len(self.previews):
-                self.previews[i].lbl_title.setText(display_name(slot.alias, slot.alias_default, i))
+                self.previews[i].lbl_title.setText(
+                    display_name(slot.alias, slot.alias_generated, i)
+                )
 
         self.state.set_running(True)
         self.state.run_started.emit()

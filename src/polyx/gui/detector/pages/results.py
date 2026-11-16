@@ -20,7 +20,12 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.detection_run import PAGE_COLUMNS, detection_row, reload_ground_truth
+from polyx.core.detection_run import (
+    PAGE_COLUMNS,
+    detection_row,
+    display_name,
+    reload_ground_truth,
+)
 from polyx.core.detection_run.operating_point import (
     Criterion,
     Score,
@@ -252,12 +257,14 @@ class ResultsPage(DetectorPage):
         rows = []
         for mi, rs in state.results.items():
             slot = state.model_slots[mi]
+            label = display_name(slot.alias, slot.alias_generated, mi)
             for r in rs:
                 avg_c = (
                     sum(p.conf for p in r.predictions) / len(r.predictions) if r.predictions else 0
                 )
                 rows.append(
                     (
+                        label,
                         slot.alias,
                         r.image_path,
                         len(r.predictions),
@@ -269,8 +276,8 @@ class ResultsPage(DetectorPage):
                     )
                 )
         self.table.setRowCount(len(rows))
-        for i, (alias, p, pred, gt, tp, fp, fn, ac) in enumerate(rows):
-            self.table.setItem(i, 0, QTableWidgetItem(alias))
+        for i, (label, alias, p, pred, gt, tp, fp, fn, ac) in enumerate(rows):
+            self.table.setItem(i, 0, QTableWidgetItem(label))
             self.table.setItem(i, 1, QTableWidgetItem(p.name))
             for col, v in enumerate([pred, gt, tp, fp, fn], start=2):
                 it = QTableWidgetItem(str(v))
@@ -279,6 +286,7 @@ class ResultsPage(DetectorPage):
             self.table.setItem(i, 7, QTableWidgetItem(f"{ac:.3f}"))
             # we store the path for double-click
             self.table.item(i, 1).setData(Qt.UserRole, str(p))
+            # ... and the stable alias, which names the folder on disk.
             self.table.item(i, 0).setData(Qt.UserRole, alias)
 
     def _reload_gt(self):
@@ -347,14 +355,15 @@ class ResultsPage(DetectorPage):
         self.refresh()
 
     def _results_by_model(self):
-        """[(alias, [ImageResult with GT])], in the order of the slots."""
+        """[(display label, [ImageResult with GT])], in the order of the slots."""
         output = []
         for mi, rs in sorted(self.state.results.items()):
             if mi >= len(self.state.model_slots):
                 continue
             con_gt = [r for r in rs if r.has_gt]
             if con_gt:
-                output.append((self.state.model_slots[mi].alias, con_gt))
+                slot = self.state.model_slots[mi]
+                output.append((display_name(slot.alias, slot.alias_generated, mi), con_gt))
         return output
 
     def _threshold_common(self, by_model):
@@ -395,17 +404,23 @@ class ResultsPage(DetectorPage):
         used_2 = self.state.params.conf
         lines: list[str] = []
         optimal: list[float] = []
-        for alias, rs in by_model:
+        for label, rs in by_model:
             sugg = self._suggest_operating_point(rs)
             if not sugg:
                 continue
             best, current = sugg
             # The criterion travels with the numbers: the KPI above is the
             # run's decision under another one, and the words say which.
-            head = (
-                f"{alias} — conf {current.threshold:g}: F1 {current.f1:.3f} "
-                f"({current.label}; P {current.precision:.3f} / R {current.recall:.3f})."
-            )
+            head = _(
+                "%(model)s — conf %(threshold)s: F1 %(f1)s (%(criterion)s; P %(precision)s / R %(recall)s)."
+            ) % {
+                "model": label,
+                "threshold": f"{current.threshold:g}",
+                "f1": f"{current.f1:.3f}",
+                "criterion": current.label,
+                "precision": f"{current.precision:.3f}",
+                "recall": f"{current.recall:.3f}",
+            }
             # A real improvement is required, not just a different threshold: with a flat F1, the
             # maximum falls anywhere, and advising a move there would be noise.
             if best.threshold > current.threshold + 1e-9 and (best.f1 - current.f1) > 0.002:

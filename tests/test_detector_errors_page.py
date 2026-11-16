@@ -53,8 +53,54 @@ def test_errors_page_rows_equal_the_match_the_run_decided(qapp, tmp_path):
     assert page.table.item(0, 5).text() == "0.40"
 
 
-def test_errors_page_lists_an_image_with_no_match_as_no_errors(qapp, tmp_path):
-    """No match means no proven errors: the page does not invent a re-match."""
+def test_errors_page_rows_use_the_display_name_not_the_alias(qapp, tmp_path, selected_language):
+    """#124: the row speaks prose while the folder keeps the stable alias."""
+    from PySide6.QtCore import Qt
+
+    selected_language("en")
+    state = DetectorState()
+    state.model_slots[0].alias = "model_1"
+    state.model_slots[0].alias_generated = True
+    state.results = {0: [matched_result(tmp_path / "plate.png")]}
+    page = ErrorsPage(state)
+    page.refresh()
+
+    assert page.table.item(0, 0).text() == "Model 1"
+    assert page.table.item(0, 0).data(Qt.UserRole) == "model_1"
+
+
+def test_errors_page_says_when_counts_have_no_match_identity(qapp, tmp_path, selected_language):
+    """A folder that kept the counts but not the pairs must not read as clean."""
+    from tests.match_fixtures import matched_run, saved_run
+
+    selected_language("en")
+    run = saved_run(matched_run(tmp_path))
+    state = DetectorState()
+    state.model_slots[0].alias = run.models[0].alias
+    state.params = run.params
+    state.results = run.results
+    page = ErrorsPage(state)
+    page.refresh()
+
+    assert page.table.rowCount() == 0
+    assert "cannot be listed" in page.lbl_identity.text()
+    assert "1 image" in page.lbl_identity.text()
+    assert "does not record which box was paired with which" in page.lbl_identity.text()
+
+
+def test_errors_page_has_no_identity_caption_when_every_match_is_known(qapp, tmp_path):
+    page, _state = _page(tmp_path / "plate.png")
+
+    assert page.lbl_identity.text() == ""
+
+
+def test_errors_page_lists_an_image_with_no_match_as_no_errors(qapp, tmp_path, selected_language):
+    """No match means no row: the page does not invent a re-match.
+
+    The image still carries a count, so the page explains why the list is
+    empty instead of presenting it as a clean image.
+    """
+    selected_language("en")
     state = DetectorState()
     state.model_slots[0].alias = "m0"
     prediction = Instance(class_id=0, class_name="PET", conf=0.9, x1=0, y1=0, x2=10, y2=10)
@@ -75,3 +121,4 @@ def test_errors_page_lists_an_image_with_no_match_as_no_errors(qapp, tmp_path):
     page.refresh()
 
     assert page.table.rowCount() == 0
+    assert "cannot be listed" in page.lbl_identity.text()

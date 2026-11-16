@@ -64,6 +64,42 @@ aggregate metrics, status (`completed` / `aborted` / `failed`), error,
 skipped images and timestamps. Reports, the CLI and `load_run` consume it;
 the GUI adds signals and review verdicts on top but does not extend it.
 
+## Operating point
+
+The confidence threshold a run is scored at, together with the criterion used
+to count its errors. Two criteria are legitimate and disagree by construction:
+**localisation** asks only whether the particle was found, while **with class**
+also requires the polymer, so a well-placed box with the wrong class is a false
+positive of the predicted class and a false negative of the true one. Every
+figure names the criterion it uses. A *recommendation* sweeps the confidences
+the run observed and returns the best one under a named criterion. The module
+that owns both the arithmetic and the criteria is
+`core/detection_run/operating_point.py`.
+_Avoid_: F1 (unqualified), score
+
+## Tiling mode and plan
+
+The decision about splitting a large photo before inference. The **mode** is
+`auto` (tile only above a threshold), `always` or `never`; the legacy Spanish
+spellings are read at the boundary and never written. The **plan** is the
+geometry of one tiled photo — tile side, overlap, tile count and the photo's
+longer side — recorded in `run.json` instead of prose, so a reader can phrase
+it in their own language. A photo with no plan goes through in a single pass.
+The decision, its geometry and its sentence belong to `core/detect/tiling.py`;
+neither a page nor the engine formats the numbers again.
+_Avoid_: mosaic (in code), `siempre`/`nunca` as current values
+
+## Model alias and display name
+
+Two values for the same model. The **alias** is the stable, filesystem-safe
+folder key inside a run (`model_1`, or the weights stem / a name somebody
+typed); it is an artifact and is never translated. The **display name** is the
+prose the interface and the report show: `_("Model %(n)s")` when the alias was
+generated, and the alias verbatim when it was chosen. The `alias_generated`
+flag on `ModelInfo`/`ModelSlot` says which, and
+`core/detection_run/identity.py` owns the resolution.
+_Avoid_: model name (ambiguous), translated alias
+
 ## Canonical run folder
 
 The folder a detection run owns, written by the canonical engine:

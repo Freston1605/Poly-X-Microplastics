@@ -80,7 +80,7 @@ class ComparePage(DetectorPage):
             measured = Score.from_decision(rs, SCORE_CRITERION, state.params.conf)
             cm = sum(confs) / len(confs) if confs else 0
             self.tbl_summary.setItem(
-                r, 0, QTableWidgetItem(display_name(slot.alias, slot.alias_default, mi))
+                r, 0, QTableWidgetItem(display_name(slot.alias, slot.alias_generated, mi))
             )
             for col, v in enumerate(
                 [
@@ -107,7 +107,7 @@ class ComparePage(DetectorPage):
             {x.image_path for mi in active_indices for x in state.results.get(mi, [])}
         )
         cols = [_("Image")] + [
-            display_name(state.model_slots[mi].alias, state.model_slots[mi].alias_default, mi)
+            display_name(state.model_slots[mi].alias, state.model_slots[mi].alias_generated, mi)
             for mi in active_indices
         ]
         self.tbl_per_image.setColumnCount(len(cols))

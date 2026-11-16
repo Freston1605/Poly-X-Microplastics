@@ -13,7 +13,8 @@ placeholder cannot be compared literally (the baseline has the resolved number),
 so those assert the placeholder instead.
 
 The baseline was captured in English, so the autouse fixture selects English
-through ``i18n.set_language`` and restores the suite's language afterwards.
+through the shared ``selected_language`` seam, which restores the suite's
+language afterwards.
 """
 
 from __future__ import annotations
@@ -55,21 +56,18 @@ BASELINE_TXT = _normalise_figures(BASELINE_HTML.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(autouse=True)
-def _baseline_language():
-    """Select the baseline language (en) and restore the suite's afterwards.
+def _baseline_language(selected_language):
+    """Select the baseline language (en); ``selected_language`` restores it.
 
     The baseline HTML was captured in English; the section bodies compared
-    against it need the same language. The switch goes through the public
-    ``set_language`` seam, and POLYX_LOG_DIR is already isolated by the autouse
-    fixture in tests/conftest.py (decision D007); no report is generated here,
-    so there is no logger to silence.
+    against it need the same language. The switch goes through the shared
+    ``selected_language`` seam, so a test that changes language inside its body
+    is restored twice: to en by that fixture, then to the suite's language by
+    this one. POLYX_LOG_DIR is already isolated by the autouse fixture in
+    tests/conftest.py (decision D007); no report is generated here, so there is
+    no logger to silence.
     """
-    from polyx.core import i18n
-
-    previous = i18n.language()
-    assert i18n.set_language("en")
-    yield
-    i18n.set_language(previous)
+    selected_language("en")
 
 
 def _benign_state(tmp_path: Path):
@@ -181,35 +179,33 @@ def test_models_body_names_the_alias(tmp_path):
     assert _normalise_figures(body) in BASELINE_TXT
 
 
-def test_models_body_translates_a_generated_alias(tmp_path):
+def test_models_body_translates_a_generated_alias(tmp_path, selected_language):
     """#124: the report reads the label from the flag, never from the alias."""
     import polyx.gui.report.sections as sections
-    from polyx.core import i18n
 
     state = _benign_state(tmp_path)
     state.models[0].alias = "model_1"
     state.models[0].alias_generated = True
 
-    assert i18n.set_language("en")
+    selected_language("en")
     english = sections.build_models(_report_context(state))
     assert "<td>Model 1</td>" in english
 
-    assert i18n.set_language("es")
+    selected_language("es")
     spanish = sections.build_models(_report_context(state))
     assert "<td>Modelo 1</td>" in spanish
 
 
-def test_models_body_shows_a_custom_alias_verbatim(tmp_path):
+def test_models_body_shows_a_custom_alias_verbatim(tmp_path, selected_language):
     """A typed name is not translated, in either language."""
     import polyx.gui.report.sections as sections
-    from polyx.core import i18n
 
     state = _benign_state(tmp_path)
     state.models[0].alias = "my-model"
     state.models[0].alias_generated = False
 
     for language in ("en", "es"):
-        assert i18n.set_language(language)
+        selected_language(language)
         body = sections.build_models(_report_context(state))
         assert "<td>my-model</td>" in body
 
@@ -517,6 +513,69 @@ def test_report_error_table_equals_the_match_the_run_decided(tmp_path):
     # And it adds up to what the run recorded for the image.
     item = run.results[0][0]
     assert (item.match.tp, item.match.fp, item.match.fn) == (item.tp, item.fp, item.fn)
+
+
+def test_methods_renders_the_plan_of_a_new_run(tmp_path):
+    """#125: the Methods table says how the batch was tiled, from the plan."""
+    import polyx.gui.report.sections as sections
+    from polyx.core.detect.tiling import TilingPlan
+    from tests.match_fixtures import matched_run
+
+    run = matched_run(tmp_path / "new")
+    plan = TilingPlan(tile=2000, overlap=0.25, n_tiles=6, side=4096, threshold_px=2000)
+    run.results[0][0].tiling_plan = plan
+
+    body = sections.build_methods(_report_context(run))
+
+    assert "<td>Tiling</td>" in body
+    assert plan.describe() in body
+
+
+def test_methods_renders_the_legacy_tiling_string(tmp_path):
+    """A folder written before #125 only has the sentence; the report shows it."""
+    import polyx.gui.report.sections as sections
+    from tests.match_fixtures import matched_run
+
+    run = matched_run(tmp_path / "legacy")
+    row = run.results[0][0]
+    row.tiling_plan = None
+    row.tiling = "4096×3072 px → 6 tiles of 2000 px, 25% overlap"
+
+    body = sections.build_methods(_report_context(run))
+
+    assert "<td>Tiling</td>" in body
+    assert row.tiling in body
+
+
+def test_methods_says_single_pass_when_nothing_was_tiled(tmp_path):
+    """No plan and no legacy sentence: the run went through in one piece."""
+    import polyx.gui.report.sections as sections
+    from tests.match_fixtures import matched_run
+
+    run = matched_run(tmp_path / "whole")
+    run.results[0][0].tiling_plan = None
+    run.results[0][0].tiling = ""
+
+    body = sections.build_methods(_report_context(run))
+
+    assert "<td>Tiling</td><td>single pass</td>" in body
+
+
+def test_error_section_excludes_an_image_without_match_identity(tmp_path):
+    """A mask-matched run reopened from disk keeps its counters, not its pairs.
+
+    Counting those counters in the matrix would apply box IoU to a run that
+    decided by mask IoU, so the row stays out and the note says how many did.
+    """
+    import polyx.gui.report.sections as sections
+    from tests.match_fixtures import matched_run, saved_run
+
+    loaded = saved_run(matched_run(tmp_path))
+    body = sections.build_errors(_report_context(loaded))
+
+    assert "1 of the images with ground truth are not in the matrix" in body
+    # The excluded row contributes nothing: PET had the mask-matched TP.
+    assert "<td>PET</td><td class='r'>0</td><td class='r'>0</td><td class='r'>0</td>" in body
 
 
 def test_methods_names_the_matching_rule_the_run_used(tmp_path):

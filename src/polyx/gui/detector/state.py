@@ -32,19 +32,6 @@ class ModelSlot(ModelInfo):
 
     loaded: DetectionSource | None = None
 
-    @property
-    def alias_default(self) -> bool:
-        """Whether the slot still holds the generated ``model_<n>`` placeholder.
-
-        Kept as the pages' name for :attr:`alias_generated`: when true the card
-        shows the translated label, and the folder key stays ``model_<n>``.
-        """
-        return self.alias_generated
-
-    @alias_default.setter
-    def alias_default(self, value: bool) -> None:
-        self.alias_generated = value
-
 
 # ────────────────────────────────────────────────────────────────────
 class DetectorState(QObject):

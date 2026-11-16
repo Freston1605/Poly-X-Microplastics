@@ -270,14 +270,14 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
     return name_2.lower() if lowercase else name_2
 
 
-def _sweep_confidence(results_2, models, conf_current: float):
+def _sweep_confidence(results_by_model, models, conf_current: float):
     """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
 
     This is the hypothetical sweep, not the run's decision: it answers "what
     if only the boxes above this confidence had counted". ``models`` is the
     run's active model list in dense engine order (the canonical
-    ``RunResult.models``); ``results_2`` is keyed by those same indices. The
-    saved predictions already passed the threshold the run used, so raising it
+    ``RunResult.models``); ``results_by_model`` is keyed by those same indices.
+    The saved predictions already passed the threshold the run used, so raising it
     is just filtering and re-pairing. Lowering it is NOT possible: those
     detections were never computed. That is why the sweep starts at the
     threshold used and states that limitation.
@@ -290,15 +290,15 @@ def _sweep_confidence(results_2, models, conf_current: float):
     Returns {alias: [(conf, precision, recall, f1, n_det), ...]}.
     """
     thresholds = [round(u, 2) for u in np.arange(conf_current, 0.96, 0.05)]
-    output_2 = {}
+    output = {}
     for mi, model in enumerate(models):
-        rs = [r for r in results_2.get(mi, []) if r.has_gt]
+        rs = [r for r in results_by_model.get(mi, []) if r.has_gt]
         if not rs:
             continue
-        rows_2 = []
+        rows = []
         for u in thresholds:
             measured = score(rs, Criterion.WITH_CLASS, u)
             n_det = sum(1 for r in rs for p in r.predictions if p.conf >= u)
-            rows_2.append((u, measured.precision, measured.recall, measured.f1, n_det))
-        output_2[model.alias] = rows_2
-    return output_2
+            rows.append((u, measured.precision, measured.recall, measured.f1, n_det))
+        output[model.alias] = rows
+    return output
