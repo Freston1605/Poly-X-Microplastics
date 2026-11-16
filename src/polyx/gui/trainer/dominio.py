@@ -24,6 +24,7 @@ from pathlib import Path
 import yaml
 
 from polyx.core.labels import find_label_file
+from polyx.core.paths import IMAGE_EXTS
 
 REAL_PREFIX = "real__"
 LAB_PREFIX = "lab__"
@@ -50,8 +51,7 @@ def _val_images(data_yaml: Path) -> list[Path]:
     if path.is_file():  # list of .txt paths
         return [Path(l.strip()) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]  # noqa: E741
     if path.is_dir():
-        exts = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
-        return sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in exts)
+        return sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS)
     return []
 
 

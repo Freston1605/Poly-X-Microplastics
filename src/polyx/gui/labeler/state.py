@@ -21,8 +21,7 @@ from polyx.core.labels import (
     write_classes,
     write_lines,
 )
-
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
+from polyx.core.paths import IMAGE_EXTS
 
 
 class LabelerState(QObject):
