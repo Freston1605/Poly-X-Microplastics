@@ -3,11 +3,13 @@
 # exactly the failure mode pinning is supposed to prevent.
 #
 # The uv lockfile is deliberately not listed here: the scientific stack is
-# pinned on purpose (ultralytics 8.3.x needs numpy<2), so automatic bumps would
-# open PRs that cannot pass. Update it by hand with `uv lock` and the matrix
-# run. Enable the `uv` ecosystem once the pins are loosened. Dependabot alerts
-# and security updates are already on in the repository settings, recorded in
-# docs/agents/repository-settings.md.
+# pinned on purpose (ultralytics 8.3.x needs numpy<2), so automatic version
+# bumps would open PRs that cannot pass. Update it by hand with `uv lock` and
+# the matrix run. Enable the `uv` ecosystem here once the pins are loosened.
+#
+# Alerts and security updates are on in the repository settings and need no
+# entry here; docs/agents/repository-settings.md owns the coupling between the
+# exact uv pin and the uv version Dependabot bundles.
 version: 2
 updates:
   - package-ecosystem: github-actions

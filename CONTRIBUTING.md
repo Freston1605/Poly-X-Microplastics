@@ -120,7 +120,9 @@ After editing dependencies, run `uv lock` and commit the lock: CI runs
 `uv lock --check`, and the suite asserts every declared package is present in
 `uv.lock`. The uv version itself is pinned by `required-version` in
 `pyproject.toml`, and the workflows install exactly that version, so bumping uv
-means re-locking in the same commit.
+means re-locking in the same commit. The pin must match the uv version
+Dependabot bundles for security updates; see
+`docs/agents/repository-settings.md`.
 
 The whole gate — translation audit, suite, ruff and ty — in one command,
 from any checkout or git worktree:
