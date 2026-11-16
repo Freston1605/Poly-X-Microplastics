@@ -53,12 +53,13 @@ class RetranslateOnLanguageChange:
 
     Subclasses provide ``retranslate``. The rebuild is queued: deleting the
     widget tree synchronously inside ``changeEvent`` is unsafe, and the
-    dialog's own rebuild follows the same rule.
+    dialog's own rebuild follows the same rule. A window destroyed before
+    the queued rebuild runs is skipped by :func:`schedule_retranslate`.
     """
 
     def changeEvent(self, event) -> None:
         if event.type() == QEvent.LanguageChange:
-            QTimer.singleShot(0, self.retranslate)
+            schedule_retranslate(self)
         super().changeEvent(event)
 
 
@@ -76,6 +77,23 @@ def is_alive(widget) -> bool:
     import shiboken6
 
     return shiboken6.isValid(widget)
+
+
+def schedule_retranslate(widget) -> None:
+    """Queue ``widget.retranslate`` only while the widget still exists.
+
+    The timer runs after the event that scheduled it has returned, and the
+    user may have closed the window in between. The liveness check comes
+    before the bound method is resolved, because resolving or calling it on
+    a wrapper whose C++ object is gone raises from inside Qt's event loop.
+    A destroyed window is therefore a no-op, not a late rebuild.
+    """
+
+    def rebuild() -> None:
+        if is_alive(widget):
+            widget.retranslate()
+
+    QTimer.singleShot(0, rebuild)
 
 
 def install_qt_translations(tag: str) -> bool:
