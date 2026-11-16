@@ -85,11 +85,19 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     # ── Language ───────────────────────────────────────────────
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
-        if not i18n_qt.is_alive(self):
-            return
-        index = self.state.current_idx
-        keep_zoom = self.canvas.keep_zoom
-        self._build_ui()
+        i18n_qt.rebuild_keeping_view(
+            self,
+            capture=self._capture_view_state,
+            rebuild=self._build_ui,
+            restore=self._restore_view_state,
+        )
+
+    def _capture_view_state(self) -> tuple[int, bool]:
+        """The image being labelled and the zoom preference, before the rebuild."""
+        return self.state.current_idx, self.canvas.keep_zoom
+
+    def _restore_view_state(self, view: tuple[int, bool]) -> None:
+        index, keep_zoom = view
         marca.titular(self, "etiquetador")
         self.chk_zoom.setChecked(keep_zoom)
         self.canvas.keep_zoom = keep_zoom

@@ -414,10 +414,14 @@ every top-level window owns a `retranslate()` that rebuilds its text. The
 rebuild is queued through `i18n_qt.schedule_retranslate`, which checks the
 window is still alive *before* resolving its `retranslate`: a window closed
 between the event and the queued call is a no-op instead of a touch on a
-destroyed C++ object. Each window keeps its own `retranslate` and its own
-liveness guard. The modules are separate processes, so the shared preferences
-file is also the cross-process channel: a `QFileSystemWatcher` in every process
-applies a locale another process saved.
+destroyed C++ object. Each window keeps its own `retranslate`. The ones with a
+view state to keep (the Labeller and the Viewer) express it through
+`i18n_qt.rebuild_keeping_view`, which runs *capture → rebuild → restore* and
+owns the liveness guard; the Detector and the Trainer keep their own because
+their rebuild waits for a running worker, and the Launcher and the Preferences
+dialog have nothing to restore. The modules are separate processes, so the
+shared preferences file is also the cross-process channel: a
+`QFileSystemWatcher` in every process applies a locale another process saved.
 
 A rebuild destroys the page tree, so a worker a page started has to outlive it.
 The Trainer's hardware probes, its report, export and evaluation jobs, and the
