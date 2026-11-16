@@ -25,7 +25,16 @@ _SRC = _ROOT / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+from polyx.core.detect.yolo import Detection  # noqa: E402
+from polyx.core.detection_run import ImageResult, RunResult  # noqa: E402
+from polyx.core.detection_run.config import CalibrationPolicy  # noqa: E402
 from polyx.core.detection_run.operating_point import Criterion, Score  # noqa: E402
+from polyx.core.measure.calibration import (  # noqa: E402
+    ORIGIN_INDEX,
+    ORIGIN_MANUAL,
+    ORIGIN_NONE,
+    Calibration,
+)
 from polyx.gui.detector.pages.results import ResultsPage  # noqa: E402
 from polyx.gui.detector.state import DetectorState  # noqa: E402
 from tests.match_fixtures import (  # noqa: E402
@@ -51,6 +60,212 @@ def _page_for(state: DetectorState) -> ResultsPage:
     page = ResultsPage(state)
     page.refresh()
     return page
+
+
+def _sized_result(
+    image: Path, diam_um: float | None, *, class_name: str = "PET", model_idx: int = 0
+) -> ImageResult:
+    """One result whose single prediction carries (or lacks) a micrometre size."""
+    prediction = Detection(
+        class_id=0,
+        class_name=class_name,
+        conf=0.9,
+        x1=10.0,
+        y1=10.0,
+        x2=20.0,
+        y2=20.0,
+        diam_um=diam_um,
+    )
+    return ImageResult(image_path=image, model_idx=model_idx, predictions=[prediction])
+
+
+def _state_with_slot(tmp_path: Path) -> DetectorState:
+    state = DetectorState()
+    state.model_slots[0].alias = "m0"
+    state.model_slots[0].path = tmp_path / "m0.pt"
+    return state
+
+
+# ── #123: the histogram asks the data, not the policy ────────────────────
+
+
+def test_auto_calibration_with_sized_particles_shows_the_histogram(qapp, tmp_path):
+    """In ``auto`` the policy's um/px is 0, but each photo has a valid scale."""
+    image = tmp_path / "photos" / "plate.png"
+    state = _state_with_slot(tmp_path)
+    state.calibration = CalibrationPolicy(mode="auto", um_per_px=0.0)
+    state.run_result = RunResult(
+        run_dir=tmp_path / "run",
+        calibrations={image: Calibration(um_por_px=31.0, origin=ORIGIN_INDEX)},
+    )
+    state.results = {0: [_sized_result(image, 42.5)]}
+
+    page = _page_for(state)
+
+    assert page._hist_canvas is not None
+    assert not page._hist_canvas.isHidden()
+    assert page._hist_placeholder.isHidden()
+
+
+def test_sized_particles_show_the_histogram_even_without_a_run_record(qapp, tmp_path):
+    """The gate is the data: a prediction with ``diam_um`` is enough to draw."""
+    image = tmp_path / "photos" / "plate.png"
+    state = _state_with_slot(tmp_path)
+    state.run_result = RunResult(run_dir=tmp_path / "run")
+    state.results = {0: [_sized_result(image, 12.0)]}
+
+    page = _page_for(state)
+
+    assert page._hist_canvas is not None
+    assert not page._hist_canvas.isHidden()
+
+
+def test_no_calibration_and_no_sized_detections_hide_the_histogram(qapp, tmp_path):
+    image = tmp_path / "photos" / "plate.png"
+    state = _state_with_slot(tmp_path)
+    state.run_result = RunResult(
+        run_dir=tmp_path / "run",
+        calibrations={image: Calibration(origin=ORIGIN_MANUAL)},
+    )
+    state.results = {0: [_sized_result(image, None)]}
+
+    page = _page_for(state)
+
+    assert page._hist_canvas is None or page._hist_canvas.isHidden()
+    assert not page._hist_placeholder.isHidden()
+
+
+# ── #123: every reader asks the run by path ─────────────────────────────
+
+
+def _same_name_run(tmp_path: Path) -> tuple[Path, Path, Path, RunResult]:
+    """Two ``plate.png`` in different folders with different scales, plus a third."""
+    first = tmp_path / "tramo_a" / "plate.png"
+    second = tmp_path / "tramo_b" / "plate.png"
+    ambiguous = tmp_path / "tramo_c" / "plate.png"
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        calibrations={
+            first: Calibration(um_por_px=2.0, origin=ORIGIN_MANUAL),
+            second: Calibration(um_por_px=3.0, origin=ORIGIN_MANUAL),
+        },
+    )
+    return first, second, ambiguous, run
+
+
+def _column(rows: list[list[object]], name: str) -> int:
+    return list(rows[0]).index(name)
+
+
+def test_the_csv_export_gives_each_photo_its_own_scale(qapp, tmp_path):
+    first, second, _ambiguous, run = _same_name_run(tmp_path)
+    state = _state_with_slot(tmp_path)
+    state.run_result = run
+    state.results = {
+        0: [
+            _sized_result(first, 20.0),
+            _sized_result(second, 30.0),
+        ]
+    }
+
+    rows = _page_for(state).export_rows()
+
+    image_col, scale_col = _column(rows, "image"), _column(rows, "um_per_px")
+    by_image = {Path(row[image_col]): row for row in rows[1:]}
+    assert by_image[first][scale_col] == pytest.approx(2.0)
+    assert by_image[second][scale_col] == pytest.approx(3.0)
+
+
+def test_an_ambiguous_basename_leaves_the_export_scale_blank(qapp, tmp_path):
+    _first, _second, ambiguous, run = _same_name_run(tmp_path)
+    state = _state_with_slot(tmp_path)
+    state.run_result = run
+    state.results = {0: [_sized_result(ambiguous, 10.0)]}
+    state.calibration.um_per_px = 2.0  # a policy fallback must not fill the gap
+
+    rows = _page_for(state).export_rows()
+
+    row = rows[1]
+    assert row[_column(rows, "um_per_px")] == ""
+    assert row[_column(rows, "calibration_origin")] == ORIGIN_NONE
+
+
+def test_the_report_calibration_summary_agrees_with_the_page(qapp, tmp_path):
+    """The run record and the page describe the same per-photo scales."""
+    from polyx.core.detection_run.schema import build_run_payload
+
+    first, second, _ambiguous, run = _same_name_run(tmp_path)
+    state = _state_with_slot(tmp_path)
+    state.run_result = run
+    state.results = {0: [_sized_result(first, 20.0), _sized_result(second, 30.0)]}
+
+    rows = _page_for(state).export_rows()
+    scale_col = _column(rows, "um_per_px")
+    page_scales = [row[scale_col] for row in rows[1:]]
+    summary = build_run_payload(run)["calibration_summary"]
+
+    assert page_scales == pytest.approx([2.0, 3.0])
+    assert summary["n"] == len(page_scales) == 2
+    assert summary["origenes"] == {ORIGIN_MANUAL: 2}
+
+
+class _FakeSignal:
+    def emit(self, *_args) -> None:
+        pass
+
+
+class _FakeViewerState:
+    def __init__(self) -> None:
+        self.um_per_px = 0.0
+        self.detections: list = []
+        self.detections_changed = _FakeSignal()
+
+    def load_single(self, path: Path) -> None:
+        self.image = path
+
+
+class _FakeViewer:
+    """Stands in for ``ViewerWindow`` so the test can read the scale it got."""
+
+    instances: list[_FakeViewer] = []
+
+    def __init__(self) -> None:
+        self.state = _FakeViewerState()
+        self.shown = False
+        type(self).instances.append(self)
+
+    def show(self) -> None:
+        self.shown = True
+
+    def raise_(self) -> None:
+        pass
+
+
+def test_open_in_viewer_hands_each_photo_its_own_scale(qapp, tmp_path, monkeypatch):
+    import polyx.gui.viewer.window as viewer_window
+
+    first, second, ambiguous, run = _same_name_run(tmp_path)
+    state = _state_with_slot(tmp_path)
+    state.run_result = run
+    state.calibration.um_per_px = 2.0  # a policy fallback must not fill the gap
+    state.results = {
+        0: [
+            _sized_result(first, 20.0),
+            _sized_result(second, 30.0),
+            _sized_result(ambiguous, 10.0),
+        ]
+    }
+    page = _page_for(state)
+    monkeypatch.setattr(viewer_window, "ViewerWindow", _FakeViewer)
+    _FakeViewer.instances.clear()
+
+    expected = (2.0, 3.0, 0.0)
+    for row, scale in enumerate(expected):
+        page.table.selectRow(row)
+        page._review_in_viewer()
+        viewer = _FakeViewer.instances[-1]
+        assert viewer.state.um_per_px == pytest.approx(scale)
+    assert all(viewer.shown for viewer in _FakeViewer.instances)
 
 
 def test_results_kpis_are_the_counters_of_the_run_s_match(qapp, tmp_path):
