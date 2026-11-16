@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 22:10-0300\n"
+"POT-Creation-Date: 2026-11-16 17:09-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -714,7 +714,7 @@ msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:329
 #: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:671
-#: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:158
+#: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:558
 msgid "● Ready"
 msgstr "● Listo"
@@ -1129,7 +1129,7 @@ msgstr "Comparar"
 msgid "Report"
 msgstr "Reporte"
 
-#: src/polyx/gui/detector/window.py:167 src/polyx/gui/trainer/window.py:163
+#: src/polyx/gui/detector/window.py:167 src/polyx/gui/trainer/window.py:177
 msgid ""
 "Designed by\n"
 "Cristofher Ferrada\n"
@@ -1147,11 +1147,11 @@ msgstr "Detector v2"
 msgid "● Running…"
 msgstr "● Ejecutando…"
 
-#: src/polyx/gui/detector/window.py:97 src/polyx/gui/trainer/window.py:94
+#: src/polyx/gui/detector/window.py:97 src/polyx/gui/trainer/window.py:104
 msgid "● Finished"
 msgstr "● Finalizado"
 
-#: src/polyx/gui/detector/window.py:98 src/polyx/gui/trainer/window.py:95
+#: src/polyx/gui/detector/window.py:98 src/polyx/gui/trainer/window.py:108
 msgid "● Stopped"
 msgstr "● Detenido"
 
@@ -1312,7 +1312,7 @@ msgstr "Faltan modelos"
 msgid "Load at least one .pt model in the Models tab."
 msgstr "Carga al menos un modelo .pt en la pestaña Modelos."
 
-#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:461
+#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:462
 #: src/polyx/gui/labeler/window.py:140
 msgid "No images"
 msgstr "Sin imágenes"
@@ -1322,7 +1322,7 @@ msgid "Select images in the Images tab."
 msgstr "Selecciona imágenes en la pestaña Imágenes."
 
 #: src/polyx/gui/detector/pages/execute.py:269 src/polyx/gui/detector/pages/execute.py:273
-#: src/polyx/gui/detector/pages/report.py:394 src/polyx/gui/trainer/pages/train.py:424
+#: src/polyx/gui/detector/pages/report.py:394 src/polyx/gui/trainer/pages/train.py:426
 msgid "No results"
 msgstr "Sin resultados"
 
@@ -1672,8 +1672,8 @@ msgstr "Inferencia"
 msgid "Custom"
 msgstr "Personalizado"
 
-#: src/polyx/gui/detector/pages/parameters.py:142 src/polyx/gui/detector/pages/parameters.py:483
-#: src/polyx/gui/detector/pages/parameters.py:501
+#: src/polyx/gui/detector/pages/parameters.py:142 src/polyx/gui/detector/pages/parameters.py:484
+#: src/polyx/gui/detector/pages/parameters.py:502
 msgid "Detect maximum (GPU)"
 msgstr "Detectar máximo (GPU)"
 
@@ -1681,35 +1681,35 @@ msgstr "Detectar máximo (GPU)"
 msgid "'0' = first GPU. 'cpu' = CPU. '0,1' = GPU 0 and 1."
 msgstr "'0' = primera GPU. 'cpu' = CPU. '0,1' = GPU 0 y 1."
 
-#: src/polyx/gui/detector/pages/parameters.py:181
+#: src/polyx/gui/detector/pages/parameters.py:182
 msgid "Automatic tiling (large photos)"
 msgstr "Troceado automático (fotos grandes)"
 
-#: src/polyx/gui/detector/pages/parameters.py:272
+#: src/polyx/gui/detector/pages/parameters.py:273
 msgid "Error analysis (when GT is available)"
 msgstr "Análisis de errores (si hay GT)"
 
-#: src/polyx/gui/detector/pages/parameters.py:296
+#: src/polyx/gui/detector/pages/parameters.py:297
 msgid "Optical calibration (particle size)"
 msgstr "Calibración óptica (tamaño de partícula)"
 
-#: src/polyx/gui/detector/pages/parameters.py:320
+#: src/polyx/gui/detector/pages/parameters.py:321
 msgid "Measure the dish in every photo and use its scale (recommended)"
 msgstr "Medir la placa en cada foto y usar su escala (recomendado)"
 
-#: src/polyx/gui/detector/pages/parameters.py:388
+#: src/polyx/gui/detector/pages/parameters.py:389
 msgid "Size filter (optional)"
 msgstr "Filtro por tamaño (opcional)"
 
-#: src/polyx/gui/detector/pages/parameters.py:412
+#: src/polyx/gui/detector/pages/parameters.py:413
 msgid "Polymer assignment (optional)"
 msgstr "Asignación de polímero (opcional)"
 
-#: src/polyx/gui/detector/pages/parameters.py:472
+#: src/polyx/gui/detector/pages/parameters.py:473
 msgid "Testing…"
 msgstr "Probando…"
 
-#: src/polyx/gui/detector/pages/parameters.py:486
+#: src/polyx/gui/detector/pages/parameters.py:487
 #, python-format
 msgid ""
 "Safe maximum for “%(model)s”: %(size)d px.\n"
@@ -1720,11 +1720,11 @@ msgstr ""
 "\n"
 "Se fijó imgsz = %(size)d."
 
-#: src/polyx/gui/detector/pages/parameters.py:497
+#: src/polyx/gui/detector/pages/parameters.py:498
 msgid "maximum imgsz"
 msgstr "imgsz máximo"
 
-#: src/polyx/gui/detector/pages/parameters.py:502
+#: src/polyx/gui/detector/pages/parameters.py:503
 msgid "Could not measure"
 msgstr "No se pudo medir"
 
@@ -1778,7 +1778,11 @@ msgstr "'mps' = GPU del Mac (Apple Silicon). 'cpu' = procesador."
 msgid "This is an Intel Mac: 'cpu' only. MPS requires Apple Silicon."
 msgstr "Este Mac es Intel: solo 'cpu'. MPS necesita Apple Silicon."
 
-#: src/polyx/gui/detector/pages/parameters.py:184
+#: src/polyx/gui/detector/pages/parameters.py:175
+msgid "Empty = the best device this machine has."
+msgstr "Vacío = el mejor dispositivo disponible en esta máquina."
+
+#: src/polyx/gui/detector/pages/parameters.py:185
 msgid ""
 "A full-plate photo enters the network rescaled to imgsz: at 4096 px reduced to 2080, every "
 "particle shrinks by half and disappears below the network stride. With tiling, each tile enters "
@@ -1790,31 +1794,31 @@ msgstr ""
 "resolución nativa y las cajas vuelven a coordenadas de la foto completa, fusionadas con NMS "
 "global — no hay que cortar nada a mano ni sumar los conteos después."
 
-#: src/polyx/gui/detector/pages/parameters.py:193
+#: src/polyx/gui/detector/pages/parameters.py:194
 msgid "When to tile:"
 msgstr "Cuándo trocear:"
 
-#: src/polyx/gui/detector/pages/parameters.py:199
+#: src/polyx/gui/detector/pages/parameters.py:200
 msgid "automatic"
 msgstr "automático"
 
-#: src/polyx/gui/detector/pages/parameters.py:200
+#: src/polyx/gui/detector/pages/parameters.py:201
 msgid "always"
 msgstr "siempre"
 
-#: src/polyx/gui/detector/pages/parameters.py:201
+#: src/polyx/gui/detector/pages/parameters.py:202
 msgid "never"
 msgstr "nunca"
 
-#: src/polyx/gui/detector/pages/parameters.py:208
+#: src/polyx/gui/detector/pages/parameters.py:209
 msgid "«auto» decides on its own from the longest side of each photo."
 msgstr "«auto» decide sola mirando el lado mayor de cada foto."
 
-#: src/polyx/gui/detector/pages/parameters.py:211
+#: src/polyx/gui/detector/pages/parameters.py:212
 msgid "Threshold (longest side, px):"
 msgstr "Umbral (lado mayor, px):"
 
-#: src/polyx/gui/detector/pages/parameters.py:220
+#: src/polyx/gui/detector/pages/parameters.py:221
 msgid ""
 "Above this, tiling kicks in. 2000 lets the study crops (1630 px) through whole and tiles the "
 "full plates (~4096 px)."
@@ -1822,11 +1826,11 @@ msgstr ""
 "Por encima de esto se trocea. 2000 deja pasar enteros los recortes del estudio (1630 px) y "
 "trocea las placas completas (~4096 px)."
 
-#: src/polyx/gui/detector/pages/parameters.py:228
+#: src/polyx/gui/detector/pages/parameters.py:229
 msgid "Tile side (px):"
 msgstr "Lado del tile (px):"
 
-#: src/polyx/gui/detector/pages/parameters.py:237
+#: src/polyx/gui/detector/pages/parameters.py:238
 msgid ""
 "0 = automatic, min(threshold, imgsz). It should match the size of the crops the model was "
 "trained on: if the model saw particles at one scale and the tile presents them at another, "
@@ -1836,11 +1840,11 @@ msgstr ""
 "se entrenó el modelo: si el modelo vio partículas a una escala y el tile las presenta a otra, el"
 " recall cae."
 
-#: src/polyx/gui/detector/pages/parameters.py:245
+#: src/polyx/gui/detector/pages/parameters.py:246
 msgid "Overlap between tiles:"
 msgstr "Solape entre tiles:"
 
-#: src/polyx/gui/detector/pages/parameters.py:255
+#: src/polyx/gui/detector/pages/parameters.py:256
 msgid ""
 "0.25 = each tile overlaps a quarter of its neighbour. The overlap is what avoids losing or "
 "duplicating a particle that falls right on the seam."
@@ -1848,15 +1852,15 @@ msgstr ""
 "0.25 = cada tile pisa un cuarto del vecino. El solape es lo que evita perder o duplicar la "
 "partícula que cae justo en la costura."
 
-#: src/polyx/gui/detector/pages/parameters.py:276
+#: src/polyx/gui/detector/pages/parameters.py:277
 msgid "IoU for matching True Positives:"
 msgstr "IoU para emparejar Verdaderos Positivos:"
 
-#: src/polyx/gui/detector/pages/parameters.py:284
+#: src/polyx/gui/detector/pages/parameters.py:285
 msgid "COCO standard: 0.50. Stricter: 0.75."
 msgstr "Estándar COCO: 0.50. Más estricto: 0.75."
 
-#: src/polyx/gui/detector/pages/parameters.py:288
+#: src/polyx/gui/detector/pages/parameters.py:289
 msgid ""
 "True Positives: correct class + IoU ≥ threshold.  False Positives: prediction with no nearby GT."
 "  False Negatives: GT not detected.  Misclassified: high IoU but wrong class."
@@ -1864,39 +1868,39 @@ msgstr ""
 "Verdaderos Positivos: clase correcta + IoU ≥ umbral.  Falsos Positivos: predicción sin GT "
 "cercano.  Falsos Negativos: GT no detectado.  Mal Clasificados: IoU alto pero clase distinta."
 
-#: src/polyx/gui/detector/pages/parameters.py:300
+#: src/polyx/gui/detector/pages/parameters.py:301
 msgid "µm per pixel:"
 msgstr "μm por píxel:"
 
-#: src/polyx/gui/detector/pages/parameters.py:312
+#: src/polyx/gui/detector/pages/parameters.py:313
 msgid "Fallback: used only when the dish cannot be measured. 0 = no calibration."
 msgstr "Respaldo: se usa solo si no se puede medir la placa. 0 = sin medición."
 
-#: src/polyx/gui/detector/pages/parameters.py:330
+#: src/polyx/gui/detector/pages/parameters.py:331
 msgid "Actual dish diameter (mm):"
 msgstr "Diámetro real de la placa (mm):"
 
-#: src/polyx/gui/detector/pages/parameters.py:338
+#: src/polyx/gui/detector/pages/parameters.py:339
 msgid "Nominal outer diameter. The Petri dish used in this study is 100 mm."
 msgstr "Diámetro externo nominal. La placa Petri del estudio mide 100 mm."
 
-#: src/polyx/gui/detector/pages/parameters.py:341
+#: src/polyx/gui/detector/pages/parameters.py:342
 msgid "Dish height (mm):"
 msgstr "Altura de la placa (mm):"
 
-#: src/polyx/gui/detector/pages/parameters.py:349
+#: src/polyx/gui/detector/pages/parameters.py:350
 msgid "0 = no correction. A 100 mm Petri dish is usually 15 mm tall."
 msgstr "0 = no corregir. Una Petri de 100 mm suele medir 15 mm de alto."
 
-#: src/polyx/gui/detector/pages/parameters.py:352
+#: src/polyx/gui/detector/pages/parameters.py:353
 msgid "Camera-to-base distance (mm):"
 msgstr "Distancia cámara → base (mm):"
 
-#: src/polyx/gui/detector/pages/parameters.py:360
+#: src/polyx/gui/detector/pages/parameters.py:361
 msgid "0 = no correction. Measure to the BOTTOM of the dish, not to its rim."
 msgstr "0 = no corregir. Medir hasta el FONDO de la placa, no hasta el borde."
 
-#: src/polyx/gui/detector/pages/parameters.py:366
+#: src/polyx/gui/detector/pages/parameters.py:367
 msgid ""
 "Nothing has to be marked: the dish rim is found automatically. The radius comes from fitting a "
 "circle to the rim sampled along 720 directions, with outlier rejection; the Hough transform only"
@@ -1909,7 +1913,7 @@ msgstr ""
 "centro aproximado porque su radio llega a errar un 12 %. En los recortes la placa no aparece, "
 "así que ahí la escala se hereda del índice de calibración que dejó el recorte."
 
-#: src/polyx/gui/detector/pages/parameters.py:373
+#: src/polyx/gui/detector/pages/parameters.py:374
 msgid ""
 "The dish rim sits closer to the camera than the base where the particles lie, so it projects "
 "larger and the resulting scale is too small: left uncorrected, ALL sizes are underestimated. "
@@ -1921,7 +1925,7 @@ msgstr ""
 "subestimadas. Con la placa a 15 mm y la cámara a 100 mm son casi 16 puntos porcentuales; a 500 "
 "mm, un 3 %. Rellena los dos campos de arriba para corregirlo."
 
-#: src/polyx/gui/detector/pages/parameters.py:380
+#: src/polyx/gui/detector/pages/parameters.py:381
 msgid ""
 "The detector computes the area and equivalent diameter (of a circle with the same area) for "
 "every detected particle. With calibration, also in μm and μm²."
@@ -1929,23 +1933,23 @@ msgstr ""
 "El detector calcula área y diámetro equivalente (de círculo con misma área) para cada partícula "
 "detectada. Si hay calibración, también en μm y μm²."
 
-#: src/polyx/gui/detector/pages/parameters.py:392
+#: src/polyx/gui/detector/pages/parameters.py:393
 msgid "Min size (µm):"
 msgstr "Tamaño mín (μm):"
 
-#: src/polyx/gui/detector/pages/parameters.py:400
+#: src/polyx/gui/detector/pages/parameters.py:401
 msgid "Max size (µm):"
 msgstr "Tamaño máx (μm):"
 
-#: src/polyx/gui/detector/pages/parameters.py:407
+#: src/polyx/gui/detector/pages/parameters.py:408
 msgid "0 = no filter. Applies to the equivalent diameter."
 msgstr "0 = sin filtro. Aplica sobre el diámetro equivalente."
 
-#: src/polyx/gui/detector/pages/parameters.py:416
+#: src/polyx/gui/detector/pages/parameters.py:417
 msgid "Minimum confidence to assign:"
 msgstr "Confianza mínima para asignar:"
 
-#: src/polyx/gui/detector/pages/parameters.py:426
+#: src/polyx/gui/detector/pages/parameters.py:427
 msgid ""
 "0 = off. Below this value the particle is still counted, but reported as \"unassignable\" "
 "instead of being given a polymer. Nile Red responds to the polarity of its environment, not to "
@@ -1961,21 +1965,21 @@ msgstr ""
 "Abstenerse es más honesto que inventar la clase, y el informe declara qué porcentaje quedó sin "
 "asignar."
 
-#: src/polyx/gui/detector/pages/parameters.py:455 src/polyx/gui/labeler/window.py:256
+#: src/polyx/gui/detector/pages/parameters.py:456 src/polyx/gui/labeler/window.py:256
 #: src/polyx/gui/labeler/window.py:440 src/polyx/gui/labeler/window.py:471
 #: src/polyx/gui/viewer/window.py:288 src/polyx/gui/viewer/window.py:665
 msgid "No model"
 msgstr "Sin modelo"
 
-#: src/polyx/gui/detector/pages/parameters.py:455
+#: src/polyx/gui/detector/pages/parameters.py:456
 msgid "Load at least one model in the Models tab."
 msgstr "Carga al menos un modelo en la pestaña Modelos."
 
-#: src/polyx/gui/detector/pages/parameters.py:462
+#: src/polyx/gui/detector/pages/parameters.py:463
 msgid "Select images in the Images tab (one of them is used to measure)."
 msgstr "Selecciona imágenes en la pestaña Imágenes (se usa una para medir)."
 
-#: src/polyx/gui/detector/pages/parameters.py:491
+#: src/polyx/gui/detector/pages/parameters.py:492
 #, python-format
 msgid ""
 "\n"
@@ -1984,7 +1988,7 @@ msgstr ""
 "\n"
 "(A %(size)s px se quedó sin memoria.)"
 
-#: src/polyx/gui/detector/pages/parameters.py:493
+#: src/polyx/gui/detector/pages/parameters.py:494
 #, python-format
 msgid ""
 "On CPU there is no GPU memory ceiling. imgsz set to %(size)d but it will be slow. With a GPU the"
@@ -1993,25 +1997,25 @@ msgstr ""
 "En CPU no hay tope de memoria GPU. Se fijó imgsz = %(size)d pero será lento. Con GPU el detector"
 " es mucho más rápido."
 
-#: src/polyx/gui/detector/pages/parameters.py:542
+#: src/polyx/gui/detector/pages/parameters.py:543
 msgid "Select images to see what would be tiled."
 msgstr "Selecciona imágenes para ver qué se trocearía."
 
-#: src/polyx/gui/detector/pages/parameters.py:546
+#: src/polyx/gui/detector/pages/parameters.py:547
 msgid "Could not read the size of the first image."
 msgstr "No se pudo leer el tamaño de la primera imagen."
 
-#: src/polyx/gui/detector/pages/parameters.py:550
+#: src/polyx/gui/detector/pages/parameters.py:551
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d (tiling off)."
 msgstr "Primera imagen %(width)d×%(height)d px → un solo pase a imgsz %(imgsz)d (troceado desactivado)."
 
-#: src/polyx/gui/detector/pages/parameters.py:567
+#: src/polyx/gui/detector/pages/parameters.py:568
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass: below the %(threshold)d px threshold."
 msgstr "Primera imagen %(width)d×%(height)d px → un solo pase: no llega al umbral de %(threshold)d px."
 
-#: src/polyx/gui/detector/pages/parameters.py:576
+#: src/polyx/gui/detector/pages/parameters.py:577
 #, python-format
 msgid ""
 "First image %(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px with %(overlap)d%% overlap,"
@@ -2022,7 +2026,7 @@ msgstr ""
 "solape, cada uno a imgsz %(imgsz)d (%(scale).2f× la resolución nativa del tile). Tarda "
 "~%(tiles)d× más que un pase único."
 
-#: src/polyx/gui/detector/pages/parameters.py:475
+#: src/polyx/gui/detector/pages/parameters.py:476
 #, python-format
 msgid "⏳ Testing %(size)d px…"
 msgstr "⏳ Probando %(size)d px…"
@@ -4511,17 +4515,17 @@ msgstr "Evaluar"
 msgid "Export"
 msgstr "Exportar"
 
-#: src/polyx/gui/trainer/window.py:140
-msgid "YOLO Trainer"
-msgstr "Entrenador YOLO"
-
-#: src/polyx/gui/trainer/window.py:93
+#: src/polyx/gui/trainer/window.py:101
 msgid "● Training…"
 msgstr "● Entrenando…"
 
-#: src/polyx/gui/trainer/window.py:96
+#: src/polyx/gui/trainer/window.py:112
 msgid "● Error"
 msgstr "● Error"
+
+#: src/polyx/gui/trainer/window.py:154
+msgid "YOLO Trainer"
+msgstr "Entrenador YOLO"
 
 #: src/polyx/gui/trainer/pages/augmentation.py:49
 msgid "Data augmentation"
@@ -4946,6 +4950,11 @@ msgstr "Seleccionar .pt"
 msgid "Weights (*.pt)"
 msgstr "Pesos (*.pt)"
 
+#: src/polyx/gui/trainer/pages/evaluate.py:179 src/polyx/gui/trainer/pages/export.py:181
+#: src/polyx/gui/trainer/pages/summary.py:315
+msgid "Failed"
+msgstr "Falló"
+
 #: src/polyx/gui/trainer/pages/evaluate.py:85
 msgid "data.yaml:"
 msgstr "data.yaml:"
@@ -4969,11 +4978,6 @@ msgstr "Falta dataset"
 #: src/polyx/gui/trainer/pages/evaluate.py:165
 msgid "Select a valid data.yaml."
 msgstr "Selecciona un data.yaml válido."
-
-#: src/polyx/gui/trainer/pages/evaluate.py:175 src/polyx/gui/trainer/pages/export.py:178
-#: src/polyx/gui/trainer/pages/summary.py:315
-msgid "Failed"
-msgstr "Falló"
 
 #: src/polyx/gui/trainer/pages/export.py:68
 msgid "Export model"
@@ -5023,6 +5027,10 @@ msgstr "Formato y opciones"
 msgid "FP16 (half precision)"
 msgstr "FP16 (half precision)"
 
+#: src/polyx/gui/trainer/pages/export.py:176
+msgid "Export finished"
+msgstr "Exportación lista"
+
 #: src/polyx/gui/trainer/pages/export.py:79
 msgid "Weights .pt:"
 msgstr "Pesos .pt:"
@@ -5032,15 +5040,11 @@ msgid "Format:"
 msgstr "Formato:"
 
 #: src/polyx/gui/trainer/pages/export.py:173
-msgid "Export finished"
-msgstr "Exportación lista"
-
-#: src/polyx/gui/trainer/pages/export.py:170
 #, python-format
 msgid "[OK] Exported: %(path)s"
 msgstr "[OK] Exportado: %(path)s"
 
-#: src/polyx/gui/trainer/pages/export.py:174
+#: src/polyx/gui/trainer/pages/export.py:177
 #, python-format
 msgid ""
 "File generated:\n"
@@ -5647,7 +5651,7 @@ msgstr "Métricas en vivo"
 msgid "Curves"
 msgstr "Curvas"
 
-#: src/polyx/gui/trainer/pages/train.py:458
+#: src/polyx/gui/trainer/pages/train.py:463
 msgid "Training failed"
 msgstr "Falló el entrenamiento"
 
@@ -5667,7 +5671,7 @@ msgstr ""
 "Corrige estos problemas antes de iniciar el entrenamiento:\n"
 "\n"
 
-#: src/polyx/gui/trainer/pages/train.py:424
+#: src/polyx/gui/trainer/pages/train.py:426
 msgid "No runs have been generated yet."
 msgstr "Aún no se han generado runs."
 
