@@ -14,6 +14,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- The per-image result carries the match the run decided (`MatchResult` with
+  the TP/FP/FN/misclassified indices) and the rule behind it (`iou_thr`, box
+  or mask IoU). The Errors page, the Results KPIs, the report's error section
+  and both threshold sweeps read that decision instead of re-matching with a
+  rule of their own; `run.json` records the rule per image/model and
+  `load_run` rebuilds the match from it. Old run folders still load.
 - The HTML report package is internal: its public surface is
   `generate_report` plus the section catalog (`SECTIONS`, `IDS_SECTIONS`,
   `PRESETS`, `anchor`), the batch precompute is a named immutable result and

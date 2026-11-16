@@ -232,6 +232,20 @@ class RunResult:
         return any(result.has_gt for results in self.results.values() for result in results)
 
     @property
+    def match_use_mask_iou(self) -> bool:
+        """Whether the run decided any image's match by mask IoU.
+
+        Masks arrive per image and per model, so this is the run-level answer
+        the Methods section states: the rule the reader needs in order to know
+        why two runs of the same folder can disagree.
+        """
+        return any(
+            result.has_gt and result.match_use_mask_iou
+            for results in self.results.values()
+            for result in results
+        )
+
+    @property
     def calibrations_by_name(self) -> dict[str, Calibration]:
         """Filename-keyed view for callers that already worked that way.
 
