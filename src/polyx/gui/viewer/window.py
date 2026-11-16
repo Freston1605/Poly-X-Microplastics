@@ -81,24 +81,28 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
     def retranslate(self) -> None:
         """Rebuild the window and re-read the state that must survive."""
-        if not i18n_qt.is_alive(self):
-            return
+        i18n_qt.rebuild_keeping_view(
+            self,
+            capture=self._capture_view_state,
+            rebuild=self._build_ui,
+            restore=self._restore_view_state,
+        )
 
-        conf = self.spin_conf.value()
+    def _capture_view_state(self) -> dict:
+        """Everything the rebuilt widgets must show again after the switch."""
+        return {
+            "conf": self.spin_conf.value(),
+            "imgsz": self.spin_imgsz.value(),
+            "gpu": self.chk_gpu.isChecked(),
+            "view": self.canvas.view_state(),
+        }
 
-        imgsz = self.spin_imgsz.value()
-
-        gpu = self.chk_gpu.isChecked()
-
-        self._build_ui()
-
+    def _restore_view_state(self, view: dict) -> None:
         marca.titular(self, "visor")
 
-        self.spin_conf.setValue(conf)
-
-        self.spin_imgsz.setValue(imgsz)
-
-        self.chk_gpu.setChecked(gpu)
+        self.spin_conf.setValue(view["conf"])
+        self.spin_imgsz.setValue(view["imgsz"])
+        self.chk_gpu.setChecked(view["gpu"])
 
         if self._model_name:
             self.lbl_model.setText(self._model_name)
@@ -106,8 +110,9 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self.nav_frame.setVisible(len(self.state.images) > 1)
 
         if self.state.current_image is not None:
-            self._on_image_loaded(self.state.current_image)
-
+            # Through the state so the new canvas receives the image too;
+            # calling the window handler alone leaves it on the placeholder.
+            self.state.image_loaded.emit(self.state.current_image)
         else:
             self._update_status_bar()
 
@@ -122,6 +127,8 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             )
 
             self._update_status_bar()
+
+        self.canvas.set_view_state(view["view"])
 
     def _build_ui(self) -> None:
 
@@ -697,7 +704,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             # exactly the case where a single pass makes the particles disappear.
 
-            plan: dict = {}
+            record: dict = {}
 
             dets = self.state.model.predict_auto(
                 str(img),
@@ -706,14 +713,14 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 device=device,
                 tiling=TilingMode.AUTO,
                 threshold_px=2000,
-                record=plan,
+                record=record,
             )
 
             self.state.detections = dets
 
             self.state.detections_changed.emit(dets)
 
-            decision = TilingDecision.from_record(plan, TilingMode.AUTO)
+            decision = TilingDecision.from_record(record, TilingMode.AUTO)
 
             if decision.tiled:
                 self._set_status(

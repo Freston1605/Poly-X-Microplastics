@@ -22,7 +22,6 @@ PAGES = [
     "polyx.gui.detector.pages.errors",
     "polyx.gui.detector.pages.compare",
     "polyx.gui.detector.pages.report",
-    "polyx.gui.detector.recargar_gt",
     "polyx.gui.detector.review_dialog",
 ]
 

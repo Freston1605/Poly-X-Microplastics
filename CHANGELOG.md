@@ -17,9 +17,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Tiling has one owner: `polyx.core.detect.tiling` holds the decision
   (`decide_tiling`), the typed plan and the one sentence each image's plan is
   phrased with. The mode is English at every boundary (`auto`/`always`/`never`);
-  a saved `"siempre"`/`"nunca"` still loads, the CLI keeps those as hidden
+  a saved legacy spelling still loads, the CLI keeps those as hidden
   deprecated aliases, and `run.json` now records `tiling_plan` per image/model
   while keeping the legacy `tiling` string for old readers.
+- Re-reading the ground truth of a finished run now goes through the
+  detection-run engine (`reload_ground_truth` in
+  `core/detection_run/reload.py`) instead of a GUI copy of the sequence. The
+  reload measures with the run's own shape path, sizes each label with that
+  photo's recorded calibration, matches with the run's own rule (mask IoU when
+  the run did) and records that rule next to the new counts. It republishes the
+  affected images in `run.json`, so the reloaded views and the run record can no
+  longer disagree. `gui/detector/recargar_gt.py` is gone; the Results page is a
+  progress dialog and one call.
 - Model aliases are stable run-folder keys, separate from the label the
   interface shows: the GUI writes `model_1`/`model_2`, the CLI writes the
   weights stem unless `--alias` names one, and `run.json` records
