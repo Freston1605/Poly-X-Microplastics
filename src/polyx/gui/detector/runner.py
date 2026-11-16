@@ -131,7 +131,6 @@ class DetectorRunner(QThread):
         state = self.state
         state.run_result = result
         state.run_dir = result.run_dir
-        state.calibrations = dict(result.calibrations_by_name)
         for dense_idx, rows in result.results.items():
             published = state.results.setdefault(self._active_indices[dense_idx], [])
             for row in rows:
@@ -201,7 +200,6 @@ class DetectorRunner(QThread):
             self._load_models(slots, _log)
 
             state.results = {i: [] for i in range(len(state.model_slots))}
-            state.calibrations = {}
             state.run_result = None
             state.verdicts = {}
             config = self._build_config(state, slots, state.run_dir)

@@ -26,6 +26,8 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from polyx.core.detect.yolo import Detection  # noqa: E402
+from polyx.core.detection_run import RunResult  # noqa: E402
+from polyx.core.measure.calibration import ORIGIN_MANUAL, Calibration  # noqa: E402
 from polyx.gui.detector.runner import DetectorRunner  # noqa: E402
 from polyx.gui.detector.state import DetectorState  # noqa: E402
 
@@ -156,8 +158,42 @@ def test_run_one_image_produces_result_files_and_progress(qapp, tmp_path):
     assert events["progress"] == [(1, 1, "plate1.png")]
     assert events["image"][-1][0] == 0
 
-    # The scale of the photo is registered for the report.
-    assert state.calibrations["plate1.png"].um_por_px == 2.0
+    # The scale of the photo is registered for the report and read through the run.
+    calibration = state.calibration_for(path)
+    assert calibration is not None
+    assert calibration.um_por_px == 2.0
+    assert not hasattr(state, "calibrations"), "the name-keyed copy is gone"
+
+
+def test_the_state_reads_scales_through_the_run_and_rejects_ambiguity(qapp, tmp_path):
+    """Same basename in two folders: each path gets its own scale, a third blank."""
+    first = tmp_path / "tramo_a" / "plate.png"
+    second = tmp_path / "tramo_b" / "plate.png"
+    state = DetectorState()
+    state.run_result = RunResult(
+        run_dir=tmp_path / "run",
+        calibrations={
+            first: Calibration(um_por_px=2.0, origin=ORIGIN_MANUAL),
+            second: Calibration(um_por_px=3.0, origin=ORIGIN_MANUAL),
+        },
+    )
+
+    assert state.calibration_for(first).um_por_px == 2.0
+    assert state.calibration_for(second).um_por_px == 3.0
+    assert state.calibration_for(tmp_path / "tramo_c" / "plate.png") is None
+
+
+def test_the_detector_package_does_not_use_the_name_keyed_calibration_view():
+    """A grep gate: the GUI asks the run, not a filename dictionary (#123)."""
+    package = Path(__file__).resolve().parents[1] / "src" / "polyx" / "gui" / "detector"
+    offenders = [
+        str(path)
+        for path in sorted(package.rglob("*.py"))
+        if "calibrations_by_name" in path.read_text(encoding="utf-8")
+        or "state.calibrations" in path.read_text(encoding="utf-8")
+    ]
+
+    assert offenders == []
 
 
 def test_a_completed_run_lists_each_result_once(qapp, tmp_path):
