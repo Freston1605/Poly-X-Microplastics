@@ -242,30 +242,36 @@ def test_core_exposes_the_canonical_engine_and_not_the_old_batch():
     assert core.load_run is detection_run.load_run
 
 
-def test_the_old_headless_writer_is_deleted_and_run_state_is_only_a_shim():
-    """No dead second engine survives; the old name only delegates to core."""
+def test_the_old_headless_writer_is_deleted_and_the_legacy_reader_is_single():
+    """No dead second engine and no second name for the legacy reader."""
     source = Path(__file__).resolve().parents[1] / "src" / "polyx"
     assert not (source / "core" / "detection_run" / "legacy.py").exists()
+    assert not (source / "gui" / "detector" / "run_state.py").exists()
+    texts = {path: path.read_text(encoding="utf-8") for path in source.rglob("*.py")}
     offenders = [
-        str(path.relative_to(source))
-        for path in source.rglob("*.py")
-        if "run_batch" in path.read_text(encoding="utf-8")
+        str(path.relative_to(source)) for path, text in texts.items() if "run_batch" in text
     ]
     assert offenders == []
-    shim = source / "gui" / "detector" / "run_state.py"
-    assert shim.is_file()
-    text = shim.read_text(encoding="utf-8")
-    assert "load_legacy_run" in text
-    assert "from polyx.gui.detector.state" not in text
-    assert "class DetectorState" not in text
+    # The legacy reader has one definition and no compatibility re-export.
+    definers = [
+        str(path.relative_to(source))
+        for path, text in texts.items()
+        if "def load_legacy_run" in text
+    ]
+    assert definers == ["core/detection_run/legacy_reader.py"]
+    second_names = [
+        str(path.relative_to(source))
+        for path, text in texts.items()
+        if "build_state_from_run" in text
+    ]
+    assert second_names == []
 
 
-def test_run_state_build_state_from_run_delegates_to_the_core_loader():
-    """The compatibility name returns the canonical RunResult, not Qt state."""
-    from polyx.core.detection_run import RunResult
-    from polyx.gui.detector.run_state import build_state_from_run
+def test_load_legacy_run_resolves_predictions_against_the_image_dir():
+    """The core reader is the only seam; it returns the canonical RunResult."""
+    from polyx.core.detection_run import RunResult, load_legacy_run
 
-    run = build_state_from_run(HEADLESS_RUN, HEADLESS_PHOTOS)
+    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
 
     assert isinstance(run, RunResult)
     assert run.run_dir == HEADLESS_RUN

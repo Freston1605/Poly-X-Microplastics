@@ -56,10 +56,9 @@ their per-model `labels/*.txt` and stay readable in the Viewer. The compact
 report keeps its `summary.json`/`centroids.csv` fallback.
 
 `run_batch` and the old headless writer are deleted. The old GUI
-`run_state` loader no longer rebuilds a `DetectorState`: a thin compatibility
-module keeps the `build_state_from_run` name and delegates to
-`load_legacy_run`, returning the same `RunResult` the report consumes.
-`polyx.core` exposes the canonical engine surface only.
+`run_state` loader is deleted too: it rebuilt a `DetectorState` that nothing
+reads any more, and its compatibility name only delegated to
+`load_legacy_run`. `polyx.core` exposes the canonical engine surface only.
 
 ## Considered options
 
