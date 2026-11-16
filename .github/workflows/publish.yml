@@ -1,7 +1,8 @@
 # Publishing to PyPI through Trusted Publishing (OIDC): there is no token to
 # leak or rotate. Triggered by a `v*` tag (e.g. `git tag v2.0.0 && git push
-# --tags`) or manually from the Actions UI, which is a dry run: it runs the
-# gate and builds the distributions but uploads nothing.
+# --tags`) or manually from the Actions UI. A manual run is a rehearsal: it
+# runs the whole CI workflow — gate, suite, wheel build and the installed-wheel
+# smoke — then builds the distributions and uploads nothing to PyPI.
 #
 # Before the first run, create the project on PyPI and register this
 # repository as a publisher (Settings -> Publishing -> Add a new publisher)
@@ -23,15 +24,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The same gate every PR runs. A tag on a red commit can no longer reach
-  # PyPI, where a version number is spent forever.
-  gate:
+  # The same workflow every PR runs, so a tag on a red commit cannot reach
+  # PyPI, where a version number is spent forever. Named `ci`, not `gate`:
+  # "gate" is the local check runner inside that workflow (the `quality` job),
+  # and one word should not name two jobs.
+  ci:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
 
   build:
-    needs: gate
+    needs: ci
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
