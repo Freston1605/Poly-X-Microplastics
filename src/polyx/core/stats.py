@@ -6,8 +6,8 @@ import math
 
 import numpy as np
 
+from polyx.core.detection_run.operating_point import Criterion, score
 from polyx.core.i18n import N_, _
-from polyx.core.quality.metrics import match_image
 
 _TABLE_T95 = {
     1: 12.706,
@@ -270,7 +270,7 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
     return name_2.lower() if lowercase else name_2
 
 
-def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
+def _sweep_confidence(results_2, models, conf_current: float):
     """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
 
     This is the hypothetical sweep, not the run's decision: it answers "what
@@ -282,8 +282,10 @@ def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
     detections were never computed. That is why the sweep starts at the
     threshold used and states that limitation.
 
-    Each image keeps the matching rule the run recorded for it, so the sweep
-    differs from the run only in its threshold, never in its mask rule.
+    The figures are the operating-point module's, under the with-class
+    criterion: each image keeps the matching rule the run recorded for it, so
+    the sweep differs from the run only in its threshold, never in its mask
+    rule or in how it divides the counters.
 
     Returns {alias: [(conf, precision, recall, f1, n_det), ...]}.
     """
@@ -295,19 +297,8 @@ def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
             continue
         rows_2 = []
         for u in thresholds:
-            tp = fp = fn = mc = nd = 0
-            for r in rs:
-                preds = [p for p in r.predictions if p.conf >= u]
-                nd += len(preds)
-                m = match_image(preds, r.gt, iou_thr=iou_thr, use_mask_iou=r.match_use_mask_iou)
-                tp += m.tp
-                fp += m.fp
-                fn += m.fn
-                mc += m.miscls
-            # Strict: misclassification penalizes on both sides.
-            p = tp / (tp + fp + mc) if (tp + fp + mc) else 0.0
-            rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
-            f1 = 2 * p * rec / (p + rec) if (p + rec) else 0.0
-            rows_2.append((u, p, rec, f1, nd))
+            measured = score(rs, Criterion.WITH_CLASS, u)
+            n_det = sum(1 for r in rs for p in r.predictions if p.conf >= u)
+            rows_2.append((u, measured.precision, measured.recall, measured.f1, n_det))
         output_2[model.alias] = rows_2
     return output_2
