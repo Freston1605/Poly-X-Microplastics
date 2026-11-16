@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 18:45-0300\n"
+"POT-Creation-Date: 2026-11-16 19:17-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1034,7 +1034,7 @@ msgstr "Predicciones: %(count)d"
 msgid "·  %(verdict)s"
 msgstr "·  %(verdict)s"
 
-#: src/polyx/gui/detector/pages/results.py:603 src/polyx/gui/detector/review_dialog.py:294
+#: src/polyx/gui/detector/pages/results.py:607 src/polyx/gui/detector/review_dialog.py:294
 #: src/polyx/gui/viewer/window.py:868 src/polyx/gui/viewer/window.py:928
 msgid "Error"
 msgstr "Error"
@@ -1102,11 +1102,11 @@ msgstr "✓ Buena"
 msgid "✗ Bad"
 msgstr "✗ Mala"
 
-#: src/polyx/gui/detector/runner.py:191
+#: src/polyx/gui/detector/runner.py:190
 msgid "No models loaded."
 msgstr "No hay modelos cargados."
 
-#: src/polyx/gui/detector/runner.py:194
+#: src/polyx/gui/detector/runner.py:193
 msgid "No images selected."
 msgstr "No hay imágenes seleccionadas."
 
@@ -2515,11 +2515,11 @@ msgstr "Cancelar"
 msgid "Reload GT"
 msgstr "Recargar GT"
 
-#: src/polyx/gui/detector/pages/results.py:593
+#: src/polyx/gui/detector/pages/results.py:597
 msgid "Export CSV"
 msgstr "Exportar CSV"
 
-#: src/polyx/gui/detector/pages/results.py:593
+#: src/polyx/gui/detector/pages/results.py:597
 msgid "CSV (*.csv)"
 msgstr "CSV (*.csv)"
 
@@ -2567,29 +2567,29 @@ msgstr ""
 msgid "Cancelled halfway: press again to finish."
 msgstr "Se canceló a mitad: vuelve a pulsar para terminar."
 
-#: src/polyx/gui/detector/pages/results.py:555 src/polyx/gui/report/figures.py:236
+#: src/polyx/gui/detector/pages/results.py:560 src/polyx/gui/report/figures.py:236
 msgid "Equivalent diameter (μm)"
 msgstr "Diámetro equivalente (μm)"
 
-#: src/polyx/gui/detector/pages/results.py:556 src/polyx/gui/report/figures.py:225
+#: src/polyx/gui/detector/pages/results.py:561 src/polyx/gui/report/figures.py:225
 #: src/polyx/gui/report/figures.py:237
 msgid "Frequency"
 msgstr "Frecuencia"
 
-#: src/polyx/gui/detector/pages/results.py:557
+#: src/polyx/gui/detector/pages/results.py:562
 msgid "Size distribution by class"
 msgstr "Distribución de tamaños por clase"
 
-#: src/polyx/gui/detector/pages/results.py:627 src/polyx/gui/detector/pages/results.py:644
-#: src/polyx/gui/detector/pages/results.py:651
+#: src/polyx/gui/detector/pages/results.py:631 src/polyx/gui/detector/pages/results.py:648
+#: src/polyx/gui/detector/pages/results.py:655
 msgid "Review"
 msgstr "Revisar"
 
-#: src/polyx/gui/detector/pages/results.py:627
+#: src/polyx/gui/detector/pages/results.py:631
 msgid "Select a row from the table below first."
 msgstr "Selecciona primero una fila de la tabla de abajo."
 
-#: src/polyx/gui/detector/pages/results.py:644
+#: src/polyx/gui/detector/pages/results.py:648
 msgid "That image has no detections to review."
 msgstr "Esa imagen no tiene detecciones que revisar."
 
@@ -2656,17 +2656,17 @@ msgstr ""
 msgid "➜ Confidence %(threshold)g is already a good operating point. You can generate the report."
 msgstr "➜ La confianza %(threshold)g ya es el punto de operación bueno. Puedes generar el informe."
 
-#: src/polyx/gui/detector/pages/results.py:566 src/polyx/gui/trainer/pages/train.py:106
+#: src/polyx/gui/detector/pages/results.py:571 src/polyx/gui/trainer/pages/train.py:106
 #, python-format
 msgid "matplotlib is not available: %(error)s"
 msgstr "matplotlib no disponible: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:603
+#: src/polyx/gui/detector/pages/results.py:607
 #, python-format
 msgid "Could not save: %(error)s"
 msgstr "No se pudo guardar: %(error)s"
 
-#: src/polyx/gui/detector/pages/results.py:651
+#: src/polyx/gui/detector/pages/results.py:655
 #, python-format
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
