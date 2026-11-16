@@ -409,9 +409,13 @@ falls back silently, because the user never asked for a language.
 `polyx.gui.i18n_qt` owns Qt's own catalogs and the `LanguageChange` broadcast.
 `i18n.set_language(tag)` swaps the active catalog and notifies the Qt bridge;
 every top-level window owns a `retranslate()` that rebuilds its text. The
-modules are separate processes, so the shared preferences file is also the
-cross-process channel: a `QFileSystemWatcher` in every process applies a locale
-another process saved.
+rebuild is queued through `i18n_qt.schedule_retranslate`, which checks the
+window is still alive *before* resolving its `retranslate`: a window closed
+between the event and the queued call is a no-op instead of a touch on a
+destroyed C++ object. Each window keeps its own `retranslate` and its own
+liveness guard. The modules are separate processes, so the shared preferences
+file is also the cross-process channel: a `QFileSystemWatcher` in every process
+applies a locale another process saved.
 
 Three rules keep that channel from feeding itself:
 

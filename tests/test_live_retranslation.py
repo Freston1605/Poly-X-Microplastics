@@ -135,6 +135,52 @@ def test_launcher_retranslates_without_restart(qapp):
     window.deleteLater()
 
 
+# ── A window that closes mid-change ──────────────────────────────────
+def test_destroying_a_window_before_its_queued_rebuild_survives_the_pump(qapp, capfd):
+    """A language event must outlive the window it reached without a crash.
+
+    The rebuild is queued, so the window can be gone by the time it runs.
+    This case destroys one window between the event and the rebuild, flushes
+    the destruction by hand (no wall-clock race decides the outcome) and
+    then pumps: the process must survive, nothing may be written to stderr,
+    and the other window must still show the new language.
+
+    The aborted CI run (43793135897, job 133055865448) could not be
+    reproduced deterministically on PySide6 6.7.2 when this case was added:
+    the per-window ``is_alive`` guard already returned before a destroyed
+    window touched Qt, and an unguarded rebuild printed a ``RuntimeError``
+    instead of aborting. The case guards the contract; it does not reproduce
+    that signal.
+    """
+    import shiboken6
+
+    from polyx.core import i18n
+    from polyx.gui import i18n_qt
+    from polyx.gui.launcher import LauncherWindow
+
+    i18n.set_language("es")
+    i18n_qt.activate()
+    doomed = LauncherWindow()
+    survivor = LauncherWindow()
+    assert doomed.btn_prefs.text() == "Preferencias"
+    assert survivor.btn_prefs.text() == "Preferencias"
+
+    # Synchronous: both windows queue their rebuild during this call.
+    i18n.set_language("en")
+
+    doomed.deleteLater()
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert not shiboken6.isValid(doomed)
+
+    capfd.readouterr()  # Ignore anything written before the race.
+    assert _pump_until(qapp, lambda: survivor.btn_prefs.text() == "Preferences", timeout_ms=1000)
+
+    captured = capfd.readouterr()
+    assert "Traceback" not in captured.err
+    assert "Fatal Python error" not in captured.err
+    survivor.deleteLater()
+
+
 def test_preferences_applies_immediately_and_stops_promising_a_restart(qapp):
     from polyx.core import i18n
     from polyx.gui.preferencias import PreferencesDialog
