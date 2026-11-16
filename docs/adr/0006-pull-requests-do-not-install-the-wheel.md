@@ -74,9 +74,11 @@ downloading torch through `pip`. This deliberately leads the intended move of
 distribution to uv; the project installer still uses pip.
 
 `publish.yml`'s reusable-workflow job is named `ci`: "gate" names the local
-check runner (`quality` in `ci.yml`) and nothing else. The artifact names stay
-distinct — `wheel` for pull requests, `dist` for publishing — because a
-reusable workflow shares the caller's run and names must not collide.
+check runner (`quality` in `ci.yml`) and nothing else. The distributions are
+built once, by the gate's packaging job, and uploaded as one artifact that the
+release path downloads rather than rebuilding. A wheel is a zip whose entries
+carry timestamps, so two builds of one commit are not byte-identical: a second
+build would publish files the smoke never touched.
 
 ## Considered options
 

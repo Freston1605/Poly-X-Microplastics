@@ -205,13 +205,15 @@ jobs:
           /tmp/smoke/bin/python -c "import polyx.gui.launcher; print('gui launcher imports OK')"
 
       # The wheel a PR produced is now downloadable from the run page, so a
-      # reviewer can test it without rebuilding. `wheel`, not `dist`: the
-      # publish workflow uploads its own `dist` in the same run when it calls
-      # this workflow, and artifact names must not collide.
+      # reviewer can test it without rebuilding. The release path consumes this
+      # same artifact instead of building its own: a wheel is a zip whose
+      # entries carry timestamps, so two builds of one commit are not
+      # byte-identical, and the smoke above would then prove a file that never
+      # ships (ADR-0006).
       - name: Upload the built wheel and sdist
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wheel
+          name: dist
           path: dist/*
           retention-days: 7
           if-no-files-found: error

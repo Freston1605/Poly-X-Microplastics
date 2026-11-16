@@ -21,7 +21,7 @@ that would have fixed it.
 
 | Switch | Value | Where |
 | --- | --- | --- |
-| Ruleset `Protect release tags` | `creation` and `deletion` of `refs/tags/v*`, bypass for admin and maintain | Repository → Rules → Rulesets |
+| Ruleset `Protect release tags` | `creation`, `update` and `deletion` of `refs/tags/v*`, bypass for admin and maintain | Repository → Rules → Rulesets |
 | Require actions to be pinned to a full-length commit SHA | on | Settings → Actions → General |
 | Private vulnerability reporting | on | Settings → Code security |
 | Dependabot alerts | on | Settings → Code security |
@@ -47,13 +47,19 @@ maintainer-only.
 | Target | `tag` |
 | Enforcement | `active` |
 | Conditions | `ref_name.include = ["refs/tags/v*"]` |
-| Rules | `creation`, `deletion` |
+| Rules | `creation`, `update`, `deletion` |
 | Bypass | `RepositoryRole` 2 (maintain), 5 (admin), mode `always` |
 
 GitHub's model is inverted with respect to the wording: a rule applies to
 **everyone except** the bypass list. So "only maintainers can create a tag"
 is the `creation` rule plus an admin/maintain bypass — not "allow maintainers"
 plus an empty list, which would let anyone tag.
+
+`update` is not decoration. Without it a tag can be force-moved to another
+commit after the fact, so the release record stops matching the code it names;
+with it, the only way to retarget a release is to delete the tag and create it
+again, which the same ruleset refuses to non-maintainers. `creation` and
+`deletion` alone leave that door open.
 
 ```bash
 gh api repos/Freston1605/Poly-X-Microplastics/rulesets \
@@ -80,7 +86,7 @@ gh api --method POST \
   "target": "tag",
   "enforcement": "active",
   "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
-  "rules": [{"type": "creation"}, {"type": "deletion"}],
+  "rules": [{"type": "creation"}, {"type": "update"}, {"type": "deletion"}],
   "bypass_actors": [
     {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"},
     {"actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "always"}

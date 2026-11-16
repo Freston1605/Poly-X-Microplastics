@@ -1,8 +1,9 @@
 # Publishing to PyPI through Trusted Publishing (OIDC): there is no token to
 # leak or rotate. Triggered by a `v*` tag (e.g. `git tag v2.0.0 && git push
 # --tags`) or manually from the Actions UI. A manual run is a rehearsal: it
-# runs the whole CI workflow — gate, suite, wheel build and the installed-wheel
-# smoke — then builds the distributions and uploads nothing to PyPI.
+# runs the whole CI workflow — gate, suite, wheel build and, since the event is
+# not a pull request, the installed-wheel smoke — then reuses the distributions
+# that run produced and uploads nothing to PyPI.
 #
 # Before the first run, create the project on PyPI and register this
 # repository as a publisher (Settings -> Publishing -> Add a new publisher)
@@ -36,18 +37,8 @@ jobs:
   build:
     needs: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.11'
-
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-
       # PyPI only accepts a commit that main already carries. `compare` reports
       # the head relative to main: `identical` is the main tip, `behind` is an
       # older commit main already has (both are on main), while `ahead` is a
@@ -65,11 +56,17 @@ jobs:
             *) echo "::error::Tag commit is not on main (compare status: ${status})."; exit 1 ;;
           esac
 
-      - name: Build sdist and wheel
-        run: uv build --out-dir dist
+      # The gate built these files, and on a tag it also installed and ran them.
+      # Building again here would ship a different zip — wheel entries carry
+      # timestamps — so the smoke would prove an artifact that never reaches
+      # PyPI. Consume the proven one instead (ADR-0006).
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
 
       # The tag names the release; the wheel carries the version that PyPI
-      # reserves. Compare the built artifact, not the source: it is what ships.
+      # reserves. Compare the shipped artifact, not the source.
       - name: Built version matches the tag
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -78,14 +75,6 @@ jobs:
           tag="${GITHUB_REF_NAME#v}"
           echo "tag=${tag} wheel=${version}"
           test "${tag}" = "${version}"
-
-      - name: Upload the distributions
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: dist
-          path: dist/*
-          retention-days: 7
-          if-no-files-found: error
 
   publish:
     needs: build
