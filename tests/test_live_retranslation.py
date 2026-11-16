@@ -10,6 +10,7 @@ there afterwards. They never look inside the catalog: the seam is
 from __future__ import annotations
 
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -18,7 +19,7 @@ import pytest
 # Offscreen before any Qt import.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication, QEvent
+from PySide6.QtCore import QCoreApplication, QEvent, QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QLabel,
@@ -359,6 +360,244 @@ def test_destroying_a_trainer_window_while_a_probe_runs_survives(
         lambda: all(ref() is None or ref().isFinished() for ref in probes),
         what="the trainer hardware probes to finish",
     )
+
+
+class _BlockingRunner(QThread):
+    """A TrainerRunner stand-in whose thread runs until the case releases it."""
+
+    epoch_metrics = Signal(object)
+    log_line = Signal(str)
+    progress = Signal(int, int)
+    finished_ok = Signal(str)
+    aborted = Signal()
+    failed = Signal(str)
+
+    def __init__(self, state, parent=None):
+        super().__init__(parent)
+        self.state = state
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def run(self):
+        self.started.set()
+        self.release.wait(10)
+
+
+def test_closing_the_trainer_window_during_a_run_keeps_the_runner_alive(qapp, monkeypatch, capfd):
+    """Closing the Trainer must not drop the only reference to a running runner.
+
+    The page owns the runner in the normal case, so closing the window would
+    destroy the page and the QThread with it. The lifetime registry owns it
+    until ``finished`` instead. Late progress and completion signals must also
+    miss the destroyed page and window: those handlers are bound slots now.
+    """
+    import gc
+    import weakref
+
+    from polyx.gui.trainer.pages import train as train_module
+    from polyx.gui.trainer.pages.parameters import ParametersPage
+    from polyx.gui.trainer.pages.train import TrainPage
+    from polyx.gui.trainer.window import TrainerWindow
+
+    # The hardware probes have their own close-during-probe case. Do not let
+    # their timers start threads here; this case isolates the runner.
+    monkeypatch.setattr(TrainPage, "_refresh_hw", lambda self: None)
+    monkeypatch.setattr(ParametersPage, "_detect_gpu", lambda self: None)
+    monkeypatch.setattr(train_module, "validate_training_config", lambda state: (True, []))
+    monkeypatch.setattr(train_module, "TrainerRunner", _BlockingRunner)
+
+    window = TrainerWindow()
+    page = next(
+        window.stack.widget(index).widget()
+        for index in range(window.stack.count())
+        if isinstance(window.stack.widget(index).widget(), TrainPage)
+    )
+    page._start()
+    runner = page.runner
+    assert isinstance(runner, _BlockingRunner)
+    _wait_until(qapp, runner.started.is_set, what="the training runner to start")
+
+    state = page.state
+    release = runner.release
+    runner_ref = weakref.ref(runner)
+    del runner
+
+    try:
+        window.close()
+        window.deleteLater()
+        qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        qapp.processEvents()
+        del page
+        del window
+        gc.collect()
+        qapp.processEvents()
+
+        kept = runner_ref()
+        assert kept is not None, "the runner died with the page that started it"
+        assert kept.isRunning(), "the runner stopped when the window closed"
+
+        # The window is gone; a late result must not reach it or its page.
+        kept.progress.emit(1, 10)
+        state.train_finished.emit("best.pt")
+        qapp.processEvents()
+    finally:
+        release.set()
+        _wait_until(
+            qapp,
+            lambda: (ref := runner_ref()) is None or ref.isFinished(),
+            what="the training runner to finish",
+        )
+        qapp.processEvents()
+
+    captured = capfd.readouterr()
+    assert "Traceback" not in captured.err
+    assert "QThread: Destroyed" not in captured.err
+    assert "Fatal Python error" not in captured.err
+
+
+class _BlockingEvalWorker(QThread):
+    log_line = Signal(str)
+    metrics_ready = Signal(dict)
+    failed = Signal(str)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def run(self):
+        self.started.set()
+        self.release.wait(10)
+
+
+def test_a_late_worker_failure_after_page_destruction_is_a_no_op(
+    qapp, tmp_path, monkeypatch, capfd
+):
+    """A failure dialog must not be raised by a page that no longer exists."""
+    import gc
+    import weakref
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from polyx.gui.trainer.pages import evaluate as evaluate_module
+    from polyx.gui.trainer.pages.evaluate import EvaluatePage
+    from polyx.gui.trainer.state import TrainerState
+
+    dialogs: list[str] = []
+    monkeypatch.setattr(QMessageBox, "critical", lambda *_args: dialogs.append("critical"))
+    monkeypatch.setattr(evaluate_module, "_EvalWorker", _BlockingEvalWorker)
+
+    weights = tmp_path / "model.pt"
+    weights.write_bytes(b"x")
+    data = tmp_path / "data.yaml"
+    data.write_text("path: .\n", encoding="utf-8")
+    page = EvaluatePage(TrainerState())
+    page.ed_w.setText(str(weights))
+    page.ed_y.setText(str(data))
+    page._run()
+    worker = page.worker
+    assert isinstance(worker, _BlockingEvalWorker)
+    _wait_until(qapp, worker.started.is_set, what="the evaluate worker to start")
+
+    release = worker.release
+    worker_ref = weakref.ref(worker)
+    del worker
+
+    try:
+        page.deleteLater()
+        qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        qapp.processEvents()
+        del page
+        gc.collect()
+        qapp.processEvents()
+
+        kept = worker_ref()
+        assert kept is not None, "the registry dropped a worker that is still running"
+        kept.failed.emit("boom")
+        qapp.processEvents()
+        assert dialogs == [], "a destroyed page received a late failure dialog"
+    finally:
+        release.set()
+        _wait_until(
+            qapp,
+            lambda: (ref := worker_ref()) is None or ref.isFinished(),
+            what="the evaluate worker to finish",
+        )
+        qapp.processEvents()
+
+    captured = capfd.readouterr()
+    assert "Traceback" not in captured.err
+
+
+class _BlockingExportWorker(QThread):
+    log_line = Signal(str)
+    finished_ok = Signal(str)
+    failed = Signal(str)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def run(self):
+        self.started.set()
+        self.release.wait(10)
+
+
+def test_a_late_export_result_after_page_destruction_is_a_no_op(qapp, tmp_path, monkeypatch, capfd):
+    """Neither an export result nor its failure may touch a destroyed page."""
+    import gc
+    import weakref
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from polyx.gui.trainer.pages import export as export_module
+    from polyx.gui.trainer.pages.export import ExportPage
+    from polyx.gui.trainer.state import TrainerState
+
+    dialogs: list[str] = []
+    monkeypatch.setattr(QMessageBox, "information", lambda *_args: dialogs.append("information"))
+    monkeypatch.setattr(QMessageBox, "critical", lambda *_args: dialogs.append("critical"))
+    monkeypatch.setattr(export_module, "_ExportWorker", _BlockingExportWorker)
+
+    weights = tmp_path / "model.pt"
+    weights.write_bytes(b"x")
+    page = ExportPage(TrainerState())
+    page.ed_w.setText(str(weights))
+    page._run()
+    worker = page.worker
+    assert isinstance(worker, _BlockingExportWorker)
+    _wait_until(qapp, worker.started.is_set, what="the export worker to start")
+
+    release = worker.release
+    worker_ref = weakref.ref(worker)
+    del worker
+
+    try:
+        page.deleteLater()
+        qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        qapp.processEvents()
+        del page
+        gc.collect()
+        qapp.processEvents()
+
+        kept = worker_ref()
+        assert kept is not None, "the registry dropped a worker that is still running"
+        kept.finished_ok.emit(str(tmp_path / "exported.pt"))
+        kept.failed.emit("boom")
+        qapp.processEvents()
+        assert dialogs == [], "a destroyed page received a late export result"
+    finally:
+        release.set()
+        _wait_until(
+            qapp,
+            lambda: (ref := worker_ref()) is None or ref.isFinished(),
+            what="the export worker to finish",
+        )
+        qapp.processEvents()
+
+    captured = capfd.readouterr()
+    assert "Traceback" not in captured.err
 
 
 def test_trainer_retranslates_and_keeps_loaded_state(qapp, tmp_path):

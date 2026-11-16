@@ -397,11 +397,13 @@ class TrainPage(TrainerPage):
         self.runner = TrainerRunner(self.state)
         self.runner.epoch_metrics.connect(self.state.train_epoch.emit)
         self.runner.log_line.connect(self.state.train_log.emit)
-        self.runner.progress.connect(lambda ep, tot: self.progress.setValue(ep))
+        self.runner.progress.connect(self._on_progress)
         self.runner.finished_ok.connect(self.state.train_finished.emit)
         self.runner.aborted.connect(self.state.train_aborted.emit)
         self.runner.failed.connect(self.state.train_failed.emit)
-        self.runner.start()
+        # The window can be closed mid-run; the registry, not this page, owns
+        # the thread until it finishes.
+        keep_thread_alive(self.runner)
 
     def _stop(self):
         if not self.state.is_running():
@@ -439,6 +441,9 @@ class TrainPage(TrainerPage):
 
     def _on_log(self, line: str):
         self.log.appendPlainText(line)
+
+    def _on_progress(self, epoch: int, _total: int):
+        self.progress.setValue(epoch)
 
     def _on_finished_ok(self, best: str):
         self.state.set_running(False)

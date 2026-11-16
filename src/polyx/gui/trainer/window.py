@@ -89,14 +89,28 @@ class TrainerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._build_ui()
 
         # Status according to training state. Connected once: a language
-        # change rebuilds the widgets, not the window object.
-        self.state.train_started.connect(lambda: self._set_status(_("● Training…"), T.ACCENT))
-        self.state.train_finished.connect(lambda _unused: self._set_status(_("● Finished"), T.OK))
-        self.state.train_aborted.connect(lambda: self._set_status(_("● Stopped"), T.WARN))
-        self.state.train_failed.connect(lambda _unused: self._set_status(_("● Error"), T.ERR))
-        self.state.train_finished.connect(lambda _unused: self._apply_pending_retranslation())
-        self.state.train_aborted.connect(self._apply_pending_retranslation)
-        self.state.train_failed.connect(lambda _unused: self._apply_pending_retranslation())
+        # change rebuilds the widgets, not the window object. These are bound
+        # slots, not lambdas: the runner outlives a closed window while it
+        # keeps the state alive, and Qt must disconnect them with the window.
+        self.state.train_started.connect(self._on_training_started)
+        self.state.train_finished.connect(self._on_training_finished)
+        self.state.train_aborted.connect(self._on_training_aborted)
+        self.state.train_failed.connect(self._on_training_failed)
+
+    def _on_training_started(self) -> None:
+        self._set_status(_("● Training…"), T.ACCENT)
+
+    def _on_training_finished(self, _best: str) -> None:
+        self._set_status(_("● Finished"), T.OK)
+        self._apply_pending_retranslation()
+
+    def _on_training_aborted(self) -> None:
+        self._set_status(_("● Stopped"), T.WARN)
+        self._apply_pending_retranslation()
+
+    def _on_training_failed(self, _message: str) -> None:
+        self._set_status(_("● Error"), T.ERR)
+        self._apply_pending_retranslation()
 
     # ── Language ───────────────────────────────────────────────
     def retranslate(self) -> None:
