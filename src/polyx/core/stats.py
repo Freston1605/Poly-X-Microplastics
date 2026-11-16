@@ -273,12 +273,17 @@ def _morphotype(value: str | None, lowercase: bool = False) -> str:
 def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
     """Recomputes P/R/F1 at different confidence thresholds, without re-inferring.
 
-    ``models`` is the run's active model list in dense engine order (the
-    canonical ``RunResult.models``); ``results_2`` is keyed by those same
-    indices. The saved predictions already passed the threshold the run used,
-    so raising it is just filtering and re-pairing. Lowering it is NOT
-    possible: those detections were never computed. That is why the sweep
-    starts at the threshold used and states that limitation.
+    This is the hypothetical sweep, not the run's decision: it answers "what
+    if only the boxes above this confidence had counted". ``models`` is the
+    run's active model list in dense engine order (the canonical
+    ``RunResult.models``); ``results_2`` is keyed by those same indices. The
+    saved predictions already passed the threshold the run used, so raising it
+    is just filtering and re-pairing. Lowering it is NOT possible: those
+    detections were never computed. That is why the sweep starts at the
+    threshold used and states that limitation.
+
+    Each image keeps the matching rule the run recorded for it, so the sweep
+    differs from the run only in its threshold, never in its mask rule.
 
     Returns {alias: [(conf, precision, recall, f1, n_det), ...]}.
     """
@@ -294,7 +299,7 @@ def _sweep_confidence(results_2, models, iou_thr: float, conf_current: float):
             for r in rs:
                 preds = [p for p in r.predictions if p.conf >= u]
                 nd += len(preds)
-                m = match_image(preds, r.gt, iou_thr=iou_thr)
+                m = match_image(preds, r.gt, iou_thr=iou_thr, use_mask_iou=r.match_use_mask_iou)
                 tp += m.tp
                 fp += m.fp
                 fn += m.fn

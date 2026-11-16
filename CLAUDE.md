@@ -746,9 +746,16 @@ by real model slot and image path.
 image_path: Path
 predictions: List[Detection]
 gt: List[Detection]             # Ground truth (if present)
-tp, fp, fn, miscls: int
+tp, fp, fn, miscls: int         # serialised projection of `match`
+match: Optional[MatchResult]    # the decision the run made; None = no GT
+match_iou_thr: float            # rule behind it, recorded in run.json
+match_use_mask_iou: bool        # True when mask IoU decided it
 annotated_png: Optional[bytes]  # Annotated PNG, read from disk on demand
 ```
+`tp/fp/fn/miscls` stay so `run.json` and pre-`match` readers keep working, but
+they are the projection of `match`: a reader that needs to know *which* box
+was which reads `match` instead of matching again with a rule of its own
+(box IoU on a mask-matched run shows errors the run never counted).
 
 ### `RunResult` (src/polyx/core/detection_run/result.py)
 The Qt-free record of one run. `load_run` rebuilds it from a canonical
@@ -766,17 +773,28 @@ skipped_images: List[Path]
 started_at, finished_at: Optional[datetime]
 execution: Dict[int, ModelExecution] # per-model images/detections/tiling/imgsz
 metrics: Dict[int, Dict[str, int]]   # per-model tp/fp/fn/miscls/totals
+match_use_mask_iou: bool             # property: any image matched by mask IoU
 legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
 ### `MatchResult` (src/polyx/core/quality/metrics.py)
-Prediction vs GT matching (IoU ≥ 0.5):
+Prediction vs GT matching (box or mask IoU at the run's `iou_tp`):
 ```python
 tp: int          # True Positives (correct conf and class)
 fp: int          # False Positives (no GT)
 fn: int          # False Negatives (GT without prediction)
 miscls: int      # Correctly located but wrong class
+tp_pairs: List[Tuple[int, int]]  # (pred_idx, gt_idx) per true positive
+fp_idx: List[int]                # indices into the predictions
+fn_idx: List[int]                # indices into the ground truth
+miscls_pairs: List[Tuple[int, int]]
 ```
+`run.json` records the rule (`match_iou_thr`, `match_use_mask_iou`) next to the
+four counters but not the pair lists: GT and predictions are already persisted,
+so `load_run` rebuilds the identity with one `match_image` call — and only when
+that call reproduces the stored counters. A mask-matched run reopened from disk
+cannot recompute it (masks are not persisted), so its match carries the counts
+and no indices rather than a second decision.
 
 ---
 

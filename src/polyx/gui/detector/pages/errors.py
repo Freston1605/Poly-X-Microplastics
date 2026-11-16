@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
-from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, match_image
+from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS
 from polyx.gui import theme as T
 
 from ._base import DetectorPage
@@ -107,16 +107,18 @@ class ErrorsPage(DetectorPage):
             type_code = "ALL"
         model_filter = self.combo_model.currentData()
         rows = []
-        iou_tp = state.params.iou_tp
 
         for mi, rs in state.results.items():
             if model_filter is not None and model_filter != -1 and mi != model_filter:
                 continue
             alias = state.model_slots[mi].alias
             for r in rs:
-                if not r.has_gt:
+                # The run's own decision: re-matching here would let the page
+                # apply a rule the run did not use (box IoU on a mask-matched
+                # run) and show errors that were never counted.
+                m = r.match
+                if not r.has_gt or m is None:
                     continue
-                m = match_image(r.predictions, r.gt, iou_thr=iou_tp)
                 # False Positives
                 if type_code in ("ALL", "FP"):
                     for pi in m.fp_idx:
