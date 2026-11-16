@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.i18n import N_, _, lazy
-from polyx.core.platform import IS_MAC, architecture_mac, label_devices
+from polyx.core.platform import IS_MAC, architecture_mac, device_available, label_devices
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
@@ -172,6 +172,7 @@ class ParametersPage(DetectorPage):
             )
         else:
             clue_2 = _("'0' = first GPU. 'cpu' = CPU. '0,1' = GPU 0 and 1.")
+        clue_2 = f"{clue_2} {_('Empty = the best device this machine has.')}"
         g.addWidget(_hint(clue_2), 3, 2)
 
         l1.addLayout(g)
@@ -512,7 +513,7 @@ class ParametersPage(DetectorPage):
         p.iou_nms = float(self.sb_iou_nms.value())
         p.iou_tp = float(self.sb_iou_tp.value())
         p.imgsz = int(self.sb_imgsz.value())
-        p.device = self.ed_device.text().strip() or "0"
+        p.device = self.ed_device.text().strip() or device_available()
         c = self.state.calibration
         c.um_per_px = float(self.sb_umpx.value())
         c.measure_plate = self.chk_plate.isChecked()

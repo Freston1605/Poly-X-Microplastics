@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 13:24-0300\n"
+"POT-Creation-Date: 2026-11-16 17:09-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1259,7 +1259,7 @@ msgstr ""
 msgid "Load at least one .pt model in the Models tab."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:461
+#: src/polyx/gui/detector/pages/execute.py:237 src/polyx/gui/detector/pages/parameters.py:462
 #: src/polyx/gui/labeler/window.py:140
 msgid "No images"
 msgstr ""
@@ -1590,8 +1590,8 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:142 src/polyx/gui/detector/pages/parameters.py:483
-#: src/polyx/gui/detector/pages/parameters.py:501
+#: src/polyx/gui/detector/pages/parameters.py:142 src/polyx/gui/detector/pages/parameters.py:484
+#: src/polyx/gui/detector/pages/parameters.py:502
 msgid "Detect maximum (GPU)"
 msgstr ""
 
@@ -1599,35 +1599,35 @@ msgstr ""
 msgid "'0' = first GPU. 'cpu' = CPU. '0,1' = GPU 0 and 1."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:181
+#: src/polyx/gui/detector/pages/parameters.py:182
 msgid "Automatic tiling (large photos)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:272
+#: src/polyx/gui/detector/pages/parameters.py:273
 msgid "Error analysis (when GT is available)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:296
+#: src/polyx/gui/detector/pages/parameters.py:297
 msgid "Optical calibration (particle size)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:320
+#: src/polyx/gui/detector/pages/parameters.py:321
 msgid "Measure the dish in every photo and use its scale (recommended)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:388
+#: src/polyx/gui/detector/pages/parameters.py:389
 msgid "Size filter (optional)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:412
+#: src/polyx/gui/detector/pages/parameters.py:413
 msgid "Polymer assignment (optional)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:472
+#: src/polyx/gui/detector/pages/parameters.py:473
 msgid "Testing…"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:486
+#: src/polyx/gui/detector/pages/parameters.py:487
 #, python-format
 msgid ""
 "Safe maximum for “%(model)s”: %(size)d px.\n"
@@ -1635,11 +1635,11 @@ msgid ""
 "imgsz set to %(size)d."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:497
+#: src/polyx/gui/detector/pages/parameters.py:498
 msgid "maximum imgsz"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:502
+#: src/polyx/gui/detector/pages/parameters.py:503
 msgid "Could not measure"
 msgstr ""
 
@@ -1688,7 +1688,11 @@ msgstr ""
 msgid "This is an Intel Mac: 'cpu' only. MPS requires Apple Silicon."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:184
+#: src/polyx/gui/detector/pages/parameters.py:175
+msgid "Empty = the best device this machine has."
+msgstr ""
+
+#: src/polyx/gui/detector/pages/parameters.py:185
 msgid ""
 "A full-plate photo enters the network rescaled to imgsz: at 4096 px reduced to 2080, every "
 "particle shrinks by half and disappears below the network stride. With tiling, each tile enters "
@@ -1696,104 +1700,104 @@ msgid ""
 "nothing has to be cut by hand nor the counts added up afterwards."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:193
+#: src/polyx/gui/detector/pages/parameters.py:194
 msgid "When to tile:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:199
+#: src/polyx/gui/detector/pages/parameters.py:200
 msgid "automatic"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:200
+#: src/polyx/gui/detector/pages/parameters.py:201
 msgid "always"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:201
+#: src/polyx/gui/detector/pages/parameters.py:202
 msgid "never"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:208
+#: src/polyx/gui/detector/pages/parameters.py:209
 msgid "«auto» decides on its own from the longest side of each photo."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:211
+#: src/polyx/gui/detector/pages/parameters.py:212
 msgid "Threshold (longest side, px):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:220
+#: src/polyx/gui/detector/pages/parameters.py:221
 msgid ""
 "Above this, tiling kicks in. 2000 lets the study crops (1630 px) through whole and tiles the "
 "full plates (~4096 px)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:228
+#: src/polyx/gui/detector/pages/parameters.py:229
 msgid "Tile side (px):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:237
+#: src/polyx/gui/detector/pages/parameters.py:238
 msgid ""
 "0 = automatic, min(threshold, imgsz). It should match the size of the crops the model was "
 "trained on: if the model saw particles at one scale and the tile presents them at another, "
 "recall drops."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:245
+#: src/polyx/gui/detector/pages/parameters.py:246
 msgid "Overlap between tiles:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:255
+#: src/polyx/gui/detector/pages/parameters.py:256
 msgid ""
 "0.25 = each tile overlaps a quarter of its neighbour. The overlap is what avoids losing or "
 "duplicating a particle that falls right on the seam."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:276
+#: src/polyx/gui/detector/pages/parameters.py:277
 msgid "IoU for matching True Positives:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:284
+#: src/polyx/gui/detector/pages/parameters.py:285
 msgid "COCO standard: 0.50. Stricter: 0.75."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:288
+#: src/polyx/gui/detector/pages/parameters.py:289
 msgid ""
 "True Positives: correct class + IoU ≥ threshold.  False Positives: prediction with no nearby GT."
 "  False Negatives: GT not detected.  Misclassified: high IoU but wrong class."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:300
+#: src/polyx/gui/detector/pages/parameters.py:301
 msgid "µm per pixel:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:312
+#: src/polyx/gui/detector/pages/parameters.py:313
 msgid "Fallback: used only when the dish cannot be measured. 0 = no calibration."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:330
+#: src/polyx/gui/detector/pages/parameters.py:331
 msgid "Actual dish diameter (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:338
+#: src/polyx/gui/detector/pages/parameters.py:339
 msgid "Nominal outer diameter. The Petri dish used in this study is 100 mm."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:341
+#: src/polyx/gui/detector/pages/parameters.py:342
 msgid "Dish height (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:349
+#: src/polyx/gui/detector/pages/parameters.py:350
 msgid "0 = no correction. A 100 mm Petri dish is usually 15 mm tall."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:352
+#: src/polyx/gui/detector/pages/parameters.py:353
 msgid "Camera-to-base distance (mm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:360
+#: src/polyx/gui/detector/pages/parameters.py:361
 msgid "0 = no correction. Measure to the BOTTOM of the dish, not to its rim."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:366
+#: src/polyx/gui/detector/pages/parameters.py:367
 msgid ""
 "Nothing has to be marked: the dish rim is found automatically. The radius comes from fitting a "
 "circle to the rim sampled along 720 directions, with outlier rejection; the Hough transform only"
@@ -1802,7 +1806,7 @@ msgid ""
 "when the crop was made."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:373
+#: src/polyx/gui/detector/pages/parameters.py:374
 msgid ""
 "The dish rim sits closer to the camera than the base where the particles lie, so it projects "
 "larger and the resulting scale is too small: left uncorrected, ALL sizes are underestimated. "
@@ -1810,29 +1814,29 @@ msgid ""
 " 3 %. Fill in both fields above to correct it."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:380
+#: src/polyx/gui/detector/pages/parameters.py:381
 msgid ""
 "The detector computes the area and equivalent diameter (of a circle with the same area) for "
 "every detected particle. With calibration, also in μm and μm²."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:392
+#: src/polyx/gui/detector/pages/parameters.py:393
 msgid "Min size (µm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:400
+#: src/polyx/gui/detector/pages/parameters.py:401
 msgid "Max size (µm):"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:407
+#: src/polyx/gui/detector/pages/parameters.py:408
 msgid "0 = no filter. Applies to the equivalent diameter."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:416
+#: src/polyx/gui/detector/pages/parameters.py:417
 msgid "Minimum confidence to assign:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:426
+#: src/polyx/gui/detector/pages/parameters.py:427
 msgid ""
 "0 = off. Below this value the particle is still counted, but reported as \"unassignable\" "
 "instead of being given a polymer. Nile Red responds to the polarity of its environment, not to "
@@ -1842,53 +1846,53 @@ msgid ""
 "unassigned."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:455 src/polyx/gui/labeler/window.py:256
+#: src/polyx/gui/detector/pages/parameters.py:456 src/polyx/gui/labeler/window.py:256
 #: src/polyx/gui/labeler/window.py:440 src/polyx/gui/labeler/window.py:471
 #: src/polyx/gui/viewer/window.py:288 src/polyx/gui/viewer/window.py:665
 msgid "No model"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:455
+#: src/polyx/gui/detector/pages/parameters.py:456
 msgid "Load at least one model in the Models tab."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:462
+#: src/polyx/gui/detector/pages/parameters.py:463
 msgid "Select images in the Images tab (one of them is used to measure)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:491
+#: src/polyx/gui/detector/pages/parameters.py:492
 #, python-format
 msgid ""
 "\n"
 "(At %(size)s px it ran out of memory.)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:493
+#: src/polyx/gui/detector/pages/parameters.py:494
 #, python-format
 msgid ""
 "On CPU there is no GPU memory ceiling. imgsz set to %(size)d but it will be slow. With a GPU the"
 " detector is much faster."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:542
+#: src/polyx/gui/detector/pages/parameters.py:543
 msgid "Select images to see what would be tiled."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:546
+#: src/polyx/gui/detector/pages/parameters.py:547
 msgid "Could not read the size of the first image."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:550
+#: src/polyx/gui/detector/pages/parameters.py:551
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d (tiling off)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:567
+#: src/polyx/gui/detector/pages/parameters.py:568
 #, python-format
 msgid "First image %(width)d×%(height)d px → single pass: below the %(threshold)d px threshold."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:576
+#: src/polyx/gui/detector/pages/parameters.py:577
 #, python-format
 msgid ""
 "First image %(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px with %(overlap)d%% overlap,"
@@ -1896,7 +1900,7 @@ msgid ""
 "than a single pass."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/parameters.py:475
+#: src/polyx/gui/detector/pages/parameters.py:476
 #, python-format
 msgid "⏳ Testing %(size)d px…"
 msgstr ""
