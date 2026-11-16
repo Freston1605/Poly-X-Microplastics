@@ -2,15 +2,14 @@
 
 ## What the CI does
 
-Three workflows run on **every PR** and on every push to `main`:
+Two workflows run on **every PR** and on every push to `main`:
 
-- **`ruff.yml`** — `ruff check` and `ruff format --check` over `src/`, `tests/`,
-  `tools/` and `install/`, using the ruff version locked in `uv.lock`. It
-  installs no project dependencies, so it reports in seconds instead of after
-  the gate's suite. It runs the same two commands the gate runs, no more.
-- **`pre-commit.yml`** — runs every hook in `.pre-commit-config.yaml` with
-  `pre-commit run --all-files`, so a hook you never installed locally still
-  fails the PR.
+- **`pre-commit.yml`** — the preview: it runs the hooks in
+  `.pre-commit-config.yaml` with `pre-commit run --all-files`, so a hook you
+  never installed locally still fails the PR. It skips `ruff-check` and
+  `ruff-format` (`SKIP`), because the gate owns ruff; the two ruff hooks run
+  with auto-fix (`--fix`), so in CI they would rewrite files instead of
+  reporting them. They stay in the configuration for local use.
 - **`ci.yml`** — the gate, plus the 3.12 suite and the wheel build:
   1. Checks `uv.lock` is current and smoke-tests the installer scripts before
      any dependency sync.
@@ -19,7 +18,8 @@ Three workflows run on **every PR** and on every push to `main`:
      environment (`uv sync --locked --extra gui`) on Python 3.11.
   3. Runs `python tools/check.py`: translation audit, palette rule, the full
      suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. The gate is the
-     one owner of the checks, so a check added to `tools/check.py` cannot
+     one owner of the checks — ruff included, at the version pinned in the
+     development group — so a check added to `tools/check.py` cannot
      silently miss CI. ty blocks on `src/polyx/core` + `src/polyx/cli`.
   4. Types the GUI on the same 3.11 environment as an advisory step: it
      reports and never fails the build.
@@ -102,9 +102,6 @@ python -m pytest -q          # inside the project .venv
 ## Debugging a red build
 
 1. Open the failed PR on GitHub and look at the red workflow or job:
-   - `Ruff` → run `uv run ruff check src/ tests/ tools/ install/` and
-     `uv run ruff format --check src/ tests/ tools/ install/`. Fix with
-     `ruff check --fix` / `ruff format`; do not reformat unrelated files.
    - `pre-commit` → the hook name and its diff are in the log. Run
      `uv run pre-commit run --all-files` locally; `pre-commit clean` resets a
      stale hook environment.
@@ -112,7 +109,10 @@ python -m pytest -q          # inside the project .venv
      lock is stale: run `uv lock` and commit `uv.lock`. **Do not** relax a pin:
      `numpy>=2` breaks ultralytics 8.3.40 validation (they removed `np.trapz`),
      and bumping `PySide6` can change Qt dialog behaviour. `Run the gate` prints
-     the command that failed; reproduce it with `python tools/check.py`. The
+     the command that failed; reproduce it with `python tools/check.py`. A ruff
+     failure is that step too: run `uv run ruff check src/ tests/ tools/ install/`
+     and `uv run ruff format --check src/ tests/ tools/ install/`, fix with
+     `ruff check --fix` / `ruff format`, and leave unrelated files alone. The
      `Type check (GUI)` step is advisory and never fails the build.
    - `CI` → `test` → the failing test is printed with its assertion. The suite
      is deterministic: if it passes locally it should pass in CI; if it fails
@@ -126,8 +126,10 @@ python -m pytest -q          # inside the project .venv
 ## Local pre-commit guardrails
 
 The hooks in `.pre-commit-config.yaml` run locally and in the `pre-commit`
-workflow, so a hook that fails on your machine fails the PR too. Install them
-once in the dev environment, then run them manually at any time:
+workflow, so a hook that fails on your machine fails the PR too. The two ruff
+hooks are the exception: CI skips them because the gate runs ruff, and locally
+they auto-fix (`ruff check --fix`, `ruff format`). Install them once in the dev
+environment, then run them manually at any time:
 
 ```bash
 uv sync --extra gui

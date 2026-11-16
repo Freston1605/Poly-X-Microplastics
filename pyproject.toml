@@ -55,7 +55,7 @@ dev = [
   "pre-commit",
   "pytest",
   "pytest-xdist",
-  "ruff>=0.17",
+  "ruff==0.17.2",  # the ruff-pre-commit revision, so preview and gate agree
   "ty>=0.0.9",
   "types-PyYAML",
 ]
@@ -67,7 +67,7 @@ dev = [
   "pre-commit",
   "pytest",
   "pytest-xdist",
-  "ruff>=0.17",
+  "ruff==0.17.2",  # the ruff-pre-commit revision, so preview and gate agree
   "ty>=0.0.9",
   "types-PyYAML",
 ]
