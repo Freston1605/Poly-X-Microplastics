@@ -155,6 +155,8 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
                           # dependency review, workflow lint),
                           # pre-commit.yml (preview), publish.yml (v* tag →
                           # PyPI + GitHub release; ADR-0006)
+.github/actionlint.yaml   # actionlint's one exception: publish.yml's `$/` call
+                          # (temporary; cause and removal are in the file)
 .github/dependabot.yml    # weekly action bumps; every `uses:` is SHA-pinned
 ```
 

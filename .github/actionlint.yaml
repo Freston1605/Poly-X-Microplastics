@@ -1,0 +1,16 @@
+# The single actionlint exception, and its only owner.
+#
+# publish.yml calls its gate as `$/.github/workflows/ci.yml`. GitHub accepts
+# that form on github.com only, and actionlint 1.7.12 predates it
+# (rhysd/actionlint#760), so it reads the call as a malformed `workflow-call`.
+# `paths` binds the ignore to that one file, and the pattern requires the whole
+# `$/.github/workflows/<file>.yml` shape: any other workflow, reference form or
+# message still fails.
+#
+# Delete this file with the first actionlint release that parses `$/`: the
+# message stops being produced, and a stale ignore would hide a regression in
+# the reference form.
+paths:
+  .github/workflows/publish.yml:
+    ignore:
+      - '^reusable workflow call "\$/\.github/workflows/[^"/]+\.yml" at "uses" is not following the format'
