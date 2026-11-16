@@ -25,7 +25,9 @@ this module registers it as a language-change subscriber.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 from PySide6.QtCore import (
     QCoreApplication,
@@ -55,6 +57,11 @@ class RetranslateOnLanguageChange:
     widget tree synchronously inside ``changeEvent`` is unsafe, and the
     dialog's own rebuild follows the same rule. A window destroyed before
     the queued rebuild runs is skipped by :func:`schedule_retranslate`.
+
+    Windows whose view state must survive the rebuild (loaded images, the
+    current page, zoom and scroll) express it through
+    :func:`rebuild_keeping_view`; the ones whose rebuild waits for a worker
+    run keep their own queue.
     """
 
     def changeEvent(self, event) -> None:
@@ -94,6 +101,47 @@ def schedule_retranslate(widget) -> None:
             widget.retranslate()
 
     QTimer.singleShot(0, rebuild)
+
+
+_View = TypeVar("_View")
+
+
+def rebuild_keeping_view(
+    window,
+    *,
+    capture: Callable[[], _View],
+    rebuild: Callable[[], None],
+    restore: Callable[[_View], None],
+) -> None:
+    """Capture view state, rebuild a window's widgets and restore the state.
+
+    ``capture`` runs while the old widgets still exist and returns whatever
+    the window must keep across the rebuild: the current image or page, the
+    canvas' zoom and scroll, the values typed into a control. ``rebuild``
+    recreates the widget tree. ``restore`` receives the captured value once
+    the new tree exists.
+
+    A window that is already destroyed is skipped before ``capture`` runs,
+    the same liveness rule :func:`schedule_retranslate` applies to the queued
+    rebuild: a language change can arrive while the window is closing.
+
+    Not every window fits this shape, and the exceptions are deliberate:
+
+    - The Detector and the Trainer queue their rebuild while a run owns a
+      worker thread (``state.is_running()``) and re-read the pages from the
+      state through ``_refresh_pages``. A snapshot captured mid-run would
+      fight the live worker, so they keep a pending flag instead.
+    - The Launcher and the Preferences dialog rebuild text-only trees and
+      have no view state worth capturing.
+
+    The caller owns what it captures; this helper only orders the three
+    steps and refuses to touch a dead window.
+    """
+    if not is_alive(window):
+        return
+    view = capture()
+    rebuild()
+    restore(view)
 
 
 def install_qt_translations(tag: str) -> bool:

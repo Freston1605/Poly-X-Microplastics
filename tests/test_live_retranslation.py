@@ -19,8 +19,10 @@ import pytest
 # Offscreen before any Qt import.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication, QEvent, QThread, Signal
+from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QPointF, Qt, QThread, Signal
+from PySide6.QtGui import QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QLabel,
     QMainWindow,
@@ -72,6 +74,72 @@ def _results_page(window):
         if type(page).__name__ == "ResultsPage":
             return page
     raise AssertionError("results page not found")
+
+
+def _manual_gt_page(window):
+    for index in range(window.stack.count()):
+        page = window.stack.widget(index).widget()
+        if type(page).__name__ == "GTManualPage":
+            return page
+    raise AssertionError("manual GT page not found")
+
+
+def _write_image(path: Path) -> Path:
+    """A real PNG: the Viewer decodes the file, so a path alone is not loaded."""
+    import cv2
+    import numpy as np
+
+    ok, buffer = cv2.imencode(".png", np.full((240, 320, 3), 24, np.uint8))
+    assert ok
+    path.write_bytes(buffer.tobytes())
+    return path
+
+
+def _wheel_over(canvas, steps: int = 1) -> None:
+    """Zoom with the wheel, over the middle of the canvas, as a user does."""
+    position = QPointF(canvas.width() / 2, canvas.height() / 2)
+    for _step in range(steps):
+        event = QWheelEvent(
+            position,
+            canvas.mapToGlobal(position),
+            QPoint(0, 0),
+            QPoint(0, 120),
+            Qt.NoButton,
+            Qt.NoModifier,
+            Qt.NoScrollPhase,
+            False,
+        )
+        QApplication.sendEvent(canvas, event)
+
+
+def _drag(canvas, dx: float = 40.0, dy: float = 30.0) -> None:
+    """Scroll the canvas with a middle-button drag, as a user does."""
+    start = QPointF(canvas.width() / 2, canvas.height() / 2)
+    end = QPointF(start.x() + dx, start.y() + dy)
+    for kind, position, button, buttons in (
+        (QMouseEvent.MouseButtonPress, start, Qt.MiddleButton, Qt.MiddleButton),
+        (QMouseEvent.MouseMove, end, Qt.NoButton, Qt.MiddleButton),
+        (QMouseEvent.MouseButtonRelease, end, Qt.MiddleButton, Qt.NoButton),
+    ):
+        event = QMouseEvent(
+            kind, position, canvas.mapToGlobal(position), button, buttons, Qt.NoModifier
+        )
+        QApplication.sendEvent(canvas, event)
+
+
+def _detection_result(image_path: Path, model_idx: int):
+    """One detected particle stored against a real model slot."""
+    from polyx.core.detect.protocol import Instance
+    from polyx.core.detection_run import ImageResult
+
+    prediction = Instance(class_id=0, class_name="PET", conf=0.875, x1=6, y1=7, x2=40, y2=44)
+    return ImageResult(
+        image_path=image_path,
+        model_idx=model_idx,
+        predictions=[prediction],
+        gt=[],
+        has_gt=False,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -668,6 +736,7 @@ def test_labeler_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     assert "Load model…" in _texts(window)
     assert window.state.images == images
     assert window.state.current_idx == 1
+    assert window.img_list.currentRow() == 1
     assert window._pre_model is model
     window.deleteLater()
 
@@ -696,6 +765,201 @@ def test_viewer_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     assert window.state.um_per_px == 31.5
     assert window.state.model is model
     window.deleteLater()
+
+
+def test_viewer_keeps_the_loaded_image_visible_across_a_switch(qapp, tmp_path):
+    """The new canvas must draw the image the state still points at.
+
+    The rebuild destroys the canvas and creates an empty one. Re-reading
+    ``state.current_image`` on the window labels is not enough: the canvas
+    only gets its pixmap through ``state.image_loaded``, so a window that
+    skips that signal shows the "Open an image" placeholder after the switch.
+    """
+    from polyx.core import i18n
+    from polyx.gui.viewer.window import ViewerWindow
+
+    image = _write_image(tmp_path / "placa.png")
+    earlier = _write_image(tmp_path / "otra.png")
+    i18n.set_language("es")
+    window = ViewerWindow()
+    window.resize(1200, 800)
+    window.show()
+    window.state.images = [earlier, image]
+    window.state.current_idx = 1
+    window.state.image_loaded.emit(image)
+    qapp.processEvents()
+    assert window.canvas.has_image()
+    assert window.lbl_nav.text() == "2 / 2"
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    assert window.state.images == [earlier, image]
+    assert window.state.current_idx == 1
+    assert window.lbl_nav.text() == "2 / 2"
+    assert window.canvas.has_image(), "the rebuilt canvas lost the loaded image"
+    window.deleteLater()
+
+
+def test_viewer_keeps_zoom_and_scroll_across_a_switch(qapp, tmp_path):
+    """Zoom and pan are the user's framing work; a rebuild must not refit.
+
+    The gestures are real wheel and middle-drag events, and the state is read
+    back through the canvas' own public view state. The rebuilt canvas also
+    receives a resize event from the layout, which used to refit and discard
+    the restored view, so the assertion happens after the event pump.
+    """
+    from polyx.core import i18n
+    from polyx.gui.viewer.window import ViewerWindow
+
+    image = _write_image(tmp_path / "placa.png")
+    i18n.set_language("es")
+    window = ViewerWindow()
+    window.resize(1200, 800)
+    window.show()
+    window.state.images = [image]
+    window.state.image_loaded.emit(image)
+    qapp.processEvents()
+
+    fitted = window.canvas.view_state()
+    _wheel_over(window.canvas, steps=2)
+    _drag(window.canvas)
+    before = window.canvas.view_state()
+    assert before[0] > fitted[0], "the wheel did not zoom"
+    assert before[1] != fitted[1], "the drag did not scroll"
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    after = window.canvas.view_state()
+    assert after[0] == pytest.approx(before[0])
+    assert after[1] == before[1]
+    window.deleteLater()
+
+
+def test_detector_keeps_the_loaded_slots_and_detection_set_across_a_switch(qapp, tmp_path):
+    """The slots the user loaded and the run's detections survive the rebuild.
+
+    The Detector has no separate "selected slot" field: the selected slots
+    are the ones that hold a path and a loaded backend, so both a non-default
+    slot and its backend are exercised here. The detection set is the run's
+    per-slot results, which the rebuilt Results page must keep showing.
+    """
+    from polyx.core import i18n
+    from polyx.gui.detector.window import DetectorWindow
+
+    images = [_write_image(tmp_path / "a.png"), _write_image(tmp_path / "b.png")]
+    reference_path = tmp_path / "reference.pt"
+    candidate_path = tmp_path / "candidate.pt"
+    reference_model = object()
+    candidate_model = object()
+
+    i18n.set_language("es")
+    window = DetectorWindow()
+    state = window.state
+    state.images = images
+    state.gt_image = images[1]
+    state.model_slots[0].path = reference_path
+    state.model_slots[0].alias = "reference"
+    state.model_slots[0].alias_default = False
+    state.model_slots[0].loaded = reference_model
+    state.model_slots[2].path = candidate_path
+    state.model_slots[2].alias = "candidate"
+    state.model_slots[2].alias_default = False
+    state.model_slots[2].loaded = candidate_model
+    detections = {
+        0: [_detection_result(images[0], 0)],
+        2: [_detection_result(images[1], 2)],
+    }
+    state.results = detections
+    window.stack.setCurrentIndex(5)
+    window.sidebar_buttons[5].setChecked(True)
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    assert state.model_slots[0].path == reference_path
+    assert state.model_slots[0].alias == "reference"
+    assert state.model_slots[0].loaded is reference_model
+    assert state.model_slots[2].path == candidate_path
+    assert state.model_slots[2].alias == "candidate"
+    assert state.model_slots[2].loaded is candidate_model
+    assert state.results is detections
+    assert state.results[2][0].predictions[0].class_name == "PET"
+    assert window.stack.currentIndex() == 5
+    assert state.gt_image == images[1]
+    manual = _manual_gt_page(window)
+    assert manual.list.currentRow() == 1
+    assert manual.lbl_image_name.text() == images[1].name
+
+    results = _results_page(window)
+    assert results.table.rowCount() == 2
+    assert {results.table.item(row, 0).text() for row in range(2)} == {
+        "reference",
+        "candidate",
+    }
+    window.deleteLater()
+
+
+# ── One rebuild helper for the windows that share the pattern ────────
+def test_the_rebuild_helper_captures_before_rebuilding_and_restores_after(qapp):
+    from polyx.gui import i18n_qt
+
+    events: list[object] = []
+    window = QMainWindow()
+    i18n_qt.rebuild_keeping_view(
+        window,
+        capture=lambda: events.append("capture") or {"page": 3},
+        rebuild=lambda: events.append("rebuild"),
+        restore=lambda view: events.append(("restore", view["page"])),
+    )
+    assert events == ["capture", "rebuild", ("restore", 3)]
+    window.deleteLater()
+
+
+def test_the_rebuild_helper_skips_a_window_that_is_already_gone(qapp):
+    """The helper owns the liveness check every window used to repeat."""
+    import shiboken6
+
+    from polyx.gui import i18n_qt
+
+    touched: list[str] = []
+    window = QMainWindow()
+    window.deleteLater()
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert not shiboken6.isValid(window)
+
+    i18n_qt.rebuild_keeping_view(
+        window,
+        capture=lambda: touched.append("capture"),
+        rebuild=lambda: touched.append("rebuild"),
+        restore=lambda view: touched.append("restore"),
+    )
+    assert touched == []
+
+
+def test_labeller_and_viewer_rebuild_through_the_shared_helper(qapp, monkeypatch):
+    """Two windows share the helper; the worker-aware ones are exceptions."""
+    from polyx.core import i18n
+    from polyx.gui import i18n_qt
+    from polyx.gui.labeler.window import LabelerWindow
+    from polyx.gui.viewer.window import ViewerWindow
+
+    calls: list[str] = []
+    original = i18n_qt.rebuild_keeping_view
+
+    def recorded(window, **kwargs):
+        calls.append(type(window).__name__)
+        return original(window, **kwargs)
+
+    monkeypatch.setattr(i18n_qt, "rebuild_keeping_view", recorded)
+    i18n.set_language("es")
+    windows = [LabelerWindow(), ViewerWindow()]
+    for window in windows:
+        window.retranslate()
+    assert calls == ["LabelerWindow", "ViewerWindow"]
+    for window in windows:
+        window.deleteLater()
 
 
 # ── A failure a maintainer can read ──────────────────────────────────
