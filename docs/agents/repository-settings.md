@@ -26,7 +26,7 @@ that would have fixed it.
 | Private vulnerability reporting | on | Settings → Code security |
 | Dependabot alerts | on | Settings → Code security |
 | Dependabot security updates | on | Settings → Code security |
-| Required status checks | set by #105, not by this runbook | Default-branch ruleset |
+| Required status checks | the six checks of the merge contract (below), strict up-to-date on | Default-branch ruleset |
 
 Every call below needs a token with **admin** on
 `Freston1605/Poly-X-Microplastics`. A 403 means the token lacks admin. Read
@@ -162,28 +162,95 @@ The dependency-review job is not a substitute for either: it audits the
 resolved set a pull request **adds**, and it cannot see an advisory published
 against a pin that is already on `main`. See #102.
 
-## Required status checks belong to #105
+## Six checks block a merge
 
-This file deliberately does **not** carry the required-checks list, and this
-change does not set it. The default-branch ruleset
-`Copilot review for default branch` (`25976878`) already holds the rule with
-`strict_required_status_checks_policy: true` and an **empty**
-`required_status_checks` array; filling it is the merge contract, and it is
-[#105](https://github.com/Freston1605/Poly-X-Microplastics/issues/105) —
-apply that after the jobs it names exist.
+A pull request merges only when six contexts are green **and** its branch is up
+to date with `main`. The list sits on the `required_status_checks` rule of the
+default-branch ruleset `Copilot review for default branch` (`25976878`). #105
+filled that rule; it was already enabled with
+`strict_required_status_checks_policy: true`, and nothing outside the array
+below was changed.
 
-When you re-apply the list from a fork reset, take the contexts from #105
-rather than from memory. Two traps:
+| Context | Reported by | Why it is required |
+| --- | --- | --- |
+| `quality` | `ci.yml` → `quality` | The gate itself: the merge contract. |
+| `test (3.12)` | `ci.yml` → `test`, matrix `3.12` | The gate runs the suite on 3.11 only. |
+| `build` | `ci.yml` → `build` | The catalog inside the wheel. |
+| `pre-commit` | `pre-commit.yml` → `pre-commit` | The hooks, without a local install. |
+| `dependency-review` | `ci.yml` → `dependency-review` | A vulnerable addition is blocked. |
+| `workflow-lint` | `ci.yml` → `workflow-lint` | actionlint and zizmor, before a run. |
 
-- A check is matched by the **job name as reported**. Renaming a job, or
-  deleting one, silently drops its protection instead of failing loudly.
-- The `test (3.12)` context embeds the matrix value. Editing the Python matrix
-  renames the check and leaves the old context required and absent, so the
-  matrix edit and the ruleset edit have to land together.
+Those one-line reasons, expanded: `quality` runs the catalog audit, the
+palette rule, the full suite, ruff and ty; `build` loads the compiled catalog
+from **inside** the wheel, which Hatchling can silently exclude because the
+source tree cannot see it; `dependency-review` blocks a pull request that adds
+a package with a fresh advisory, since an exact pin stops drift and not
+disclosure.
 
 The strict "branch must be up to date" policy stays on: without it, two
 individually green pull requests can merge into a combination neither one
 tested.
+
+### The two traps that break this list
+
+Both fail the same way: the merge button waits forever, and the run that
+produced the green checks is not the reason.
+
+- **A context is the job name as reported, not the workflow name.** Renaming a
+  job drops its protection silently; a name no job produces leaves the check
+  "Expected" on every pull request, including the one that would fix it.
+- **`test (3.12)` embeds the matrix value.** Editing the Python matrix in
+  `ci.yml` renames the check and leaves the old context required and absent,
+  so the matrix edit and this list have to land together.
+
+One more is worth knowing without being a trap today: a required check whose
+job is skipped by an `if:` on a pull request never reports either. The only
+conditional job here, `dependency-review`, is conditional on the event being
+`pull_request` — the event that is gated — so a pull request always runs it.
+
+### Reading it back
+
+```bash
+R=Freston1605/Poly-X-Microplastics
+gh api repos/$R/rulesets/25976878 --jq '
+  .rules[] | select(.type == "required_status_checks") | .parameters'
+# {"strict_required_status_checks_policy":true,"do_not_enforce_on_create":false,
+#  "required_status_checks":[{"context":"quality"},{"context":"test (3.12)"},
+#  {"context":"build"},{"context":"pre-commit"},{"context":"dependency-review"},
+#  {"context":"workflow-lint"}]}
+```
+
+### Re-applying it
+
+`PUT` replaces the whole ruleset, so read it and send every other rule back
+untouched — the Copilot review rule, `code_quality`, `deletion`,
+`non_fast_forward` and the `pull_request` rule are siblings of this one, and a
+hand-written body drops whichever ones it forgets. Rewriting only the one
+array keeps them byte-identical:
+
+```bash
+R=Freston1605/Poly-X-Microplastics
+gh api repos/$R/rulesets/25976878 \
+  | jq '{name, target, enforcement, conditions, bypass_actors,
+      rules: [.rules[]
+        | if .type == "required_status_checks"
+          then .parameters.required_status_checks = [
+            {context: "quality"},
+            {context: "test (3.12)"},
+            {context: "build"},
+            {context: "pre-commit"},
+            {context: "dependency-review"},
+            {context: "workflow-lint"}
+          ]
+          else . end]}' \
+  | gh api --method PUT repos/$R/rulesets/25976878 --input -
+```
+
+Then read it back with the command above, and diff the rule array instead of
+trusting the `200`: a context spelled `test (3.12)` with a different space, or
+a job that was already renamed, is the failure this list cannot detect itself.
+The contexts can be confirmed against a real run — `gh pr checks <n>` lists
+exactly the names GitHub matches.
 
 ## Re-applying after a fork reset
 
@@ -198,7 +265,8 @@ In order:
    already have it.
 4. Turn on private vulnerability reporting, Dependabot alerts and security
    updates. Confirm each with its `GET`.
-5. Land #105's required-checks list, last.
+5. Fill the six required checks, last — and only once the jobs they name run
+   on `main` (see "Six checks block a merge").
 6. Verify the whole set with the reads below — a `PUT` that returns `204` is
    not evidence that the value is what you sent.
 
@@ -207,13 +275,18 @@ R=Freston1605/Poly-X-Microplastics
 gh api repos/$R/actions/permissions
 gh api repos/$R/rulesets --jq '.[] | {id, name, target, enforcement}'
 gh api repos/$R/rulesets/<tag-ruleset-id> --jq '.bypass_actors'
+# The effective default-branch rules, as GitHub applies them — this is the
+# read that shows the required-checks list actually reached `main`.
+gh api repos/$R/rules/branches/main \
+  --jq '.[] | select(.type == "required_status_checks") | .parameters'
 gh api repos/$R/private-vulnerability-reporting
 gh api repos/$R/automated-security-fixes
 gh api repos/$R/vulnerability-alerts -i | head -1   # HTTP/2.0 204 = on
 ```
 
 Expected: `sha_pinning_required: true`; two rulesets in this repository, one
-`branch` and one `tag`; `bypass_actors` naming repository roles 2 and 5;
+`branch` and one `tag`; `bypass_actors` naming repository roles 2 and 5; the
+six contexts with `strict_required_status_checks_policy: true`;
 `{"enabled":true}`; `{"enabled":true,"paused":false}`; `204`.
 
 ## What this runbook cannot re-apply
