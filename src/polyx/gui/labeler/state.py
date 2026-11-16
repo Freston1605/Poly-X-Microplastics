@@ -151,7 +151,7 @@ class LabelerState(QObject):
         key = str(img)
         if reviewed:
             self._reviewed.add(key)
-            self._save_labels_for(img, self.current_boxes, force=True)
+            self.save_labels(img, self.current_boxes, force=True)
         else:
             self._reviewed.discard(key)
             # Withdraw the datum: remove the file the codec found, wherever
@@ -180,9 +180,9 @@ class LabelerState(QObject):
     def save_current(self):
         img = self.current_image
         if img:
-            self._save_labels_for(img, self.current_boxes)
+            self.save_labels(img, self.current_boxes)
 
-    def _save_labels_for(self, img: Path, boxes: list[BBox], force: bool = False):
+    def save_labels(self, img: Path, boxes: list[BBox], force: bool = False):
         """Writes the .txt. With no boxes and not reviewed, it does NOT create the file.
 
         Creating empty .txt files just from passing over an image would
@@ -222,18 +222,39 @@ class LabelerState(QObject):
         boxes, _malformed = read_boxes(txt)
         return len(boxes)
 
-    def has_annotations_for(self, img: Path) -> bool:
-        """Whether the image already has a drawing cached in memory."""
-        return str(img) in self._annotations
+    def has_boxes_for(self, img: Path) -> bool:
+        """Whether the image already has a box, in memory or in its label file."""
+        return self.box_count_for(img) > 0
 
-    def set_annotations_for(self, img: Path, boxes: list[BBox]) -> None:
-        """Cache a drawing for an image that is not the current one.
+    def set_boxes_for(self, img: Path, boxes: list[BBox]) -> None:
+        """Caches a drawing for an image that is not the current one.
 
         Used by batch pre-annotation, which walks the whole list without
         navigating; the current image's edits go through
         :meth:`set_current_boxes` so they push undo.
         """
         self._annotations[str(img)] = list(boxes)
+
+    def preannotate(self, boxes_by_image: dict[Path, list[BBox]]) -> int:
+        """Applies and saves a batch of model drawings; returns how many it kept.
+
+        Skips images that already have a box, in memory or in the file the
+        codec finds: the batch fills the blanks, it does not overwrite the
+        operator's work. Saving goes through :meth:`save_labels`, so the
+        empty-file census rule is the same one the editor uses, and
+        ``annotations_changed`` is emitted once for the whole batch. The
+        progress feedback stays in the window: the model runs there.
+        """
+        annotated = 0
+        for img, boxes in boxes_by_image.items():
+            if self.has_boxes_for(img):
+                continue
+            self.set_boxes_for(img, boxes)
+            self.save_labels(img, boxes)
+            annotated += 1
+        if annotated:
+            self.annotations_changed.emit()
+        return annotated
 
     def save_classes_txt(self):
         """Writes classes.txt where the labels of the loaded images live.
