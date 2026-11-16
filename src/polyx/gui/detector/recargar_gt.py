@@ -69,7 +69,6 @@ def reload_gt(state, progress=None) -> dict:
     if not state.results or state.run_dir is None:
         return summary
 
-    params = state.params
     # Class names come from the first loaded model: the .txt stores only
     # the index, and without the map the boxes would have no readable class.
     names_2 = {}
@@ -129,10 +128,22 @@ def reload_gt(state, progress=None) -> dict:
             r.gt = list(gts)
             r.has_gt = has_gt
             if has_gt:
-                m = match_image(r.predictions, gts, iou_thr=params.iou_tp)
+                # The reload is the run deciding again over new labels, so the
+                # match it just made replaces the old one: keeping the previous
+                # match next to new counters would leave every reader of the
+                # identity (Errors page, report) describing the labels that
+                # were thrown away. The rule stays the one the run recorded.
+                m = match_image(
+                    r.predictions,
+                    gts,
+                    iou_thr=r.match_iou_thr,
+                    use_mask_iou=r.match_use_mask_iou,
+                )
                 r.tp, r.fp, r.fn, r.miscls = m.tp, m.fp, m.fn, m.miscls
+                r.match = m
             else:
                 r.tp = r.fp = r.fn = r.miscls = 0
+                r.match = None
 
             # The predictions image does not change -- the predictions are the
             # same -- but the control and combined ones do. They are drawn by

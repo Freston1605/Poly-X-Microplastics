@@ -102,6 +102,7 @@ def make_config(
     measure_shape: bool = False,
     calibration: CalibrationPolicy | None = None,
     force: bool = False,
+    iou_tp: float = 0.5,
 ) -> RunConfig:
     return RunConfig(
         images=images,
@@ -110,7 +111,7 @@ def make_config(
             for i, model in enumerate(models)
         ],
         output_dir=output_dir,
-        params=RunParams(measure_shape=measure_shape),
+        params=RunParams(measure_shape=measure_shape, iou_tp=iou_tp),
         gt_folder=gt_folder,
         calibration=calibration or CalibrationPolicy(mode="manual", um_per_px=2.0),
         force=force,
@@ -841,11 +842,15 @@ def test_run_json_records_the_match_rule_and_load_rehydrates_the_match(tmp_path)
     grow the document to say what it already says.
     """
     image = _matching_plate(tmp_path)
-    result = run_detection(make_config([image], [_matching_detector()], tmp_path / "run"))
+    # A non-default threshold, so the round-trip proves the recorded value is
+    # read back instead of the dataclass default standing in for it.
+    result = run_detection(
+        make_config([image], [_matching_detector()], tmp_path / "run", iou_tp=0.7)
+    )
 
     payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
     row = payload["images"][0]["models"][0]
-    assert row["match_iou_thr"] == pytest.approx(result.params.iou_tp)
+    assert row["match_iou_thr"] == pytest.approx(0.7)
     assert row["match_use_mask_iou"] is False
     assert "tp_pairs" not in row and "fp_idx" not in row
 
@@ -862,7 +867,8 @@ def test_run_json_records_the_match_rule_and_load_rehydrates_the_match(tmp_path)
         item.fn,
         item.miscls,
     )
-    assert item.match_iou_thr == pytest.approx(result.params.iou_tp)
+    assert item.match_iou_thr == pytest.approx(0.7)
+    assert loaded.params.iou_tp == pytest.approx(0.7)
     assert item.match_use_mask_iou is False
 
 
