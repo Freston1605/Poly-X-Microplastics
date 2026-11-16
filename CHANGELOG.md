@@ -14,6 +14,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- Tiling has one owner: `polyx.core.detect.tiling` holds the decision
+  (`decide_tiling`), the typed plan and the one sentence each image's plan is
+  phrased with. The mode is English at every boundary (`auto`/`always`/`never`);
+  a saved `"siempre"`/`"nunca"` still loads, the CLI keeps those as hidden
+  deprecated aliases, and `run.json` now records `tiling_plan` per image/model
+  while keeping the legacy `tiling` string for old readers.
 - Model aliases are stable run-folder keys, separate from the label the
   interface shows: the GUI writes `model_1`/`model_2`, the CLI writes the
   weights stem unless `--alias` names one, and `run.json` records

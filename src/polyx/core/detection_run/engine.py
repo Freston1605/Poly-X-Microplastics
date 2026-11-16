@@ -19,6 +19,7 @@ import numpy as np
 
 from polyx.core.annotate import triptych
 from polyx.core.detect.protocol import Instance
+from polyx.core.detect.tiling import TilingDecision
 from polyx.core.i18n import _
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
@@ -273,31 +274,13 @@ def _number_detections(detections: list[Instance]) -> None:
         det.number = number
 
 
-def _tiling_description(record: dict) -> str:
-    """Human-readable tiling decision for one image; empty when it stayed whole.
-
-    The record keys are the detector backend's existing contract, not new
-    identifiers: they predate the English-identifier rule and changing them
-    here would break every backend's ``predict_auto``.
-    """
-    if not record.get("troceado"):
-        return ""
-    plan = record.get("plan") or {}
-    width = int(record.get("ancho", 0) or 0)
-    height = int(record.get("alto", 0) or 0)
-    tile = int(plan.get("tile", 0) or 0)
-    tiles = int(plan.get("n_tiles", 0) or 0)
-    overlap = float(plan.get("overlap", 0.0) or 0.0)
-    return f"{width}×{height} px → {tiles} tiles of {tile} px, {int(overlap * 100)}% overlap"
-
-
 def _predict(
     detector,
     image_path: Path,
     params,
     execution: ModelExecution,
-) -> tuple[list[Instance], str]:
-    """Run the shared tiling entry point and record what it decided."""
+) -> tuple[list[Instance], TilingDecision]:
+    """Run the shared tiling entry point and keep the decision it reported."""
     record: dict = {}
     predictions = detector.predict_auto(
         image_path,
@@ -311,17 +294,18 @@ def _predict(
         overlap=params.tiling_overlap,
         record=record,
     )
-    if record.get("troceado"):
+    decision = TilingDecision.from_record(record, params.tiling)
+    plan = decision.plan
+    if plan is not None:
         execution.tiled_images += 1
-        plan = record.get("plan") or {}
         # Each tile enters the network at its native tile side, not at imgsz.
-        execution.record_imgsz(int(plan.get("tile", 0) or 0))
+        execution.record_imgsz(plan.tile)
     else:
         used_imgsz = int(getattr(detector, "last_imgsz", 0) or 0)
         execution.record_imgsz(used_imgsz or int(params.imgsz))
     if getattr(detector, "last_fallback", False):
         execution.memory_fallback.append(image_path.name)
-    return list(predictions), _tiling_description(record)
+    return list(predictions), decision
 
 
 def _write_failed_run(
@@ -461,7 +445,9 @@ def run_detection(
 
             for model_index, spec in enumerate(config.models):
                 execution = result.execution[model_index]
-                predictions, tiling = _predict(spec.detector, image_path, config.params, execution)
+                predictions, tiling_decision = _predict(
+                    spec.detector, image_path, config.params, execution
+                )
                 shapeless = _measure(predictions, bgr, um_per_px, config.params)
                 execution.shapeless += shapeless
                 # Same order as the GUI runner: measure, filter, abstain, number,
@@ -504,7 +490,8 @@ def run_detection(
                     match=match,
                     match_iou_thr=config.params.iou_tp,
                     match_use_mask_iou=mask_iou_rule,
-                    tiling=tiling,
+                    tiling=tiling_decision.describe(),
+                    tiling_plan=tiling_decision.plan,
                 )
                 result.results.setdefault(model_index, []).append(image_result)
                 execution.images += 1

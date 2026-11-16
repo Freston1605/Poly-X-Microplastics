@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from polyx.core.detect.protocol import Instance
+from polyx.core.detect.tiling import TilingDecision, TilingMode, TilingPlan, describe_tiling
 from polyx.core.detection_run import (
     CalibrationPolicy,
     ModelSpec,
@@ -390,6 +391,7 @@ def test_abort_is_honoured_at_the_image_boundary(tmp_path):
                 "miscls": 0,
                 "match_iou_thr": 0.5,
                 "match_use_mask_iou": False,
+                "tiling_plan": None,
                 "tiling": "",
             },
             {
@@ -402,6 +404,7 @@ def test_abort_is_honoured_at_the_image_boundary(tmp_path):
                 "miscls": 0,
                 "match_iou_thr": 0.5,
                 "match_use_mask_iou": False,
+                "tiling_plan": None,
                 "tiling": "",
             },
         ],
@@ -585,7 +588,7 @@ def test_predict_auto_is_called_with_the_run_tiling_policy(tmp_path):
 
     call_path, kwargs = detector.calls[0]
     assert call_path == image
-    assert kwargs["tiling"] == result.params.tiling == "auto"
+    assert kwargs["tiling"] is result.params.tiling is TilingMode.AUTO
     assert kwargs["threshold_px"] == result.params.tiling_threshold_px
     assert kwargs["tile"] == result.params.tiling_tile
     assert kwargs["overlap"] == result.params.tiling_overlap
@@ -594,6 +597,62 @@ def test_predict_auto_is_called_with_the_run_tiling_policy(tmp_path):
     assert kwargs["imgsz"] == result.params.imgsz
     assert kwargs["record"] == {}
     assert result.results[0][0].tiling == ""
+    assert result.results[0][0].tiling_plan is None
+
+
+class TilingDetector(FakeDetector):
+    """Reports the decision it took, the way a tiling backend does."""
+
+    plan = TilingPlan(tile=2048, overlap=0.25, n_tiles=6, side=4096, threshold_px=2000)
+
+    def predict_auto(self, image_path, **kwargs):
+        record = kwargs.get("record")
+        if record is not None:
+            record.update(
+                {
+                    "width": 4096,
+                    "height": 3072,
+                    "tiled": True,
+                    "plan": self.plan,
+                }
+            )
+        return super().predict_auto(image_path, **kwargs)
+
+
+def test_the_engine_records_the_plan_and_describes_it_once(tmp_path):
+    """#125: the record holds the decision; the sentence is derived from it."""
+    image = write_plate(tmp_path / "photos" / "plate.png")
+    detector = TilingDetector()
+    result = run_detection(make_config([image], [detector], tmp_path / "run"))
+
+    image_result = result.results[0][0]
+    assert image_result.tiling_plan == TilingDetector.plan
+    expected_sentence = describe_tiling(
+        TilingDecision(
+            mode=TilingMode.AUTO,
+            width=4096,
+            height=3072,
+            plan=TilingDetector.plan,
+        )
+    )
+    assert image_result.tiling == expected_sentence
+    assert result.execution[0].tiled_images == 1
+    assert result.execution[0].imgsz_used == [2048]
+
+    payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
+    row = payload["images"][0]["models"][0]
+    assert row["tiling_plan"] == {
+        "tile": 2048,
+        "overlap": 0.25,
+        "n_tiles": 6,
+        "side": 4096,
+        "threshold_px": 2000,
+    }
+    assert row["tiling"] == image_result.tiling
+
+    loaded = load_run(result.run_dir).results[0][0]
+    assert loaded.tiling_plan == TilingDetector.plan
+    assert loaded.tiling == image_result.tiling
 
 
 def test_measure_shape_false_keeps_the_box_fallback(tmp_path):

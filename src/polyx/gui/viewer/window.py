@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.annotate import find_run_labels
+from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
 from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
@@ -703,7 +704,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 conf=self.spin_conf.value(),
                 imgsz=imgsz,
                 device=device,
-                tiling="auto",
+                tiling=TilingMode.AUTO,
                 threshold_px=2000,
                 record=plan,
             )
@@ -712,23 +713,16 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             self.state.detections_changed.emit(dets)
 
-            if plan.get("troceado"):
-                p = plan["plan"]
+            decision = TilingDecision.from_record(plan, TilingMode.AUTO)
 
+            if decision.tiled:
                 self._set_status(
                     ngettext(
-                        "● %(count)d detection (tiled into %(tiles)d tiles of "
-                        "%(tile)d px, imgsz %(imgsz)d)",
-                        "● %(count)d detections (tiled into %(tiles)d tiles of "
-                        "%(tile)d px, imgsz %(imgsz)d)",
+                        "● %(count)d detection at imgsz %(imgsz)d (%(plan)s)",
+                        "● %(count)d detections at imgsz %(imgsz)d (%(plan)s)",
                         len(dets),
                     )
-                    % {
-                        "count": len(dets),
-                        "tiles": p["n_tiles"],
-                        "tile": p["tile"],
-                        "imgsz": imgsz,
-                    },
+                    % {"count": len(dets), "imgsz": imgsz, "plan": decision.describe()},
                     T.OK,
                 )
 

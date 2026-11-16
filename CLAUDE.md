@@ -719,6 +719,21 @@ Cost 5.9 ms per particle. Only cv2 and numpy: `scipy` is **not** in
 `requirements.txt` —it arrives as a transitive dependency of ultralytics— and
 relying on it would break the install the day ultralytics stops shipping it.
 
+### Tiling (src/polyx/core/detect/tiling.py)
+One module owns the tiling decision and its sentence: `TilingMode`
+(`auto`/`always`/`never`), `TilingPlan` (`tile`, `overlap`, `n_tiles`, `side`,
+`threshold_px`), `decide_tiling()` and `describe_tiling()`.
+`policy_tiling` stays as the geometry primitive and is re-exported from
+`protocol.py` and `yolo.py` for old importers.
+
+The mode is English at every boundary, and `TilingMode.parse` is the only
+place a saved `"siempre"`/`"nunca"` is understood — it is normalised on load
+and never written again. `run.json` records the plan per image/model in
+`tiling_plan`; the legacy `tiling` sentence stays so readers written before
+#125 keep working. The engine and the Parameters/Execute previews render the
+plan through `describe()`, which is translated at call time; no page formats
+the tile count, the tile side or the overlap on its own.
+
 ### `YoloModel` (src/polyx/core/detect/yolo.py)
 Lazy-loading wrapper for Ultralytics YOLO:
 ```python
@@ -753,6 +768,8 @@ tp, fp, fn, miscls: int         # serialised projection of `match`
 match: Optional[MatchResult]    # the decision the run made; None = no GT
 match_iou_thr: float            # rule behind it, recorded in run.json
 match_use_mask_iou: bool        # True when mask IoU decided it
+tiling_plan: Optional[TilingPlan]  # the tiling decision; None = single pass
+tiling: str                     # legacy sentence kept for pre-#125 readers
 annotated_png: Optional[bytes]  # Annotated PNG, read from disk on demand
 ```
 `tp/fp/fn/miscls` stay so `run.json` and pre-`match` readers keep working, but
@@ -905,7 +922,7 @@ size_min_um: float = 0.0    # Lower filter (0 = no filter)
 size_max_um: float = 0.0    # Upper filter (0 = no filter)
 conf_assignment: float = 0.0  # Minimum confidence to attribute a polymer (0 = off)
 measure_shape: bool = True  # Mask-aware area/length/width instead of the box
-tiling: str = "auto"        # "auto" | "siempre" | "nunca" (backend values)
+tiling: TilingMode = TilingMode.AUTO  # "auto" | "always" | "never" (English)
 tiling_threshold_px: int = 2000
 tiling_tile: int = 0        # 0 = derive from min(threshold, imgsz)
 tiling_overlap: float = 0.25

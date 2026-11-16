@@ -18,6 +18,7 @@ import pytest
 
 from polyx.cli import detect as cli_detect
 from polyx.core.detect.protocol import Instance
+from polyx.core.detect.tiling import TilingMode
 from polyx.core.detection_run import load_run
 from polyx.core.measure.calibration import ORIGIN_MANUAL, ORIGIN_NONE
 from polyx.core.report_simple import generate as generate_compact
@@ -482,13 +483,18 @@ def test_existing_flags_keep_their_meaning(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("choice", "backend"),
-    [("auto", "auto"), ("always", "siempre"), ("never", "nunca")],
+    ("choice", "expected"),
+    [
+        ("auto", TilingMode.AUTO),
+        ("always", TilingMode.ALWAYS),
+        ("never", TilingMode.NEVER),
+        # Hidden deprecated aliases: an old script keeps working.
+        ("siempre", TilingMode.ALWAYS),
+        ("nunca", TilingMode.NEVER),
+    ],
 )
-def test_tiling_cli_choices_are_english_and_reach_the_backend_values(
-    tmp_path, monkeypatch, choice, backend
-):
-    """The developer-facing flag speaks English; the detector keeps its contract."""
+def test_cli_accepts_english_and_legacy_flags(tmp_path, monkeypatch, choice, expected):
+    """The flag maps directly to the mode; the Spanish spellings still parse."""
     weights = weights_file(tmp_path, "best")
     detector = FakeDetector()
     install_factory(monkeypatch, detector)
@@ -507,8 +513,8 @@ def test_tiling_cli_choices_are_english_and_reach_the_backend_values(
     )
 
     assert code == 0
-    assert load_run(tmp_path / "run").params.tiling == backend
-    assert detector.call_kwargs[0]["tiling"] == backend
+    assert load_run(tmp_path / "run").params.tiling is expected
+    assert detector.call_kwargs[0]["tiling"] is expected
 
 
 def test_without_a_manual_scale_the_run_is_uncalibrated(tmp_path, monkeypatch):

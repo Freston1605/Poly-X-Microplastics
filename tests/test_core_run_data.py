@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import json
 import os
 import subprocess
 import sys
@@ -29,6 +30,7 @@ from polyx.core.detect import (  # noqa: E402
     YoloSegModel,
 )
 from polyx.core.detect.protocol import Instance  # noqa: E402
+from polyx.core.detect.tiling import TilingMode  # noqa: E402
 from polyx.core.detection_run import (  # noqa: E402
     CalibrationPolicy,
     ImageResult,
@@ -83,7 +85,7 @@ def test_run_params_keep_the_inference_defaults():
     assert params.size_max_um == 0.0
     assert params.conf_assignment == 0.0
     assert params.measure_shape is True
-    assert params.tiling == "auto"
+    assert params.tiling is TilingMode.AUTO
     assert params.tiling_threshold_px == 2000
     assert params.tiling_tile == 0
     assert params.tiling_overlap == 0.25
@@ -346,4 +348,92 @@ def test_yolo_predict_auto_uses_predict_when_tiling_is_disabled(monkeypatch, tmp
             "device": "cpu",
         }
     ]
-    assert record["troceado"] is False
+    assert record["tiled"] is False
+
+
+# ── Tiling parameters and the recorded plan ────────────────────────────
+
+
+def test_params_round_trip_english_and_legacy():
+    """Old runs load their Spanish mode; new dumps always carry the English one."""
+    from polyx.core.detect.tiling import TilingMode
+    from polyx.core.detection_run.schema import params_from_dict, params_to_dict
+
+    assert params_from_dict({"tiling": "siempre"}).tiling is TilingMode.ALWAYS
+    assert params_from_dict({"tiling": "nunca"}).tiling is TilingMode.NEVER
+    assert params_from_dict({"tiling": "always"}).tiling is TilingMode.ALWAYS
+    assert params_from_dict({}).tiling is TilingMode.AUTO
+    # An unknown value is not a reason to refuse a folder; it falls back to auto.
+    assert params_from_dict({"tiling": "sideways"}).tiling is TilingMode.AUTO
+
+    legacy_in_memory = RunParams(tiling="nunca")
+    assert legacy_in_memory.tiling is TilingMode.NEVER
+    dumped = params_to_dict(legacy_in_memory)
+    assert dumped["tiling"] == "never"
+    assert '"tiling": "never"' in json.dumps(dumped)
+
+
+def test_run_json_records_tiling_plan_and_loads_old_string(tmp_path):
+    """The new folder carries the invariant plan; an old one only has the sentence."""
+    from polyx.core.detect.tiling import TilingPlan
+    from polyx.core.detection_run.schema import build_run_payload, load_run
+
+    plan = TilingPlan(tile=2000, overlap=0.25, n_tiles=6, side=4096, threshold_px=2000)
+    sentence = "4096×3072 px → 6 tiles of 2000 px, 25% overlap"
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        images=[tmp_path / "photo.png"],
+        models=[ModelInfo(alias="model_1")],
+        results={
+            0: [
+                ImageResult(
+                    image_path=tmp_path / "photo.png",
+                    model_idx=0,
+                    tiling=sentence,
+                    tiling_plan=plan,
+                )
+            ]
+        },
+    )
+
+    row = build_run_payload(run)["images"][0]["models"][0]
+    assert row["tiling_plan"] == {
+        "tile": 2000,
+        "overlap": 0.25,
+        "n_tiles": 6,
+        "side": 4096,
+        "threshold_px": 2000,
+    }
+    assert row["tiling"] == sentence
+
+    # A folder written before #125: the same string, no plan object.
+    folder = tmp_path / "old_run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 1,
+        "models": [{"alias": "model_1"}],
+        "images": [
+            {
+                "index": 0,
+                "path": str(tmp_path / "photo.png"),
+                "models": [{"model": 0, "tiling": sentence}],
+            }
+        ],
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    old = load_run(folder).results[0][0]
+    assert old.tiling == sentence
+    assert old.tiling_plan is None
+
+    # The same folder after the writer learned the plan object.
+    payload["images"][0]["models"][0]["tiling_plan"] = {
+        "tile": 2000,
+        "overlap": 0.25,
+        "n_tiles": 6,
+        "side": 4096,
+        "threshold_px": 2000,
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    loaded = load_run(folder).results[0][0]
+    assert loaded.tiling_plan == plan
+    assert loaded.tiling == sentence
