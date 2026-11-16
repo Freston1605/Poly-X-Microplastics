@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
+from polyx.core.detect.protocol import size_image
+from polyx.core.detect.tiling import TilingMode, decide_tiling, describe_tiling
 from polyx.core.i18n import N_, _, lazy
 from polyx.core.platform import IS_MAC, architecture_mac, device_available, label_devices
 from polyx.gui import iconos
@@ -193,16 +195,19 @@ class ParametersPage(DetectorPage):
 
         g5.addWidget(QLabel(_("When to tile:")), 0, 0)
         self.combo_tiling = QComboBox()
-        # The value goes in userData, not in the displayed text: if the text were the
-        # value, translating the interface would break the check against `"siempre"` and
-        # `"nunca"` in predict_auto(). The text is translated, the data does not change.
+        # The value goes in userData, not in the displayed text: if the text
+        # were the value, translating the interface would change the mode.
+        # Values are the English TilingMode; labels are translated. A legacy
+        # spelling saved by an older run is normalised before the lookup.
         for _value, _label in (
-            ("auto", _("automatic")),
-            ("siempre", _("always")),
-            ("nunca", _("never")),
+            (TilingMode.AUTO, _("automatic")),
+            (TilingMode.ALWAYS, _("always")),
+            (TilingMode.NEVER, _("never")),
         ):
-            self.combo_tiling.addItem(_label, _value)
-        self.combo_tiling.setCurrentIndex(max(0, self.combo_tiling.findData(state.params.tiling)))
+            self.combo_tiling.addItem(_label, _value.value)
+        self.combo_tiling.setCurrentIndex(
+            max(0, self.combo_tiling.findData(TilingMode.parse(state.params.tiling).value))
+        )
         self.combo_tiling.currentTextChanged.connect(self._on_change)
         g5.addWidget(self.combo_tiling, 0, 1)
         g5.addWidget(
@@ -523,7 +528,7 @@ class ParametersPage(DetectorPage):
         p.size_min_um = float(self.sb_min.value())
         p.size_max_um = float(self.sb_max.value())
         p.conf_assignment = float(self.sb_assignment.value())
-        p.tiling = self.combo_tiling.currentData() or "auto"
+        p.tiling = TilingMode.parse(self.combo_tiling.currentData())
         p.tiling_threshold_px = int(self.sb_threshold.value())
         p.tiling_tile = int(self.sb_tile.value())
         p.tiling_overlap = float(self.sb_overlap.value())
@@ -535,9 +540,9 @@ class ParametersPage(DetectorPage):
 
         Seeing the decision before launching the batch avoids the surprise of
         discovering two hours later that everything was inferred in one piece.
+        The geometry sentence comes from the decision module; this page only
+        adds the extra context it can compute (the scale and the duration).
         """
-        from polyx.core.detect.yolo import policy_tiling, size_image
-
         p = self.state.params
         if not self.state.images:
             self.lbl_plan.setText(_("Select images to see what would be tiled."))
@@ -546,46 +551,43 @@ class ParametersPage(DetectorPage):
         if wh is None:
             self.lbl_plan.setText(_("Could not read the size of the first image."))
             return
-        if p.tiling == "nunca":
-            self.lbl_plan.setText(
-                _(
-                    "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d "
-                    "(tiling off)."
-                )
-                % {"width": wh[0], "height": wh[1], "imgsz": p.imgsz}
-            )
-            return
-        plan = policy_tiling(
+        decision = decide_tiling(
             wh[0],
             wh[1],
             p.imgsz,
-            threshold_px=0 if p.tiling == "siempre" else p.tiling_threshold_px,
+            mode=p.tiling,
+            threshold_px=p.tiling_threshold_px,
             tile=p.tiling_tile,
             overlap=p.tiling_overlap,
         )
-        if plan is None:
-            self.lbl_plan.setText(
-                _(
-                    "First image %(width)d×%(height)d px → single pass: below the "
-                    "%(threshold)d px threshold."
+        if decision.plan is None:
+            if TilingMode.parse(p.tiling) is TilingMode.NEVER:
+                self.lbl_plan.setText(
+                    _(
+                        "First image %(width)d×%(height)d px → single pass at imgsz %(imgsz)d "
+                        "(tiling off)."
+                    )
+                    % {"width": wh[0], "height": wh[1], "imgsz": p.imgsz}
                 )
-                % {"width": wh[0], "height": wh[1], "threshold": p.tiling_threshold_px}
-            )
-        else:
-            scale = p.imgsz / plan["tile"]
-            self.lbl_plan.setText(
-                _(
-                    "First image %(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px "
-                    "with %(overlap)d%% overlap, each at imgsz %(imgsz)d (%(scale).2f× the "
-                    "tile's native resolution). Takes ~%(tiles)d× longer than a single pass."
+            else:
+                self.lbl_plan.setText(
+                    _(
+                        "First image %(width)d×%(height)d px → single pass: below the "
+                        "%(threshold)d px threshold."
+                    )
+                    % {"width": wh[0], "height": wh[1], "threshold": p.tiling_threshold_px}
                 )
-                % {
-                    "width": wh[0],
-                    "height": wh[1],
-                    "tiles": plan["n_tiles"],
-                    "tile": plan["tile"],
-                    "overlap": int(plan["overlap"] * 100),
-                    "imgsz": p.imgsz,
-                    "scale": scale,
-                }
+            return
+        plan = decision.plan
+        self.lbl_plan.setText(
+            _(
+                "First image: %(plan)s. Each tile enters at imgsz %(imgsz)d (%(scale).2f× its "
+                "native resolution); about %(tiles)d× slower than a single pass."
             )
+            % {
+                "plan": describe_tiling(decision),
+                "imgsz": p.imgsz,
+                "scale": p.imgsz / plan.tile,
+                "tiles": plan.n_tiles,
+            }
+        )

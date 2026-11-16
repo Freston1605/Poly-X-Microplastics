@@ -12,6 +12,12 @@ from typing import Literal, Protocol
 
 import numpy as np
 
+# ``policy_tiling`` lives in ``tiling`` with the decision and the sentence;
+# it is re-exported here because this module was its historical home and other
+# modules import it from the protocol.
+from .tiling import TilingMode as TilingMode
+from .tiling import policy_tiling as policy_tiling
+
 
 @dataclass
 class Instance:
@@ -119,7 +125,7 @@ class DetectionSource(Protocol):
         iou: float = 0.45,
         imgsz: int = 1280,
         device: str = "0",
-        tiling: str = "auto",
+        tiling: TilingMode | str = TilingMode.AUTO,
         threshold_px: int = 2000,
         tile: int = 0,
         overlap: float = 0.25,
@@ -130,7 +136,12 @@ class DetectionSource(Protocol):
 
         This is the single entry point the run engine calls. Backends that
         cannot tile delegate to their existing single-pass ``predict``.
-        ``record``, when given, is filled with the tiling decision taken.
+
+        ``tiling`` accepts a :class:`TilingMode` or its English string; the
+        deprecated Spanish values still arrive from old callers and are
+        normalised once. ``record``, when given, is filled with the decision
+        under English keys: ``width``, ``height``, ``tiled`` and ``plan`` (a
+        :class:`~polyx.core.detect.tiling.TilingPlan` or ``None``).
         """
         ...
 
@@ -161,7 +172,7 @@ class SinglePassDetectionSource:
         iou: float = 0.45,
         imgsz: int = 1280,
         device: str = "0",
-        tiling: str = "auto",
+        tiling: TilingMode | str = TilingMode.AUTO,
         threshold_px: int = 2000,
         tile: int = 0,
         overlap: float = 0.25,
@@ -209,60 +220,6 @@ def size_image(image_path: str | Path) -> tuple[int, int] | None:
             return int(img.shape[1]), int(img.shape[0])
         except Exception:  # noqa: BLE001
             return None
-
-
-def policy_tiling(
-    width: int,
-    height: int,
-    imgsz: int,
-    threshold_px: int = 2000,
-    tile: int = 0,
-    overlap: float = 0.25,
-) -> dict | None:
-    """Decides whether the photo gets tiled, and with which geometry, from its
-    size alone.
-
-        ``None`` means a single pass over the full image.
-
-        The threshold is not compared against the area but against the **longer
-        side**, because what makes a particle disappear is the rescale to
-        ``imgsz``: a 3260 px photo entering at 2080 shrinks every particle to
-        0.64x, and below the network's stride it stops existing. Tiling avoids
-        that rescale.
-
-        With ``tile=0`` the tile side comes from ``min(umbral_px, imgsz)``: this
-        way the crop enters the network without being shrunk, which is exactly
-        the goal.
-
-        WHETHER to tile and AT WHICH SIZE are two different questions, and
-        mixing them up caused a failure: to force tiling, ``predict_auto``
-        passes ``umbral_px=0`` -- its way of saying "do not decide, tile" --,
-        and that yielded ``min(0, imgsz) = 0``, which the clamp raised to 256.
-        On a 4096x3072 photo that is 336 tiles of 256 px: extremely slow and
-        with ZERO detections, because each tile gets rescaled 8x up to imgsz and
-        the model sees nothing resembling what it was trained on. With
-        umbral_px at 0 the size is governed by imgsz, the only thing that truly
-        determines it.
-    """
-    side = max(int(width), int(height))
-    if side <= int(threshold_px):
-        return None
-    if int(tile) > 0:
-        t = int(tile)
-    else:
-        candidates_2 = [v for v in (int(threshold_px), int(imgsz)) if v > 0]
-        t = min(candidates_2) if candidates_2 else 1280
-    t = max(256, min(t, side))
-    overlap = min(max(float(overlap), 0.0), 0.9)
-    step = max(1, int(round(t * (1.0 - overlap))))  # noqa: RUF046
-    n = len(_tile_starts(int(width), t, step)) * len(_tile_starts(int(height), t, step))
-    return {
-        "tile": t,
-        "overlap": overlap,
-        "n_tiles": n,
-        "lado": side,
-        "umbral_px": int(threshold_px),
-    }
 
 
 def equal_area_diameter(area: float) -> float:
@@ -330,13 +287,3 @@ class SegmentationSource(Protocol):
 
     @property
     def last_imgsz(self) -> int: ...
-
-
-def _tile_starts(total: int, tile: int, step: int) -> list[int]:
-    """Start positions of the tiles along one axis (the last one flush with the edge)."""
-    if total <= tile:
-        return [0]
-    starts = list(range(0, total - tile + 1, step))
-    if not starts or starts[-1] != total - tile:
-        starts.append(total - tile)
-    return starts
