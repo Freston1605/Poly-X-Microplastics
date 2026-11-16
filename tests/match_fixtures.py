@@ -100,3 +100,78 @@ def matched_run(root: Path, *, use_mask: bool = True) -> RunResult:
         params=RunParams(),
         results={0: [matched_result(image, use_mask=use_mask)]},
     )
+
+
+def misclassified_result(image: Path, model_idx: int = 0) -> ImageResult:
+    """One true positive and one well-placed box with the wrong class.
+
+    Both boxes sit on their ground-truth particle, so the run's match finds no
+    plain false positive and no missing particle: ``tp=1, fp=0, fn=0`` and one
+    ``miscls``. The box is wrong only in the polymer, which is exactly the
+    difference between the two operating-point criteria.
+    """
+    true_positive = Instance(
+        class_id=0,
+        class_name="PET",
+        conf=0.9,
+        x1=12.0,
+        y1=12.0,
+        x2=52.0,
+        y2=52.0,
+    )
+    wrong_class = Instance(
+        class_id=1,
+        class_name="PP",
+        conf=0.4,
+        x1=102.0,
+        y1=102.0,
+        x2=142.0,
+        y2=142.0,
+    )
+    gt_true = Instance(
+        class_id=0,
+        class_name="PET",
+        conf=1.0,
+        x1=10.0,
+        y1=10.0,
+        x2=50.0,
+        y2=50.0,
+    )
+    gt_wrong = Instance(
+        class_id=0,
+        class_name="PET",
+        conf=1.0,
+        x1=100.0,
+        y1=100.0,
+        x2=140.0,
+        y2=140.0,
+    )
+    match = match_image([true_positive, wrong_class], [gt_true, gt_wrong], iou_thr=0.5)
+    assert (match.tp, match.fp, match.fn, match.miscls) == (1, 0, 0, 1)
+
+    return ImageResult(
+        image_path=image,
+        model_idx=model_idx,
+        predictions=[true_positive, wrong_class],
+        gt=[gt_true, gt_wrong],
+        has_gt=True,
+        tp=match.tp,
+        fp=match.fp,
+        fn=match.fn,
+        miscls=match.miscls,
+        match=match,
+        match_iou_thr=0.5,
+        match_use_mask_iou=False,
+    )
+
+
+def misclassified_run(root: Path) -> RunResult:
+    """A one-model, one-image run carrying ``misclassified_result``."""
+    image = root / "plate.png"
+    return RunResult(
+        run_dir=root / "run",
+        images=[image],
+        models=[ModelInfo(alias="m1", path=root / "m1.pt")],
+        params=RunParams(),
+        results={0: [misclassified_result(image)]},
+    )

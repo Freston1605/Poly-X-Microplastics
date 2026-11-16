@@ -29,13 +29,22 @@ from .identity import (
 from .legacy_reader import load_legacy_run
 from .reload import ReloadSummary, reload_ground_truth
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
-from .schema import DETECTION_COLUMNS, SCHEMA_VERSION, load_run
+from .schema import (
+    DETECTION_COLUMNS,
+    PAGE_COLUMNS,
+    SCHEMA_VERSION,
+    VIEWER_COLUMNS,
+    detection_row,
+    load_run,
+)
 
 __all__ = [
     "CALIBRATION_MODES",
     "DETECTION_COLUMNS",
     "IMAGE_EXTS",
+    "PAGE_COLUMNS",
     "SCHEMA_VERSION",
+    "VIEWER_COLUMNS",
     "CalibrationPolicy",
     "ImageResult",
     "ModelExecution",
@@ -51,6 +60,7 @@ __all__ = [
     "RunParams",
     "RunResult",
     "RunStatus",
+    "detection_row",
     "display_name",
     "generated_alias",
     "load_legacy_run",
