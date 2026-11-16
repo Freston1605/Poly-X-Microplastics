@@ -16,6 +16,7 @@ from pathlib import Path
 from polyx.core.detect.yolo import Detection
 from polyx.core.measure.calibration import Calibration, summary_batch
 from polyx.core.platform import device_available
+from polyx.core.quality.metrics import MatchResult
 
 
 class RunStatus(StrEnum):
@@ -115,6 +116,16 @@ class ImageResult:
     fp: int = 0
     fn: int = 0
     miscls: int = 0
+    # The match the run actually decided, indices and all. ``tp/fp/fn/miscls``
+    # above are its serialised projection: ``run.json`` keeps them so old
+    # folders and old readers stay valid, and readers must take the identity
+    # from here instead of re-matching with a rule of their own. ``None`` means
+    # no decision was made for this image (no ground truth).
+    match: MatchResult | None = field(default=None, compare=False, repr=False)
+    # The rule that decision used, recorded with it: a reader that cannot see
+    # the match must still be able to say which criterion the run applied.
+    match_iou_thr: float = 0.5
+    match_use_mask_iou: bool = False
     # Paths of the annotated images saved in the run folder.
     annotated_path: Path | None = None  # prediction + GT (preview/errors)
     pred_path: Path | None = None  # model predictions only

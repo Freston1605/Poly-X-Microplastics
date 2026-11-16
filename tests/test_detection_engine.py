@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import cv2
@@ -36,6 +37,7 @@ from polyx.core.detection_run import (
 )
 from polyx.core.detection_run import engine as engine_module
 from polyx.core.measure.calibration import ORIGIN_MANUAL, ORIGIN_NONE
+from polyx.core.quality.metrics import MatchResult
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -385,6 +387,8 @@ def test_abort_is_honoured_at_the_image_boundary(tmp_path):
                 "fp": 0,
                 "fn": 0,
                 "miscls": 0,
+                "match_iou_thr": 0.5,
+                "match_use_mask_iou": False,
                 "tiling": "",
             },
             {
@@ -395,6 +399,8 @@ def test_abort_is_honoured_at_the_image_boundary(tmp_path):
                 "fp": 0,
                 "fn": 0,
                 "miscls": 0,
+                "match_iou_thr": 0.5,
+                "match_use_mask_iou": False,
                 "tiling": "",
             },
         ],
@@ -720,3 +726,253 @@ def test_engine_executes_and_loads_without_importing_qt(tmp_path):
         f"stderr: {result.stderr}"
     )
     assert "QT_LOADED=[]" in result.stdout
+
+
+# ── The match the engine decided (ticket #120) ─────────────────────────
+#
+# The engine has always decided which prediction is a true positive, a false
+# positive, a missed label or a misclassified pair. These tests pin that the
+# decision itself crosses the seam, instead of only its four totals: readers
+# used to rebuild their own match and could disagree with the run.
+
+_DISJOINT_BOXES = {
+    "top": (20.0, 20.0, 60.0, 60.0),
+    "bottom": (90.0, 90.0, 130.0, 130.0),
+    "left-low": (20.0, 90.0, 60.0, 130.0),
+    "right-high": (90.0, 20.0, 130.0, 60.0),
+}
+
+
+class ScriptedDetector:
+    """A loaded detection source that returns exactly the instances it was given.
+
+    The engine measures, filters and numbers in place, so every call hands back
+    a fresh deep copy; masks included, because ``_uses_mask_iou`` reads them.
+    """
+
+    def __init__(self, detections: list[Instance], names: dict[int, str] | None = None):
+        self._detections = detections
+        self._names = names or {0: "PET", 1: "PP"}
+        self.calls: list[Path] = []
+        self.last_imgsz = 0
+        self.last_fallback = False
+
+    @property
+    def names(self) -> dict[int, str]:
+        return self._names
+
+    def predict_auto(self, image_path, **kwargs) -> list[Instance]:
+        self.calls.append(Path(image_path))
+        self.last_imgsz = int(kwargs.get("imgsz", 0) or 0)
+        return [deepcopy(det) for det in self._detections]
+
+
+def _detection(class_id: int, conf: float, box: tuple[float, float, float, float], **extra):
+    x1, y1, x2, y2 = box
+    return Instance(
+        class_id=class_id,
+        class_name="PET" if class_id == 0 else "PP",
+        conf=conf,
+        x1=x1,
+        y1=y1,
+        x2=x2,
+        y2=y2,
+        **extra,
+    )
+
+
+def _label_line(class_id: int, box: tuple[float, float, float, float]) -> str:
+    """One YOLO label line for a 160x160 plate."""
+    x1, y1, x2, y2 = box
+    return (
+        f"{class_id} {(x1 + x2) / 2 / 160:.6f} {(y1 + y2) / 2 / 160:.6f} "
+        f"{(x2 - x1) / 160:.6f} {(y2 - y1) / 160:.6f}\n"
+    )
+
+
+def _matching_plate(tmp_path: Path) -> Path:
+    """A plate with one label of every outcome: TP, FP, misclassified, missed."""
+    image = write_plate(tmp_path / "photos" / "plate.png")
+    (image.parent / "plate.txt").write_text(
+        _label_line(0, _DISJOINT_BOXES["top"])
+        + _label_line(1, _DISJOINT_BOXES["left-low"])
+        + _label_line(1, _DISJOINT_BOXES["right-high"]),
+        encoding="utf-8",
+    )
+    return image
+
+
+def _matching_detector() -> ScriptedDetector:
+    """Predictions: a PET on the PET label, a stray, and a PET on a PP label."""
+    return ScriptedDetector(
+        [
+            _detection(0, 0.90, _DISJOINT_BOXES["top"]),
+            _detection(0, 0.80, _DISJOINT_BOXES["bottom"]),
+            _detection(0, 0.70, _DISJOINT_BOXES["left-low"]),
+        ]
+    )
+
+
+def test_engine_attaches_the_match_it_performed(tmp_path):
+    """The engine keeps the decision, not just its four totals."""
+    image = _matching_plate(tmp_path)
+    result = run_detection(make_config([image], [_matching_detector()], tmp_path / "run"))
+    item = result.results[0][0]
+
+    match = item.match
+    assert isinstance(match, MatchResult)
+    assert (item.tp, item.fp, item.fn, item.miscls) == (1, 1, 1, 1)
+    assert (match.tp, match.fp, match.fn, match.miscls) == (1, 1, 1, 1)
+    # Prediction 0 is the TP on GT 0; prediction 1 has no GT; prediction 2 sits
+    # on the PP label while claiming PET; GT 2 is never found.
+    assert match.tp_pairs == [(0, 0)]
+    assert match.fp_idx == [1]
+    assert match.miscls_pairs == [(2, 1)]
+    assert match.fn_idx == [2]
+    assert item.match_iou_thr == pytest.approx(result.params.iou_tp)
+    assert item.match_use_mask_iou is False
+
+
+def test_run_json_records_the_match_rule_and_load_rehydrates_the_match(tmp_path):
+    """The rule survives a reload; the pair lists do not need to be written.
+
+    GT and predictions are already in the folder, so one ``match_image`` call
+    with the recorded rule rebuilds the decision. Persisting the indices would
+    grow the document to say what it already says.
+    """
+    image = _matching_plate(tmp_path)
+    result = run_detection(make_config([image], [_matching_detector()], tmp_path / "run"))
+
+    payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
+    row = payload["images"][0]["models"][0]
+    assert row["match_iou_thr"] == pytest.approx(result.params.iou_tp)
+    assert row["match_use_mask_iou"] is False
+    assert "tp_pairs" not in row and "fp_idx" not in row
+
+    loaded = load_run(result.run_dir)
+    item = loaded.results[0][0]
+    assert isinstance(item.match, MatchResult)
+    assert item.match.tp_pairs == [(0, 0)]
+    assert item.match.fp_idx == [1]
+    assert item.match.miscls_pairs == [(2, 1)]
+    assert item.match.fn_idx == [2]
+    assert (item.match.tp, item.match.fp, item.match.fn, item.match.miscls) == (
+        item.tp,
+        item.fp,
+        item.fn,
+        item.miscls,
+    )
+    assert item.match_iou_thr == pytest.approx(result.params.iou_tp)
+    assert item.match_use_mask_iou is False
+
+
+def _polygon_line(class_id: int, points: list[tuple[float, float]]) -> str:
+    """One YOLO-seg label line (normalized polygon) for a 160x160 plate."""
+    coords = " ".join(f"{x / 160:.6f} {y / 160:.6f}" for x, y in points)
+    return f"{class_id} {coords}\n"
+
+
+def _solid_mask(box: tuple[float, float, float, float]) -> np.ndarray:
+    """A full-frame boolean mask covering ``box``."""
+    mask = np.zeros((160, 160), dtype=bool)
+    x1, y1, x2, y2 = (int(value) for value in box)
+    mask[y1:y2, x1:x2] = True
+    return mask
+
+
+def _masked_plate(tmp_path: Path) -> Path:
+    """A plate whose GT carries a polygon mask, so mask IoU is available."""
+    image = write_plate(tmp_path / "photos" / "plate.png")
+    x1, y1, x2, y2 = _DISJOINT_BOXES["top"]
+    (image.parent / "plate.txt").write_text(
+        _polygon_line(0, [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]),
+        encoding="utf-8",
+    )
+    return image
+
+
+def test_masked_run_records_the_mask_rule_and_a_box_run_records_the_box_rule(tmp_path):
+    """The same plate, decided twice: the recorded rule says which one ran.
+
+    The prediction's box is twice as tall as the particle but its mask covers
+    exactly the GT mask, so mask matching finds the true positive (IoU 1.0)
+    and box matching does not (IoU 0.125): the two rules disagree on purpose.
+    """
+    image = _masked_plate(tmp_path)
+    mask = _solid_mask(_DISJOINT_BOXES["top"])
+    masked = ScriptedDetector(
+        [_detection(0, 0.90, (0.0, 0.0, 160.0, 80.0), mask=mask, mask_source="yolo-seg")]
+    )
+    result = run_detection(make_config([image], [masked], tmp_path / "run"))
+    item = result.results[0][0]
+
+    assert (item.tp, item.fp, item.fn) == (1, 0, 0)
+    assert item.match_use_mask_iou is True
+    assert item.match is not None and item.match.tp_pairs == [(0, 0)]
+
+    payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
+    assert payload["images"][0]["models"][0]["match_use_mask_iou"] is True
+
+    box_run = run_detection(
+        make_config(
+            [_matching_plate(tmp_path / "plain")], [_matching_detector()], tmp_path / "box-run"
+        )
+    )
+    box_payload = json.loads((box_run.run_dir / "run.json").read_text(encoding="utf-8"))
+    assert box_payload["images"][0]["models"][0]["match_use_mask_iou"] is False
+
+
+def test_a_masked_run_reopened_from_disk_keeps_its_counters_and_its_rule(tmp_path):
+    """Masks are not persisted, so the reopen must not invent a second match.
+
+    The record says the run matched by mask IoU and says what the counts were.
+    Recomputing that identity from a folder without masks is impossible; the
+    loader keeps the counters as the truth and reports no pair indices rather
+    than a box-matched decision the run never made.
+    """
+    image = _masked_plate(tmp_path)
+    masked = ScriptedDetector(
+        [_detection(0, 0.90, (0.0, 0.0, 160.0, 80.0), mask=_solid_mask(_DISJOINT_BOXES["top"]))]
+    )
+    result = run_detection(make_config([image], [masked], tmp_path / "run"))
+
+    loaded = load_run(result.run_dir)
+    item = loaded.results[0][0]
+    assert item.match_use_mask_iou is True
+    assert item.match_iou_thr == pytest.approx(result.params.iou_tp)
+    assert (item.tp, item.fp, item.fn, item.miscls) == (1, 0, 0, 0)
+    assert item.match is not None
+    assert (item.match.tp, item.match.fp, item.match.fn) == (1, 0, 0)
+    # No box-matched identity is passed off as the run's own.
+    assert item.match.tp_pairs == []
+    assert item.match.fp_idx == []
+
+
+def test_a_run_json_without_the_match_rule_still_loads(tmp_path):
+    """Folders written before #120 keep loading, with the documented fallback.
+
+    Those runs matched at ``params.iou_tp`` and never persisted masks, so box
+    IoU at that threshold is the only rule their counters can have come from.
+    With the boxes still in the folder the decision is reproducible.
+    """
+    image = _matching_plate(tmp_path)
+    result = run_detection(make_config([image], [_matching_detector()], tmp_path / "run"))
+    run_json = result.run_dir / "run.json"
+    payload = json.loads(run_json.read_text(encoding="utf-8"))
+    for entry in payload["images"]:
+        for row in entry["models"]:
+            row.pop("match_iou_thr", None)
+            row.pop("match_use_mask_iou", None)
+    run_json.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_run(result.run_dir)
+    item = loaded.results[0][0]
+
+    assert (item.tp, item.fp, item.fn, item.miscls) == (1, 1, 1, 1)
+    assert item.match_iou_thr == pytest.approx(loaded.params.iou_tp)
+    assert item.match_use_mask_iou is False
+    assert isinstance(item.match, MatchResult)
+    assert item.match.tp_pairs == [(0, 0)]
+    assert item.match.fp_idx == [1]
+    assert item.match.miscls_pairs == [(2, 1)]
+    assert item.match.fn_idx == [2]

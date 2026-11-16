@@ -67,6 +67,31 @@ def test_legacy_headless_folder_becomes_a_run_result():
     assert second.has_gt is True
 
 
+def test_legacy_headless_folder_keeps_its_recorded_counts_as_its_match():
+    """Old headless folders have counts but no GT boxes: they say so.
+
+    The ``match`` is the counters the run recorded, with no pair indices,
+    because nothing in the folder can prove which box was which. Readers get
+    a decision to read instead of a silent ``None`` next to ``has_gt=True``.
+    """
+    from polyx.core.detection_run import load_legacy_run
+    from polyx.core.quality.metrics import MatchResult
+
+    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
+    by_name = {result.image_path.name: result for result in run.results[0]}
+
+    first = by_name["plate1.png"]
+    assert isinstance(first.match, MatchResult)
+    assert (first.match.tp, first.match.fp, first.match.fn, first.match.miscls) == (1, 0, 0, 0)
+    assert first.match.tp_pairs == []
+    assert first.match.fp_idx == []
+
+    second = by_name["plate2.png"]
+    assert isinstance(second.match, MatchResult)
+    assert (second.match.tp, second.match.fp, second.match.fn) == (0, 1, 1)
+    assert second.match.fn_idx == [] and second.match.fp_idx == []
+
+
 def test_legacy_headless_folder_without_originals_still_loads():
     """A folder copied away from its photos stays readable: names are enough."""
     from polyx.core.detection_run import load_legacy_run
