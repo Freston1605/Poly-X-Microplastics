@@ -507,8 +507,34 @@ def test_unexpected_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
     assert [item.image_path for item in loaded.results[0]] == [images[0]]
 
 
-def test_setup_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
-    """An alias/config error before the loop still leaves a partial record."""
+def test_setup_error_writes_a_failed_run_and_raises_run_failed(tmp_path, monkeypatch):
+    """A setup error before the loop still leaves a partial record."""
+    image = write_plate(tmp_path / "photos" / "plate.png")
+
+    def _explode(_path):
+        raise RuntimeError("fingerprint exploded")
+
+    monkeypatch.setattr(engine_module, "sha256_file", _explode)
+    config = RunConfig(
+        images=[image],
+        models=[ModelSpec(detector=FakeDetector(), alias="same", path=image)],
+        output_dir=tmp_path / "run",
+        params=RunParams(),
+        calibration=CalibrationPolicy(mode="none"),
+    )
+
+    with pytest.raises(RunFailed) as error:
+        run_detection(config)
+
+    assert error.value.result.status is RunStatus.FAILED
+    assert "fingerprint exploded" in (error.value.result.error or "")
+    payload = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+    assert payload["models"] == []
+
+
+def test_duplicate_model_aliases_disambiguate_instead_of_failing(tmp_path):
+    """Two models with the same name get sibling folders, not an error (#124)."""
     image = write_plate(tmp_path / "photos" / "plate.png")
     config = RunConfig(
         images=[image],
@@ -521,14 +547,14 @@ def test_setup_error_writes_a_failed_run_and_raises_run_failed(tmp_path):
         calibration=CalibrationPolicy(mode="none"),
     )
 
-    with pytest.raises(RunFailed) as error:
-        run_detection(config)
+    result = run_detection(config)
 
-    assert error.value.result.status is RunStatus.FAILED
-    assert "duplicate model alias" in (error.value.result.error or "")
-    payload = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
-    assert payload["status"] == "failed"
-    assert payload["models"] == []
+    assert result.status is RunStatus.COMPLETED
+    assert [model.alias for model in result.models] == ["same", "same_2"]
+    assert (tmp_path / "run" / "same" / "0000_plate_annot.png").is_file()
+    assert (tmp_path / "run" / "same_2" / "0000_plate_annot.png").is_file()
+    loaded = load_run(tmp_path / "run")
+    assert [model.alias for model in loaded.models] == ["same", "same_2"]
 
 
 def test_none_calibration_invents_no_micrometre_sizes(tmp_path):

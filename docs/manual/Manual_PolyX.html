@@ -1902,6 +1902,7 @@ misma carpeta canónica:</p>
   <thead><tr><th>Opción</th><th>Efecto</th></tr></thead>
   <tbody>
     <tr><td><code>--model</code>, <code>--model-type</code></td><td>se repiten una vez por modelo; el alias sale del nombre del archivo. Un solo tipo se aplica a todos; sin tipo se usa <code>yolo</code>.</td></tr>
+    <tr><td><code>--alias</code></td><td>subcarpeta de la corrida para un modelo; se repite una vez por modelo. Por defecto, el nombre del fichero de pesos. Nunca se traduce.</td></tr>
     <tr><td><code>--out</code>, <code>--force</code></td><td>la carpeta exacta de la corrida. Si ya tiene contenido se rechaza, salvo con <code>--force</code>.</td></tr>
     <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>calibración por foto; por defecto <code>auto</code>. <code>--um-per-px</code> solo implica <code>manual</code> y <code>--index-calibration</code> da el CSV explícito.</td></tr>
     <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>umbrales e inferencia.</td></tr>

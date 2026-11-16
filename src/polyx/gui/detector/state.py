@@ -17,8 +17,8 @@ from polyx.core.detection_run import (
     ModelInfo,
     RunParams,
     RunResult,
+    generated_alias,
 )
-from polyx.core.i18n import _
 
 # Compatibility name used by the pages and by old headless folder readers.
 InferenceParams = RunParams
@@ -30,9 +30,19 @@ class ModelSlot(ModelInfo):
     """A model slot in the `Modelos` tab (up to 3): metadata plus its backend."""
 
     loaded: DetectionSource | None = None
-    #: The alias is still the generated "Model N", so it follows the interface
-    #: language; a name typed by the user is kept as written.
-    alias_default: bool = True
+
+    @property
+    def alias_default(self) -> bool:
+        """Whether the slot still holds the generated ``model_<n>`` placeholder.
+
+        Kept as the pages' name for :attr:`alias_generated`: when true the card
+        shows the translated label, and the folder key stays ``model_<n>``.
+        """
+        return self.alias_generated
+
+    @alias_default.setter
+    def alias_default(self, value: bool) -> None:
+        self.alias_generated = value
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -52,7 +62,7 @@ class DetectorState(QObject):
     def __init__(self):
         super().__init__()
         self.model_slots: list[ModelSlot] = [
-            ModelSlot(alias=_("Model %(n)s") % {"n": i + 1}) for i in range(3)
+            ModelSlot(alias=generated_alias(i), alias_generated=True) for i in range(3)
         ]
         self.images: list[Path] = []
         self.gt_folder: Path | None = None

@@ -262,6 +262,29 @@ def test_detector_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     window.deleteLater()
 
 
+def test_generated_alias_keeps_its_run_folder_name_across_a_language_switch(qapp):
+    """#124: the card translates its label; the alias it writes does not."""
+    from polyx.core import i18n
+    from polyx.gui.detector.window import DetectorWindow
+
+    i18n.set_language("es")
+    window = DetectorWindow()
+    assert window.state.model_slots[0].alias == "model_1"
+    card = _models_page(window).slot_cards[0]
+    assert card.ed_alias.text() == "model_1"
+    assert "Modelo 1" in _texts(card)
+
+    i18n.set_language("en")
+    qapp.processEvents()
+
+    card = _models_page(window).slot_cards[0]
+    assert card.ed_alias.text() == "model_1", "the run folder name is not interface prose"
+    assert "Model 1" in _texts(card)
+    assert window.state.model_slots[0].alias == "model_1"
+    assert window.state.model_slots[0].alias_default is True
+    window.deleteLater()
+
+
 def test_detector_kpis_keep_the_no_data_placeholder_after_a_switch(qapp):
     """A rebuilt page must not turn "no data yet" into a measured zero."""
     from polyx.core import i18n
