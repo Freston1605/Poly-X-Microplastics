@@ -72,8 +72,13 @@ second to the verdict:
   posture (unpinned action refs, `${{ }}` interpolated into a script, excess
   permissions). Both run from pinned artifacts: actionlint's release tarball
   and shellcheck's, each verified against the published SHA-256, and zizmor
-  through `uvx zizmor==<version>`. One finding is ignored and named in
-  `.github/zizmor.yml`; everything else at any severity fails the PR.
+  through `uvx zizmor==<version>`. zizmor runs with no configuration file, so
+  every finding at every severity fails the PR. actionlint has one narrow
+  ignore in `.github/actionlint.yaml`: the `$/...` reusable-workflow call in
+  `publish.yml`, which version 1.7.12 cannot parse yet (upstream
+  [issue #760](https://github.com/rhysd/actionlint/issues/760)). The pattern
+  matches that message only, and goes away with the first actionlint release
+  that parses `$/`.
 
 The same two commands run locally, and they are the fast loop for a workflow
 change:
@@ -85,7 +90,9 @@ uvx zizmor==1.32.0 .github/workflows/
 
 `publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
 tags via Trusted Publishing. A tag run starts with a job named `ci` that calls
-`ci.yml` through `workflow_call` — the same pipeline every PR runs, which is why
+`ci.yml` through `workflow_call` as `$/.github/workflows/ci.yml` — GitHub's
+self-repository form, so the call resolves to this repository at the running
+commit — the same pipeline every PR runs, which is why
 "gate" is the local check runner and nothing else. A tag on a red commit
 therefore cannot reach PyPI, where a version number is spent forever. The
 `build` job then rejects a tag whose commit is not on `main`, checks that the
