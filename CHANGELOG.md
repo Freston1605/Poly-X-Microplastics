@@ -14,6 +14,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- Re-reading the ground truth of a finished run now goes through the
+  detection-run engine (`reload_ground_truth` in
+  `core/detection_run/reload.py`) instead of a GUI copy of the sequence. The
+  reload measures with the run's own shape path, sizes each label with that
+  photo's recorded calibration, matches with the run's own rule (mask IoU when
+  the run did) and records that rule next to the new counts. It republishes the
+  affected images in `run.json`, so the reloaded views and the run record can no
+  longer disagree. `gui/detector/recargar_gt.py` is gone; the Results page is a
+  progress dialog and one call.
 - The per-image result carries the match the run decided (`MatchResult` with
   the TP/FP/FN/misclassified indices) and the rule behind it (`iou_thr`, box
   or mask IoU). The Errors page, the Results KPIs, the report's error section

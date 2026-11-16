@@ -4,7 +4,9 @@ The canonical engine lives in :mod:`polyx.core.detection_run.engine`; it is
 Qt-free and owns decode, ground-truth reading, measurement, matching, drawing
 and the run folder. ``load_run`` reopens a canonical folder and
 ``load_legacy_run`` rebuilds a ``RunResult`` from a pre-canonical headless
-folder, both without Qt.
+folder, both without Qt. ``reload_ground_truth`` re-reads the labels of a
+finished run through the same rules, so correcting an annotation does not need
+a second inference pass nor a second implementation of the sequence.
 """
 
 from polyx.core.paths import IMAGE_EXTS
@@ -18,6 +20,7 @@ from .engine import (
     run_detection,
 )
 from .legacy_reader import load_legacy_run
+from .reload import ReloadSummary, reload_ground_truth
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import DETECTION_COLUMNS, SCHEMA_VERSION, load_run
 
@@ -31,6 +34,7 @@ __all__ = [
     "ModelExecution",
     "ModelInfo",
     "ModelSpec",
+    "ReloadSummary",
     "RunConfig",
     "RunDirNotEmpty",
     "RunFailed",
@@ -41,5 +45,6 @@ __all__ = [
     "RunStatus",
     "load_legacy_run",
     "load_run",
+    "reload_ground_truth",
     "run_detection",
 ]

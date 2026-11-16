@@ -32,7 +32,7 @@ from polyx.core.measure.calibration import (
 from polyx.core.measure.shape import measure_detections
 from polyx.core.provenance import logger_for, provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
-from polyx.core.quality.metrics import match_image
+from polyx.core.quality.metrics import MatchResult, match_image
 
 from .config import CALIBRATION_MODES, CalibrationPolicy, RunConfig
 from .result import ImageResult, ModelExecution, ModelInfo, RunResult, RunStatus
@@ -231,6 +231,21 @@ def _uses_mask_iou(predictions: list[Instance], gts: list[Instance]) -> bool:
     return any(getattr(det, "mask", None) is not None for det in predictions) or any(
         getattr(det, "mask", None) is not None for det in gts
     )
+
+
+def _decide_match(
+    predictions: list[Instance], gts: list[Instance], iou_thr: float
+) -> tuple[MatchResult, bool]:
+    """The run's matching decision for one model/image, and the rule it used.
+
+    One owner for the criterion: whoever decides again over new labels -- a
+    completed run re-read, a reader rehydrating a recorded match -- must decide
+    the way the run did. That rule is "mask IoU when either side carries a
+    mask", so the returned flag is what the caller records next to the counts.
+    """
+    use_mask_iou = _uses_mask_iou(predictions, gts)
+    match = match_image(predictions, gts, iou_thr=iou_thr, use_mask_iou=use_mask_iou)
+    return match, use_mask_iou
 
 
 def _filter_by_size(detections: list[Instance], um_per_px: float | None, params) -> list[Instance]:
@@ -461,13 +476,7 @@ def run_detection(
                 _number_detections(predictions)
 
                 if has_gt:
-                    mask_iou_rule = _uses_mask_iou(predictions, gts)
-                    match = match_image(
-                        predictions,
-                        gts,
-                        iou_thr=config.params.iou_tp,
-                        use_mask_iou=mask_iou_rule,
-                    )
+                    match, mask_iou_rule = _decide_match(predictions, gts, config.params.iou_tp)
                     tp, fp, fn, miscls = match.tp, match.fp, match.fn, match.miscls
                 else:
                     mask_iou_rule = False
