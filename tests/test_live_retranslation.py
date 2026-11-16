@@ -309,6 +309,65 @@ def test_labeler_keeps_the_no_data_placeholder_after_a_switch(qapp):
     window.deleteLater()
 
 
+def test_destroying_a_trainer_window_while_a_probe_runs_survives(qapp, monkeypatch):
+    """A probe thread must outlive the page and window that started it.
+
+    The trainer starts two probes shortly after it opens. Qt aborts the
+    process when a ``QThread`` object is destroyed with its thread still
+    running, and the probe lives inside a page of the window. The probe body
+    is held open here so the race is deterministic instead of depending on how
+    fast torch answers; the case then destroys the window and drops it, which
+    is what a language change plus a closed module does in the real program.
+
+    This is the abort the CI log showed: pytest captures the
+    ``QThread: Destroyed while thread is still running`` line, so the log
+    named no cause, and the surviving thread in the dump — the one with no
+    Python frame — is the probe Qt destroyed underneath the window. The
+    teardown-race case above guards a different contract.
+    """
+    import gc
+    import threading
+    import weakref
+
+    from polyx.core import i18n
+    from polyx.gui.trainer.window import TrainerWindow
+
+    release = threading.Event()
+    began = threading.Event()
+    # Weak references: holding the probe here would keep the QThread alive and
+    # hide the very destruction this case exists to catch.
+    probes: list[weakref.ReferenceType] = []
+
+    def hold(probe) -> None:
+        probes.append(weakref.ref(probe))
+        began.set()
+        release.wait(5)
+
+    monkeypatch.setattr("polyx.gui.trainer.pages.train._HwProbeWorker.run", hold)
+    monkeypatch.setattr("polyx.gui.trainer.pages.parameters._GpuDetectWorker.run", hold)
+
+    i18n.set_language("es")
+    window = TrainerWindow()
+    _wait_until(qapp, began.is_set, expected="es", what="a trainer probe to start")
+
+    window.deleteLater()
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+    del window
+    gc.collect()
+    qapp.processEvents()
+
+    # Reaching this line is the assertion: the interpreter survived. The
+    # probes are still alive and finish on their own once released.
+    release.set()
+    _wait_until(
+        qapp,
+        lambda: all(ref() is None or ref().isFinished() for ref in probes),
+        expected="es",
+        what="the trainer probes to finish",
+    )
+
+
 def test_trainer_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     from polyx.core import i18n
     from polyx.gui.trainer.window import TrainerWindow
