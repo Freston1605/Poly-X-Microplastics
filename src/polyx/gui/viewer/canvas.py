@@ -66,6 +66,9 @@ class ViewerCanvas(QWidget):
         self._pixmap: QPixmap | None = None
         self._scale: float = 1.0
         self._offset: QPointF = QPointF(0.0, 0.0)
+        # True once the user zoomed or panned: a later resize keeps that
+        # framing instead of refitting and throwing it away.
+        self._user_view: bool = False
         self._filter_cls: str | None = None
 
         # Pan
@@ -95,7 +98,33 @@ class ViewerCanvas(QWidget):
             except Exception:  # noqa: BLE001, S110
                 pass
         self._pixmap = pix if not pix.isNull() else None
+        # A new image starts from its own fit: the previous framing belonged
+        # to another picture.
+        self._user_view = False
         self._fit_to_window()
+        self.update()
+
+    def has_image(self) -> bool:
+        """Whether a decoded image is loaded and can be drawn."""
+        return self._pixmap is not None
+
+    def view_state(self) -> tuple[float, QPointF]:
+        """The zoom and scroll (pan) the user left the canvas at.
+
+        A language change destroys and recreates this widget, so the window
+        captures this pair before the rebuild and hands it back afterwards.
+        """
+        return self._scale, QPointF(self._offset)
+
+    def set_view_state(self, view: tuple[float, QPointF]) -> None:
+        """Restore a view captured by :meth:`view_state`.
+
+        It is marked as the user's own framing, so the resize the rebuilt
+        layout triggers afterwards keeps it instead of refitting the image.
+        """
+        self._scale = view[0]
+        self._offset = QPointF(view[1])
+        self._user_view = True
         self.update()
 
     def _fit_to_window(self):
@@ -112,7 +141,8 @@ class ViewerCanvas(QWidget):
         )
 
     def resizeEvent(self, ev):
-        self._fit_to_window()
+        if not self._user_view:
+            self._fit_to_window()
         super().resizeEvent(ev)
 
     def set_filter_class(self, cls_name: str | None):
@@ -279,6 +309,7 @@ class ViewerCanvas(QWidget):
         if self._panning and self._pan_start is not None:
             delta = pos - self._pan_start
             self._offset = self._pan_offset_start + delta
+            self._user_view = True
             self.update()
         elif self.state.calib_mode != "none":
             self._cursor_img = self._w2i(pos)
@@ -299,6 +330,7 @@ class ViewerCanvas(QWidget):
             pos.x() - img_pt.x() * self._scale,
             pos.y() - img_pt.y() * self._scale,
         )
+        self._user_view = True
         self.update()
 
     # ── Keyboard ─────────────────────────────────────────────
