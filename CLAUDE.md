@@ -545,6 +545,9 @@ polyx-detect --model best.pt --images ./photos --out ./run \
 
 - `--model` and `--model-type` repeat: aliases default to the weights stem,
   one type applies to every model, and no type means `yolo`.
+- `--alias NAME` names the model's run subfolder and repeats once per model.
+  Unlike the old pre-#124 alias, it is a stable folder key: it is never
+  translated, and unsafe characters are replaced (`a/b` → `a_b`).
 - `--out` is the exact run folder. A non-empty folder is refused unless
   `--force` is given.
 - `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
