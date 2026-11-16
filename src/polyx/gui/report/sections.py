@@ -12,7 +12,10 @@ import numpy as np
 from polyx.core.detection_run import RunStatus
 from polyx.core.i18n import _, ngettext
 from polyx.core.quality.assignment import resume
-from polyx.core.quality.metrics import aggregate_per_class, confusion_matrix
+from polyx.core.quality.metrics import (
+    confusion_matrix_from_matches,
+    per_class_from_matches,
+)
 from polyx.core.report_metrics import _ORDER_CLASSES, _count_per_class, _pr_f1
 from polyx.core.stats import (
     _average_ic95,
@@ -133,6 +136,16 @@ def _run_status_note(run) -> str:
         "padding:6px 12px;background:var(--bg_soft)'>"
         f"<strong>{title}</strong> {detail} <code>{status.value}</code></p>"
     )
+
+
+def _match_rule_label(use_mask_iou: bool) -> str:
+    """How the run matched predictions to labels, in words the reader can cite.
+
+    A report that only says "IoU 0.50" leaves the reader unable to tell why two
+    runs of the same photos disagree: a box IoU of 0.50 and a mask IoU of 0.50
+    decide differently.
+    """
+    return _("mask IoU") if use_mask_iou else _("box IoU")
 
 
 def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
@@ -361,10 +374,23 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
             str(cid),
         )
         cls_names.append(name)
-    cm = confusion_matrix(preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp)
-    per_class_metrics = aggregate_per_class(
-        preds_only, gts_only, cls_ids, iou_thr=run.params.iou_tp
-    )
+    # The run's own decision, image by image: the table below describes the
+    # run, so it must not re-match with a rule of its own (box IoU over a run
+    # matched by mask IoU showed errors the run never counted).
+    matched = [(r.predictions, r.gt, r.match) for r in rs if r.has_gt and r.match is not None]
+    cm = confusion_matrix_from_matches(matched, cls_ids)
+    per_class_metrics = per_class_from_matches(matched, cls_ids)
+    missing_identity = len([r for r in rs if r.has_gt]) - len(matched)
+    note_identity = ""
+    if missing_identity:
+        note_identity = (
+            "<p class='caption' style='text-align:left'>"
+            + _(
+                "%(missing)s of the images with ground truth are not in the matrix: the folder does not record which box was paired with which, so counting them would apply a different rule than the run did."
+            )
+            % {"missing": missing_identity}
+            + "</p>"
+        )
 
     cm_img = _fig_confusion_matrix(cm, cls_names)
     rows = ""
@@ -403,6 +429,7 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         <table class='data'><tr>{_("<th>Class</th><th>True Positives</th><th>False Positives</th><th>False Negatives</th>")}
         {_("<th>Precision</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
         {note_missing}
+        {note_identity}
         """
 
 
@@ -614,7 +641,16 @@ def _section_comparison(run, results_2) -> str:
                 preds_m = [r.predictions for r in rs]
                 ids = sorted({d.class_id for lst in gts_m + preds_m for d in lst})
                 if ids:
-                    metrics = aggregate_per_class(preds_m, gts_m, ids, iou_thr=run.params.iou_tp)
+                    # The run's decision, not a re-match: this figure sits next
+                    # to the error table and must report the same numbers.
+                    metrics = per_class_from_matches(
+                        [
+                            (r.predictions, r.gt, r.match)
+                            for r in rs
+                            if r.has_gt and r.match is not None
+                        ],
+                        ids,
+                    )
                     names_cls = {
                         cid: next(
                             (
@@ -902,7 +938,10 @@ def _section_methods(
         (_("Models loaded"), _esc(", ".join(s.alias for s in active)) or "—"),
         (_("Minimum confidence"), f"{p.conf:g}"),
         (_("IoU NMS"), f"{p.iou_nms:g}"),
-        (_("IoU for matching true positives"), f"{p.iou_tp:g}"),
+        (
+            _("IoU for matching true positives"),
+            f"{_match_rule_label(run.match_use_mask_iou)} {p.iou_tp:g}",
+        ),
         (_("Image size (imgsz)"), f"{p.imgsz}"),
         (_("Device"), p.device),
         (_("μm per pixel"), um_px_txt),
@@ -958,9 +997,9 @@ def _section_methods(
         }
         + (
             _(
-                "Error metrics were computed against independent manual annotation, matching predictions and labels at IoU ≥ %(iou)s. "
+                "Error metrics were computed against independent manual annotation, matching predictions and labels at %(rule)s ≥ %(iou)s. "
             )
-            % {"iou": f"{p.iou_tp:g}"}
+            % {"rule": _match_rule_label(run.match_use_mask_iou), "iou": f"{p.iou_tp:g}"}
             if any_gt
             else ""
         )

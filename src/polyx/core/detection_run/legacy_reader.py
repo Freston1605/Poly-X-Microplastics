@@ -18,6 +18,7 @@ from pathlib import Path
 
 from polyx.core.measure.calibration import ORIGIN_MANUAL, Calibration
 from polyx.core.paths import find_images
+from polyx.core.quality.metrics import MatchResult
 
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import (
@@ -140,6 +141,19 @@ def load_legacy_run(run_dir: Path, image_dir: Path | None = None) -> RunResult:
                 fp=int(counts.get("fp", 0)),
                 fn=int(counts.get("fn", 0)),
                 miscls=int(counts.get("miscls", 0)),
+                # The old folder recorded the totals and nothing else: this is
+                # the match as far as it survives, and it says so by carrying
+                # no pair indices.
+                match=(
+                    MatchResult(
+                        tp=int(counts.get("tp", 0)),
+                        fp=int(counts.get("fp", 0)),
+                        fn=int(counts.get("fn", 0)),
+                        miscls=int(counts.get("miscls", 0)),
+                    )
+                    if counts
+                    else None
+                ),
                 annotated_path=run_dir / LEGACY_IMAGES / f"{Path(name).stem}.png",
             )
         )

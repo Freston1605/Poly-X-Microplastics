@@ -436,17 +436,28 @@ class ResultsPage(DetectorPage):
     def _metrics_to(self, gt_results, threshold: float):
         """Strict P/R/F1 filtering the predictions at a given threshold.
 
+        This is the hypothetical threshold sweep, not the run's decision: the
+        numbers it returns answer "what if we had kept only the boxes above
+        ``threshold``". The run's own totals are ``r.match`` and are never
+        recomputed here. The criterion (strict, misclassification penalised on
+        both sides) moves to the operating-point module in ARCH-03, which will
+        name it; the matching rule itself is already the run's own.
+
         Strict: a well placed box with the wrong class counts as a false
         positive of the predicted class and a false negative of the true one.
         The permissive criterion, which leaves it out of both denominators,
         overestimates the performance and moreover contradicts the per-class
         precision table.
         """
-        iou_thr = self.state.params.iou_tp
         tp = fp = fn = mc = 0
         for r in gt_results:
             preds = [p for p in r.predictions if p.conf >= threshold]
-            m = match_image(preds, r.gt, iou_thr)
+            m = match_image(
+                preds,
+                r.gt,
+                iou_thr=r.match_iou_thr,
+                use_mask_iou=r.match_use_mask_iou,
+            )
             tp += m.tp
             fp += m.fp
             fn += m.fn

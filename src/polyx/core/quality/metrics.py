@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -155,6 +156,48 @@ class ClassMetrics:
         return 2 * p * r / (p + r) if (p + r) else 0.0
 
 
+def _add_to_classes(preds: list[Detection], gts: list[Detection], m: MatchResult, out) -> None:
+    """Fold one already-decided match into the per-class counters."""
+    # TP per class: use the TP pairs
+    for pi, gi in m.tp_pairs:  # noqa: B007
+        cid = preds[pi].class_id
+        if cid in out:
+            out[cid].tp += 1
+    # FP per predicted class
+    for pi in m.fp_idx:
+        cid = preds[pi].class_id
+        if cid in out:
+            out[cid].fp += 1
+    # FN per GT class
+    for gi in m.fn_idx:
+        cid = gts[gi].class_id
+        if cid in out:
+            out[cid].fn += 1
+    # miscls: counts as FP of the prediction + FN of the GT
+    for pi, gi in m.miscls_pairs:
+        cid_p = preds[pi].class_id
+        cid_g = gts[gi].class_id
+        if cid_p in out:
+            out[cid_p].fp += 1
+        if cid_g in out:
+            out[cid_g].fn += 1
+
+
+def per_class_from_matches(
+    matches: Iterable[tuple[list[Detection], list[Detection], MatchResult]],
+    class_ids: list[int],
+) -> dict[int, ClassMetrics]:
+    """Per-class counters over matches that were already decided.
+
+    The caller passes the pairs the run performed; nothing is matched again,
+    so a report cannot disagree with the run it describes.
+    """
+    out = {cid: ClassMetrics() for cid in class_ids}
+    for preds, gts, match in matches:
+        _add_to_classes(preds, gts, match, out)
+    return out
+
+
 def aggregate_per_class(
     all_preds: list[list[Detection]],
     all_gts: list[list[Detection]],
@@ -163,33 +206,46 @@ def aggregate_per_class(
     use_mask_iou: bool = False,
 ) -> dict[int, ClassMetrics]:
     """Returns {class_id: ClassMetrics} summed over all images."""
-    out = {cid: ClassMetrics() for cid in class_ids}
-    for preds, gts in zip(all_preds, all_gts):  # noqa: B905
-        m = match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou)
-        # TP per class: use the TP pairs
-        for pi, gi in m.tp_pairs:  # noqa: B007
-            cid = preds[pi].class_id
-            if cid in out:
-                out[cid].tp += 1
-        # FP per predicted class
-        for pi in m.fp_idx:
-            cid = preds[pi].class_id
-            if cid in out:
-                out[cid].fp += 1
-        # FN per GT class
-        for gi in m.fn_idx:
-            cid = gts[gi].class_id
-            if cid in out:
-                out[cid].fn += 1
-        # miscls: counts as FP of the prediction + FN of the GT
-        for pi, gi in m.miscls_pairs:
-            cid_p = preds[pi].class_id
-            cid_g = gts[gi].class_id
-            if cid_p in out:
-                out[cid_p].fp += 1
-            if cid_g in out:
-                out[cid_g].fn += 1
-    return out
+    return per_class_from_matches(
+        (
+            (preds, gts, match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou))
+            for preds, gts in zip(all_preds, all_gts)  # noqa: B905
+        ),
+        class_ids,
+    )
+
+
+def _add_to_matrix(cm: np.ndarray, idx_of: dict[int, int], n: int, preds, gts, m: MatchResult):
+    for pi, gi in m.tp_pairs:  # noqa: B007
+        i = idx_of.get(gts[gi].class_id)
+        if i is not None:
+            cm[i, i] += 1
+    for pi, gi in m.miscls_pairs:
+        ig = idx_of.get(gts[gi].class_id)
+        ip = idx_of.get(preds[pi].class_id)
+        if ig is not None and ip is not None:
+            cm[ig, ip] += 1
+    for pi in m.fp_idx:
+        ip = idx_of.get(preds[pi].class_id)
+        if ip is not None:
+            cm[n, ip] += 1  # GT background -> predicted as a class
+    for gi in m.fn_idx:
+        ig = idx_of.get(gts[gi].class_id)
+        if ig is not None:
+            cm[ig, n] += 1  # GT class -> not detected
+
+
+def confusion_matrix_from_matches(
+    matches: Iterable[tuple[list[Detection], list[Detection], MatchResult]],
+    class_ids: list[int],
+) -> np.ndarray:
+    """Matrix (N+1)x(N+1) over matches that were already decided."""
+    n = len(class_ids)
+    cm = np.zeros((n + 1, n + 1), dtype=int)
+    idx_of = {c: i for i, c in enumerate(class_ids)}
+    for preds, gts, match in matches:
+        _add_to_matrix(cm, idx_of, n, preds, gts, match)
+    return cm
 
 
 def confusion_matrix(
@@ -200,26 +256,10 @@ def confusion_matrix(
     use_mask_iou: bool = False,
 ) -> np.ndarray:
     """Matrix (N+1)x(N+1). Last row/col = background (FN/FP)."""
-    n = len(class_ids)
-    cm = np.zeros((n + 1, n + 1), dtype=int)
-    idx_of = {c: i for i, c in enumerate(class_ids)}
-    for preds, gts in zip(all_preds, all_gts):  # noqa: B905
-        m = match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou)
-        for pi, gi in m.tp_pairs:  # noqa: B007
-            i = idx_of.get(gts[gi].class_id)
-            if i is not None:
-                cm[i, i] += 1
-        for pi, gi in m.miscls_pairs:
-            ig = idx_of.get(gts[gi].class_id)
-            ip = idx_of.get(preds[pi].class_id)
-            if ig is not None and ip is not None:
-                cm[ig, ip] += 1
-        for pi in m.fp_idx:
-            ip = idx_of.get(preds[pi].class_id)
-            if ip is not None:
-                cm[n, ip] += 1  # GT background -> predicted as a class
-        for gi in m.fn_idx:
-            ig = idx_of.get(gts[gi].class_id)
-            if ig is not None:
-                cm[ig, n] += 1  # GT class -> not detected
-    return cm
+    return confusion_matrix_from_matches(
+        (
+            (preds, gts, match_image(preds, gts, iou_thr, use_mask_iou=use_mask_iou))
+            for preds, gts in zip(all_preds, all_gts)  # noqa: B905
+        ),
+        class_ids,
+    )

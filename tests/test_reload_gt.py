@@ -291,3 +291,27 @@ def test_reload_without_gt_redraws_only_combined_view(qapp, tmp_path):
         _sha(result.annotated_path)
         == "f683e1d1268a40eae62a6d67de6f6ca608bdc1b9c3edea06108601329af42866"
     )
+
+
+def test_reload_replaces_the_match_it_recomputes(qapp, tmp_path):
+    """The reload decides again, so the identity must move with the counters.
+
+    Leaving the old ``match`` next to new ``tp/fp/fn`` would make the Errors
+    page and the report describe the labels the reload just threw away.
+    """
+    st, result = _reload_state(tmp_path, _TXT_BOX)
+    stale = result.match
+    assert stale is None
+
+    reload_gt(st)
+
+    # The label is 20x20 px inside a 60x60 px prediction: box IoU 0.111, so no
+    # true positive, one false positive and one missed label -- the numbers
+    # the reloaded GT produces, not the ones the result carried before.
+    assert result.match is not None
+    assert result.match is not stale
+    assert (result.tp, result.fp, result.fn) == (0, 1, 1)
+    assert (result.match.tp, result.match.fp, result.match.fn) == (0, 1, 1)
+    assert result.match.tp_pairs == []
+    assert result.match.fp_idx == [0]
+    assert result.match.fn_idx == [0]

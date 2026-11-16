@@ -464,3 +464,35 @@ def test_include_gallery_false_drops_the_gallery_section(tmp_path):
     ).read_text(encoding="utf-8")
     assert "<h2 id='gallery'>" not in excluded
     assert "Model prediction" not in excluded
+
+
+# ── The error section reads the match the run decided (#120) ────────────
+
+
+def test_report_error_table_equals_the_match_the_run_decided(tmp_path):
+    """The per-class table is the run's decision, not a box re-match of it."""
+    import polyx.gui.report.sections as sections
+    from tests.match_fixtures import matched_run
+
+    run = matched_run(tmp_path)
+    body = sections.build_errors(_report_context(run))
+
+    # PET: the mask-matched true positive; PP: the only false positive.
+    assert "<td>PET</td><td class='r'>1</td><td class='r'>0</td><td class='r'>0</td>" in body
+    assert "<td>PP</td><td class='r'>0</td><td class='r'>1</td><td class='r'>0</td>" in body
+
+    # And it adds up to what the run recorded for the image.
+    item = run.results[0][0]
+    assert (item.match.tp, item.match.fp, item.match.fn) == (item.tp, item.fp, item.fn)
+
+
+def test_methods_names_the_matching_rule_the_run_used(tmp_path):
+    """A reader must be able to tell a box-matched run from a mask-matched one."""
+    import polyx.gui.report.sections as sections
+    from tests.match_fixtures import matched_run
+
+    masked = sections.build_methods(_report_context(matched_run(tmp_path / "masked")))
+    assert "mask IoU 0.5" in masked
+
+    box = sections.build_methods(_report_context(matched_run(tmp_path / "box", use_mask=False)))
+    assert "box IoU 0.5" in box

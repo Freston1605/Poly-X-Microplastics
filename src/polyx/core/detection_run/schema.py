@@ -17,6 +17,7 @@ from pathlib import Path
 from polyx.core.annotate import run_view_path
 from polyx.core.detect.protocol import Instance
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration
+from polyx.core.quality.metrics import MatchResult, match_image
 
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 
@@ -334,6 +335,11 @@ def _image_payloads(result: RunResult) -> list[dict]:
                     "fp": row.fp,
                     "fn": row.fn,
                     "miscls": row.miscls,
+                    # The rule behind those four numbers. Without it a reader
+                    # cannot tell a box-matched run from a mask-matched one,
+                    # nor reproduce the decision on reload.
+                    "match_iou_thr": row.match_iou_thr,
+                    "match_use_mask_iou": row.match_use_mask_iou,
                     "tiling": row.tiling,
                 }
             )
@@ -439,6 +445,52 @@ def _detection_rows_by_model_image(rows: list[dict]) -> dict[tuple[str, str], li
     return grouped
 
 
+def _recorded_rule(model_row: dict, params: RunParams) -> tuple[float, bool]:
+    """The matching rule a persisted row recorded.
+
+    Folders written before #120 did not record it: they matched at
+    ``params.iou_tp`` and masks were never persisted, so box IoU is the only
+    rule those counters can have come from.
+    """
+    iou_thr = _float(model_row.get("match_iou_thr"))
+    return (
+        params.iou_tp if iou_thr is None else iou_thr,
+        _bool(model_row.get("match_use_mask_iou"), default=False),
+    )
+
+
+def _match_from_record(
+    predictions: list[Instance],
+    gts: list[Instance],
+    model_row: dict,
+    iou_thr: float,
+    use_mask_iou: bool,
+) -> MatchResult:
+    """Rebuild the match a row recorded, claiming only the identity it can prove.
+
+    The stored counters are the run's own record. Recomputing with the
+    recorded rule must reproduce them exactly for the pair indices to be the
+    ones the run decided; when it does not -- a mask-matched run reopened from
+    disk, where masks are gone -- the match keeps the counts and reports no
+    indices rather than a second, contradicting decision.
+    """
+    recorded = MatchResult(
+        tp=int(model_row.get("tp") or 0),
+        fp=int(model_row.get("fp") or 0),
+        fn=int(model_row.get("fn") or 0),
+        miscls=int(model_row.get("miscls") or 0),
+    )
+    recomputed = match_image(predictions, gts, iou_thr=iou_thr, use_mask_iou=use_mask_iou)
+    if (recomputed.tp, recomputed.fp, recomputed.fn, recomputed.miscls) == (
+        recorded.tp,
+        recorded.fp,
+        recorded.fn,
+        recorded.miscls,
+    ):
+        return recomputed
+    return recorded
+
+
 def load_run(run_dir: Path) -> RunResult:
     """Reconstruct a :class:`RunResult` from a canonical folder, without Qt."""
     run_dir = Path(run_dir)
@@ -451,6 +503,7 @@ def load_run(run_dir: Path) -> RunResult:
         raise ValueError(f"unsupported run schema version: {version!r}")
 
     models = [_model_from_payload(entry) for entry in data.get("models") or []]
+    params = params_from_dict(data.get("params"))
     execution = {
         index: _execution_from_payload(entry.get("execution"))
         for index, entry in enumerate(data.get("models") or [])
@@ -491,17 +544,29 @@ def load_run(run_dir: Path) -> RunResult:
                 model_rows = rows.get((str(model_idx), str(image_path)), [])
             folder = run_dir / alias
             gt_path = run_view_path(folder, image_index, image_path.stem, "_gt")
+            predictions = [detection_from_row(row) for row in model_rows]
+            row_has_gt = bool(model_row.get("has_gt", has_gt))
+            match_iou_thr, match_use_mask_iou = _recorded_rule(model_row, params)
             results[model_idx].append(
                 ImageResult(
                     image_path=image_path,
                     model_idx=model_idx,
-                    predictions=[detection_from_row(row) for row in model_rows],
+                    predictions=predictions,
                     gt=gt,
-                    has_gt=bool(model_row.get("has_gt", has_gt)),
+                    has_gt=row_has_gt,
                     tp=int(model_row.get("tp") or 0),
                     fp=int(model_row.get("fp") or 0),
                     fn=int(model_row.get("fn") or 0),
                     miscls=int(model_row.get("miscls") or 0),
+                    match=(
+                        _match_from_record(
+                            predictions, gt, model_row, match_iou_thr, match_use_mask_iou
+                        )
+                        if row_has_gt
+                        else None
+                    ),
+                    match_iou_thr=match_iou_thr,
+                    match_use_mask_iou=match_use_mask_iou,
                     annotated_path=run_view_path(folder, image_index, image_path.stem, "_annot"),
                     pred_path=run_view_path(folder, image_index, image_path.stem, "_pred"),
                     gt_path=gt_path if has_gt and gt_path.is_file() else None,
@@ -517,7 +582,7 @@ def load_run(run_dir: Path) -> RunResult:
         run_dir=run_dir,
         images=images,
         models=models,
-        params=params_from_dict(data.get("params")),
+        params=params,
         calibrations=calibrations,
         results=results,
         status=RunStatus.parse(data.get("status")),
