@@ -292,6 +292,10 @@ def _model_payload(result: RunResult, index: int, metrics: dict[int, dict[str, i
     return {
         "index": index,
         "alias": info.alias,
+        # Invariant boolean, not a translated label: the report renders the
+        # label in the language of whoever is reading it (ADR-0004 permits a
+        # flag, never prose).
+        "alias_generated": bool(info.alias_generated),
         "path": str(info.path) if info.path is not None else None,
         "model_type": info.model_type,
         "names": {str(key): value for key, value in info.names.items()},
@@ -402,6 +406,8 @@ def _model_from_payload(data: dict) -> ModelInfo:
     path = data.get("path")
     return ModelInfo(
         alias=str(data.get("alias") or ""),
+        # Old folders have no flag: their alias was a name, shown verbatim.
+        alias_generated=_bool(data.get("alias_generated"), default=False),
         path=Path(path) if path else None,
         model_type=str(data.get("model_type") or "yolo"),
         names=names,

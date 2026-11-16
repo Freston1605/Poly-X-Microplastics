@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from polyx.core.detection_run import generated_alias, sanitize_alias
 from polyx.core.i18n import _, lazy
 from polyx.core.paths import DEFAULT_MODEL
 from polyx.gui import iconos
@@ -62,7 +63,7 @@ class _ModelSlotCard(QFrame):
         row1.setSpacing(8)
         lbl1 = QLabel(_("Alias:"))
         lbl1.setStyleSheet(f"color: {T.INK2}; border: none; min-width: 40px;")
-        self.ed_alias = QLineEdit(_("Model %(n)s") % {"n": idx + 1})
+        self.ed_alias = QLineEdit(generated_alias(idx))
         self.ed_alias.setMaximumWidth(220)
         self.ed_alias.editingFinished.connect(self._emit_change)
         row1.addWidget(lbl1)
@@ -205,19 +206,24 @@ class ModelsPage(DetectorPage):
         self.refresh()
 
     def refresh(self) -> None:
-        """Re-read the slots from the state (used after a language change)."""
+        """Re-read the slots from the state (used after a language change).
+
+        The alias is a folder key: it never follows the language, so only the
+        card's own labels are rebuilt. Writing the translated label here is what
+        used to move the same weights to a different ``run/`` folder.
+        """
         for i, card in enumerate(self.slot_cards):
-            slot = self.state.model_slots[i]
-            if slot.alias_default:
-                slot.alias = _("Model %(n)s") % {"n": i + 1}
-            card.set_slot(slot)
+            card.set_slot(self.state.model_slots[i])
 
     # ──────────────────────────────────────────
     def _on_slot_changed(self, idx: int, alias: str, path_str: str):
         slot = self.state.model_slots[idx]
-        default_alias = _("Model %(n)s") % {"n": idx + 1}
-        slot.alias = alias or default_alias
-        slot.alias_default = not alias or alias == default_alias
+        default_alias = generated_alias(idx)
+        slot.alias = sanitize_alias(alias) or default_alias
+        # Empty or the untouched placeholder still means "generated"; anything
+        # else is a name the user chose and must be shown exactly as written.
+        slot.alias_default = not alias.strip() or slot.alias == default_alias
+        self.slot_cards[idx].ed_alias.setText(slot.alias)
         if path_str:
             p = Path(path_str)
             if p.exists() and p.suffix.lower() == ".pt":

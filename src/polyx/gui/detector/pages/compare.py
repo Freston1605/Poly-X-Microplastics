@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from polyx.core.detection_run import display_name
 from polyx.core.i18n import _, lazy
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_TP
 
@@ -82,7 +83,9 @@ class ComparePage(DetectorPage):
             rec = _safe_div(tp, tp + fn)
             f1 = _safe_div(2 * prec * rec, prec + rec)
             cm = sum(confs) / len(confs) if confs else 0
-            self.tbl_summary.setItem(r, 0, QTableWidgetItem(slot.alias))
+            self.tbl_summary.setItem(
+                r, 0, QTableWidgetItem(display_name(slot.alias, slot.alias_default, mi))
+            )
             for col, v in enumerate(
                 [
                     n_img,
@@ -107,7 +110,10 @@ class ComparePage(DetectorPage):
         image_set = sorted(
             {x.image_path for mi in active_indices for x in state.results.get(mi, [])}
         )
-        cols = [_("Image")] + [state.model_slots[mi].alias for mi in active_indices]
+        cols = [_("Image")] + [
+            display_name(state.model_slots[mi].alias, state.model_slots[mi].alias_default, mi)
+            for mi in active_indices
+        ]
         self.tbl_per_image.setColumnCount(len(cols))
         self.tbl_per_image.setHorizontalHeaderLabels(cols)
         self.tbl_per_image.setRowCount(len(image_set))

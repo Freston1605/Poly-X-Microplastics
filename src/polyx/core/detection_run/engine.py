@@ -35,6 +35,7 @@ from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import match_image
 
 from .config import CALIBRATION_MODES, CalibrationPolicy, RunConfig
+from .identity import resolve_identity
 from .result import ImageResult, ModelExecution, ModelInfo, RunResult, RunStatus
 from .schema import aggregate_metrics, utcnow
 from .writer import RunWriter
@@ -88,11 +89,21 @@ def _prepare_output_dir(output_dir: Path, force: bool) -> None:
 
 
 def _build_models(config: RunConfig) -> list[ModelInfo]:
-    """Resolve aliases, class maps and fingerprints; reject ambiguous folders."""
+    """Resolve aliases, class maps and fingerprints; one owner for the alias.
+
+    Safety and uniqueness belong to :func:`resolve_identity`; the checks below
+    stay as the engine's last line of defence, so a resolver regression fails
+    the run instead of writing outside the run folder or into a sibling's.
+    """
     infos: list[ModelInfo] = []
     seen: set[str] = set()
     for index, spec in enumerate(config.models):
-        alias = spec.folder_name(index)
+        path = spec.path
+        if path is None:
+            weights = getattr(spec.detector, "weights_path", None)
+            path = Path(weights) if weights else None
+        identity = resolve_identity(typed=spec.alias, weights=path, index=index, taken=seen)
+        alias = identity.alias
         if Path(alias).name != alias or alias in (".", ".."):
             raise ValueError(f"model alias is not a folder name: {alias!r}")
         if alias in seen:
@@ -101,16 +112,15 @@ def _build_models(config: RunConfig) -> list[ModelInfo]:
 
         names = spec.names or getattr(spec.detector, "names", {}) or {}
         names = {int(key): str(value) for key, value in dict(names).items()}
-        path = spec.path
-        if path is None:
-            weights = getattr(spec.detector, "weights_path", None)
-            path = Path(weights) if weights else None
         sha256 = spec.sha256
         if not sha256 and path is not None and Path(path).is_file():
             sha256 = sha256_file(path)
         infos.append(
             ModelInfo(
                 alias=alias,
+                # The GUI keeps its placeholder as a literal ``model_1``, so it
+                # must declare it; the resolver only knows when it invented one.
+                alias_generated=spec.alias_generated or identity.alias_generated,
                 path=Path(path) if path is not None else None,
                 model_type=spec.model_type or "yolo",
                 names=names,

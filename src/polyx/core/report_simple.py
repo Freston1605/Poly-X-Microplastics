@@ -12,6 +12,7 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
+from polyx.core.detection_run.identity import display_name
 from polyx.core.detection_run.schema import read_csv_rows, read_json_object
 from polyx.core.i18n import _, language, ngettext
 
@@ -64,7 +65,12 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
             f" &nbsp; <b>{_('Schema:')}</b> "
             f"{html.escape(str(canonical.get('schema_version', '?')))}</p>"
         )
-        aliases = [str(model.get("alias", "")) for model in canonical.get("models") or []]
+        aliases = [
+            display_name(
+                str(model.get("alias", "")), bool(model.get("alias_generated", False)), index
+            )
+            for index, model in enumerate(canonical.get("models") or [])
+        ]
         if aliases:
             parts.append(f"<p><b>{_('Models:')}</b> {html.escape(', '.join(aliases))}</p>")
         skipped = canonical.get("skipped_images") or []

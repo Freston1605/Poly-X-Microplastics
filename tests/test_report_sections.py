@@ -181,6 +181,39 @@ def test_models_body_names_the_alias(tmp_path):
     assert _normalise_figures(body) in BASELINE_TXT
 
 
+def test_models_body_translates_a_generated_alias(tmp_path):
+    """#124: the report reads the label from the flag, never from the alias."""
+    import polyx.gui.report.sections as sections
+    from polyx.core import i18n
+
+    state = _benign_state(tmp_path)
+    state.models[0].alias = "model_1"
+    state.models[0].alias_generated = True
+
+    assert i18n.set_language("en")
+    english = sections.build_models(_report_context(state))
+    assert "<td>Model 1</td>" in english
+
+    assert i18n.set_language("es")
+    spanish = sections.build_models(_report_context(state))
+    assert "<td>Modelo 1</td>" in spanish
+
+
+def test_models_body_shows_a_custom_alias_verbatim(tmp_path):
+    """A typed name is not translated, in either language."""
+    import polyx.gui.report.sections as sections
+    from polyx.core import i18n
+
+    state = _benign_state(tmp_path)
+    state.models[0].alias = "my-model"
+    state.models[0].alias_generated = False
+
+    for language in ("en", "es"):
+        assert i18n.set_language(language)
+        body = sections.build_models(_report_context(state))
+        assert "<td>my-model</td>" in body
+
+
 def test_comparison_body_without_a_second_model_explains_why(tmp_path):
     """Comparison: one model means no comparison, but the caption is rendered."""
     import polyx.gui.report.sections as sections

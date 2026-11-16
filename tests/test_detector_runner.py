@@ -261,6 +261,48 @@ def test_dense_engine_indices_map_to_real_slots(qapp, tmp_path):
     assert (state.run_dir / "model_c" / "labels" / "0000_plate.txt").is_file()
 
 
+def test_generated_alias_names_the_folder_and_is_persisted(qapp, tmp_path):
+    """#124: the GUI default is a stable alias, and run.json says it was generated."""
+    import json
+
+    path = _plate(tmp_path / "photos" / "plate.png")
+    state = DetectorState()
+    slot = state.model_slots[0]
+    slot.path = tmp_path / "best.pt"
+    slot.loaded = _FakeModel()
+    state.images = [path]
+    state.calibration.measure_plate = False
+    state.calibration.um_per_px = 2.0
+    state.params.tiling = "nunca"
+
+    events = _execute(_runner_with_folder(state, tmp_path))
+
+    assert events["failed"] == []
+    model = state.run_result.models[0]
+    assert (model.alias, model.alias_generated) == ("model_1", True)
+    assert (state.run_dir / "model_1" / "labels" / "0000_plate.txt").is_file()
+    payload = json.loads((state.run_dir / "run.json").read_text(encoding="utf-8"))
+    assert payload["models"][0]["alias"] == "model_1"
+    assert payload["models"][0]["alias_generated"] is True
+    with (state.run_dir / "detections.csv").open(encoding="utf-8") as handle:
+        assert "model_1" in handle.read()
+
+
+def test_typed_alias_is_kept_verbatim_and_not_marked_generated(qapp, tmp_path):
+    """A name the user typed is the folder key and the label, untranslated."""
+    path = _plate(tmp_path / "photos" / "plate.png")
+    state = _state(tmp_path, [path])
+    state.model_slots[0].alias = "my-model"
+    state.model_slots[0].alias_default = False
+
+    events = _execute(_runner_with_folder(state, tmp_path))
+
+    assert events["failed"] == []
+    model = state.run_result.models[0]
+    assert (model.alias, model.alias_generated) == ("my-model", False)
+    assert (state.run_dir / "my-model" / "labels" / "0000_plate.txt").is_file()
+
+
 def test_verdicts_live_in_state_and_not_in_result(qapp, tmp_path):
     path = _plate(tmp_path / "photos" / "plate.png")
     state = _state(tmp_path, [path])

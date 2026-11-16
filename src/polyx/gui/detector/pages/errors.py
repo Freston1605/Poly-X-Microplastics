@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from polyx.core.detection_run import display_name
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS
@@ -96,7 +97,7 @@ class ErrorsPage(DetectorPage):
         self.combo_model.addItem(_("All"), -1)
         for i, slot in enumerate(self.state.model_slots):
             if slot.path is not None:
-                self.combo_model.addItem(slot.alias, i)
+                self.combo_model.addItem(display_name(slot.alias, slot.alias_default, i), i)
         self.combo_model.blockSignals(False)
 
     def refresh(self):
