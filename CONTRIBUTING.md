@@ -21,6 +21,10 @@ Three workflows run on **every PR** and on every push to `main`:
      suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. The gate is the
      one owner of the checks, so a check added to `tools/check.py` cannot
      silently miss CI. ty blocks on `src/polyx/core` + `src/polyx/cli`.
+     The suite also reads the console scripts from the installed distribution
+     metadata, compares them with `[project.scripts]` and imports every
+     target, so a broken entry point fails the pull request rather than a
+     release — no workflow step is needed for that.
   4. Types the GUI on the same 3.11 environment as an advisory step: it
      reports and never fails the build.
   5. A separate `test` job runs the suite on Python 3.12, and `build` builds
