@@ -80,14 +80,8 @@ def _prediction() -> Instance:
     return detection
 
 
-def _single_image_run(
-    tmp_path: Path,
-    gt_text: str | None,
-    *,
-    predictions: list[Instance] | None = None,
-    params: RunParams | None = None,
-) -> tuple[RunResult, ImageResult]:
-    """A one-image run whose folder exists, ready for an end-to-end reload.
+def _single_image_run(tmp_path: Path, gt_text: str | None) -> tuple[RunResult, ImageResult]:
+    """A one-image run, ready for an end-to-end reload.
 
     The stale GT box is left on the result so the reload has something to
     replace and therefore actually redraws. No calibration is recorded, which
@@ -102,7 +96,7 @@ def _single_image_run(
     result = ImageResult(
         model_idx=0,
         image_path=plate,
-        predictions=[_prediction()] if predictions is None else predictions,
+        predictions=[_prediction()],
         gt=[_stale_gt()],
         has_gt=True,
     )
@@ -110,7 +104,7 @@ def _single_image_run(
         run_dir=tmp_path / "run",
         images=[plate],
         models=[ModelInfo(alias="m0", names={0: "PET"})],
-        params=params or RunParams(measure_shape=False),
+        params=RunParams(measure_shape=False),
         results={0: [result]},
         status=RunStatus.COMPLETED,
     )

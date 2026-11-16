@@ -238,10 +238,10 @@ def _decide_match(
 ) -> tuple[MatchResult, bool]:
     """The run's matching decision for one model/image, and the rule it used.
 
-    One owner for the criterion: whoever decides again over new labels -- a
-    completed run re-read, a reader rehydrating a recorded match -- must decide
-    the way the run did. That rule is "mask IoU when either side carries a
-    mask", so the returned flag is what the caller records next to the counts.
+    One owner for the criterion: whoever decides again over a set of labels --
+    a completed run re-read, for instance -- must decide the way the run did.
+    That rule is "mask IoU when either side carries a mask", so the returned
+    flag is what the caller records next to the counts.
     """
     use_mask_iou = _uses_mask_iou(predictions, gts)
     match = match_image(predictions, gts, iou_thr=iou_thr, use_mask_iou=use_mask_iou)
