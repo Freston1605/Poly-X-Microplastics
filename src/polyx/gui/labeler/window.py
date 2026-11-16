@@ -479,24 +479,26 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         pd.setMinimumDuration(0)
         pd.setValue(0)
 
+        boxes_by_image: dict[Path, list] = {}
+
         for i, img_path in enumerate(self.state.images):
             if pd.wasCanceled():
                 break
             pd.setValue(i)
             pd.setLabelText(f"{i + 1}/{total}: {img_path.name}")
-            # Only annotate the empty ones
-            if self.state.has_annotations_for(img_path):
+            # Skipping the inference here is a cost guard: running the model
+            # on an image that already has boxes would only be thrown away
+            # by the state's batch, which owns the "only the empty ones" rule.
+            if self.state.has_boxes_for(img_path):
                 continue
             try:
                 dets = self._pre_model.predict_auto(str(img_path), **self._pre_annotation_params())
-                boxes = self._dets_to_boxes(dets, img_path)
-                self.state.set_annotations_for(img_path, boxes)
-                self.state._save_labels_for(img_path, boxes)
+                boxes_by_image[img_path] = self._dets_to_boxes(dets, img_path)
             except Exception:  # noqa: BLE001, S110
                 pass
 
         pd.setValue(total)
-        self.state.annotations_changed.emit()
+        self.state.preannotate(boxes_by_image)
         self._set_status(_("● Pre-annotation complete"), T.OK)
 
     def _pre_annotation_params(self) -> dict:
