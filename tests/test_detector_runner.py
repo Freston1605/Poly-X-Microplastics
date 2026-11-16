@@ -160,6 +160,63 @@ def test_run_one_image_produces_result_files_and_progress(qapp, tmp_path):
     assert state.calibrations["plate1.png"].um_por_px == 2.0
 
 
+def test_a_completed_run_lists_each_result_once(qapp, tmp_path):
+    """The streamed append is the single write path for results.
+
+    Every result is appended under its real slot as it arrives, and the final
+    publish adopts that same list instead of rebuilding the mapping: the pages
+    that read ``state.results`` mid-run read the same objects afterwards, and
+    no result is written twice.
+    """
+    paths = [
+        _plate(tmp_path / "photos" / "a.png"),
+        _plate(tmp_path / "photos" / "b.png"),
+    ]
+    state = _state(tmp_path, paths)
+    runner = _runner_with_folder(state, tmp_path)
+    streamed: dict[int, list] = {}
+    runner.image_done.connect(
+        lambda index, _result: streamed.setdefault(index, state.results[index])
+    )
+
+    events = _execute(runner)
+
+    assert events["failed"] == []
+    published = state.results[0]
+    assert [result.image_path.name for result in published] == ["a.png", "b.png"]
+    assert len({id(result) for result in published}) == 2, "each ImageResult must be written once"
+    assert published is streamed[0], "the published list is the one the results were streamed into"
+    engine_rows = state.run_result.results[0]
+    assert all(result is row for result, row in zip(published, engine_rows, strict=False))
+
+
+def test_an_aborted_run_keeps_the_results_received_so_far_once_each(qapp, tmp_path):
+    """An aborted run publishes exactly the results received before the abort."""
+    paths = [
+        _plate(tmp_path / "photos" / "a.png"),
+        _plate(tmp_path / "photos" / "b.png"),
+    ]
+    state = _state(tmp_path, paths)
+    runner = _runner_with_folder(state, tmp_path)
+    streamed: dict[int, list] = {}
+    received: list = []
+
+    def _stop(index, result):
+        streamed[index] = state.results[index]
+        received.append(result)
+        state.request_abort()
+
+    runner.image_done.connect(_stop)
+    events = _execute(runner)
+
+    assert events["aborted"] == [True]
+    published = state.results[0]
+    assert [result.image_path.name for result in published] == ["a.png"]
+    assert len({id(result) for result in published}) == 1, "each ImageResult must be written once"
+    assert published is streamed[0], "the published list is the one the results were streamed into"
+    assert published[0] is received[0]
+
+
 def test_run_with_ground_truth_counts_tp_and_fp(qapp, tmp_path):
     path = _plate(tmp_path / "photos" / "plate2.png")
     # GT only for the upper box: the lower prediction must be a false positive.
