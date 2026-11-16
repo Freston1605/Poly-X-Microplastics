@@ -417,6 +417,13 @@ liveness guard. The modules are separate processes, so the shared preferences
 file is also the cross-process channel: a `QFileSystemWatcher` in every process
 applies a locale another process saved.
 
+A rebuild destroys the page tree, so a background worker a page started has to
+survive it. The Trainer's hardware probes are started through
+`trainer.pages._base.start_probe`, which keeps the `QThread` alive until its
+thread finishes: Qt aborts the process when a `QThread` object is destroyed
+with its thread still running. A result the old page no longer listens to is
+dropped by Qt's own disconnection rule.
+
 Three rules keep that channel from feeding itself:
 
 - `i18n.set_language(tag, persist=False)` applies a value that came from

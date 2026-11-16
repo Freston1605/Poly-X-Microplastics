@@ -2,13 +2,30 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ..state import TrainerState
+
+#: Probes whose thread is still running: they outlive the page that started them.
+_live_probes: set[QThread] = set()
+
+
+def start_probe(worker: QThread) -> None:
+    """Start ``worker`` and keep it alive until its thread finishes.
+
+    A language change rebuilds the Trainer's pages, and the window can be
+    closed before a hardware probe answers. Qt aborts the process when a
+    ``QThread`` object is destroyed with its thread still running, so the
+    worker is owned here instead of by the page; a result the old page no
+    longer listens to is dropped by Qt's own disconnection rule.
+    """
+    _live_probes.add(worker)
+    worker.finished.connect(lambda: _live_probes.discard(worker))
+    worker.start()
 
 
 class TrainerPage(QWidget):
