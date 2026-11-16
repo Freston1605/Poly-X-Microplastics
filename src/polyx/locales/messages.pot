@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 18:09-0300\n"
+"POT-Creation-Date: 2026-11-16 18:36-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1048,11 +1048,11 @@ msgstr ""
 msgid "✗ Bad"
 msgstr ""
 
-#: src/polyx/gui/detector/runner.py:183
+#: src/polyx/gui/detector/runner.py:191
 msgid "No models loaded."
 msgstr ""
 
-#: src/polyx/gui/detector/runner.py:186
+#: src/polyx/gui/detector/runner.py:194
 msgid "No images selected."
 msgstr ""
 
