@@ -14,6 +14,7 @@ Usage:
     polyx-detect --model best.pt --images ./photos --out ./run
     polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \\
         --images ./photos --out ./run
+    polyx-detect --model best.pt --alias baseline --images ./photos --out ./run
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
         --index-calibration ./indice.csv
@@ -75,6 +76,13 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         metavar="WEIGHTS",
         help=_("weights path; repeat once per model (aliases default to the file stem)"),
+    )
+    parser.add_argument(
+        "--alias",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help=_("run subfolder for a model; repeat once per model (default: the weights stem)"),
     )
     parser.add_argument(
         "--model-type",
@@ -173,17 +181,30 @@ def _resolve_model_types(requested: list[str], model_count: int) -> list[str]:
     return types
 
 
-def _load_models(weights: list[str], model_types: list[str]) -> list[ModelSpec]:
+def _resolve_aliases(requested: list[str], model_count: int) -> list[str]:
+    """One optional alias per model; the resolver sanitises it later."""
+    aliases = [str(value).strip() for value in requested]
+    if not aliases:
+        return [""] * model_count
+    if len(aliases) != model_count:
+        raise ValueError(
+            _("--alias takes one value per model (%(count)d); got %(got)d")
+            % {"count": model_count, "got": len(aliases)}
+        )
+    return aliases
+
+
+def _load_models(weights: list[str], model_types: list[str], aliases: list[str]) -> list[ModelSpec]:
     """Build one loaded model per weights path; the engine never calls load()."""
     specs: list[ModelSpec] = []
-    for weights_path, model_type in zip(weights, model_types, strict=True):
+    for weights_path, model_type, alias in zip(weights, model_types, aliases, strict=True):
         path = Path(weights_path)
         try:
             detector = make_detector(model_type, path)
             detector.load()
         except Exception as exc:
             raise RuntimeError(f"{path}: {exc}") from exc
-        specs.append(ModelSpec(detector=detector, path=path, model_type=model_type))
+        specs.append(ModelSpec(detector=detector, alias=alias, path=path, model_type=model_type))
     return specs
 
 
@@ -243,12 +264,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         model_types = _resolve_model_types(args.model_type, len(args.model))
+        aliases = _resolve_aliases(args.alias, len(args.model))
     except ValueError as exc:
         print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return EXIT_USAGE
 
     try:
-        specs = _load_models(args.model, model_types)
+        specs = _load_models(args.model, model_types, aliases)
     except Exception as exc:  # noqa: BLE001
         print(_("ERROR loading model: %(error)s") % {"error": exc}, file=sys.stderr)
         return EXIT_ERROR

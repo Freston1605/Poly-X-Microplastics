@@ -8,6 +8,7 @@ their final numbers.
 
 from __future__ import annotations
 
+from polyx.core.detection_run import display_name
 from polyx.core.i18n import N_, _, language
 
 from .markup import _esc, _report_css
@@ -114,7 +115,7 @@ def _document_html(alive, active, status_note: str = "") -> str:
   <div class='kicker'>Poly-X · {_("Detection report")}</div>
   <h1>{_("Microplastics detection report")}<br>{_("by Nile Red fluorescence")}</h1>
   <p class='meta'><strong>{_("Author:")}</strong> Cristofher Ferrada &middot;
-    <strong>{_("Models:")}</strong> {_esc(", ".join(s.alias for s in active)) or "—"}</p>
+    <strong>{_("Models:")}</strong> {_esc(", ".join(display_name(s.alias, getattr(s, "alias_generated", False), index) for index, s in enumerate(active))) or "—"}</p>
 </header>
 
 {status_block}<div class='toc'>

@@ -28,6 +28,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   criterion, and every label on the page names the one it shows. The duplicate
   helper in `core/report_metrics.py`, the arithmetic in the Compare page and
   the report's threshold sweep were removed.
+- Model aliases are stable run-folder keys, separate from the label the
+  interface shows: the GUI writes `model_1`/`model_2`, the CLI writes the
+  weights stem unless `--alias` names one, and `run.json` records
+  `alias_generated` so the report translates only a generated label. Changing
+  the interface language no longer renames a run folder; old folders still load
+  and show their recorded alias verbatim.
 - The per-image result carries the match the run decided (`MatchResult` with
   the TP/FP/FN/misclassified indices) and the rule behind it (`iou_thr`, box
   or mask IoU). The Errors page, the Results KPIs, the report's error section

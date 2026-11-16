@@ -13,6 +13,7 @@ from pathlib import Path
 
 from polyx.core.detect.protocol import DetectionSource
 
+from .identity import resolve_identity
 from .result import RunParams
 
 CALIBRATION_MODES = ("auto", "manual", "index", "none")
@@ -24,26 +25,23 @@ class ModelSpec:
 
     ``detector`` is already loaded by the caller: the engine never calls
     ``load()``. ``alias`` names the model's folder; it defaults to the weights
-    stem, then to ``model_<n>``. ``names`` overrides the detector's own class
-    map when a caller has a reason to, and is recorded in ``run.json`` either
-    way.
+    stem, then to ``model_<n>``. ``alias_generated`` lets a caller that keeps
+    its own placeholder (the GUI) say so when the literal alias is already
+    ``model_<n>``. ``names`` overrides the detector's own class map when a
+    caller has a reason to, and is recorded in ``run.json`` either way.
     """
 
     detector: DetectionSource
     alias: str = ""
+    alias_generated: bool = False
     path: Path | None = None
     model_type: str = "yolo"
     names: dict[int, str] = field(default_factory=dict)
     sha256: str = ""
 
     def folder_name(self, index: int) -> str:
-        """The folder alias for this model, derived when the caller left it empty."""
-        alias = self.alias.strip()
-        if not alias and self.path is not None:
-            alias = self.path.stem.strip()
-        if not alias:
-            alias = f"model_{index + 1}"
-        return alias
+        """The stable folder alias, through the one resolver that owns it."""
+        return resolve_identity(typed=self.alias, weights=self.path, index=index, taken=set()).alias
 
 
 @dataclass

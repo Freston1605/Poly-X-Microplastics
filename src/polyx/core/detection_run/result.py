@@ -166,6 +166,10 @@ class ModelInfo:
     """
 
     alias: str = ""
+    #: True when the resolver invented ``model_<n>``: the interface shows the
+    #: translated label instead of the alias. A typed name, a weights stem and
+    #: every alias recorded by an older run are ``False`` and read verbatim.
+    alias_generated: bool = False
     path: Path | None = None
     model_type: str = "yolo"
     names: dict[int, str] = field(default_factory=dict)

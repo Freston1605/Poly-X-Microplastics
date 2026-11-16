@@ -1892,6 +1892,7 @@ the same canonical folder:</p>
   <thead><tr><th>Option</th><th>Effect</th></tr></thead>
   <tbody>
     <tr><td><code>--model</code>, <code>--model-type</code></td><td>repeat once per model; the alias comes from the file stem. One type applies to all models; with no type, <code>yolo</code> is used.</td></tr>
+    <tr><td><code>--alias</code></td><td>run subfolder for a model; repeat once per model. The default is the weights stem. It is never translated.</td></tr>
     <tr><td><code>--out</code>, <code>--force</code></td><td>the exact run folder. A non-empty folder is refused unless <code>--force</code> is given.</td></tr>
     <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code> and <code>--index-calibration</code> supplies the explicit CSV.</td></tr>
     <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>thresholds and inference.</td></tr>

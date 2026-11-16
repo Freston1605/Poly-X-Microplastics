@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from polyx.core.detection_run import RunStatus
+from polyx.core.detection_run import RunStatus, display_name
 from polyx.core.detection_run.operating_point import Criterion, Score
 from polyx.core.i18n import _, ngettext
 from polyx.core.quality.assignment import resume
@@ -67,6 +67,16 @@ def _clue_label(station: str, stretch: str, plate: str | None = None) -> str:
     return label
 
 
+def _model_label(model, index: int = 0) -> str:
+    """What a reader sees for a model: a translated label or its own name.
+
+    The alias is a folder key (``model_1``); the report speaks prose. Resolving
+    here, from ``(alias, alias_generated)``, keeps every table and caption in
+    agreement and never retranslates an old run's recorded alias.
+    """
+    return display_name(model.alias, getattr(model, "alias_generated", False), index)
+
+
 def _section_team(active) -> str:
     """Table of components and of how each loaded model was trained."""
     rows_eq = "".join(f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in machine._team())
@@ -77,12 +87,12 @@ def _section_team(active) -> str:
     )
 
     training_runs = []
-    for s in active:
+    for index, s in enumerate(active):
         if s.path is None:
             continue
         info = machine._training_of(Path(s.path))
         if info:
-            training_runs.append((s.alias, info))
+            training_runs.append((_model_label(s, index), info))
     if not training_runs:
         return html
 
@@ -272,7 +282,7 @@ def _section_count(results_2: dict[int, list], run, classes: list[str]) -> str:
         _(
             "<p>Particles counted in each sample, broken down by polymer. The <em>manual</em> column is the human annotation (ground truth) and the <em>model</em> column is every detection made by <strong>%(alias)s</strong>%(suffix)s</p>"
         )
-        % {"alias": _esc(run.models[0].alias), "suffix": tagline}
+        % {"alias": _esc(_model_label(run.models[0], 0)), "suffix": tagline}
         + _(
             "<p><strong>Read it as a count, not as an evaluation.</strong> The model's column does not subtract false positives nor match box to box: it is how many particles of each polymer it reported. Agreeing on the total does not imply getting each particle right; that is what the error analysis is for.</p>"
         )
@@ -354,7 +364,7 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
                     "miscls": sum(row.miscls for row in model_rows),
                 }
             rows_legacy += (
-                f"<tr><td>{_esc(model.alias)}</td>"
+                f"<tr><td>{_esc(_model_label(model, index))}</td>"
                 f"<td class='r'>{int(counts.get('tp', 0))}</td>"
                 f"<td class='r'>{int(counts.get('fp', 0))}</td>"
                 f"<td class='r'>{int(counts.get('fn', 0))}</td>"
@@ -425,7 +435,7 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         
         <h3>@@N@@.1 {_("Confusion matrix")}</h3>
         <div class='fig'><img src='data:image/png;base64,{cm_img}' />
-            <div class='caption'>{_("Figure. Confusion matrix (main model: %(model)s, IoU = %(iou)s).") % {"model": _esc(active[0].alias), "iou": run.params.iou_tp}}</div></div>
+            <div class='caption'>{_("Figure. Confusion matrix (main model: %(model)s, IoU = %(iou)s).") % {"model": _esc(_model_label(active[0], 0)), "iou": run.params.iou_tp}}</div></div>
         <h3>@@N@@.2 {_("Precision / recall / F1 per class")}</h3>
         <table class='data'><tr>{_("<th>Class</th><th>True Positives</th><th>False Positives</th><th>False Negatives</th>")}
         {_("<th>Precision</th><th>Recall</th><th>F1</th>")}</tr>{rows}</table>
@@ -469,7 +479,7 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
         c_loc = f"{f1_loc:.3f}" if there_is_gt else "—"
         c_cls = f"{f1_cls:.3f}" if there_is_gt else "—"
         rows_models += (
-            f"<tr><td>{_esc(slot.alias)}</td><td class='r'>{n_img}</td><td class='r'>{n_det}</td>"
+            f"<tr><td>{_esc(_model_label(slot, mi))}</td><td class='r'>{n_img}</td><td class='r'>{n_det}</td>"
             f"<td class='r'>{avg_cf:.3f}</td>"
             f"<td class='r'>{tp}</td><td class='r'>{fp}</td><td class='r'>{fn}</td>"
             f"<td class='r'>{mc}</td>"
@@ -511,11 +521,14 @@ def _section_verdict(results_2, run) -> str:
     if any(r.has_gt for rs in results_2.values() for r in rs):
         sweep = _sweep_confidence(results_2, run.models, run.params.conf)
         if sweep:
+            labels = {
+                model.alias: _model_label(model, index) for index, model in enumerate(run.models)
+            }
             summary = []
             for alias, rows_2 in sweep.items():
                 best = max(rows_2, key=lambda f: f[3])
                 current = rows_2[0]
-                summary.append((alias, current, best))
+                summary.append((labels.get(alias, alias), current, best))
 
             # Verdict: the winner is whoever has the best F1 with class at their best threshold.
             summary.sort(key=lambda x: x[2][3], reverse=True)
@@ -560,7 +573,7 @@ def _section_comparison(run, results_2) -> str:
         there_is_gt = any(r.has_gt for rs in results_2.values() for r in rs)
         header_line = _("<tr><th>Image</th>")
         for mi in active_2:
-            alias = run.models[mi].alias
+            alias = _model_label(run.models[mi], mi)
             header_line += (
                 f"<th>{_esc(alias)}<br>"
                 f"<span style='font-weight:400;font-size:8.5pt'>{_('dets')}</span></th>"
@@ -597,7 +610,7 @@ def _section_comparison(run, results_2) -> str:
             for mi in active_2:
                 rs = results_2.get(mi, [])
                 measured = Score.from_decision(rs, Criterion.LOCALISATION, run.params.conf)
-                marker_2.append((measured.f1, run.models[mi].alias))
+                marker_2.append((measured.f1, _model_label(run.models[mi], mi)))
             marker_2.sort(reverse=True)
             best_f1, best = marker_2[0]
             # This F1 is the permissive one (localization). It used to say only `F1 global` and
@@ -621,7 +634,7 @@ def _section_comparison(run, results_2) -> str:
             data_bars = []
             by_model_class: dict[str, dict[str, tuple]] = {}
             for mi in active_2:
-                alias = run.models[mi].alias
+                alias = _model_label(run.models[mi], mi)
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
                 localisation = Score.from_decision(rs, Criterion.LOCALISATION, run.params.conf)
                 with_class = Score.from_decision(rs, Criterion.WITH_CLASS, run.params.conf)
@@ -704,7 +717,7 @@ def _section_comparison(run, results_2) -> str:
                     if ra is not None and rb is not None:
                         pares.append((len(ra.predictions), len(rb.predictions), Path(path_2).name))
                 f_agreement = _fig_agreement_by_image(
-                    run.models[a].alias, run.models[b].alias, pares
+                    _model_label(run.models[a], a), _model_label(run.models[b], b), pares
                 )
                 if f_agreement:
                     figures_cmp += (
@@ -794,7 +807,7 @@ def _section_gallery(
             continue
         left = (
             f"<figure><img src='{_uri_gallery(pred_bytes)}' />"
-            f"<figcaption>{_('Model prediction')} · {_esc(slot.alias)}"
+            f"<figcaption>{_('Model prediction')} · {_esc(_model_label(slot, mi))}"
             f"<span class='sub'>"
             + ngettext(
                 "%(n)s detection by YOLO",
@@ -842,7 +855,7 @@ def _section_gallery(
         meta = (
             f"<strong>{_esc(r.image_path.name)}</strong>{where}"
             "&nbsp;<span class='tag'>"
-            + _("model: %(model)s") % {"model": _esc(slot.alias)}
+            + _("model: %(model)s") % {"model": _esc(_model_label(slot, mi))}
             + "</span>"
         )
 
@@ -935,7 +948,10 @@ def _section_methods(
     else:
         um_px_txt = "—"
     methods_rows = [
-        (_("Models loaded"), _esc(", ".join(s.alias for s in active)) or "—"),
+        (
+            _("Models loaded"),
+            _esc(", ".join(_model_label(s, index) for index, s in enumerate(active))) or "—",
+        ),
         (_("Minimum confidence"), f"{p.conf:g}"),
         (_("IoU NMS"), f"{p.iou_nms:g}"),
         (
@@ -980,7 +996,9 @@ def _section_methods(
         _ul_see = ultralytics.__version__
     except Exception:  # noqa: BLE001
         _ul_see = "—"
-    _model_names = _esc(", ".join(s.alias for s in active)) if active else "—"
+    _model_names = (
+        _esc(", ".join(_model_label(s, index) for index, s in enumerate(active))) if active else "—"
+    )
     methods_for = (
         "<p><strong>" + _("Summary of the settings used:") + "</strong></p>"
         "<blockquote style='border-left:3px solid var(--accent); margin:8px 0; "

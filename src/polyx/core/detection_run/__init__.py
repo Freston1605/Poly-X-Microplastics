@@ -17,6 +17,13 @@ from .engine import (
     RunOutputNotADirectory,
     run_detection,
 )
+from .identity import (
+    ModelIdentity,
+    display_name,
+    generated_alias,
+    resolve_identity,
+    sanitize_alias,
+)
 from .legacy_reader import load_legacy_run
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import (
@@ -38,6 +45,7 @@ __all__ = [
     "CalibrationPolicy",
     "ImageResult",
     "ModelExecution",
+    "ModelIdentity",
     "ModelInfo",
     "ModelSpec",
     "RunConfig",
@@ -49,7 +57,11 @@ __all__ = [
     "RunResult",
     "RunStatus",
     "detection_row",
+    "display_name",
+    "generated_alias",
     "load_legacy_run",
     "load_run",
+    "resolve_identity",
     "run_detection",
+    "sanitize_alias",
 ]
