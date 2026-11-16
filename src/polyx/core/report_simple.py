@@ -65,6 +65,8 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
             f" &nbsp; <b>{_('Schema:')}</b> "
             f"{html.escape(str(canonical.get('schema_version', '?')))}</p>"
         )
+        # The canonical document is read raw, so a folder written before
+        # ``alias_generated`` existed defaults to a chosen alias (verbatim).
         aliases = [
             display_name(
                 str(model.get("alias", "")), bool(model.get("alias_generated", False)), index

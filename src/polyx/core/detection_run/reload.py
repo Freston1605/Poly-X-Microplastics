@@ -6,8 +6,8 @@ batch: the predictions are already in the run, and what is needed is to pair
 them again with the labels on disk and redraw the affected views.
 
 The operation is a second reading of the run's own sequence, not a second
-implementation of it. It reuses the engine's measurement (``_measure``), its
-matching rule (``_decide_match``) and its drawing (``triptych``), takes each
+implementation of it. It reuses the engine's measurement (``measure_particles``), its
+matching rule (``decide_match``) and its drawing (``triptych``), takes each
 photo's calibration from the run record, and republishes the affected rows
 through :class:`RunWriter`. A reloaded image therefore cannot disagree with a
 fresh run over the same labels, and the run folder says what the images show.
@@ -27,7 +27,7 @@ from polyx.core.detect.protocol import Instance, size_image
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
 
-from .engine import _decide_match, _measure
+from .engine import decide_match, measure_particles
 from .result import ImageResult, RunResult
 from .schema import aggregate_metrics
 from .writer import RunWriter
@@ -160,7 +160,7 @@ def reload_ground_truth(
         calibration = run.calibration_for(image_path)
         um_per_px = calibration.um_por_px if calibration is not None and calibration.valid else None
         if has_gt:
-            _measure(gts, bgr, um_per_px, run.params)
+            measure_particles(gts, bgr, um_per_px, run.params)
 
         image_index = image_indices.get(image_path, made - 1)
         for _model_idx, row in cluster:
@@ -173,7 +173,7 @@ def reload_ground_truth(
                 # match next to new counters would leave every reader of the
                 # identity (Errors page, report) describing the labels that
                 # were thrown away.
-                match, row.match_use_mask_iou = _decide_match(
+                match, row.match_use_mask_iou = decide_match(
                     row.predictions, gts, run.params.iou_tp
                 )
                 row.match = match

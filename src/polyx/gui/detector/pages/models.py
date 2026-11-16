@@ -222,7 +222,7 @@ class ModelsPage(DetectorPage):
         slot.alias = sanitize_alias(alias) or default_alias
         # Empty or the untouched placeholder still means "generated"; anything
         # else is a name the user chose and must be shown exactly as written.
-        slot.alias_default = not alias.strip() or slot.alias == default_alias
+        slot.alias_generated = not alias.strip() or slot.alias == default_alias
         self.slot_cards[idx].ed_alias.setText(slot.alias)
         if path_str:
             p = Path(path_str)
