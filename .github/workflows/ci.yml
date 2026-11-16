@@ -1,10 +1,12 @@
-# Minimal lint-and-test pipeline: install the exact versions from uv.lock (the
-# numpy==1.26.4 pin is fragile: bump numpy or ultralytics and it must be known
-# here, not on the studio machine), then run the full pytest suite without
-# windows.
+# The pipeline: the gate (`quality`), the 3.12 suite, the packaging job, and
+# the two jobs that check the pipeline itself. It installs the exact versions
+# from uv.lock (the numpy==1.26.4 pin is fragile: bump numpy or ultralytics
+# and it must be known here, not on the studio machine).
 #
-# This workflow is also the publish gate: `publish.yml` calls it through
-# `workflow_call`, so a tag can only reach PyPI after the same suite passes.
+# The words: the *preview* is the local hooks in `pre-commit.yml`, the *gate*
+# is the `quality` job here, and the *pipeline* is this workflow. `publish.yml`
+# calls this workflow through `workflow_call` under the name `ci`, so a tag
+# runs exactly what a pull request runs.
 name: CI
 
 on:
@@ -12,7 +14,7 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:   # manual run to reproduce a failure on any branch
-  workflow_call:       # publish.yml gates on this suite
+  workflow_call:       # publish.yml calls this pipeline as `ci`
 
 permissions:
   contents: read
@@ -117,15 +119,16 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    needs: [quality, test]
+    # The gate only. Packaging cannot see the source suite, and the 3.12 leg
+    # proves the interpreter, not the wheel, so waiting for it adds a job to
+    # the wait without adding a proof. Consequence, accepted: a pull request
+    # whose suite fails still builds and uploads a wheel — its check is red
+    # and the artifact is kept for seven days (ADR-0006).
+    needs: quality
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Qt runtime libs (headless CI)
-        run: sudo apt-get update && sudo apt-get install -y
-             libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -135,40 +138,68 @@ jobs:
         with:
           enable-cache: true
 
+      # No Qt system libraries on a pull request: nothing here imports
+      # PySide6, and the job stops after the catalog check. A pull request
+      # builds the distributions and proves the packaged catalog (ADR-0006).
       - name: Build wheel and sdist
         run: uv build -o dist
 
       # Packaging is invisible to the source gate: Hatchling excludes
       # VCS-ignored files, so the compiled catalogs can silently miss the
-      # wheel. Load the packaged catalog the way an installed copy does.
+      # wheel. Load the packaged catalog the way an installed copy does. This
+      # stays on pull requests because it is the one packaging invariant the
+      # source tree cannot see.
       - name: Packaged catalogs load
         run: python tools/check_wheel.py dist/*.whl
 
-      - name: Smoke-test the wheel (headless)
-        run: |
-          python -m venv /tmp/smoke
-          /tmp/smoke/bin/pip install --quiet dist/*.whl
-          /tmp/smoke/bin/python -c "import polyx; print('version:', polyx.__version__)"
-          /tmp/smoke/bin/python -c "import polyx.core.paths as p; assert (p.ASSETS_DIR / 'polyx.ico').is_file(), 'asset missing from wheel'"
-          /tmp/smoke/bin/polyx-train --help >/dev/null
-          /tmp/smoke/bin/polyx-detect --help >/dev/null
-          /tmp/smoke/bin/polyx-eval --help >/dev/null
-          /tmp/smoke/bin/polyx-report --help >/dev/null
-          /tmp/smoke/bin/polyx-download-models --help >/dev/null
-          /tmp/smoke/bin/polyx train --help >/dev/null
-          /tmp/smoke/bin/polyx detect --help >/dev/null
+      # Everything below proves the *distribution*, not the source, and runs
+      # only when the event is not a pull request: on a tag, where a version
+      # number on PyPI is permanent, and on a manual dispatch of publish.yml,
+      # which rehearses exactly this path without uploading (ADR-0006). The
+      # condition is the event, not the ref, so there is one definition of
+      # the smoke rather than a tag branch and a dispatch branch.
+      #
+      # Qt shared libraries are needed only here, not for the wheel: importing
+      # `polyx.gui.launcher` loads QtWidgets, which wants libGL even with no
+      # display. A pull request installs none of this.
+      - name: Qt runtime libs (headless CI)
+        if: github.event_name != 'pull_request'
+        run: sudo apt-get update && sudo apt-get install -y
+             libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
 
-      - name: Smoke-test the [gui] extra
+      - name: Create the smoke environment
+        if: github.event_name != 'pull_request'
+        run: uv venv /tmp/smoke --python 3.11
+
+      # uv, not the system pip. One install with the extra proves both the
+      # base distribution and the GUI surface; the old pair of `pip install`
+      # calls proved them in sequence, one download of torch at a time.
+      - name: Install the wheel with the GUI extra
+        if: github.event_name != 'pull_request'
         run: |
           WHEEL=$(ls dist/*.whl)
-          /tmp/smoke/bin/pip install --quiet "${WHEEL}[gui]"
+          uv pip install --python /tmp/smoke/bin/python "${WHEEL}[gui]"
+
+      # The entry points a user runs, from the environment a user has.
+      # `polyx-gui` is absent on purpose: it has no `--help`, it starts the
+      # window, and the suite already proves its target resolves
+      # (tests/test_console_scripts.py).
+      - name: Console scripts start (headless)
+        if: github.event_name != 'pull_request'
+        run: |
+          /tmp/smoke/bin/python -c "import polyx; print('version:', polyx.__version__)"
+          /tmp/smoke/bin/python -c "import polyx.core.paths as p; assert (p.ASSETS_DIR / 'polyx.ico').is_file(), 'asset missing from wheel'"
+          for script in polyx polyx-train polyx-eval polyx-detect polyx-report polyx-download-models; do
+            echo "running ${script} --help"
+            "/tmp/smoke/bin/${script}" --help >/dev/null
+          done
           /tmp/smoke/bin/python -c "from polyx.gui.qt import qt_available, require_qt; require_qt(); print('qt_available:', qt_available())"
           /tmp/smoke/bin/python -c "import polyx.gui.launcher; print('gui launcher imports OK')"
 
       # The wheel a PR produced is now downloadable from the run page, so a
       # reviewer can test it without rebuilding. `wheel`, not `dist`: the
       # publish workflow uploads its own `dist` in the same run when it calls
-      # this workflow as its gate, and artifact names must not collide.
+      # this workflow, and artifact names must not collide.
       - name: Upload the built wheel and sdist
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

@@ -2,6 +2,19 @@
 
 ## What the CI does
 
+Three words, used the same way everywhere:
+
+- **preview** — the local hooks, run by `pre-commit.yml`. Fast, and not
+  authoritative: it catches a format or convention mistake before the gate
+  looks at it.
+- **gate** — `quality` in `ci.yml`: translation audit, palette rule, the full
+  suite, ruff and ty, run by `python tools/check.py`. The gate is the
+  contract, and it is the only owner of those checks.
+- **pipeline** — `ci.yml` as a whole: the gate, the 3.12 suite, the packaging
+  job and the two jobs that check the pipeline itself.
+
+`publish.yml` runs the pipeline; it does not keep its own copy of the checks.
+
 Two workflows run on **every PR** and on every push to `main`:
 
 - **`pre-commit.yml`** — the preview: it runs the hooks in
@@ -10,25 +23,35 @@ Two workflows run on **every PR** and on every push to `main`:
   `ruff-format` (`SKIP`), because the gate owns ruff; the two ruff hooks run
   with auto-fix (`--fix`), so in CI they would rewrite files instead of
   reporting them. They stay in the configuration for local use.
-- **`ci.yml`** — the gate, plus the 3.12 suite and the wheel build:
+- **`ci.yml`** — the pipeline, which is the gate plus the checks around it:
   1. Checks `uv.lock` is current and smoke-tests the installer scripts before
      any dependency sync.
   2. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
      `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`) and syncs the locked
      environment (`uv sync --locked --extra gui`) on Python 3.11.
-  3. Runs `python tools/check.py`: translation audit, palette rule, the full
-     suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. The gate is the
-     one owner of the checks — ruff included, at the version pinned in the
-     development group — so a check added to `tools/check.py` cannot
-     silently miss CI. ty blocks on `src/polyx/core` + `src/polyx/cli`.
-     The suite also reads the console scripts from the installed distribution
-     metadata, compares them with `[project.scripts]` and imports every
-     target, so a broken entry point fails the pull request rather than a
-     release — no workflow step is needed for that.
+  3. Runs the gate: `python tools/check.py` — translation audit, palette rule,
+     the full suite (serial, `QT_QPA_PLATFORM=offscreen`), ruff and ty. Ruff
+     included, at the version pinned in the development group, so a check
+     added to `tools/check.py` cannot silently miss CI. ty blocks on
+     `src/polyx/core` + `src/polyx/cli`. The suite also reads the console
+     scripts from the installed distribution metadata, compares them with
+     `[project.scripts]` and imports every target, so a broken entry point
+     fails the pull request rather than a release.
   4. Types the GUI on the same 3.11 environment as an advisory step: it
      reports and never fails the build.
-  5. A separate `test` job runs the suite on Python 3.12, and `build` builds
-     the wheel, loads the packaged catalogs and smoke-imports it.
+  5. A separate `test` job runs the suite on Python 3.12.
+  6. A `build` job depends on the gate only. It builds the wheel and sdist,
+     runs `tools/check_wheel.py` against the wheel — the compiled Spanish
+     catalog is inside and the pseudo-locale is not — and uploads the wheel as
+     the run artifact. On a pull request it installs no Qt libraries and
+     creates no virtual environment, so it starts beside the 3.12 suite
+     instead of after it.
+
+Everything that installs the built distribution runs when the event is **not a
+pull request** — a `v*` tag, or a manual run of `publish.yml`: uv creates the
+environment and installs the wheel with the `[gui]` extra, then every CLI
+console script starts with `--help` and the GUI imports. One definition, in
+`ci.yml`; ADR-0006 says why.
 
 Two more `ci.yml` jobs make the pipeline check itself. Both run **beside** the
 gate — neither waits for another job and nothing waits for them — so they add a
@@ -59,13 +82,21 @@ uvx zizmor==1.32.0 .github/workflows/
 ```
 
 `publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
-tags via Trusted Publishing. A tag run starts with a `gate` job that calls
-`ci.yml` through `workflow_call` — the same suite every PR runs — so a tag on a
-red commit cannot reach PyPI, where a version number is spent forever. The build
-job then rejects a tag whose commit is not on `main`, checks that the tag names
-the version in the built wheel, and `release` attaches the same files to a
-GitHub release. A manual run from the Actions UI is a rehearsal: it runs the
-gate and builds the distributions but uploads nothing.
+tags via Trusted Publishing. A tag run starts with a job named `ci` that calls
+`ci.yml` through `workflow_call` — the same pipeline every PR runs, which is why
+"gate" is the local check runner and nothing else. A tag on a red commit
+therefore cannot reach PyPI, where a version number is spent forever. The
+`build` job then rejects a tag whose commit is not on `main`, checks that the
+tag names the version in the built wheel, and `release` attaches the same files
+to a GitHub release.
+
+So the split is: **a pull request proves the source** — the gate — **and the
+packaging invariant the source tree cannot see** (the compiled catalog is in
+the wheel, the pseudo-locale is not); **a tag proves the distribution**: the
+wheel installs into a clean environment with uv, every CLI console script
+starts, and the GUI imports. A manual run of `publish.yml` from the Actions UI
+is a rehearsal: it runs the whole pipeline, including the installed-wheel
+smoke, then builds the distributions and uploads nothing to PyPI.
 
 Every `uses:` is pinned to a commit SHA with its release in a comment, and
 `.github/dependabot.yml` opens one grouped PR a week for patch and minor action
@@ -149,8 +180,11 @@ python -m pytest -q          # inside the project .venv
    - `CI` → `test` → the failing test is printed with its assertion. The suite
      is deterministic: if it passes locally it should pass in CI; if it fails
      only in CI, check the language (`POLYX_LOCALE`) and the locale.
-   - `CI` → `build` → the wheel, the packaged catalogs or a smoke import
-     failed; the log names the command.
+   - `CI` → `build` → the wheel build, the packaged-catalog check, or — on a
+     tag or a manual publish run — the wheel install and console-script smoke.
+     Reproduce the catalog check with `uv build -o dist` and
+     `python tools/check_wheel.py dist/*.whl`; a missing `messages.mo` means
+     the build hook did not run or Hatchling filtered the artifact.
    - `CI` → `workflow-lint` → the finding names the file, line and column.
      `expression` means a `${{ }}` that does not resolve (a missing `needs:`, a
      typo); `shellcheck` means the shell inside a `run:` block; a bare zizmor
