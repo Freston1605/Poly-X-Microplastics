@@ -26,6 +26,34 @@ Three workflows run on **every PR** and on every push to `main`:
   5. A separate `test` job runs the suite on Python 3.12, and `build` builds
      the wheel, loads the packaged catalogs and smoke-imports it.
 
+Two more `ci.yml` jobs make the pipeline check itself. Both run **beside** the
+gate — neither waits for another job and nothing waits for them — so they add a
+line to the checks list but not a second to the verdict:
+
+- **`dependency-review`** — on pull requests only, diffs the resolved
+  dependency set against the base branch and fails when the diff introduces a
+  package with a known advisory (`fail-on-severity: low`). Keeping exact pins
+  says nothing about whether those pins are vulnerable; this is the check that
+  reads them. Python dependency graphs include `uv.lock`, so a lock bump is
+  reviewed like any other dependency change. It posts nothing in the pull
+  request: that would need `pull-requests: write`, and the job is read-only.
+- **`workflow-lint`** — `actionlint` over `.github/workflows/*.yml`, which
+  checks the `${{ }}` expressions and, because `shellcheck` sits on `PATH`,
+  the shell inside every `run:` block; then `zizmor`, which audits the security
+  posture (unpinned action refs, `${{ }}` interpolated into a script, excess
+  permissions). Both run from pinned artifacts: actionlint's release tarball
+  and shellcheck's, each verified against the published SHA-256, and zizmor
+  through `uvx zizmor==<version>`. One finding is ignored and named in
+  `.github/zizmor.yml`; everything else at any severity fails the PR.
+
+The same two commands run locally, and they are the fast loop for a workflow
+change:
+
+```bash
+actionlint .github/workflows/*.yml   # with shellcheck on PATH
+uvx zizmor==1.32.0 .github/workflows/
+```
+
 `publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
 tags via Trusted Publishing. A tag run starts with a `gate` job that calls
 `ci.yml` through `workflow_call` — the same suite every PR runs — so a tag on a
@@ -119,6 +147,16 @@ python -m pytest -q          # inside the project .venv
      only in CI, check the language (`POLYX_LOCALE`) and the locale.
    - `CI` → `build` → the wheel, the packaged catalogs or a smoke import
      failed; the log names the command.
+   - `CI` → `workflow-lint` → the finding names the file, line and column.
+     `expression` means a `${{ }}` that does not resolve (a missing `needs:`, a
+     typo); `shellcheck` means the shell inside a `run:` block; a bare zizmor
+     title (`template-injection`, `unpinned-uses`, `artipacked`) is the audit
+     it came from. Reproduce with the two commands above, on the files you
+     changed.
+   - `CI` → `dependency-review` → the log lists the advisory, the package and
+     the version that introduced it. Bump past the patched version if there is
+     one; if the package cannot move, the honest fix is a documented exception
+     in the workflow, not a weaker threshold.
 2. Reproduce locally with the same command as the step (Linux above).
 3. Push the fix to the same branch: the job re-runs on its own, and the new push
    cancels the previous run.
