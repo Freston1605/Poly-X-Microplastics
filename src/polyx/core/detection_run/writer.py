@@ -103,9 +103,11 @@ class RunWriter:
             include_conf=True,
         )
 
+        table, handle = self._csv, self._csv_handle
+        assert table is not None and handle is not None  # update mode opens no table
         for det in image_result.predictions:
-            self._csv.writerow(detection_row(alias, image_result.image_path, det, calibration))
-        self._csv_handle.flush()
+            table.writerow(detection_row(alias, image_result.image_path, det, calibration))
+        handle.flush()
         self.write_run_json()
 
     def update_image(self, image_result: ImageResult, views: Triptych, image_index: int) -> None:
@@ -148,6 +150,7 @@ class RunWriter:
     def finish(self) -> None:
         """Close the CSV and write the final run record."""
         if not self._csv_closed:
+            assert self._csv_handle is not None  # an open table has an open handle
             self._csv_handle.flush()
             self._csv_handle.close()
             self._csv_closed = True
