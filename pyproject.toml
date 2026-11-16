@@ -114,10 +114,8 @@ path = "src/polyx/__init__.py"
 # The workflows install exactly this uv: setup-uv reads `required-version`
 # when no version input is given, so the lockfile is always written and read
 # by the same resolver. Bumping it means re-locking in the same commit.
-# The value is not free: Dependabot's uv updater bundles one uv version and
-# runs `uv lock` for security updates, so this pin must equal that version or
-# every Python update job dies with `tool_version_not_supported`. 0.13.7 is
-# the bundled version. See docs/agents/repository-settings.md.
+# The value must match the uv version Dependabot bundles; see
+# docs/agents/repository-settings.md for why.
 required-version = "==0.13.7"
 # Keep the dev/CI lock aligned with the tested stack. torch/torchvision are
 # not declared as direct dependencies (ultralytics pulls them in and the

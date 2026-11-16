@@ -147,11 +147,17 @@ gh api repos/Freston1605/Poly-X-Microplastics/private-vulnerability-reporting
 Dependabot alerts and security updates are the other half. Every dependency
 here is pinned exactly on purpose, so the advisory feed is the only thing that
 turns "this pin is now known-vulnerable" into a version somebody moves. The
-alerts show the affected package in the advisory; the security updates open a
-pull request that raises the pin toward the first fixed release. Because the
-pins live in two places — `pyproject.toml` and the frozen `requirements.txt` —
-treat that pull request as a starting point, not a merge-ready change: both
-manifests have to move together, and `uv lock` has to follow.
+alerts show the affected package in the advisory. Security updates try to open
+a pull request that raises the pin toward the first fixed release, and for the
+Python ecosystem that only happens when the pin is satisfiable by the uv
+version Dependabot bundles — otherwise the job fails before it proposes
+anything (see "Security updates are only on when the uv pin is satisfiable").
+Because the pins live in two places — `pyproject.toml` and the frozen
+`requirements.txt` — treat any such pull request as a starting point, not a
+merge-ready change: both manifests and `uv lock` have to move together.
+
+The routine bump of the scientific stack stays manual, with the full gate: it
+is a different path from a security update, and nothing here automates it.
 
 ```bash
 gh api --method PUT repos/Freston1605/Poly-X-Microplastics/vulnerability-alerts
@@ -179,48 +185,54 @@ does not satisfy ends the job before any lock work:
 |            |                            |   "supported-versions": "0.13.7" }  |
 ```
 
-That is run `43796115788` (2026-11-16, `uv` in `/`, torch; the Pillow job
-`43796112000` failed the same way). No pull request is opened; the only
+That is run `43796115788` (uv, torch). No pull request is opened; the only
 trace is a red run whose name says "Dependabot Updates failure". The setting
 looks on and the Python half is silent. #107 and #110 exist because of this.
 
 The rule, therefore:
 
-- `required-version` in `pyproject.toml` must be **exactly** the uv that
-  Dependabot bundles, and it is the single source of truth: no workflow passes
-  a `version:` to `setup-uv`, so CI installs the same binary that writes the
-  lockfile. An exact pin is deliberate — a range would let two resolvers write
-  and read one lock.
+- `required-version` in `pyproject.toml` must be **exactly** the uv version
+  that Dependabot bundles, and it is the single source of truth: no workflow
+  passes a `version:` to `setup-uv`, so CI installs the same binary that writes
+  the lockfile. An exact pin is deliberate — a range would let two resolvers
+  write and read one lock.
 - When Dependabot's bundled uv moves, the failure above names both versions.
   The fix is a planned change, not a mystery: bump `required-version`, run
-  `uv lock` with that same binary, commit the pin and the lock together, and
-  re-sync local environments (`uv sync --locked --extra gui`) because the old
-  `.venv` was built by the previous resolver.
+  `uv lock` with that same binary, and commit the pin and the lock together.
 - Version updates for `uv` stay out of `.github/dependabot.yml` on purpose:
   the scientific stack is bumped by hand with the full gate. Security updates
   must not be confused with that — they only reach for the first fixed
   release of a pin an advisory already covers.
 
-Verify the path instead of assuming it. An update job is a run whose event is
-`dynamic` and whose name starts with "Dependabot Updates"; read the failing
-line rather than the run colour:
+Verify the path instead of assuming it. A successful update is a run that
+completed with conclusion `success`, reached `uv lock`, and carries no
+`tool_version_not_supported`. The check stops at the first failed command and
+says which step failed:
 
 ```bash
 R=Freston1605/Poly-X-Microplastics
-gh run list -R $R --event dynamic --limit 20 \
-  --json databaseId,displayTitle,conclusion
-# Success signal: a run whose log reaches `uv lock` and carries no
-# `tool_version_not_supported`. Then:
-gh run view -R $R <run-id> --log | grep -E 'tool_version_not_supported|uv lock' \
-  || echo 'no version-gate error in this job'
+run=$(gh run list -R "$R" --workflow "Dependabot Updates" --limit 1 \
+  --json databaseId --jq '.[0].databaseId // empty') || exit 1
+[ -n "$run" ] || { echo 'no Dependabot update run yet' >&2; exit 1; }
+state=$(gh run view "$run" -R "$R" \
+  --json status,conclusion --jq '"\(.status) \(.conclusion)"') || exit 1
+[ "$state" = "completed success" ] \
+  || { echo "run $run ended $state" >&2; exit 1; }
+log=$(gh run view "$run" -R "$R" --log) || exit 1
+printf '%s\n' "$log" | grep -q 'uv lock' \
+  || { echo "run $run never reached uv lock" >&2; exit 1; }
+if printf '%s\n' "$log" | grep -q 'tool_version_not_supported'; then
+  echo "run $run still hits the uv version gate" >&2
+  exit 1
+fi
+echo "run $run reached uv lock with no version-gate error"
 ```
 
 An advisory must exist to schedule such a run, and it reads the configuration
 on the default branch; a fix on a feature branch cannot be observed until it
-lands on `main`. So record the run id you checked, not the intention to check
-one. If the only available evidence is the queued check, say exactly that:
-"queued after merge on the next advisory; success = the same job log without
-`tool_version_not_supported` and a populated resolved set."
+lands on `main`. Record the run id checked. If no run could be scheduled yet,
+say the check is queued and that success is the same job log reaching
+`uv lock` without `tool_version_not_supported`.
 
 The dependency-review job is not a substitute for either: it audits the
 resolved set a pull request **adds**, and it cannot see an advisory published
@@ -329,9 +341,9 @@ In order:
    already have it.
 4. Turn on private vulnerability reporting, Dependabot alerts and security
    updates. Confirm each with its `GET`, and check that `required-version` in
-   `pyproject.toml` is the uv that Dependabot bundles — otherwise the setting
-   is on and every Python job fails (see "Security updates are only on when
-   the uv pin is satisfiable").
+   `pyproject.toml` is the uv version Dependabot bundles — otherwise the
+   setting is on and every Python job fails (see "Security updates are only on
+   when the uv pin is satisfiable").
 5. Fill the six required checks, last — and only once the jobs they name run
    on `main` (see "Six checks block a merge").
 6. Verify the whole set with the reads below — a `PUT` that returns `204` is
