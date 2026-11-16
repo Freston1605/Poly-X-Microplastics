@@ -16,6 +16,7 @@ from pathlib import Path
 
 from polyx.core.annotate import run_view_path
 from polyx.core.detect.protocol import Instance
+from polyx.core.detect.tiling import TilingMode, TilingPlan
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration
 from polyx.core.quality.metrics import MatchResult, match_image
 
@@ -124,13 +125,29 @@ def parse_datetime(value: object) -> datetime | None:
 
 
 def params_to_dict(params: RunParams) -> dict:
-    return asdict(params)
+    """Plain JSON form; the tiling mode always leaves as its English value.
+
+    ``TilingMode`` is a ``str``, so ``asdict`` plus ``json`` already wrote a
+    string. Converting explicitly keeps that true for a caller that assigned a
+    legacy value after construction.
+    """
+    data = asdict(params)
+    data["tiling"] = TilingMode.parse(data.get("tiling")).value
+    return data
 
 
 def params_from_dict(data: dict | None) -> RunParams:
-    """Rebuild ``RunParams`` from JSON, ignoring unknown/missing fields."""
+    """Rebuild ``RunParams`` from JSON, ignoring unknown/missing fields.
+
+    A legacy ``"siempre"``/``"nunca"`` is mapped to its English mode; an
+    unknown mode falls back to ``AUTO`` with a warning, because a run that
+    cannot be re-read is worse than one that tiled differently.
+    """
     known = {field.name for field in fields(RunParams)}
-    return RunParams(**{key: value for key, value in (data or {}).items() if key in known})
+    values = {key: value for key, value in (data or {}).items() if key in known}
+    if "tiling" in values:
+        values["tiling"] = TilingMode.parse(values["tiling"])
+    return RunParams(**values)
 
 
 def calibration_to_dict(calibration: Calibration) -> dict:
@@ -186,6 +203,39 @@ def _instance_from_mapping(data: dict) -> Instance:
 
 def detection_from_dict(data: dict) -> Instance:
     return _instance_from_mapping(data)
+
+
+def tiling_plan_to_dict(plan: TilingPlan | None) -> dict | None:
+    """Plain-data form of a tiling plan; ``None`` means a single pass."""
+    if plan is None:
+        return None
+    return {
+        "tile": int(plan.tile),
+        "overlap": float(plan.overlap),
+        "n_tiles": int(plan.n_tiles),
+        "side": int(plan.side),
+        "threshold_px": int(plan.threshold_px),
+    }
+
+
+def tiling_plan_from_dict(data: object) -> TilingPlan | None:
+    """Rebuild a recorded plan; a missing or malformed object reads as one piece.
+
+    A folder written before the plan was recorded only has the legacy
+    ``tiling`` sentence, and a folder whose plan is unusable must still open.
+    """
+    if not isinstance(data, dict):
+        return None
+    try:
+        return TilingPlan(
+            tile=int(data["tile"]),
+            overlap=float(data["overlap"]),
+            n_tiles=int(data["n_tiles"]),
+            side=int(data["side"]),
+            threshold_px=int(data["threshold_px"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _float(value: object) -> float | None:
@@ -389,6 +439,11 @@ def _image_payloads(result: RunResult) -> list[dict]:
                     # nor reproduce the decision on reload.
                     "match_iou_thr": row.match_iou_thr,
                     "match_use_mask_iou": row.match_use_mask_iou,
+                    # The invariant decision, not its sentence: the reader
+                    # phrases it in their language through ``describe()``.
+                    "tiling_plan": tiling_plan_to_dict(row.tiling_plan),
+                    # Legacy sentence kept so an old reader still shows what a
+                    # new folder did; new readers prefer ``tiling_plan``.
                     "tiling": row.tiling,
                 }
             )
@@ -621,6 +676,7 @@ def load_run(run_dir: Path) -> RunResult:
                     annotated_path=run_view_path(folder, image_index, image_path.stem, "_annot"),
                     pred_path=run_view_path(folder, image_index, image_path.stem, "_pred"),
                     gt_path=gt_path if has_gt and gt_path.is_file() else None,
+                    tiling_plan=tiling_plan_from_dict(model_row.get("tiling_plan")),
                     tiling=str(model_row.get("tiling") or ""),
                 )
             )
@@ -667,5 +723,7 @@ __all__ = [
     "read_csv_rows",
     "read_detections_csv",
     "read_json_object",
+    "tiling_plan_from_dict",
+    "tiling_plan_to_dict",
     "utcnow",
 ]
