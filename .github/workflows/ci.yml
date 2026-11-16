@@ -176,3 +176,104 @@ jobs:
           path: dist/*
           retention-days: 7
           if-no-files-found: error
+
+  # --- the pipeline checks itself -------------------------------------------
+  #
+  # Both jobs below run *beside* the gate, never in front of it: neither needs
+  # another job and nothing needs them, so they cannot lengthen the
+  # pull-request verdict. They are jobs here rather than workflows of their own
+  # because neither asks for a write permission, which is what would justify
+  # their own trigger set and their own pinning burden. They also run when
+  # publish.yml calls this workflow; the dependency review is skipped there
+  # because it needs pull-request context.
+
+  dependency-review:
+    # Exact pins stop a dependency from drifting, not from being vulnerable,
+    # and the vector that matters is a pull request that adds a package. This
+    # diffs the resolved dependency set against the base branch — Python
+    # dependency graphs read `uv.lock` since April 2026 — and fails on a newly
+    # introduced advisory, so a vulnerable addition is blocked before merge
+    # instead of arriving days later in the weekly Dependabot scan.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # No checkout: this action diffs the base and head dependency snapshots
+      # through the API, so there is no working tree of an untrusted branch to
+      # materialize.
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Already the upstream default; naming it means a future default
+          # change cannot quietly weaken this check.
+          fail-on-severity: low
+          # The verdict goes to the job log and the run summary. Posting it in
+          # the pull request would need `pull-requests: write`, and this
+          # workflow adds no write permission.
+          comment-summary-in-pr: never
+
+  workflow-lint:
+    # An expression typo is otherwise discovered by a run that has already
+    # spent runner-minutes downloading torch. actionlint parses the workflow
+    # files in about a second and, with shellcheck on PATH, also lints the
+    # shell inside every `run:` block. zizmor audits what a linter cannot see:
+    # an action ref that lost its SHA, `${{ }}` interpolated straight into a
+    # script, a job that asks for more permission than it uses.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      # actionlint has no distribution on PyPI maintained by its author (the
+      # `actionlint-py` package is a third-party wrapper), so the pinned
+      # release artifact is downloaded and checked against the checksum
+      # published with that release. shellcheck is pinned the same way and put
+      # on PATH because actionlint only lints `run:` scripts when it finds it.
+      - name: Install actionlint and shellcheck
+        run: |
+          set -euo pipefail
+          tools="${RUNNER_TEMP}/workflow-lint"
+          mkdir -p "${tools}"
+
+          curl -fsSL -o "${tools}/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  ${tools}/actionlint.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf "${tools}/actionlint.tar.gz" -C "${tools}" actionlint
+
+          curl -fsSL -o "${tools}/shellcheck.tar.xz" \
+            https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz
+          echo "6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87  ${tools}/shellcheck.tar.xz" \
+            | sha256sum --check --strict
+          tar -xJf "${tools}/shellcheck.tar.xz" -C "${tools}" --strip-components=1 \
+            shellcheck-v0.10.0/shellcheck
+
+          echo "${tools}" >> "${GITHUB_PATH}"
+
+      # Print what actually resolved: a pin that silently moved would make a
+      # green job mean something else than it did yesterday.
+      - name: Tool versions
+        run: |
+          actionlint --version
+          shellcheck --version | sed -n '2p'
+          uvx zizmor==1.32.0 --version
+
+      - name: actionlint (workflow expressions and shell)
+        run: actionlint .github/workflows/*.yml
+
+      # zizmor is published on PyPI by its own authors, so uvx runs it the way
+      # the project runs its Python tooling: exact version, isolated
+      # environment, nothing added to the repository. Any finding at any
+      # severity fails the job; the single documented exception lives in
+      # .github/zizmor.yml.
+      - name: zizmor (workflow security analysis)
+        run: uvx zizmor==1.32.0 --format=github .github/workflows/

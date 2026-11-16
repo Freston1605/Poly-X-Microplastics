@@ -151,7 +151,8 @@ models/                   # YOLO .pt weights (dev; in installs they go to user d
 runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
 data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
-.github/workflows/        # ci.yml (gate, suite, wheel), pre-commit.yml (preview),
+.github/workflows/        # ci.yml (gate, suite, wheel, dependency review,
+                          # workflow lint), pre-commit.yml (preview),
                           # publish.yml (v* tag → PyPI + GitHub release)
 .github/dependabot.yml    # weekly action bumps; every `uses:` is SHA-pinned
 ```
