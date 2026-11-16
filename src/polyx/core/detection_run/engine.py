@@ -222,7 +222,9 @@ def _resolve_calibration(
     )
 
 
-def _measure(detections: list[Instance], bgr: np.ndarray, um_per_px: float | None, params) -> int:
+def measure_particles(
+    detections: list[Instance], bgr: np.ndarray, um_per_px: float | None, params
+) -> int:
     """Box fallback first, then the current shape measurement; returns shapeless count."""
     return measure_detections(
         detections,
@@ -244,7 +246,7 @@ def _uses_mask_iou(predictions: list[Instance], gts: list[Instance]) -> bool:
     )
 
 
-def _decide_match(
+def decide_match(
     predictions: list[Instance], gts: list[Instance], iou_thr: float
 ) -> tuple[MatchResult, bool]:
     """The run's matching decision for one model/image, and the rule it used.
@@ -456,14 +458,14 @@ def run_detection(
                 gts, malformed = read_label_file(gt_path, width, height, first_names)
                 if malformed:
                     log.warning("GT labels: %d unparseable line(s) in %s", malformed, gt_path.name)
-                _measure(gts, bgr, um_per_px, config.params)
+                measure_particles(gts, bgr, um_per_px, config.params)
 
             for model_index, spec in enumerate(config.models):
                 execution = result.execution[model_index]
                 predictions, tiling_decision = _predict(
                     spec.detector, image_path, config.params, execution
                 )
-                shapeless = _measure(predictions, bgr, um_per_px, config.params)
+                shapeless = measure_particles(predictions, bgr, um_per_px, config.params)
                 execution.shapeless += shapeless
                 # Same order as the GUI runner: measure, filter, abstain, number,
                 # then match. Abstention never drops a particle.
@@ -472,7 +474,7 @@ def run_detection(
                 _number_detections(predictions)
 
                 if has_gt:
-                    match, mask_iou_rule = _decide_match(predictions, gts, config.params.iou_tp)
+                    match, mask_iou_rule = decide_match(predictions, gts, config.params.iou_tp)
                     tp, fp, fn, miscls = match.tp, match.fp, match.fn, match.miscls
                 else:
                     mask_iou_rule = False

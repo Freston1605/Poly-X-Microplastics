@@ -174,7 +174,7 @@ class ParametersPage(DetectorPage):
             )
         else:
             clue_2 = _("'0' = first GPU. 'cpu' = CPU. '0,1' = GPU 0 and 1.")
-        clue_2 = f"{clue_2} {_('Empty = the best device this machine has.')}"
+        clue_2 = _("%(clue)s Empty = the best device this machine has.") % {"clue": clue_2}
         g.addWidget(_hint(clue_2), 3, 2)
 
         l1.addLayout(g)

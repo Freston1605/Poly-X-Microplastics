@@ -26,17 +26,8 @@ from polyx.gui.detector.state import DetectorState  # noqa: E402
 from tests.match_fixtures import misclassified_run  # noqa: E402
 
 
-@pytest.fixture
-def english():
-    from polyx.core import i18n
-
-    previous = i18n.language()
-    assert i18n.set_language("en")
-    yield
-    i18n.set_language(previous)
-
-
-def test_compare_summary_names_its_criterion(qapp, tmp_path, english):
+def test_compare_summary_names_its_criterion(qapp, tmp_path, selected_language):
+    selected_language("en")
     run = misclassified_run(tmp_path)
     result = run.results[0][0]
     state = DetectorState()

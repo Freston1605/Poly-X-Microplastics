@@ -585,6 +585,7 @@ def _match_from_record(
         fp=int(model_row.get("fp") or 0),
         fn=int(model_row.get("fn") or 0),
         miscls=int(model_row.get("miscls") or 0),
+        has_identity=False,
     )
     recomputed = match_image(predictions, gts, iou_thr=iou_thr, use_mask_iou=use_mask_iou)
     if (recomputed.tp, recomputed.fp, recomputed.fn, recomputed.miscls) == (

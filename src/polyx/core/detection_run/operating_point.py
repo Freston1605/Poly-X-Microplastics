@@ -207,10 +207,10 @@ def recommend(
     )
     if not candidates:
         return Score.from_counts(criterion, 0.0, tp=0, fp=0, fn=0, miscls=0)
-    # At most ~25 points: the page draws a line, not a dense curve.
-    step = max(1, len(candidates) // 25)
+    # The grid is rounded to 0.01, so there are at most 101 points: sweeping
+    # all of them is cheap and cannot skip the maximum between two samples.
     best: Score | None = None
-    for threshold in candidates[::step]:
+    for threshold in candidates:
         current = score(rows, criterion, threshold)
         if best is None or current.f1 > best.f1:
             best = current

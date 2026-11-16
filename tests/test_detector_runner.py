@@ -386,7 +386,7 @@ def test_typed_alias_is_kept_verbatim_and_not_marked_generated(qapp, tmp_path):
     path = _plate(tmp_path / "photos" / "plate.png")
     state = _state(tmp_path, [path])
     state.model_slots[0].alias = "my-model"
-    state.model_slots[0].alias_default = False
+    state.model_slots[0].alias_generated = False
 
     events = _execute(_runner_with_folder(state, tmp_path))
 
