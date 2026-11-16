@@ -444,6 +444,8 @@ def _parchear_runner(monkeypatch) -> list:
         log_line = _SenalFalsa()
         progress = _SenalFalsa()
         finished_ok = _SenalFalsa()
+        # keep_thread_alive only needs a connect() receiver; the no-op works.
+        finished = progress
         aborted = _SenalFalsa()
         failed = _SenalFalsa()
 

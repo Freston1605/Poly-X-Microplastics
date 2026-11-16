@@ -411,9 +411,29 @@ falls back silently, because the user never asked for a language.
 `polyx.gui.i18n_qt` owns Qt's own catalogs and the `LanguageChange` broadcast.
 `i18n.set_language(tag)` swaps the active catalog and notifies the Qt bridge;
 every top-level window owns a `retranslate()` that rebuilds its text. The
-modules are separate processes, so the shared preferences file is also the
-cross-process channel: a `QFileSystemWatcher` in every process applies a locale
-another process saved.
+rebuild is queued through `i18n_qt.schedule_retranslate`, which checks the
+window is still alive *before* resolving its `retranslate`: a window closed
+between the event and the queued call is a no-op instead of a touch on a
+destroyed C++ object. Each window keeps its own `retranslate` and its own
+liveness guard. The modules are separate processes, so the shared preferences
+file is also the cross-process channel: a `QFileSystemWatcher` in every process
+applies a locale another process saved.
+
+A rebuild destroys the page tree, so a worker a page started has to outlive it.
+The Trainer's hardware probes, its report, export and evaluation jobs, and the
+training runner are all started through
+`trainer.pages._base.keep_thread_alive`, which keeps the `QThread` alive until
+its thread finishes. Destroying a `QThread` object while its thread still runs
+aborts the interpreter with `QThread: Destroyed while thread is still running`
+and SIGABRT — a signature reproduced locally, not shown to be the exact event
+that started this work.
+
+A result the old page no longer listens to is dropped by Qt's own disconnection
+rule, so the page and window callbacks are bound slots rather than lambdas:
+destroying the receiver disconnects it. That matters most for the training
+runner, which holds `TrainerState` and therefore keeps it alive after the window
+closes; a lambda that captured that window would otherwise run against a
+destroyed widget.
 
 Three rules keep that channel from feeding itself:
 

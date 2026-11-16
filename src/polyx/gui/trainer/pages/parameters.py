@@ -30,7 +30,7 @@ from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ..hw import detect_gpu, estimate_vram_gb, humanize_gb, recommend_batch, recommend_max_imgsz
-from ._base import TrainerPage
+from ._base import TrainerPage, keep_thread_alive
 
 
 # GPU detection in the background so the GUI does not freeze at startup
@@ -365,7 +365,7 @@ class ParametersPage(TrainerPage):
         self.btn_optimize.setEnabled(False)
         self._gpu_worker = _GpuDetectWorker()
         self._gpu_worker.detected.connect(self._on_gpu_detected)
-        self._gpu_worker.start()
+        keep_thread_alive(self._gpu_worker)
 
     def _on_gpu_detected(self, info):
         self._last_gpu_info = info  # cache for the other buttons

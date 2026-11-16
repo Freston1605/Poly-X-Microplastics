@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-14 22:10-0300\n"
+"POT-Creation-Date: 2026-11-16 13:24-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -691,7 +691,7 @@ msgstr ""
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:329
 #: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:671
-#: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:158
+#: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:558
 msgid "● Ready"
 msgstr ""
@@ -1085,7 +1085,7 @@ msgstr ""
 msgid "Report"
 msgstr ""
 
-#: src/polyx/gui/detector/window.py:167 src/polyx/gui/trainer/window.py:163
+#: src/polyx/gui/detector/window.py:167 src/polyx/gui/trainer/window.py:177
 msgid ""
 "Designed by\n"
 "Cristofher Ferrada\n"
@@ -1100,11 +1100,11 @@ msgstr ""
 msgid "● Running…"
 msgstr ""
 
-#: src/polyx/gui/detector/window.py:97 src/polyx/gui/trainer/window.py:94
+#: src/polyx/gui/detector/window.py:97 src/polyx/gui/trainer/window.py:104
 msgid "● Finished"
 msgstr ""
 
-#: src/polyx/gui/detector/window.py:98 src/polyx/gui/trainer/window.py:95
+#: src/polyx/gui/detector/window.py:98 src/polyx/gui/trainer/window.py:108
 msgid "● Stopped"
 msgstr ""
 
@@ -1269,7 +1269,7 @@ msgid "Select images in the Images tab."
 msgstr ""
 
 #: src/polyx/gui/detector/pages/execute.py:269 src/polyx/gui/detector/pages/execute.py:273
-#: src/polyx/gui/detector/pages/report.py:394 src/polyx/gui/trainer/pages/train.py:424
+#: src/polyx/gui/detector/pages/report.py:394 src/polyx/gui/trainer/pages/train.py:426
 msgid "No results"
 msgstr ""
 
@@ -4091,16 +4091,16 @@ msgstr ""
 msgid "Export"
 msgstr ""
 
-#: src/polyx/gui/trainer/window.py:140
-msgid "YOLO Trainer"
-msgstr ""
-
-#: src/polyx/gui/trainer/window.py:93
+#: src/polyx/gui/trainer/window.py:101
 msgid "● Training…"
 msgstr ""
 
-#: src/polyx/gui/trainer/window.py:96
+#: src/polyx/gui/trainer/window.py:112
 msgid "● Error"
+msgstr ""
+
+#: src/polyx/gui/trainer/window.py:154
+msgid "YOLO Trainer"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/augmentation.py:49
@@ -4498,6 +4498,11 @@ msgstr ""
 msgid "Weights (*.pt)"
 msgstr ""
 
+#: src/polyx/gui/trainer/pages/evaluate.py:179 src/polyx/gui/trainer/pages/export.py:181
+#: src/polyx/gui/trainer/pages/summary.py:315
+msgid "Failed"
+msgstr ""
+
 #: src/polyx/gui/trainer/pages/evaluate.py:85
 msgid "data.yaml:"
 msgstr ""
@@ -4520,11 +4525,6 @@ msgstr ""
 
 #: src/polyx/gui/trainer/pages/evaluate.py:165
 msgid "Select a valid data.yaml."
-msgstr ""
-
-#: src/polyx/gui/trainer/pages/evaluate.py:175 src/polyx/gui/trainer/pages/export.py:178
-#: src/polyx/gui/trainer/pages/summary.py:315
-msgid "Failed"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/export.py:68
@@ -4573,6 +4573,10 @@ msgstr ""
 msgid "FP16 (half precision)"
 msgstr ""
 
+#: src/polyx/gui/trainer/pages/export.py:176
+msgid "Export finished"
+msgstr ""
+
 #: src/polyx/gui/trainer/pages/export.py:79
 msgid "Weights .pt:"
 msgstr ""
@@ -4582,15 +4586,11 @@ msgid "Format:"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/export.py:173
-msgid "Export finished"
-msgstr ""
-
-#: src/polyx/gui/trainer/pages/export.py:170
 #, python-format
 msgid "[OK] Exported: %(path)s"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/export.py:174
+#: src/polyx/gui/trainer/pages/export.py:177
 #, python-format
 msgid ""
 "File generated:\n"
@@ -5158,7 +5158,7 @@ msgstr ""
 msgid "Curves"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/train.py:458
+#: src/polyx/gui/trainer/pages/train.py:463
 msgid "Training failed"
 msgstr ""
 
@@ -5176,7 +5176,7 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/polyx/gui/trainer/pages/train.py:424
+#: src/polyx/gui/trainer/pages/train.py:426
 msgid "No runs have been generated yet."
 msgstr ""
 

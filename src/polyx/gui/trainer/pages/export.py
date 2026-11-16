@@ -22,7 +22,7 @@ from polyx.core.i18n import N_, _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
-from ._base import TrainerPage
+from ._base import TrainerPage, keep_thread_alive
 
 FORMATS = [
     ("ONNX", "onnx", N_("Most portable. For CPU or GPU via onnxruntime.")),
@@ -165,15 +165,17 @@ class ExportPage(TrainerPage):
         self.log.clear()
         self.worker = _ExportWorker(w, fmt, imgsz, self.cb_half.isChecked())
         self.worker.log_line.connect(self.log.appendPlainText)
-        self.worker.finished_ok.connect(
-            lambda p: (
-                self.log.appendPlainText(_("[OK] Exported: %(path)s") % {"path": p}),
-                QMessageBox.information(
-                    self,
-                    _("Export finished"),
-                    _("File generated:\n%(path)s") % {"path": p},
-                ),
-            )
+        self.worker.finished_ok.connect(self._on_export_finished)
+        self.worker.failed.connect(self._on_worker_failed)
+        keep_thread_alive(self.worker)
+
+    def _on_export_finished(self, path: str):
+        self.log.appendPlainText(_("[OK] Exported: %(path)s") % {"path": path})
+        QMessageBox.information(
+            self,
+            _("Export finished"),
+            _("File generated:\n%(path)s") % {"path": path},
         )
-        self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
-        self.worker.start()
+
+    def _on_worker_failed(self, message: str):
+        QMessageBox.critical(self, _("Failed"), message)

@@ -38,6 +38,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tests.conftest import destroy_windows
+
 WINDOW_NAMES = (
     "LauncherWindow",
     "DetectorWindow",
@@ -69,12 +71,6 @@ def _window_classes() -> dict[str, type]:
 
 def _build_windows() -> dict[str, QWidget]:
     return {name: cls() for name, cls in _window_classes().items()}
-
-
-def _destroy(windows: dict[str, QWidget], qapp) -> None:
-    for window in windows.values():
-        window.deleteLater()
-    qapp.processEvents()
 
 
 def _widget_texts(widget: QWidget) -> list[str]:
@@ -137,13 +133,7 @@ def _restore_language(qapp):
     i18n.set_language(previous)
 
 
-@pytest.fixture
-def _no_update_check(monkeypatch):
-    """The launcher schedules a background update check; keep the test offline."""
-    monkeypatch.setattr("polyx.gui.launcher.SearchUpdates.lookfor", lambda self: None)
-
-
-def test_no_visible_text_survives_a_language_switch(qapp, _no_update_check):
+def test_no_visible_text_survives_a_language_switch(qapp, no_update_check):
     from polyx.core import i18n
     from polyx.gui import i18n_qt
 
@@ -155,7 +145,7 @@ def test_no_visible_text_survives_a_language_switch(qapp, _no_update_check):
     try:
         english = _all_texts(english_windows)
     finally:
-        _destroy(english_windows, qapp)
+        destroy_windows(english_windows.values(), qapp)
 
     # The application runs in Spanish, then the language changes underneath it.
     assert i18n.set_language("es")
@@ -179,7 +169,7 @@ def test_no_visible_text_survives_a_language_switch(qapp, _no_update_check):
             f"{name}: {texts[:5]}" for name, texts in leftovers.items()
         )
     finally:
-        _destroy(windows, qapp)
+        destroy_windows(windows.values(), qapp)
 
 
 def _assert_walk_is_not_vacuous(windows: dict[str, QWidget]) -> None:

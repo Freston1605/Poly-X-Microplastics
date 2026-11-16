@@ -2,13 +2,46 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
 from ..state import TrainerState
+
+#: Threads whose run loop has not finished: they outlive the page that
+#: started them. The set is the only owner, so a worker is released when its
+#: ``finished`` signal arrives, not when the page dies.
+#:
+#: Known limit: the set is unbounded and it does not stop a thread. A worker
+#: that never returns — a driver that hangs on a dead GPU, for instance — is
+#: held until the interpreter exits, and Qt may then destroy it while it still
+#: runs: the same abort, moved to shutdown. There is no safe bounded cleanup
+#: here (terminating an arbitrary thread can corrupt the driver's state), so
+#: stop such a worker where it is written instead of expecting this set to
+#: reap it.
+_live_threads: set[QThread] = set()
+
+
+def keep_thread_alive(worker: QThread) -> None:
+    """Start ``worker`` and keep it alive until its thread finishes.
+
+    A language change rebuilds the Trainer's pages and the window can be
+    closed while a job is still running. Qt aborts the process when a
+    ``QThread`` object is destroyed with its thread still running, so the
+    worker is owned here instead of by the page; a result the old page no
+    longer listens to is dropped by Qt's own disconnection rule.
+
+    The new live-retranslation teardown destroys a window with a probe in
+    flight, and only this registry decides when that probe's wrapper is
+    released: without it, the moment depends on when the last reference to a
+    running thread is dropped. It closes a hazard that predates the test
+    change, not a defect the test introduced.
+    """
+    _live_threads.add(worker)
+    worker.finished.connect(lambda: _live_threads.discard(worker))
+    worker.start()
 
 
 class TrainerPage(QWidget):
