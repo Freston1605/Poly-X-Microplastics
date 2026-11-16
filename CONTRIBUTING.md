@@ -48,7 +48,8 @@ Two workflows run on **every PR** and on every push to `main`:
      instead of after it.
 
 Everything that installs the built distribution runs when the event is **not a
-pull request** — a `v*` tag, or a manual run of `publish.yml`: uv creates the
+pull request** — a `v*` tag, a push to `main`, or a manual run of
+`publish.yml`: uv creates the
 environment and installs the wheel with the `[gui]` extra, then every CLI
 console script starts with `--help` and the GUI imports. One definition, in
 `ci.yml`; ADR-0006 says why.
@@ -181,7 +182,8 @@ python -m pytest -q          # inside the project .venv
      is deterministic: if it passes locally it should pass in CI; if it fails
      only in CI, check the language (`POLYX_LOCALE`) and the locale.
    - `CI` → `build` → the wheel build, the packaged-catalog check, or — on a
-     tag or a manual publish run — the wheel install and console-script smoke.
+     tag, on a push to `main`, or on a manual publish run — the wheel install
+     and console-script smoke.
      Reproduce the catalog check with `uv build -o dist` and
      `python tools/check_wheel.py dist/*.whl`; a missing `messages.mo` means
      the build hook did not run or Hatchling filtered the artifact.

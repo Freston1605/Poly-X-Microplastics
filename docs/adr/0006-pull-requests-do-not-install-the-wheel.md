@@ -55,9 +55,9 @@ it.
 
 The wheel install and the console-script smoke are conditioned on
 `github.event_name != 'pull_request'`, not on the ref being a tag. They run on
-a tag and on a manual dispatch of `publish.yml`, from one definition in
-`ci.yml`; a dispatch is therefore a real rehearsal of the tag path rather than
-a different, weaker path. The install uses uv:
+a tag, on a push to `main` and on a manual dispatch of `publish.yml`, from one
+definition in `ci.yml`; a dispatch is therefore a real rehearsal of the tag
+path rather than a different, weaker path. The install uses uv:
 
 ```bash
 uv venv /tmp/smoke --python 3.11
