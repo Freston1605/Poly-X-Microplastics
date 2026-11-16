@@ -308,13 +308,17 @@ jobs:
           shellcheck --version | sed -n '2p'
           uvx zizmor==1.32.0 --version
 
+      # actionlint reads .github/actionlint.yaml on its own. That file carries
+      # one narrow ignore: the `$/` reusable-workflow call in publish.yml,
+      # which actionlint 1.7.12 cannot parse (upstream issue #760). Nothing
+      # else is ignored and no severity is changed.
       - name: actionlint (workflow expressions and shell)
         run: actionlint .github/workflows/*.yml
 
       # zizmor is published on PyPI by its own authors, so uvx runs it the way
       # the project runs its Python tooling: exact version, isolated
       # environment, nothing added to the repository. Any finding at any
-      # severity fails the job; the single documented exception lives in
-      # .github/zizmor.yml.
+      # severity fails the job, and there is no zizmor configuration file:
+      # every finding is fatal.
       - name: zizmor (workflow security analysis)
         run: uvx zizmor==1.32.0 --format=github .github/workflows/
