@@ -101,8 +101,10 @@ reusable workflow shares the caller's run and names must not collide.
 
 ## Consequences
 
-- A pull request whose suite fails still uploads a wheel. Its packaging check
-  is red, the artifact is not a verdict, and retention is seven days.
+- A pull request whose 3.12 leg fails still uploads a wheel. Its packaging check
+  is green, the artifact is not a verdict, and retention is seven days. If the
+  gate itself fails, the packaging job is skipped instead — `needs: quality`
+  means no artifact is built for a commit the suite has already rejected.
 - A broken console-script entry point fails the gate through
   `tests/test_console_scripts.py`, not through a workflow step. Adding a
   distribution check to pull requests means adding a test to the suite, which

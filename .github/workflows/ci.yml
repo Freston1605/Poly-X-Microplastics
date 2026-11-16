@@ -122,8 +122,9 @@ jobs:
     # The gate only. Packaging cannot see the source suite, and the 3.12 leg
     # proves the interpreter, not the wheel, so waiting for it adds a job to
     # the wait without adding a proof. Consequence, accepted: a pull request
-    # whose suite fails still builds and uploads a wheel — its check is red
-    # and the artifact is kept for seven days (ADR-0006).
+    # whose 3.12 leg fails still builds and uploads a wheel — the artifact is
+    # not a verdict, and it is kept for seven days. A failing gate skips this
+    # job instead (ADR-0006).
     needs: quality
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
