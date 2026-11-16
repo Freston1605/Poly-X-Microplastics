@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.detection_run import PAGE_COLUMNS, detection_row
+from polyx.core.detection_run import PAGE_COLUMNS, detection_row, reload_ground_truth
 from polyx.core.detection_run.operating_point import (
     Criterion,
     Score,
@@ -282,10 +282,14 @@ class ResultsPage(DetectorPage):
             self.table.item(i, 0).setData(Qt.UserRole, alias)
 
     def _reload_gt(self):
-        """Re-reads the .txt files from disk and recomputes, without inferring again."""
-        from ..recargar_gt import reload_gt
+        """Re-reads the .txt files from disk and recomputes, without inferring again.
 
-        if not self.state.results:
+        The page owns only the progress dialog and the message: reading the
+        labels, measuring, matching, redrawing and republishing the run record
+        belong to :func:`polyx.core.detection_run.reload_ground_truth`.
+        """
+        run = self.state.run_result
+        if run is None or not run.results:
             self.lbl_recharge.setText(
                 _("There are no results to recompute: run the detection first.")
             )
@@ -296,20 +300,20 @@ class ResultsPage(DetectorPage):
         dlg.setMinimumDuration(0)
         dlg.setValue(0)
 
-        cancelled = {"si": False}
+        cancelled = {"yes": False}
 
-        def progress(made, total, name_2):
+        def progress(made, total, name):
             if dlg.wasCanceled():
-                cancelled["si"] = True
+                cancelled["yes"] = True
                 return False
             dlg.setMaximum(total)
             dlg.setValue(made)
-            dlg.setLabelText(f"{name_2}  ({made}/{total})")
+            dlg.setLabelText(f"{name}  ({made}/{total})")
             QApplication.processEvents()
 
         self.btn_reload.setEnabled(False)
         try:
-            summary = reload_gt(self.state, progress=progress)
+            summary = reload_ground_truth(run, gt_folder=self.state.gt_folder, progress=progress)
         except Exception as e:  # noqa: BLE001
             dlg.close()
             self.btn_reload.setEnabled(True)
@@ -319,7 +323,7 @@ class ResultsPage(DetectorPage):
             dlg.close()
             self.btn_reload.setEnabled(True)
 
-        changed = summary["cambiadas"]
+        changed = [path.name for path in summary.changed]
         if changed:
             items_2 = ", ".join(changed[:8])
             if len(changed) > 8:
@@ -332,12 +336,12 @@ class ResultsPage(DetectorPage):
         else:
             text = _(
                 "✓ Reviewed %(count)s images: no .txt changed since the run. There was nothing to recompute."
-            ) % {"count": summary["revisadas"]}
-        if summary["sin_gt"]:
+            ) % {"count": summary.revisited}
+        if summary.missing_gt:
             text += "  " + _("(%(count)s with no control .txt.)") % {
-                "count": len(summary["sin_gt"])
+                "count": len(summary.missing_gt)
             }
-        if cancelled["si"]:
+        if cancelled["yes"]:
             text += "  " + _("Cancelled halfway: press again to finish.")
         self.lbl_recharge.setText(text)
         self.refresh()

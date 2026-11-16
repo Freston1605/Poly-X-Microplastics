@@ -28,6 +28,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   criterion, and every label on the page names the one it shows. The duplicate
   helper in `core/report_metrics.py`, the arithmetic in the Compare page and
   the report's threshold sweep were removed.
+- Re-reading the ground truth of a finished run now goes through the
+  detection-run engine (`reload_ground_truth` in
+  `core/detection_run/reload.py`) instead of a GUI copy of the sequence. The
+  reload measures with the run's own shape path, sizes each label with that
+  photo's recorded calibration, matches with the run's own rule (mask IoU when
+  the run did) and records that rule next to the new counts. It republishes the
+  affected images in `run.json`, so the reloaded views and the run record can no
+  longer disagree. `gui/detector/recargar_gt.py` is gone; the Results page is a
+  progress dialog and one call.
 - Model aliases are stable run-folder keys, separate from the label the
   interface shows: the GUI writes `model_1`/`model_2`, the CLI writes the
   weights stem unless `--alias` names one, and `run.json` records
