@@ -25,7 +25,7 @@ from polyx.gui.widgets import KPICard
 
 from ..runner import TrainerRunner
 from ..state import validate_training_config
-from ._base import TrainerPage, start_probe
+from ._base import TrainerPage, keep_thread_alive
 
 
 class _HwProbeWorker(QThread):
@@ -300,7 +300,7 @@ class TrainPage(TrainerPage):
         self.lbl_hw.setText(_("⌛  Detecting hardware…"))
         self._hw_worker = _HwProbeWorker()
         self._hw_worker.done.connect(self._on_hw_probe)
-        start_probe(self._hw_worker)
+        keep_thread_alive(self._hw_worker)
 
     def _on_hw_probe(self, d: dict):
         if d.get("ok"):

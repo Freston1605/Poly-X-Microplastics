@@ -22,7 +22,7 @@ from polyx.core.i18n import N_, _, lazy
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
-from ._base import TrainerPage
+from ._base import TrainerPage, keep_thread_alive
 
 FORMATS = [
     ("ONNX", "onnx", N_("Most portable. For CPU or GPU via onnxruntime.")),
@@ -176,4 +176,4 @@ class ExportPage(TrainerPage):
             )
         )
         self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
-        self.worker.start()
+        keep_thread_alive(self.worker)

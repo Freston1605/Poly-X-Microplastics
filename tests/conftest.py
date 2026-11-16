@@ -82,6 +82,24 @@ def split_dataset(
     return root
 
 
+def destroy_windows(windows, qapp) -> None:
+    """Delete each widget in ``windows`` and flush the deferred deletes.
+
+    ``deleteLater`` only queues the destruction: until the event loop runs,
+    the window is still a live top-level widget and a broadcast reaches it.
+    Flushing at the case boundary is what stops one test's window from
+    rebuilding inside the next one's wait.
+    """
+    import shiboken6
+    from PySide6.QtCore import QEvent
+
+    for window in windows:
+        if shiboken6.isValid(window):
+            window.deleteLater()
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+
+
 @pytest.fixture(autouse=True)
 def _aislar_logs_suite(tmp_path, monkeypatch):
     """Aisla POLYX_LOG_DIR a tmp_path / '_polyx_logs' para toda la suite.
@@ -138,6 +156,19 @@ def qapp():
     if app is None:
         app = QApplication([])
     yield app
+
+
+@pytest.fixture
+def no_update_check(monkeypatch):
+    """Keep the launcher's background GitHub check out of a test.
+
+    ``LauncherWindow`` schedules a check about 1.2 s after it is built; it
+    reaches the network and starts a thread that can outlive a window the case
+    destroyed. A test that builds a launcher requests this fixture. A module
+    that builds one in most of its cases may wrap it in an autouse fixture of
+    its own, which requests this one instead of re-implementing it.
+    """
+    monkeypatch.setattr("polyx.gui.launcher.SearchUpdates.lookfor", lambda self: None)
 
 
 @pytest.fixture

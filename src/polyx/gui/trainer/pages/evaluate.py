@@ -21,7 +21,7 @@ from polyx.gui import iconos
 from polyx.gui import theme as T
 from polyx.gui.widgets import KPICard
 
-from ._base import TrainerPage
+from ._base import TrainerPage, keep_thread_alive
 
 
 class _EvalWorker(QThread):
@@ -173,7 +173,7 @@ class EvaluatePage(TrainerPage):
         self.worker.log_line.connect(self.log.appendPlainText)
         self.worker.metrics_ready.connect(self._on_metrics)
         self.worker.failed.connect(lambda m: QMessageBox.critical(self, _("Failed"), m))
-        self.worker.start()
+        keep_thread_alive(self.worker)
 
     def _on_metrics(self, d: dict):
         self.kpi_map50.set_value(f"{d['mAP50']:.3f}")

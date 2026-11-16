@@ -29,7 +29,7 @@ from polyx.core.paths import RUNS_TRAIN_DIR
 from polyx.gui import iconos
 from polyx.gui import theme as T
 
-from ._base import TrainerPage
+from ._base import TrainerPage, keep_thread_alive
 
 
 def _b64_image(path: Path) -> str:
@@ -301,7 +301,7 @@ class ReportPage(TrainerPage):
         self.worker = _ReportWorker(run, out, self.chk_refs.isChecked())
         self.worker.finished_ok.connect(self._on_ok)
         self.worker.failed.connect(self._on_fail)
-        self.worker.start()
+        keep_thread_alive(self.worker)
 
     def _on_ok(self, p: str):
         self.lbl_status.setText(_("✓ Generated: %(path)s") % {"path": p})

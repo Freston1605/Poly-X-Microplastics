@@ -417,12 +417,14 @@ liveness guard. The modules are separate processes, so the shared preferences
 file is also the cross-process channel: a `QFileSystemWatcher` in every process
 applies a locale another process saved.
 
-A rebuild destroys the page tree, so a background worker a page started has to
-survive it. The Trainer's hardware probes are started through
-`trainer.pages._base.start_probe`, which keeps the `QThread` alive until its
-thread finishes: Qt aborts the process when a `QThread` object is destroyed
-with its thread still running. A result the old page no longer listens to is
-dropped by Qt's own disconnection rule.
+A rebuild destroys the page tree, so a worker a page started has to outlive it.
+The Trainer's hardware probes and its report, export and evaluation jobs are
+all started through `trainer.pages._base.keep_thread_alive`, which keeps the
+`QThread` alive until its thread finishes. Destroying a `QThread` object while
+its thread still runs aborts the interpreter with `QThread: Destroyed while
+thread is still running` and SIGABRT — a signature reproduced locally, not
+shown to be the exact event that started this work. A result the old page no
+longer listens to is dropped by Qt's own disconnection rule.
 
 Three rules keep that channel from feeding itself:
 

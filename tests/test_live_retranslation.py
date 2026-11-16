@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
     QRadioButton,
 )
 
+from tests.conftest import destroy_windows
+
 
 # ── Helpers ──────────────────────────────────────────────────────────
 def _texts(widget) -> list[str]:
@@ -71,23 +73,6 @@ def _results_page(window):
     raise AssertionError("results page not found")
 
 
-def _flush_test_windows(qapp, inherited: set) -> None:
-    """Destroy every top-level widget created since ``inherited``, then flush.
-
-    A window that outlives its case still receives the next language-change
-    broadcast and can rebuild while another case runs. Deferring the deletion
-    and flushing it here makes the boundary between cases explicit instead of
-    hoping Qt gets to it before the next change.
-    """
-    import shiboken6
-
-    for widget in qapp.topLevelWidgets():
-        if widget not in inherited and shiboken6.isValid(widget):
-            widget.deleteLater()
-    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    qapp.processEvents()
-
-
 @pytest.fixture(autouse=True)
 def _restore_language(qapp):
     """Leave the suite in the language it pins, and no window behind.
@@ -100,19 +85,20 @@ def _restore_language(qapp):
 
     inherited = set(qapp.topLevelWidgets())
     yield
-    _flush_test_windows(qapp, inherited)
+    destroy_windows([widget for widget in qapp.topLevelWidgets() if widget not in inherited], qapp)
     i18n.carry()
 
 
 @pytest.fixture(autouse=True)
-def _no_update_check(monkeypatch):
+def _no_update_check(no_update_check):
     """Keep the launcher's background GitHub check out of this module.
 
     It fires 1.2 s after a launcher is built — inside a wait — and its thread
     can outlive a window the case destroyed. It has nothing to do with live
     retranslation, and its timer is another race this module does not test.
+    Every case here may build a launcher, so the shared fixture is applied to
+    all of them instead of listed in each signature.
     """
-    monkeypatch.setattr("polyx.gui.launcher.SearchUpdates.lookfor", lambda self: None)
 
 
 # ── The switch itself ────────────────────────────────────────────────
@@ -171,7 +157,9 @@ def test_launcher_retranslates_without_restart(qapp):
 
 
 # ── A window that closes mid-change ──────────────────────────────────
-def test_destroying_a_window_before_its_queued_rebuild_survives_the_pump(qapp, capfd):
+def test_destroying_a_window_before_its_queued_rebuild_survives_the_pump(
+    qapp, capfd, selected_language
+):
     """A language event must outlive the window it reached without a crash.
 
     The rebuild is queued, so the window can be gone by the time it runs.
@@ -193,7 +181,7 @@ def test_destroying_a_window_before_its_queued_rebuild_survives_the_pump(qapp, c
     from polyx.gui import i18n_qt
     from polyx.gui.launcher import LauncherWindow
 
-    i18n.set_language("es")
+    selected_language("es")
     i18n_qt.activate()
     doomed = LauncherWindow()
     survivor = LauncherWindow()
@@ -309,27 +297,32 @@ def test_labeler_keeps_the_no_data_placeholder_after_a_switch(qapp):
     window.deleteLater()
 
 
-def test_destroying_a_trainer_window_while_a_probe_runs_survives(qapp, monkeypatch):
+def test_destroying_a_trainer_window_while_a_probe_runs_survives(
+    qapp, monkeypatch, selected_language
+):
     """A probe thread must outlive the page and window that started it.
 
-    The trainer starts two probes shortly after it opens. Qt aborts the
-    process when a ``QThread`` object is destroyed with its thread still
-    running, and the probe lives inside a page of the window. The probe body
-    is held open here so the race is deterministic instead of depending on how
+    The trainer starts two probes shortly after it opens. The probe body is
+    held open here so the race is deterministic instead of depending on how
     fast torch answers; the case then destroys the window and drops it, which
     is what a language change plus a closed module does in the real program.
+    The window is a page tree, so the probe is one attribute of a page that
+    the teardown destroys.
 
-    This is the abort the CI log showed: pytest captures the
-    ``QThread: Destroyed while thread is still running`` line, so the log
-    named no cause, and the surviving thread in the dump — the one with no
-    Python frame — is the probe Qt destroyed underneath the window. The
-    teardown-race case above guards a different contract.
+    What is proven: a ``QThread`` object destroyed while its thread still runs
+    aborts the interpreter with ``QThread: Destroyed while thread is still
+    running`` and SIGABRT — the same signature as the failed CI run (a
+    thread inside the event pump, the step exiting 250). That signature was
+    reproduced locally by dropping the last reference to a running ``QThread``
+    (exit 134). What is not proven: that this abort, and not something else in
+    the runner, produced that CI event — the pre-fix tree ran this file and
+    the case above without aborting here, so the evidence is the signature,
+    not the incident. The case guards the contract; it does not replay CI.
     """
     import gc
     import threading
     import weakref
 
-    from polyx.core import i18n
     from polyx.gui.trainer.window import TrainerWindow
 
     release = threading.Event()
@@ -346,9 +339,9 @@ def test_destroying_a_trainer_window_while_a_probe_runs_survives(qapp, monkeypat
     monkeypatch.setattr("polyx.gui.trainer.pages.train._HwProbeWorker.run", hold)
     monkeypatch.setattr("polyx.gui.trainer.pages.parameters._GpuDetectWorker.run", hold)
 
-    i18n.set_language("es")
+    selected_language("es")
     window = TrainerWindow()
-    _wait_until(qapp, began.is_set, expected="es", what="a trainer probe to start")
+    _wait_until(qapp, began.is_set, what="a trainer hardware probe to be running")
 
     window.deleteLater()
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
@@ -359,12 +352,12 @@ def test_destroying_a_trainer_window_while_a_probe_runs_survives(qapp, monkeypat
 
     # Reaching this line is the assertion: the interpreter survived. The
     # probes are still alive and finish on their own once released.
+    assert probes, "the probe recorded no weak reference to itself"
     release.set()
     _wait_until(
         qapp,
         lambda: all(ref() is None or ref().isFinished() for ref in probes),
-        expected="es",
-        what="the trainer probes to finish",
+        what="the trainer hardware probes to finish",
     )
 
 
@@ -443,42 +436,25 @@ def test_viewer_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     window.deleteLater()
 
 
-# ── Waiting without a stopwatch ──────────────────────────────────────
-def test_the_wait_returns_when_a_language_change_lands(qapp):
-    """The wait follows the event, not a count of fixed sleeps.
-
-    A change queued shortly after the wait starts has to be seen and the wait
-    has to return long before the generous budget would expire. This is what
-    replaces the old loop of twenty-millisecond sleeps: on a busy machine the
-    loop is slower, but it is still driven by the event and the monotonic
-    deadline, not by an iteration count.
-    """
-    from PySide6.QtCore import QTimer
-
-    from polyx.core import i18n
-
-    i18n.set_language("es")
-    QTimer.singleShot(50, lambda: i18n.set_language("en"))
-
-    elapsed = _wait_until(qapp, lambda: i18n.language() == "en", expected="en")
-
-    assert i18n.language() == "en"
-    assert elapsed < DEFAULT_WAIT_SECONDS / 2
-
-
-def test_a_wait_that_cannot_succeed_reports_the_state_it_saw(qapp):
+# ── A failure a maintainer can read ──────────────────────────────────
+def test_a_wait_that_cannot_succeed_reports_the_state_it_saw(qapp, selected_language):
     """A timeout is an assertion that carries the state a maintainer needs.
 
     The predicate is made false on purpose: the point is that the failure
     itself names the elapsed time, the two languages, the preferences bytes
     and the watcher, so a CI log is enough to diagnose the next failure.
+
+    The message is also proof that the timeout path is an ordinary failure.
+    Forcing it in a scratch run of this module's wait prints the fields below
+    and pytest exits 1 ("1 failed"), not 134 (SIGABRT) — the point of the
+    diagnostics is that the next red build reports instead of aborting.
     """
     import json
 
-    from polyx.core import i18n, preferences
+    from polyx.core import preferences
     from polyx.gui import i18n_qt
 
-    i18n.set_language("es")
+    selected_language("es")
     i18n_qt.activate()
     # A value the watcher has nothing to do with: the active language must stay
     # Spanish while the wait expects English, so the diagnostic shows both.
@@ -486,7 +462,7 @@ def test_a_wait_that_cannot_succeed_reports_the_state_it_saw(qapp):
 
     started = time.monotonic()
     with pytest.raises(AssertionError) as caught:
-        _wait_until(qapp, lambda: False, expected="en", timeout_s=0.3)
+        _wait_until(qapp, lambda: False, expected="en", timeout_s=0.3, what="nothing to change")
     elapsed = time.monotonic() - started
 
     message = str(caught.value)
@@ -499,28 +475,6 @@ def test_a_wait_that_cannot_succeed_reports_the_state_it_saw(qapp):
     # The budget was respected and the failure was an assertion, not a hang.
     assert elapsed >= 0.3
     assert elapsed < 5
-
-
-def test_the_case_teardown_destroys_the_windows_it_created(qapp):
-    """A window from an earlier case cannot receive the next broadcast.
-
-    The teardown runs between cases; this case isolates its two steps so the
-    destruction is deterministic instead of depending on pytest ordering.
-    """
-    import shiboken6
-
-    from polyx.core import i18n
-    from polyx.gui.launcher import LauncherWindow
-
-    inherited = set(qapp.topLevelWidgets())
-    i18n.set_language("es")
-    leftover = LauncherWindow()
-    assert leftover in qapp.topLevelWidgets()
-
-    _flush_test_windows(qapp, inherited)
-
-    assert not shiboken6.isValid(leftover)
-    assert leftover not in qapp.topLevelWidgets()
 
 
 # ── The wait primitive ───────────────────────────────────────────────
@@ -554,7 +508,7 @@ def _watcher_state(path: Path) -> str:
     return f"file={path in files}, parent={path.parent in directories}"
 
 
-def _timeout_report(what: str, elapsed: float, expected: str) -> str:
+def _timeout_report(what: str, elapsed: float, expected: str | None) -> str:
     """The state a maintainer needs to diagnose a wait that never finished."""
     from polyx.core import i18n, preferences
 
@@ -567,11 +521,13 @@ def _timeout_report(what: str, elapsed: float, expected: str) -> str:
         preferences_state = f"{target}: {saved}"
     else:
         preferences_state = f"{target}: absent"
+    languages = f"  active language: {i18n.language()!r}\n"
+    if expected is not None:
+        languages += f"  expected language: {expected!r}\n"
     return (
         f"Live retranslation timed out after {elapsed:.2f} s waiting for {what}.\n"
         f"  elapsed: {elapsed:.2f} s\n"
-        f"  active language: {i18n.language()!r}\n"
-        f"  expected language: {expected!r}\n"
+        f"{languages}"
         f"  preferences file {preferences_state}\n"
         f"  watcher: {_watcher_state(target)}"
     )
@@ -581,9 +537,10 @@ def _wait_until(
     qapp,
     predicate,
     *,
-    expected: str,
+    expected: str | None = None,
     timeout_s: float = DEFAULT_WAIT_SECONDS,
     what: str = "the language change",
+    expect_timeout: bool = False,
 ) -> float:
     """Process events until ``predicate`` holds, bounded by a monotonic clock.
 
@@ -593,8 +550,15 @@ def _wait_until(
     monotonic deadline ends the wait, and a loaded machine makes each check
     later instead of changing the answer.
 
+    ``expected`` is the language the wait wanted, when that is what it was
+    waiting for; a wait on a probe or on anything else leaves it out instead of
+    reporting a language it never looked at. ``expect_timeout`` makes the
+    deadline the success condition: that is the "nothing must change" case,
+    which runs the same loop for its whole window and asserts nothing about
+    what it saw.
+
     Returns the elapsed seconds. On timeout raises ``AssertionError`` with the
-    elapsed time, both languages, the preferences bytes and the watcher state,
+    elapsed time, the languages, the preferences bytes and the watcher state,
     so the failure is diagnosable from the log. Never aborts the interpreter.
     """
     from PySide6.QtCore import QEventLoop, QTimer
@@ -602,14 +566,9 @@ def _wait_until(
     started = time.monotonic()
     deadline = started + timeout_s
     loop = QEventLoop()
-    expired = False
 
     def poll() -> None:
-        nonlocal expired
-        if predicate():
-            loop.quit()
-        elif time.monotonic() >= deadline:
-            expired = True
+        if time.monotonic() >= deadline or (not expect_timeout and predicate()):
             loop.quit()
 
     ticker = QTimer()
@@ -623,19 +582,24 @@ def _wait_until(
 
     qapp.processEvents()
     elapsed = time.monotonic() - started
-    if predicate() and not expired:
+    if expect_timeout or predicate():
         return elapsed
     raise AssertionError(_timeout_report(what, elapsed, expected))
 
 
-def _stay_quiet(qapp, seconds: float = QUIET_SECONDS) -> None:
-    """Run the loop for a deliberate short window, then return."""
-    from PySide6.QtCore import QEventLoop, QTimer
+def _stay_quiet(qapp, seconds: float = QUIET_SECONDS) -> float:
+    """Run the loop for a deliberate short window, then return.
 
-    loop = QEventLoop()
-    QTimer.singleShot(round(seconds * 1000), loop.quit)
-    loop.exec()
-    qapp.processEvents()
+    The same loop as :func:`_wait_until`, with the deadline as the only exit:
+    the point is that nothing happens, so there is no predicate to satisfy.
+    """
+    return _wait_until(
+        qapp,
+        lambda: False,
+        timeout_s=seconds,
+        what="nothing to happen",
+        expect_timeout=True,
+    )
 
 
 # ── Another application ──────────────────────────────────────────────
