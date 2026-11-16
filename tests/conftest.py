@@ -158,31 +158,33 @@ def qapp():
     yield app
 
 
-@pytest.fixture(autouse=True)
-def _drain_trainer_threads():
-    """Release Trainer workers a case registered but did not outlive.
+_SESSION_EXIT_STATUS = 0
 
-    The registry is module state. A finished ``QThread`` left there is
-    destroyed during interpreter shutdown, after the ``QApplication``, and
-    that can segfault. Wait for the registered threads after each case and
-    empty the set while Qt is still alive. A thread that is still running is
-    left alone: deleting it would abort, and the case that left it is the
-    one that has to account for it.
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    """Keep pytest's exit status for the unconfigure-time exit."""
+    global _SESSION_EXIT_STATUS  # noqa: PLW0603
+    _SESSION_EXIT_STATUS = int(exitstatus)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    """Exit before CPython finalizes the Qt wrappers.
+
+    PySide6 6.7 segfaults while ``QWidget`` wrappers are deallocated during
+    interpreter shutdown (``QWidget::~QWidget`` -> shiboken ``dict_dealloc``).
+    pytest has printed its summary by the time ``unconfigure`` runs, so flush
+    and leave with the status recorded at session finish. A run that never
+    imported Qt (the headless install smoke tests) keeps the normal shutdown.
     """
-    yield
-    base = sys.modules.get("polyx.gui.trainer.pages._base")
-    live = getattr(base, "_live_threads", None)
-    if live is None:
+    if "PySide6.QtWidgets" not in sys.modules:
         return
-    for thread in list(live):
-        is_running = getattr(thread, "isRunning", None)
-        if callable(is_running) and is_running():
-            wait = getattr(thread, "wait", None)
-            if callable(wait):
-                wait(5000)
-        is_running = getattr(thread, "isRunning", None)
-        if not callable(is_running) or not is_running():
-            live.discard(thread)
+    if hasattr(config, "workerinput"):  # xdist worker: let it report normally
+        return
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(_SESSION_EXIT_STATUS)
 
 
 @pytest.fixture
