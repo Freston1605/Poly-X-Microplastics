@@ -150,3 +150,56 @@ def test_an_out_of_memory_run_leaves_the_fallback_to_the_model(
     assert "auto_fallback" not in model.calls[0], "the model's ladder stays in charge"
     assert "Out of GPU memory at imgsz 2080" in warnings[0]
     assert "untick" in warnings[0]
+
+
+class _FallbackModel(_RecordingModel):
+    """A model that reports the size its out-of-memory ladder ran at."""
+
+    def __init__(self, *, imgsz: int, fell_back: bool) -> None:
+        super().__init__()
+        self.last_imgsz = imgsz
+        self.last_fallback = fell_back
+
+
+def _detect_with_fallback(qapp, monkeypatch, *, imgsz: int, fell_back: bool, resolved: str = "mps"):
+    """Run one detection with a model that reports what it actually did."""
+    from polyx.core import platform
+    from polyx.gui.viewer.window import ViewerWindow
+
+    monkeypatch.setattr(platform, "device_available", lambda: resolved)
+    window = ViewerWindow()
+    window.state.model = _FallbackModel(imgsz=imgsz, fell_back=fell_back)
+    window.state.images = [Path("plate.png")]
+    window.state.current_idx = 0
+    window.chk_gpu.setChecked(True)
+    statuses: list[str] = []
+    monkeypatch.setattr(window, "_set_status", lambda text, color=None: statuses.append(text))
+    try:
+        window._detect()
+    finally:
+        window.close()
+    return statuses
+
+
+def test_a_fallback_run_names_the_size_that_actually_ran(qapp, monkeypatch, selected_language):
+    """The status is written after inference: it must not claim the request.
+
+    The model reduced 2080 to 1024 on its own ladder; the last line the user
+    reads names 1024 and the device that ran, not the imgsz that failed.
+    """
+    selected_language("en")
+    statuses = _detect_with_fallback(qapp, monkeypatch, imgsz=1024, fell_back=True)
+
+    assert "1024" in statuses[-1]
+    assert "2080" not in statuses[-1], "the requested size is not the one that ran"
+    assert "Metal Performance Shaders" in statuses[-1], "the device stays the same"
+    assert "running out of memory" in statuses[-1]
+
+
+def test_a_run_without_fallback_names_the_requested_size(qapp, monkeypatch, selected_language):
+    """Nothing changed for the normal path: the requested size is the run size."""
+    selected_language("en")
+    statuses = _detect_with_fallback(qapp, monkeypatch, imgsz=2080, fell_back=False)
+
+    assert "2080" in statuses[-1]
+    assert "running out of memory" not in statuses[-1]

@@ -703,6 +703,18 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             return platform.DEVICE_CPU
         return platform.device_available()
 
+    def _ran_fallback(self) -> bool:
+        """Whether the model's out-of-memory ladder reduced the size it ran at.
+
+        The ladder belongs to ``YoloModel``, which reports it after the run; a
+        model that does not expose the flag is simply not a fallback run.
+        """
+        return bool(getattr(self.state.model, "last_fallback", False))
+
+    def _used_imgsz(self, requested: int) -> int:
+        """The size inference actually ran at, when the model reports it."""
+        return int(getattr(self.state.model, "last_imgsz", 0) or requested)
+
     def _detect(self):
 
         if not self.state.model:
@@ -763,6 +775,26 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                     )
                     % {"count": len(dets), "imgsz": imgsz, "plan": decision.describe()},
                     T.OK,
+                )
+
+            elif self._ran_fallback():
+                # The status was written before the run with the requested size;
+                # the model reduced it on its own ladder, so the line that stays
+                # on screen names what actually ran and the device that ran it.
+                self._set_status(
+                    ngettext(
+                        "● %(count)d detection at imgsz %(imgsz)d (%(device)s)"
+                        " — reduced after running out of memory",
+                        "● %(count)d detections at imgsz %(imgsz)d (%(device)s)"
+                        " — reduced after running out of memory",
+                        len(dets),
+                    )
+                    % {
+                        "count": len(dets),
+                        "imgsz": self._used_imgsz(imgsz),
+                        "device": platform.description_device(device),
+                    },
+                    T.WARN,
                 )
 
             else:

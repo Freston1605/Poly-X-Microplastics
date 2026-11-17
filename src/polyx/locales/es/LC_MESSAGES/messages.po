@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 01:18-0300\n"
+"POT-Creation-Date: 2026-11-17 01:20-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -330,19 +330,19 @@ msgstr "Device (0/cpu):"
 msgid "Device (0/rocm/cpu):"
 msgstr "Dispositivo (0/rocm/cpu):"
 
-#: src/polyx/core/platform.py:235
+#: src/polyx/core/platform.py:239
 msgid "Mac integrated GPU (Metal Performance Shaders)"
 msgstr "GPU integrada del Mac (Metal Performance Shaders)"
 
-#: src/polyx/core/platform.py:237
+#: src/polyx/core/platform.py:241
 msgid "processor (CPU)"
 msgstr "procesador (CPU)"
 
-#: src/polyx/core/platform.py:243
+#: src/polyx/core/platform.py:247
 msgid "AMD GPU (ROCm)"
 msgstr "GPU AMD (ROCm)"
 
-#: src/polyx/core/platform.py:245
+#: src/polyx/core/platform.py:249
 msgid "NVIDIA GPU (CUDA)"
 msgstr "GPU NVIDIA (CUDA)"
 
@@ -354,12 +354,12 @@ msgstr "Dispositivo (mps/cpu):"
 msgid "Device (cpu):"
 msgstr "Dispositivo (cpu):"
 
-#: src/polyx/core/platform.py:241
+#: src/polyx/core/platform.py:245
 #, python-format
 msgid "NVIDIA GPU #%(index)s (CUDA)"
 msgstr "GPU NVIDIA #%(index)s (CUDA)"
 
-#: src/polyx/core/platform.py:240
+#: src/polyx/core/platform.py:244
 #, python-format
 msgid "AMD GPU #%(index)s (ROCm)"
 msgstr "GPU AMD #%(index)s (ROCm)"
@@ -1080,11 +1080,11 @@ msgid "·  %(verdict)s"
 msgstr "·  %(verdict)s"
 
 #: src/polyx/gui/detector/pages/results.py:622 src/polyx/gui/detector/review_dialog.py:294
-#: src/polyx/gui/viewer/window.py:894 src/polyx/gui/viewer/window.py:954
+#: src/polyx/gui/viewer/window.py:926 src/polyx/gui/viewer/window.py:986
 msgid "Error"
 msgstr "Error"
 
-#: src/polyx/gui/detector/review_dialog.py:294 src/polyx/gui/viewer/window.py:954
+#: src/polyx/gui/detector/review_dialog.py:294 src/polyx/gui/viewer/window.py:986
 msgid "Could not read the image."
 msgstr "No se pudo leer la imagen."
 
@@ -1559,7 +1559,7 @@ msgstr "No se pudo leer el tamano de %(name)s"
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1407
+#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1439
 msgid "Error while saving"
 msgstr "Error al guardar"
 
@@ -2043,7 +2043,7 @@ msgstr ""
 
 #: src/polyx/gui/detector/pages/parameters.py:461 src/polyx/gui/labeler/window.py:264
 #: src/polyx/gui/labeler/window.py:448 src/polyx/gui/labeler/window.py:479
-#: src/polyx/gui/viewer/window.py:317 src/polyx/gui/viewer/window.py:709
+#: src/polyx/gui/viewer/window.py:317 src/polyx/gui/viewer/window.py:721
 msgid "No model"
 msgstr "Sin modelo"
 
@@ -2891,12 +2891,12 @@ msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acer
 msgid "● Folder loaded"
 msgstr "● Carpeta cargada"
 
-#: src/polyx/gui/labeler/window.py:442 src/polyx/gui/viewer/window.py:1497
+#: src/polyx/gui/labeler/window.py:442 src/polyx/gui/viewer/window.py:1529
 msgid "● Model loaded"
 msgstr "● Modelo cargado"
 
 #: src/polyx/gui/labeler/window.py:448 src/polyx/gui/labeler/window.py:479
-#: src/polyx/gui/viewer/window.py:709
+#: src/polyx/gui/viewer/window.py:721
 msgid "Load a .pt model first."
 msgstr "Carga un modelo .pt primero."
 
@@ -5864,9 +5864,9 @@ msgstr "Estos puntos no definen una calibración."
 msgid "  No image  —  Not calibrated"
 msgstr "  Sin imagen  —  Sin calibración"
 
-#: src/polyx/gui/viewer/window.py:261 src/polyx/gui/viewer/window.py:716
-#: src/polyx/gui/viewer/window.py:815 src/polyx/gui/viewer/window.py:929
-#: src/polyx/gui/viewer/window.py:1355 src/polyx/gui/viewer/window.py:1376
+#: src/polyx/gui/viewer/window.py:261 src/polyx/gui/viewer/window.py:728
+#: src/polyx/gui/viewer/window.py:847 src/polyx/gui/viewer/window.py:961
+#: src/polyx/gui/viewer/window.py:1387 src/polyx/gui/viewer/window.py:1408
 msgid "No image"
 msgstr "Sin imagen"
 
@@ -5938,11 +5938,11 @@ msgstr ""
 msgid "✕  Cancel calibration"
 msgstr "✕  Cancelar calibración"
 
-#: src/polyx/gui/viewer/window.py:468 src/polyx/gui/viewer/window.py:1361
+#: src/polyx/gui/viewer/window.py:468 src/polyx/gui/viewer/window.py:1393
 msgid "Not calibrated"
 msgstr "Sin calibrar"
 
-#: src/polyx/gui/viewer/window.py:488 src/polyx/gui/viewer/window.py:1192
+#: src/polyx/gui/viewer/window.py:488 src/polyx/gui/viewer/window.py:1224
 msgid "All classes"
 msgstr "Todas las clases"
 
@@ -5970,31 +5970,31 @@ msgstr "Abrir carpeta de imágenes"
 msgid "● Image loaded"
 msgstr "● Imagen cargada"
 
-#: src/polyx/gui/viewer/window.py:821
+#: src/polyx/gui/viewer/window.py:853
 msgid "Run folder (runs/detect_...)"
 msgstr "Carpeta de la corrida (runs/detect_...)"
 
-#: src/polyx/gui/viewer/window.py:1236
+#: src/polyx/gui/viewer/window.py:1268
 msgid "● Calibration mode active"
 msgstr "● Modo calibración activo"
 
-#: src/polyx/gui/viewer/window.py:1283
+#: src/polyx/gui/viewer/window.py:1315
 msgid "Calibration — Line"
 msgstr "Calibración — Línea"
 
-#: src/polyx/gui/viewer/window.py:1285
+#: src/polyx/gui/viewer/window.py:1317
 msgid "Real length of the marked line (μm):"
 msgstr "Tamaño real de la línea marcada (μm):"
 
-#: src/polyx/gui/viewer/window.py:1325
+#: src/polyx/gui/viewer/window.py:1357
 msgid "Calibration not applied"
 msgstr "Calibración no aplicada"
 
-#: src/polyx/gui/viewer/window.py:1326
+#: src/polyx/gui/viewer/window.py:1358
 msgid "● Calibration not applied"
 msgstr "● Calibración no aplicada"
 
-#: src/polyx/gui/viewer/window.py:1382
+#: src/polyx/gui/viewer/window.py:1414
 msgid "Output folder"
 msgstr "Carpeta de salida"
 
@@ -6030,76 +6030,76 @@ msgstr "Asp."
 msgid "● Model ready"
 msgstr "● Modelo listo"
 
-#: src/polyx/gui/viewer/window.py:716 src/polyx/gui/viewer/window.py:929
+#: src/polyx/gui/viewer/window.py:728 src/polyx/gui/viewer/window.py:961
 msgid "Open an image first."
 msgstr "Abre una imagen primero."
 
-#: src/polyx/gui/viewer/window.py:815
+#: src/polyx/gui/viewer/window.py:847
 msgid "Open the original photo first."
 msgstr "Abre primero la foto original."
 
-#: src/polyx/gui/viewer/window.py:841 src/polyx/gui/viewer/window.py:903
+#: src/polyx/gui/viewer/window.py:873 src/polyx/gui/viewer/window.py:935
 msgid "No predictions"
 msgstr "Sin predicciones"
 
-#: src/polyx/gui/viewer/window.py:859
+#: src/polyx/gui/viewer/window.py:891
 msgid "Several models"
 msgstr "Varios modelos"
 
-#: src/polyx/gui/viewer/window.py:860
+#: src/polyx/gui/viewer/window.py:892
 msgid "This photo was analysed with several models. Which one do you want to review?"
 msgstr "Esta foto se analizó con varios modelos. ¿Cuál revisar?"
 
-#: src/polyx/gui/viewer/window.py:904
+#: src/polyx/gui/viewer/window.py:936
 msgid "The file is empty: that photo had no detections."
 msgstr "El archivo está vacío: esa foto no tuvo detecciones."
 
-#: src/polyx/gui/viewer/window.py:914
+#: src/polyx/gui/viewer/window.py:946
 #, python-format
 msgid "● %(n)s predictions loaded from %(c)s"
 msgstr "● %(n)s predicciones cargadas de %(c)s"
 
-#: src/polyx/gui/viewer/window.py:940
+#: src/polyx/gui/viewer/window.py:972
 msgid "No labels"
 msgstr "Sin etiquetas"
 
-#: src/polyx/gui/viewer/window.py:963
+#: src/polyx/gui/viewer/window.py:995
 #, python-format
 msgid "  (%(count)d unreadable line)"
 msgid_plural "  (%(count)d unreadable lines)"
 msgstr[0] "  (%(count)d línea ilegible)"
 msgstr[1] "  (%(count)d líneas ilegibles)"
 
-#: src/polyx/gui/viewer/window.py:974
+#: src/polyx/gui/viewer/window.py:1006
 #, python-format
 msgid "● %(count)d label loaded from %(file)s%(warning)s"
 msgid_plural "● %(count)d labels loaded from %(file)s%(warning)s"
 msgstr[0] "● %(count)d etiqueta cargada de %(file)s%(warning)s"
 msgstr[1] "● %(count)d etiquetas cargadas de %(file)s%(warning)s"
 
-#: src/polyx/gui/viewer/window.py:992
+#: src/polyx/gui/viewer/window.py:1024
 #, python-format
 msgid "%(count)d detection"
 msgid_plural "%(count)d detections"
 msgstr[0] "%(count)d detección"
 msgstr[1] "%(count)d detecciones"
 
-#: src/polyx/gui/viewer/window.py:1055
+#: src/polyx/gui/viewer/window.py:1087
 #, python-format
 msgid "%(count)s particle"
 msgid_plural "%(count)s particles"
 msgstr[0] "%(count)s partícula"
 msgstr[1] "%(count)s partículas"
 
-#: src/polyx/gui/viewer/window.py:1064
+#: src/polyx/gui/viewer/window.py:1096
 msgid "(uncalibrated: sizes in pixels only)"
 msgstr "(sin calibrar: tallas solo en píxeles)"
 
-#: src/polyx/gui/viewer/window.py:1127
+#: src/polyx/gui/viewer/window.py:1159
 msgid "This particle could not be separated from the background"
 msgstr "No se pudo aislar esta partícula del fondo"
 
-#: src/polyx/gui/viewer/window.py:1149
+#: src/polyx/gui/viewer/window.py:1181
 #, python-format
 msgid ""
 "Particle #%(number)s · %(class)s · %(morphotype)s   —   left: no marks · right: green = measured"
@@ -6108,27 +6108,27 @@ msgstr ""
 "Partícula #%(number)s · %(class)s · %(morphotype)s   —   izquierda: sin marcas · derecha: verde "
 "= contorno medido, amarillo = Feret, magenta = geodésico"
 
-#: src/polyx/gui/viewer/window.py:1164
+#: src/polyx/gui/viewer/window.py:1196
 #, python-format
 msgid "measured by  %(method)s"
 msgstr "medido por  %(method)s"
 
-#: src/polyx/gui/viewer/window.py:1173
+#: src/polyx/gui/viewer/window.py:1205
 #, python-format
 msgid "Feret       %(value)8.1f px"
 msgstr "Feret       %(value)8.1f px"
 
-#: src/polyx/gui/viewer/window.py:1174
+#: src/polyx/gui/viewer/window.py:1206
 #, python-format
 msgid "geodesic    %(value)8.1f px"
 msgstr "geodesico   %(value)8.1f px"
 
-#: src/polyx/gui/viewer/window.py:1175
+#: src/polyx/gui/viewer/window.py:1207
 #, python-format
 msgid "aspect      %(aspect)8.1f   curvature %(curvature).2f"
 msgstr "aspecto     %(aspect)8.1f   curvatura %(curvature).2f"
 
-#: src/polyx/gui/viewer/window.py:1229
+#: src/polyx/gui/viewer/window.py:1261
 msgid ""
 "Click 2 points on\n"
 "a known reference."
@@ -6136,7 +6136,7 @@ msgstr ""
 "Haz clic en 2 puntos sobre\n"
 "una referencia conocida."
 
-#: src/polyx/gui/viewer/window.py:1233
+#: src/polyx/gui/viewer/window.py:1265
 msgid ""
 "Click 3 points on the edge\n"
 "of a circular object of known size."
@@ -6144,15 +6144,15 @@ msgstr ""
 "Haz clic en 3 puntos del borde\n"
 "de un objeto circular conocido."
 
-#: src/polyx/gui/viewer/window.py:1270
+#: src/polyx/gui/viewer/window.py:1302
 msgid "Enter the real size to finish."
 msgstr "Introduce el tamaño real para terminar."
 
-#: src/polyx/gui/viewer/window.py:1294
+#: src/polyx/gui/viewer/window.py:1326
 msgid "Calibration — Circle"
 msgstr "Calibración — Círculo"
 
-#: src/polyx/gui/viewer/window.py:1296
+#: src/polyx/gui/viewer/window.py:1328
 msgid ""
 "Real diameter of the circular object (μm):\n"
 "100 mm Petri dish → 100000"
@@ -6160,21 +6160,21 @@ msgstr ""
 "Diámetro real del objeto circular (μm):\n"
 "Placa Petri de 100 mm → 100000"
 
-#: src/polyx/gui/viewer/window.py:1335
+#: src/polyx/gui/viewer/window.py:1367
 #, python-format
 msgid "%(value).4f μm/px  (%(mode)s)"
 msgstr "%(value).4f μm/px  (%(mode)s)"
 
-#: src/polyx/gui/viewer/window.py:1342
+#: src/polyx/gui/viewer/window.py:1374
 #, python-format
 msgid "● Calibration applied: %(value).4f μm/px"
 msgstr "● Calibración aplicada: %(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:1376
+#: src/polyx/gui/viewer/window.py:1408
 msgid "No image is open."
 msgstr "No hay imagen abierta."
 
-#: src/polyx/gui/viewer/window.py:1403
+#: src/polyx/gui/viewer/window.py:1435
 msgid "Saved"
 msgstr "Guardado"
 
@@ -6183,20 +6183,20 @@ msgstr "Guardado"
 msgid "%(value).4f μm/px"
 msgstr "%(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:726
+#: src/polyx/gui/viewer/window.py:738
 #, python-format
 msgid "● Detecting (imgsz %(imgsz)d, %(device)s)…"
 msgstr "● Detectando (imgsz %(imgsz)d, %(device)s)…"
 
-#: src/polyx/gui/viewer/window.py:792
+#: src/polyx/gui/viewer/window.py:824
 msgid "Detection error"
 msgstr "Error en detección"
 
-#: src/polyx/gui/viewer/window.py:794
+#: src/polyx/gui/viewer/window.py:826
 msgid "● Detection error"
 msgstr "● Error en detección"
 
-#: src/polyx/gui/viewer/window.py:842
+#: src/polyx/gui/viewer/window.py:874
 #, python-format
 msgid ""
 "That run has no predictions for %(n)s.\n"
@@ -6207,11 +6207,11 @@ msgstr ""
 "\n"
 "Se buscó en las subcarpetas 'labels'."
 
-#: src/polyx/gui/viewer/window.py:880
+#: src/polyx/gui/viewer/window.py:912
 msgid "could not read the image"
 msgstr "no se pudo leer la imagen"
 
-#: src/polyx/gui/viewer/window.py:941
+#: src/polyx/gui/viewer/window.py:973
 #, python-format
 msgid ""
 "There is no label file for the image:\n"
@@ -6220,56 +6220,56 @@ msgstr ""
 "No hay archivo de etiquetas para la imagen:\n"
 "%(name)s"
 
-#: src/polyx/gui/viewer/window.py:1053
+#: src/polyx/gui/viewer/window.py:1085
 #, python-format
 msgid "%(count)s fibre"
 msgid_plural "%(count)s fibres"
 msgstr[0] "%(count)s fibra"
 msgstr[1] "%(count)s fibras"
 
-#: src/polyx/gui/viewer/window.py:1059
+#: src/polyx/gui/viewer/window.py:1091
 #, python-format
 msgid "%(count)s unmeasured"
 msgid_plural "%(count)s unmeasured"
 msgstr[0] "%(count)s sin medir"
 msgstr[1] "%(count)s sin medir"
 
-#: src/polyx/gui/viewer/window.py:1165
+#: src/polyx/gui/viewer/window.py:1197
 #, python-format
 msgid "length      %(value)8.1f px"
 msgstr "largo       %(value)8.1f px"
 
-#: src/polyx/gui/viewer/window.py:1171
+#: src/polyx/gui/viewer/window.py:1203
 #, python-format
 msgid "width       %(value)8.1f px"
 msgstr "ancho       %(value)8.1f px"
 
-#: src/polyx/gui/viewer/window.py:1180
+#: src/polyx/gui/viewer/window.py:1212
 #, python-format
 msgid "warning: %(message)s"
 msgstr "aviso: %(message)s"
 
-#: src/polyx/gui/viewer/window.py:1259
+#: src/polyx/gui/viewer/window.py:1291
 #, python-format
 msgid "Click %(count)d more point."
 msgid_plural "Click %(count)d more points."
 msgstr[0] "Haz clic en %(count)d punto más."
 msgstr[1] "Haz clic en %(count)d puntos más."
 
-#: src/polyx/gui/viewer/window.py:1331
+#: src/polyx/gui/viewer/window.py:1363
 msgid "line"
 msgstr "línea"
 
-#: src/polyx/gui/viewer/window.py:1332
+#: src/polyx/gui/viewer/window.py:1364
 msgid "circle"
 msgstr "círculo"
 
-#: src/polyx/gui/viewer/window.py:1400
+#: src/polyx/gui/viewer/window.py:1432
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr "● Guardado en %(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1403
+#: src/polyx/gui/viewer/window.py:1435
 #, python-format
 msgid ""
 "Files saved to:\n"
@@ -6278,25 +6278,18 @@ msgstr ""
 "Archivos guardados en:\n"
 "%(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1409
+#: src/polyx/gui/viewer/window.py:1441
 msgid "● Error while saving"
 msgstr "● Error al guardar"
 
-#: src/polyx/gui/viewer/window.py:759
+#: src/polyx/gui/viewer/window.py:771
 #, python-format
 msgid "● %(count)d detection at imgsz %(imgsz)d (%(plan)s)"
 msgid_plural "● %(count)d detections at imgsz %(imgsz)d (%(plan)s)"
 msgstr[0] "● %(count)d detección a imgsz %(imgsz)d (%(plan)s)"
 msgstr[1] "● %(count)d detecciones a imgsz %(imgsz)d (%(plan)s)"
 
-#: src/polyx/gui/viewer/window.py:770
-#, python-format
-msgid "● %(count)d detection (imgsz %(imgsz)d)"
-msgid_plural "● %(count)d detections (imgsz %(imgsz)d)"
-msgstr[0] "● %(count)d detección (imgsz %(imgsz)d)"
-msgstr[1] "● %(count)d detecciones (imgsz %(imgsz)d)"
-
-#: src/polyx/gui/viewer/window.py:787
+#: src/polyx/gui/viewer/window.py:819
 #, python-format
 msgid ""
 "Out of GPU memory at imgsz %(imgsz)d.\n"
@@ -6307,22 +6300,36 @@ msgstr ""
 "\n"
 "Baja la resolución de inferencia o desmarca «Usar GPU»."
 
-#: src/polyx/gui/viewer/window.py:895
+#: src/polyx/gui/viewer/window.py:927
 #, python-format
 msgid "Could not read the predictions: %(error)s"
 msgstr "No se pudieron leer las predicciones: %(error)s"
 
-#: src/polyx/gui/viewer/window.py:1167
+#: src/polyx/gui/viewer/window.py:1199
 #, python-format
 msgid "  x %(scale).4f um/px = %(size).0f um"
 msgstr "  x %(scale).4f um/px = %(size).0f um"
 
-#: src/polyx/gui/viewer/window.py:1172
+#: src/polyx/gui/viewer/window.py:1204
 #, python-format
 msgid "  = %(size).0f um"
 msgstr "  = %(size).0f um"
 
-#: src/polyx/gui/viewer/window.py:1500
+#: src/polyx/gui/viewer/window.py:785
+#, python-format
+msgid "● %(count)d detection at imgsz %(imgsz)d (%(device)s) — reduced after running out of memory"
+msgid_plural "● %(count)d detections at imgsz %(imgsz)d (%(device)s) — reduced after running out of memory"
+msgstr[0] "● %(count)d detección a imgsz %(imgsz)d (%(device)s) — reducido tras quedarse sin memoria"
+msgstr[1] "● %(count)d detecciones a imgsz %(imgsz)d (%(device)s) — reducido tras quedarse sin memoria"
+
+#: src/polyx/gui/viewer/window.py:802
+#, python-format
+msgid "● %(count)d detection (imgsz %(imgsz)d)"
+msgid_plural "● %(count)d detections (imgsz %(imgsz)d)"
+msgstr[0] "● %(count)d detección (imgsz %(imgsz)d)"
+msgstr[1] "● %(count)d detecciones (imgsz %(imgsz)d)"
+
+#: src/polyx/gui/viewer/window.py:1532
 #, python-format
 msgid "● Error: %(error)s"
 msgstr "● Error: %(error)s"
