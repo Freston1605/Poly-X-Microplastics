@@ -26,8 +26,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.editing import MIN_SIDE_PX
+from polyx.core.editing import rejection_message
 from polyx.core.i18n import N_, _, ngettext
+from polyx.core.labels import class_name_for
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
@@ -351,11 +352,10 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._update_progress()
 
     def _on_box_rejected(self, side: float):
-        self._set_status(
-            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
-            % {"side": side, "minimum": MIN_SIDE_PX},
-            T.WARN,
-        )
+        message = rejection_message(side)
+        if message is None:
+            return
+        self._set_status(message, T.WARN)
         QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):
@@ -638,12 +638,9 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         n = len(boxes)
 
         cls_counts: dict[str, int] = {}
+        names = dict(enumerate(self.state.class_names))
         for b in boxes:
-            name = (
-                self.state.class_names[b.class_id]
-                if b.class_id < len(self.state.class_names)
-                else str(b.class_id)
-            )
+            name = class_name_for(b.class_id, names)
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:

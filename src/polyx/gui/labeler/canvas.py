@@ -4,6 +4,10 @@ The shell only translates events, zooms and pans, paints, and reports what
 the labeller did. Geometry, hit-testing, the resize handles, selection and
 undo belong to :class:`polyx.core.editing.BoxEditor`, one per image, held by
 :class:`~polyx.gui.labeler.state.LabelerState`.
+
+The pixels are decoded by :func:`polyx.gui.image_pixmap.qpixmap_from_file`,
+the same EXIF-applied frame ``size_image`` measures and the editor works in:
+painting, hit-testing and the saved normalisation cannot disagree.
 """
 
 from __future__ import annotations
@@ -12,7 +16,6 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
-    QImage,
     QKeyEvent,
     QMouseEvent,
     QPainter,
@@ -22,22 +25,24 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
-from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason
+from polyx.core.editing import (
+    HANDLE_TOLERANCE_PX,
+    BoxEditor,
+    EditMode,
+    Handle,
+    RejectionReason,
+    rejection_message,
+)
 from polyx.core.i18n import _
+from polyx.core.labels import class_name_for
 from polyx.gui import theme as T
+from polyx.gui.editing_qt import cursor_for_handle
+from polyx.gui.image_pixmap import qpixmap_from_file
 
 from .state import LabelerState
 
 # A press that never moves this far is a click (select), not a move.
 _DRAG_THRESHOLD_PX = 3.0
-
-# A rejected gesture shorter than this is an accidental click, not a mark
-# the operator believed they made: it is discarded without a message.
-_SILENT_SIDE_PX = 0.3
-
-_DRAW = "draw"
-_MOVE = "move"
-_RESIZE = "resize"
 
 
 class BboxCanvas(QWidget):
@@ -50,7 +55,7 @@ class BboxCanvas(QWidget):
       - Left click on a box → selects it
       - Right click on a box→ assigns the active class
       - `Del` / Backspace   → deletes the selected box
-      - 1-9                 → changes the active class
+      - 1-9                 → changes the active class (and the selection's)
       - Space               → marks reviewed and moves on
       - F                   → reframes (fits to the window again)
       - Ctrl+Z / Ctrl+Y     → undo / redo
@@ -63,10 +68,9 @@ class BboxCanvas(QWidget):
     box_drawn = Signal()
     box_rejected = Signal(float)  # side in px of the discarded box
 
-    # Handle size and grab radius, in widget pixels. The core receives the
-    # radius in image pixels at the current scale.
+    # Painted handle size, in widget pixels. The grab distance is the core's
+    # HANDLE_TOLERANCE_PX, scaled to image pixels at the current zoom.
     HANDLE_RADIUS_PX = 4.0
-    HANDLE_TOLERANCE_PX = 6.0
 
     def __init__(self, state: LabelerState):
         super().__init__()
@@ -85,7 +89,8 @@ class BboxCanvas(QWidget):
         self._zoom_user = False
 
         # The gesture the shell is translating; the editor holds the box.
-        self._gesture: str | None = None
+        # The enum, not a private string: the core already names the gestures.
+        self._gesture: EditMode | None = None
         # A press on a box does not move it until the pointer actually moves.
         self._move_armed = False
         self._move_origin = QPointF(0.0, 0.0)  # widget coords
@@ -113,18 +118,7 @@ class BboxCanvas(QWidget):
             self.update()
             return
 
-        pix = QPixmap(str(img_path))
-        if pix.isNull():
-            try:
-                import numpy as np
-                from PIL import Image
-
-                arr = np.array(Image.open(str(img_path)).convert("RGB"))
-                h, w, c = arr.shape
-                qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
-                pix = QPixmap.fromImage(qimg)
-            except Exception:  # noqa: BLE001, S110
-                pass
+        pix = qpixmap_from_file(img_path)
         previous = self._pixmap
         self._pixmap = pix if not pix.isNull() else None
         # Keeps zoom and framing if the user adjusted them and the image is of
@@ -208,6 +202,7 @@ class BboxCanvas(QWidget):
 
         font = QFont(T.APP_FONT_FAMILY, 8, QFont.Bold)
         p.setFont(font)
+        names = dict(enumerate(self.state.class_names))
         for i, box in enumerate(boxes):
             if i == live:
                 continue
@@ -226,15 +221,12 @@ class BboxCanvas(QWidget):
             p.setBrush(Qt.NoBrush)
             p.drawRect(rect_w)
 
-            # Class label
-            cls_name = (
-                self.state.class_names[box.class_id]
-                if box.class_id < len(self.state.class_names)
-                else str(box.class_id)
-            )
+            # Class label: the codec's one class-name lookup.
+            cls_name = class_name_for(box.class_id, names)
             tag = QRectF(rect_w.x(), rect_w.y() - 17, max(50, len(cls_name) * 7 + 8), 17)
             p.fillRect(tag, color)
-            p.setPen(QColor("white"))
+            # The theme's "on top of a filled colour" ink, not a literal.
+            p.setPen(QColor(T.ON_ACCENT))
             p.drawText(tag, Qt.AlignCenter, cls_name)
 
         # Box in progress
@@ -256,7 +248,7 @@ class BboxCanvas(QWidget):
 
     def _paint_handles(self, p: QPainter, editor: BoxEditor, color: QColor):
         box_side = self.HANDLE_RADIUS_PX * 2
-        p.setPen(QPen(QColor("white"), 1.2))
+        p.setPen(QPen(QColor(T.ON_ACCENT), 1.2))
         p.setBrush(color)
         for hx, hy in editor.handle_points():
             pt = self._i2w(QPointF(hx, hy))
@@ -268,7 +260,7 @@ class BboxCanvas(QWidget):
 
     def _handle_tolerance(self) -> float:
         """The widget grab radius, in image pixels at the current zoom."""
-        return self.HANDLE_TOLERANCE_PX / self._scale
+        return HANDLE_TOLERANCE_PX / self._scale
 
     def mousePressEvent(self, ev: QMouseEvent):
         editor = self.state.current_editor
@@ -295,11 +287,11 @@ class BboxCanvas(QWidget):
             if editor.select_at(x, y) < 0:
                 # Start drawing a new box.
                 editor.begin_draw(x, y)
-                self._gesture = _DRAW
+                self._gesture = EditMode.DRAW
             else:
                 handle = editor.handle_at(x, y, self._handle_tolerance())
                 if handle is not Handle.NONE and editor.begin_resize(handle, x, y):
-                    self._gesture = _RESIZE
+                    self._gesture = EditMode.RESIZE
                 else:
                     # A click selects; the move starts only if the pointer moves.
                     self._move_armed = True
@@ -321,20 +313,20 @@ class BboxCanvas(QWidget):
             return
         img_pt = self._w2i(pos)
 
-        if self._gesture == _DRAW:
+        if self._gesture is EditMode.DRAW:
             editor.update_draw(img_pt.x(), img_pt.y())
             self.update()
-        elif self._gesture == _MOVE:
+        elif self._gesture is EditMode.MOVE:
             editor.update_move(img_pt.x(), img_pt.y())
             self.update()
-        elif self._gesture == _RESIZE:
+        elif self._gesture is EditMode.RESIZE:
             editor.update_resize(img_pt.x(), img_pt.y())
             self.update()
         elif self._move_armed:
             if (pos - self._move_origin).manhattanLength() > _DRAG_THRESHOLD_PX:
                 origin = self._move_image_origin
                 if editor.begin_move(origin.x(), origin.y()):
-                    self._gesture = _MOVE
+                    self._gesture = EditMode.MOVE
                     editor.update_move(img_pt.x(), img_pt.y())
                 self._move_armed = False
                 self.update()
@@ -353,11 +345,11 @@ class BboxCanvas(QWidget):
         if editor is None:
             return
 
-        if gesture == _DRAW:
+        if gesture is EditMode.DRAW:
             self._settle(editor.finish_draw(), drawn=True)
-        elif gesture == _MOVE:
+        elif gesture is EditMode.MOVE:
             self._settle(editor.finish_move())
-        elif gesture == _RESIZE:
+        elif gesture is EditMode.RESIZE:
             self._settle(editor.finish_resize())
         self.update()
 
@@ -367,10 +359,12 @@ class BboxCanvas(QWidget):
             self.state.notify_edited()
             if drawn:
                 self.box_drawn.emit()
-        elif result.reason is RejectionReason.TOO_SMALL and result.side_px > _SILENT_SIDE_PX:
+        elif result.reason is RejectionReason.TOO_SMALL:
             # It used to be discarded silently: the operator believed they had
             # marked the particle and the mark disappeared without warning.
-            self.box_rejected.emit(result.side_px)
+            # The core owns the threshold and the wording (silent click).
+            if rejection_message(result.side_px) is not None:
+                self.box_rejected.emit(result.side_px)
 
     def _update_cursor(self, img_pt: QPointF):
         editor = self.state.current_editor
@@ -378,7 +372,7 @@ class BboxCanvas(QWidget):
             return
         handle = editor.handle_at(img_pt.x(), img_pt.y(), self._handle_tolerance())
         if handle is not Handle.NONE:
-            self.setCursor(_HANDLE_CURSORS[handle])
+            self.setCursor(cursor_for_handle(handle))
         elif editor.box_at(img_pt.x(), img_pt.y()) >= 0:
             self.setCursor(Qt.SizeAllCursor)
         else:
@@ -438,15 +432,3 @@ class BboxCanvas(QWidget):
             self.state.next_image()
         else:
             super().keyPressEvent(ev)
-
-
-_HANDLE_CURSORS = {
-    Handle.TOP_LEFT: Qt.SizeFDiagCursor,
-    Handle.TOP_RIGHT: Qt.SizeBDiagCursor,
-    Handle.BOTTOM_RIGHT: Qt.SizeFDiagCursor,
-    Handle.BOTTOM_LEFT: Qt.SizeBDiagCursor,
-    Handle.TOP: Qt.SizeVerCursor,
-    Handle.RIGHT: Qt.SizeHorCursor,
-    Handle.BOTTOM: Qt.SizeVerCursor,
-    Handle.LEFT: Qt.SizeHorCursor,
-}

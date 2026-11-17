@@ -618,7 +618,8 @@ conventional layout `classes.txt` is written once at the dataset root; a plain
 folder keeps one per folder that holds labels.
 
 **Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
-unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
+unreviewed · `F` reframes · `1-9` active class, and they reclassify the selected
+box (one undo entry) · `←/→` navigate · `Del` deletes the
 selected box · `Ctrl+Z/Y` undo/redo · drag to draw · drag a box to move it · drag a
 handle to resize · wheel zoom · middle-button pan.
 
@@ -627,6 +628,14 @@ shared editing core, so the Manual GT page's canvas rejects the same box with th
 same message as the Labeller; it is not a per-canvas constant any more. It was 5 px
 and it silently discarded legitimate marks: the study's smallest particles measure
 ~8 px per side. Now, if a box is rejected, the status bar says so.
+
+**One annotation frame.** Both canvases decode through
+`polyx.gui.image_pixmap.qpixmap_from_file`, and `size_image` measures the same
+EXIF-applied frame. `QPixmap(path)` ignores the orientation tag while cv2
+honours it, so painting through it put the pixels in one geometry and the
+editor and the `.txt` in another, for photos tagged as rotated. Painting,
+hit-testing, editor dimensions and the saved normalisation now share one frame
+per canvas.
 
 Zoom is kept between images (checkbox in the right panel), with size tolerance:
 crops from a grid differ by 1 px due to rounding, and demanding exact equality

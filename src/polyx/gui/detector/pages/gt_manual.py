@@ -18,18 +18,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import cv2
-import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
-    QImage,
     QKeySequence,
     QPainter,
     QPen,
-    QPixmap,
     QShortcut,
 )
 from PySide6.QtWidgets import (
@@ -51,18 +47,19 @@ from PySide6.QtWidgets import (
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.editing import (
-    MIN_SIDE_PX,
+    HANDLE_TOLERANCE_PX,
     BoxEditor,
     EditBox,
     EditMode,
     Handle,
     RejectionReason,
+    rejection_message,
 )
 from polyx.core.i18n import _, lazy, ngettext
-from polyx.core.image_io import read_image
 from polyx.core.labels import (
     STUDY_CLASSES,
     bbox_from,
+    class_name_for,
     classes_dir_for,
     find_label_file,
     label_dir_for,
@@ -74,33 +71,10 @@ from polyx.core.labels import (
 )
 from polyx.gui import iconos
 from polyx.gui import theme as T
+from polyx.gui.editing_qt import cursor_for_handle
+from polyx.gui.image_pixmap import qpixmap_from_file
 
 from ._base import DetectorPage
-
-
-def _qpixmap_de(path: Path) -> QPixmap:
-    """Decodes with cv2, not with the Qt reader.
-
-    The annotator and the detector have to work on the SAME pixel frame.
-    Qt applies the EXIF rotation when opening a JPEG and cv2 does not, so a
-    photo marked as rotated was annotated on one frame and read on another:
-    the saved boxes came out displaced -- some even outside the plate -- even
-    though in the annotator they looked perfectly placed. And the .txt has no
-    way to declare on which frame it was written.
-
-    As a bonus, ``cv2.imdecode`` over ``np.fromfile`` is the only thing that
-    reliably opens accented paths on Windows, which is the reason the rest of
-    the project already reads this way.
-    """
-    bgr = read_image(path)
-    if bgr is None:
-        return QPixmap()
-    h, w = bgr.shape[:2]
-    rgb = np.ascontiguousarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
-    # .copy() so the QImage owns its bytes: the numpy array is
-    # freed on exit, and without the copy it would point to dead memory.
-    return QPixmap.fromImage(QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
-
 
 HANDLE_SIZE = 8  # px on screen
 
@@ -138,7 +112,10 @@ class AnnotCanvas(QGraphicsView):
         self._pixmap_item = None
         self._image_path: Path | None = None
         self._editor: BoxEditor | None = None
-        self._active_class = 0
+        # The class new boxes get while no image is loaded. Once an image is
+        # loaded the editor owns the active class: one owner, not a shadow
+        # copy that could drift.
+        self._class_before_load = 0
         self.class_names: list[str] = list(STUDY_CLASSES)
 
         # Interaction state the core does not own: panning and the space key.
@@ -163,19 +140,16 @@ class AnnotCanvas(QGraphicsView):
         return self._editor.selection if self._editor is not None else -1
 
     @property
-    def selected_idx(self) -> int:
-        """The selected box index; kept for the old public attribute."""
-        return self.selection
-
-    @property
     def active_class(self) -> int:
-        """The class new boxes get; the core owns it once an image is loaded."""
-        return self._editor.active_class if self._editor is not None else self._active_class
+        """The class new boxes get; the editor owns it once an image is loaded."""
+        if self._editor is not None:
+            return self._editor.active_class
+        return self._class_before_load
 
     def set_class_names(self, names: list[str]):
         self.class_names = list(names)
         if not 0 <= self.active_class < len(self.class_names):
-            self._active_class = 0
+            self._class_before_load = 0
             if self._editor is not None:
                 self._editor.set_active_class(0)
         self._refresh()
@@ -183,8 +157,8 @@ class AnnotCanvas(QGraphicsView):
     def set_active_class(self, idx: int):
         if not 0 <= idx < len(self.class_names):
             return
-        self._active_class = idx
         if self._editor is None:
+            self._class_before_load = idx
             return
         self._editor.set_active_class(idx)
         # if a box is selected, change its class (the core records the undo)
@@ -194,7 +168,9 @@ class AnnotCanvas(QGraphicsView):
 
     def load_image(self, path: Path, existing: list[Detection]):
         self._image_path = path
-        pm = _qpixmap_de(path)
+        # The class choice survives the load; it is the one the next editor gets.
+        self._class_before_load = self.active_class
+        pm = qpixmap_from_file(path)
         if pm.isNull():
             self.scene_.clear()
             self._pixmap_item = None
@@ -208,7 +184,7 @@ class AnnotCanvas(QGraphicsView):
             pm.width(),
             pm.height(),
             [EditBox.from_detection(d) for d in existing],
-            active_class=self._active_class,
+            active_class=self.active_class,
         )
         # Initial fit
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
@@ -255,7 +231,7 @@ class AnnotCanvas(QGraphicsView):
     # ── internal helpers ───────────────────────────────────────────
     def _handle_tolerance(self) -> float:
         """The handle hit target, as a distance in image pixels."""
-        return HANDLE_SIZE / max(self.transform().m11(), 0.0001)
+        return HANDLE_TOLERANCE_PX / max(self.transform().m11(), 0.0001)
 
     def _refresh(self):
         """Redraws all the boxes + handles + labels (without touching the image)."""
@@ -268,6 +244,7 @@ class AnnotCanvas(QGraphicsView):
             return
 
         selected = self._editor.selection
+        names = dict(enumerate(self.class_names))
         for i, b in enumerate(self._editor.boxes):
             color = T.class_qcolor_at(self.class_names, b.class_id)
             sel = i == selected
@@ -281,51 +258,39 @@ class AnnotCanvas(QGraphicsView):
             rect.setBrush(QBrush(fill))
             self.scene_.addItem(rect)
 
-            # Label
-            name = (
-                self.class_names[b.class_id]
-                if b.class_id < len(self.class_names)
-                else str(b.class_id)
-            )
+            # Label: the codec's one class-name lookup.
+            name = class_name_for(b.class_id, names)
             label_bg = QGraphicsRectItem(QRectF(b.x1, b.y1 - 18, len(name) * 9 + 12, 18))
             label_bg.setPen(QPen(color, 1))
             label_bg.setBrush(QBrush(color))
             self.scene_.addItem(label_bg)
             txt = QGraphicsSimpleTextItem(name)
-            txt.setBrush(QBrush(Qt.white))
+            txt.setBrush(QBrush(QColor(T.ON_ACCENT)))
             f = QFont(T.APP_FONT_FAMILY, 9, QFont.Bold)
             txt.setFont(f)
             txt.setPos(b.x1 + 4, b.y1 - 17)
             self.scene_.addItem(txt)
 
             if sel:
-                # 8-point handles, positioned by the core
-                hs = self._handle_tolerance()  # size in scene
+                # 8-point handles, positioned by the core; the painted side
+                # stays the shell's HANDLE_SIZE, the grab distance is the
+                # core's HANDLE_TOLERANCE_PX.
+                hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)
                 for hx, hy in self._editor.handle_points(b):
                     h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
-                    h.setPen(QPen(Qt.white, 1.2))
+                    h.setPen(QPen(QColor(T.ON_ACCENT), 1.2))
                     h.setBrush(QBrush(color))
                     h.setZValue(10)
                     self.scene_.addItem(h)
 
     def _set_cursor_for_handle(self, handle: Handle):
-        cursors = {
-            Handle.TOP_LEFT: Qt.SizeFDiagCursor,
-            Handle.BOTTOM_RIGHT: Qt.SizeFDiagCursor,
-            Handle.TOP_RIGHT: Qt.SizeBDiagCursor,
-            Handle.BOTTOM_LEFT: Qt.SizeBDiagCursor,
-            Handle.TOP: Qt.SizeVerCursor,
-            Handle.BOTTOM: Qt.SizeVerCursor,
-            Handle.LEFT: Qt.SizeHorCursor,
-            Handle.RIGHT: Qt.SizeHorCursor,
-        }
-        self.setCursor(cursors.get(handle, Qt.CrossCursor))
+        self.setCursor(cursor_for_handle(handle))
 
     def _report_rejection(self, side_px: float):
-        self.status_changed.emit(
-            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
-            % {"side": side_px, "minimum": MIN_SIDE_PX}
-        )
+        """Announce a refused gesture, unless it was an accidental click."""
+        message = rejection_message(side_px)
+        if message is not None:
+            self.status_changed.emit(message)
 
     # ── events ────────────────────────────────────────────────────
     def wheelEvent(self, ev):
@@ -583,7 +548,7 @@ class GTManualPage(DetectorPage):
         b_save = QPushButton(_("Save ground truth (.txt YOLO)"))
         b_save.setIcon(iconos.icon("guardar", 15, T.ON_ACCENT))
         b_save.setStyleSheet(
-            f"background: {T.ACCENT}; color: white; border: none; "
+            f"background: {T.ACCENT}; color: {T.ON_ACCENT}; border: none; "
             f"border-radius: 6px; padding: 8px 16px; font-weight: 600;"
         )
         b_save.setCursor(Qt.PointingHandCursor)

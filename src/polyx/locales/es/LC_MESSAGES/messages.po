@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 01:21-0300\n"
+"POT-Creation-Date: 2026-11-17 02:16-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -321,6 +321,11 @@ msgstr "MEJOR: %(path)s"
 #, python-format
 msgid "epoch %(epoch)s: %(metrics)s"
 msgstr "época %(epoch)s: %(metrics)s"
+
+#: src/polyx/core/editing.py:115
+#, python-format
+msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
+msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
 
 #: src/polyx/core/platform.py:228
 msgid "Device (0/cpu):"
@@ -757,8 +762,8 @@ msgstr "Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Quí
 msgid "MODULES"
 msgstr "MÓDULOS"
 
-#: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:331
-#: src/polyx/gui/labeler/window.py:359 src/polyx/gui/labeler/window.py:674
+#: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:332
+#: src/polyx/gui/labeler/window.py:359 src/polyx/gui/labeler/window.py:671
 #: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:566
 msgid "● Ready"
@@ -820,7 +825,7 @@ msgstr ""
 "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas de calidad y "
 "comparación con runs anteriores."
 
-#: src/polyx/gui/labeler/window.py:132 src/polyx/gui/launcher.py:513
+#: src/polyx/gui/labeler/window.py:133 src/polyx/gui/launcher.py:513
 msgid "Labeler"
 msgstr "Etiquetador"
 
@@ -972,11 +977,11 @@ msgstr "Claro"
 msgid "Detection review — Poly-X"
 msgstr "Revisión de detecciones — Poly-X"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:538 src/polyx/gui/detector/review_dialog.py:74
+#: src/polyx/gui/detector/pages/gt_manual.py:503 src/polyx/gui/detector/review_dialog.py:74
 msgid "Fit (F)"
 msgstr "Ajustar (F)"
 
-#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:553
+#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:518
 #: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:76
 #: src/polyx/gui/detector/review_dialog.py:94 src/polyx/gui/detector/window.py:29
 #: src/polyx/gui/report/sections.py:345
@@ -987,11 +992,11 @@ msgstr "Imágenes"
 msgid "Click and drag to draw · wheel: zoom · Space+drag: pan · Del: delete box."
 msgstr "Click y arrastra para dibujar · rueda: zoom · Espacio+arrastre: mover · Supr: borrar caja."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:593 src/polyx/gui/detector/review_dialog.py:122
+#: src/polyx/gui/detector/pages/gt_manual.py:558 src/polyx/gui/detector/review_dialog.py:122
 msgid "←  Previous"
 msgstr "←  Anterior"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:596 src/polyx/gui/detector/review_dialog.py:125
+#: src/polyx/gui/detector/pages/gt_manual.py:561 src/polyx/gui/detector/review_dialog.py:125
 msgid "Next  →"
 msgstr "Siguiente  →"
 
@@ -1133,8 +1138,8 @@ msgstr "No hay imágenes seleccionadas."
 msgid "Models"
 msgstr "Modelos"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:511 src/polyx/gui/detector/pages/gt_manual.py:789
-#: src/polyx/gui/detector/pages/gt_manual.py:801 src/polyx/gui/detector/window.py:30
+#: src/polyx/gui/detector/pages/gt_manual.py:476 src/polyx/gui/detector/pages/gt_manual.py:754
+#: src/polyx/gui/detector/pages/gt_manual.py:766 src/polyx/gui/detector/window.py:30
 msgid "Manual GT"
 msgstr "GT manual"
 
@@ -1370,7 +1375,7 @@ msgid "Load at least one .pt model in the Models tab."
 msgstr "Carga al menos un modelo .pt en la pestaña Modelos."
 
 #: src/polyx/gui/detector/pages/execute.py:235 src/polyx/gui/detector/pages/parameters.py:467
-#: src/polyx/gui/labeler/window.py:142
+#: src/polyx/gui/labeler/window.py:143
 msgid "No images"
 msgstr "Sin imágenes"
 
@@ -1430,7 +1435,7 @@ msgstr ""
 "solo para que el modelo pueda detectar: los resultados y el informe se entregan sobre la foto "
 "completa."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:512
+#: src/polyx/gui/detector/pages/gt_manual.py:477
 msgid ""
 "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to "
 "resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · "
@@ -1441,82 +1446,77 @@ msgstr ""
 " zoom. Teclas 1..9: clase activa · Supr: borrar · Ctrl+Z/Y: undo/redo · ←/→: imagen "
 "anterior/siguiente (autoguarda)."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:520
+#: src/polyx/gui/detector/pages/gt_manual.py:485
 msgid "Annotation"
 msgstr "Anotación"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:525
+#: src/polyx/gui/detector/pages/gt_manual.py:490
 msgid "(no image selected)"
 msgstr "(sin imagen seleccionada)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:573
+#: src/polyx/gui/detector/pages/gt_manual.py:538
 msgid "Ready. Click and drag to draw."
 msgstr "Listo. Click y arrastra para dibujar."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:583
+#: src/polyx/gui/detector/pages/gt_manual.py:548
 msgid "Save ground truth (.txt YOLO)"
 msgstr "Guardar GT (.txt YOLO)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:600
+#: src/polyx/gui/detector/pages/gt_manual.py:565
 msgid "Undo"
 msgstr "Deshacer"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:604
+#: src/polyx/gui/detector/pages/gt_manual.py:569
 msgid "Redo"
 msgstr "Rehacer"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:609
+#: src/polyx/gui/detector/pages/gt_manual.py:574
 msgid "Delete selection"
 msgstr "Borrar selección"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:613 src/polyx/gui/detector/pages/gt_manual.py:747
+#: src/polyx/gui/detector/pages/gt_manual.py:578 src/polyx/gui/detector/pages/gt_manual.py:712
 msgid "Clear all"
 msgstr "Limpiar todo"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:618
+#: src/polyx/gui/detector/pages/gt_manual.py:583
 msgid "0 boxes"
 msgstr "0 cajas"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:739
+#: src/polyx/gui/detector/pages/gt_manual.py:704
 #, python-format
 msgid "Delete the %(count)d box on this image?"
 msgid_plural "Delete the %(count)d boxes on this image?"
 msgstr[0] "¿Borrar la %(count)d caja de esta imagen?"
 msgstr[1] "¿Borrar las %(count)d cajas de esta imagen?"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:744
+#: src/polyx/gui/detector/pages/gt_manual.py:709
 msgid "(You can undo with Ctrl+Z)"
 msgstr "(se puede deshacer con Ctrl+Z)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:815
+#: src/polyx/gui/detector/pages/gt_manual.py:780
 msgid "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
 msgstr "   ⚠ Vuelve a Ejecutar la detección: el informe usa el GT leído en la última corrida."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:202
+#: src/polyx/gui/detector/pages/gt_manual.py:178
 msgid "Could not open the image."
 msgstr "No se pudo abrir la imagen."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:326 src/polyx/gui/labeler/window.py:355
-#, python-format
-msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
-msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
-
-#: src/polyx/gui/detector/pages/gt_manual.py:531
+#: src/polyx/gui/detector/pages/gt_manual.py:496
 msgid "Class:"
 msgstr "Clase:"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:733 src/polyx/gui/labeler/window.py:650
+#: src/polyx/gui/detector/pages/gt_manual.py:698 src/polyx/gui/labeler/window.py:647
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
 msgstr[0] "%(count)d caja"
 msgstr[1] "%(count)d cajas"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:789
+#: src/polyx/gui/detector/pages/gt_manual.py:754
 msgid "Select an image first."
 msgstr "Selecciona primero una imagen."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:802
+#: src/polyx/gui/detector/pages/gt_manual.py:767
 msgid ""
 "No boxes have been drawn. Save this image as reviewed with zero particles? Any previous "
 "annotation will be overwritten."
@@ -1524,26 +1524,26 @@ msgstr ""
 "No hay ninguna caja dibujada. ¿Guardar esta imagen como revisada con cero partículas? Se "
 "sobrescribirá la anotación anterior, si la hubiera."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:819
+#: src/polyx/gui/detector/pages/gt_manual.py:784
 #, python-format
 msgid "✓ Saved to: %(path)s%(warning)s"
 msgstr "✓ Guardado en: %(path)s%(warning)s"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:758
+#: src/polyx/gui/detector/pages/gt_manual.py:723
 #, python-format
 msgid "Could not read the size of %(name)s"
 msgstr "No se pudo leer el tamano de %(name)s"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:781
+#: src/polyx/gui/detector/pages/gt_manual.py:746
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:452
+#: src/polyx/gui/detector/pages/gt_manual.py:417
 #, python-format
 msgid "Drawing: %(width).0f×%(height).0f px"
 msgstr "Dibujando: %(width).0f×%(height).0f px"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:784 src/polyx/gui/viewer/window.py:1357
+#: src/polyx/gui/detector/pages/gt_manual.py:749 src/polyx/gui/viewer/window.py:1357
 msgid "Error while saving"
 msgstr "Error al guardar"
 
@@ -1726,7 +1726,7 @@ msgstr ""
 msgid "Inference"
 msgstr "Inferencia"
 
-#: src/polyx/gui/detector/pages/parameters.py:90 src/polyx/gui/labeler/window.py:41
+#: src/polyx/gui/detector/pages/parameters.py:90 src/polyx/gui/labeler/window.py:42
 #: src/polyx/gui/trainer/state.py:92 src/polyx/gui/trainer/state.py:264
 msgid "Custom"
 msgstr "Personalizado"
@@ -2025,7 +2025,7 @@ msgstr ""
 "Abstenerse es más honesto que inventar la clase, y el informe declara qué porcentaje quedó sin "
 "asignar."
 
-#: src/polyx/gui/detector/pages/parameters.py:461 src/polyx/gui/labeler/window.py:258
+#: src/polyx/gui/detector/pages/parameters.py:461 src/polyx/gui/labeler/window.py:259
 #: src/polyx/gui/labeler/window.py:441 src/polyx/gui/labeler/window.py:472
 #: src/polyx/gui/viewer/window.py:296 src/polyx/gui/viewer/window.py:677
 msgid "No model"
@@ -2711,55 +2711,55 @@ msgstr "No se pudo guardar: %(error)s"
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
 
-#: src/polyx/gui/labeler/canvas.py:193
+#: src/polyx/gui/labeler/canvas.py:187
 msgid "Open an image folder to begin"
 msgstr "Abre una carpeta de imágenes para comenzar"
 
-#: src/polyx/gui/labeler/window.py:39
+#: src/polyx/gui/labeler/window.py:40
 msgid "Nile Red microplastics"
 msgstr "Microplásticos Nile Red"
 
-#: src/polyx/gui/labeler/window.py:40
+#: src/polyx/gui/labeler/window.py:41
 msgid "General (1 class)"
 msgstr "General (1 clase)"
 
-#: src/polyx/gui/labeler/window.py:135
+#: src/polyx/gui/labeler/window.py:136
 msgid "Open folder…"
 msgstr "Abrir carpeta…"
 
-#: src/polyx/gui/labeler/window.py:162
+#: src/polyx/gui/labeler/window.py:163
 msgid "← Previous"
 msgstr "← Anterior"
 
-#: src/polyx/gui/labeler/window.py:163
+#: src/polyx/gui/labeler/window.py:164
 msgid "Next →"
 msgstr "Siguiente →"
 
-#: src/polyx/gui/labeler/window.py:193
+#: src/polyx/gui/labeler/window.py:194
 msgid "⏭  Next unreviewed"
 msgstr "⏭  Siguiente sin revisar"
 
-#: src/polyx/gui/labeler/window.py:194
+#: src/polyx/gui/labeler/window.py:195
 msgid "Jumps to the next image you have not reviewed yet (Tab)"
 msgstr "Salta a la próxima imagen que aún no has revisado (Tab)"
 
-#: src/polyx/gui/labeler/window.py:230
+#: src/polyx/gui/labeler/window.py:231
 msgid "+ Add class"
 msgstr "+ Agregar clase"
 
-#: src/polyx/gui/labeler/window.py:242
+#: src/polyx/gui/labeler/window.py:243
 msgid "Annotations (current image):"
 msgstr "Anotaciones (imagen actual):"
 
-#: src/polyx/gui/labeler/window.py:253
+#: src/polyx/gui/labeler/window.py:254
 msgid "Automatic pre-annotation"
 msgstr "Pre-anotación automática"
 
-#: src/polyx/gui/labeler/window.py:266 src/polyx/gui/viewer/window.py:307
+#: src/polyx/gui/labeler/window.py:267 src/polyx/gui/viewer/window.py:307
 msgid "Load model…"
 msgstr "Cargar modelo…"
 
-#: src/polyx/gui/labeler/window.py:286
+#: src/polyx/gui/labeler/window.py:287
 msgid ""
 "Inference resolution. With tiny particles in large photographs,\n"
 "a low value proposes nothing at all."
@@ -2767,19 +2767,19 @@ msgstr ""
 "Resolución de inferencia. Con partículas diminutas en fotos grandes,\n"
 "un valor bajo no propone nada."
 
-#: src/polyx/gui/labeler/window.py:293
+#: src/polyx/gui/labeler/window.py:294
 msgid "Pre-annotate current image"
 msgstr "Pre-anotar imagen actual"
 
-#: src/polyx/gui/labeler/window.py:297
+#: src/polyx/gui/labeler/window.py:298
 msgid "Pre-annotate ALL"
 msgstr "Pre-anotar TODAS"
 
-#: src/polyx/gui/labeler/window.py:304
+#: src/polyx/gui/labeler/window.py:305
 msgid "Keep zoom between images"
 msgstr "Mantener zoom entre imágenes"
 
-#: src/polyx/gui/labeler/window.py:307
+#: src/polyx/gui/labeler/window.py:308
 msgid ""
 "Keeps the zoom level when moving between crops.\n"
 "With hundreds of crops, reframing every time costs a lot of time.\n"
@@ -2789,11 +2789,11 @@ msgstr ""
 "Con cientos de recortes, reencuadrar cada vez cuesta mucho tiempo.\n"
 "F reencuadra manualmente."
 
-#: src/polyx/gui/labeler/window.py:316
+#: src/polyx/gui/labeler/window.py:317
 msgid "✓  Reviewed, next   (Space)"
 msgstr "✓  Revisada, siguiente   (Espacio)"
 
-#: src/polyx/gui/labeler/window.py:318
+#: src/polyx/gui/labeler/window.py:319
 msgid ""
 "Records that you looked at this image even if it has no particles.\n"
 "Without this, a reviewed empty plate is indistinguishable from one never looked at."
@@ -2801,7 +2801,7 @@ msgstr ""
 "Deja constancia de que miraste esta imagen aunque no tenga partículas.\n"
 "Sin esto, una placa vacía revisada es indistinguible de una sin mirar."
 
-#: src/polyx/gui/labeler/window.py:325
+#: src/polyx/gui/labeler/window.py:326
 msgid "Save (.txt)"
 msgstr "Guardar (.txt)"
 
@@ -2841,27 +2841,27 @@ msgstr "Pre-anotando"
 msgid "● Pre-annotation complete"
 msgstr "● Pre-anotación completa"
 
-#: src/polyx/gui/labeler/window.py:673
+#: src/polyx/gui/labeler/window.py:670
 msgid "● Autosaved"
 msgstr "● Autoguardado"
 
-#: src/polyx/gui/labeler/window.py:210
+#: src/polyx/gui/labeler/window.py:211
 msgid "Class preset:"
 msgstr "Preset de clases:"
 
-#: src/polyx/gui/labeler/window.py:220
+#: src/polyx/gui/labeler/window.py:221
 msgid "Active classes:"
 msgstr "Clases activas:"
 
-#: src/polyx/gui/labeler/window.py:257 src/polyx/gui/trainer/pages/evaluate.py:74
+#: src/polyx/gui/labeler/window.py:258 src/polyx/gui/trainer/pages/evaluate.py:74
 msgid "Model .pt:"
 msgstr "Modelo .pt:"
 
-#: src/polyx/gui/labeler/window.py:273
+#: src/polyx/gui/labeler/window.py:274
 msgid "conf:"
 msgstr "conf:"
 
-#: src/polyx/gui/labeler/window.py:280 src/polyx/gui/trainer/pages/evaluate.py:98
+#: src/polyx/gui/labeler/window.py:281 src/polyx/gui/trainer/pages/evaluate.py:98
 #: src/polyx/gui/trainer/pages/export.py:105
 msgid "imgsz:"
 msgstr "imgsz:"
@@ -2900,7 +2900,7 @@ msgstr "Conteo completo"
 msgid "There are no unreviewed images left."
 msgstr "No quedan imágenes sin revisar."
 
-#: src/polyx/gui/labeler/window.py:655
+#: src/polyx/gui/labeler/window.py:652
 msgid "No annotations"
 msgstr "Sin anotaciones"
 

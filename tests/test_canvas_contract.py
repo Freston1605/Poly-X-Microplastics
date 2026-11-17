@@ -17,10 +17,12 @@ The Qt-free guarantee of the core is owned by
 guard here covers the static half (no Qt import in the core source) and the
 shells (no private editing maths, no colour tables, no minimum-side alias).
 
-The Viewer canvas also carries a ``_CLASS_COLORS`` table with the same literal
-palette. It is out of card 07's scope (the two annotation editors) and its
-index-ordered colours are a different rule from the theme's name lookup, so it
-is left alone and reported rather than silently re-coloured.
+The two rigs live in ``tests/canvas_rigs.py``: one gesture script, either
+shell, so this module and the per-canvas modules drive the widgets the same
+way. The Viewer canvas also carries a ``_CLASS_COLORS`` table with the same
+literal palette. It is out of card 07's scope (the two annotation editors) and
+its index-ordered colours are a different rule from the theme's name lookup,
+so it is left alone and reported rather than silently re-coloured.
 """
 
 from __future__ import annotations
@@ -36,22 +38,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PySide6")
 
-import cv2
-import numpy as np
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent
-from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
 
-from polyx.core.editing import MIN_SIDE_PX
-from polyx.core.labels import STUDY_CLASSES
+from polyx.core import editing
+from polyx.core.detect.protocol import size_image
+from polyx.core.editing import MIN_SIDE_PX, rejection_message
+from polyx.core.i18n import _
+from polyx.core.labels import STUDY_CLASSES, bbox_from, find_label_file, read_boxes
 from polyx.gui import theme as T
 from polyx.gui.detector.pages import gt_manual
-from polyx.gui.detector.pages.gt_manual import AnnotCanvas
 from polyx.gui.labeler import canvas as labeler_canvas
 from polyx.gui.labeler import window as labeler_window
 from polyx.gui.labeler.canvas import BboxCanvas
-from polyx.gui.labeler.state import LabelerState
+from tests.canvas_rigs import CanvasRig, GtRig, LabellerRig
+from tests.conftest import write_image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -63,178 +63,15 @@ CLASSES = [*STUDY_CLASSES, "HDPE"]
 # ── The two rigs: the same gestures through each shell's real events ──────
 
 
-def _write_image(path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    ok, buffer = cv2.imencode(".png", np.full((IMAGE_H, IMAGE_W, 3), 40, np.uint8))
-    assert ok
-    path.write_bytes(buffer.tobytes())
-    return path
-
-
 @pytest.fixture
 def image(tmp_path) -> Path:
-    return _write_image(tmp_path / "imgs" / "plate.png")
-
-
-class _Rig:
-    """The editing gestures a labeller makes, driven through one shell.
-
-    Both editors receive the same image coordinates; each adapter converts
-    them with its own widget transform, which is exactly the shell concern
-    that remains after card 07.
-    """
-
-    canvas: object
-
-    def boxes(self) -> list[tuple[float, float, float, float, int]]: ...
-
-    def selection(self) -> int: ...
-
-    def can_undo(self) -> bool: ...
-
-    def set_class(self, class_id: int) -> None: ...
-
-    def drag(
-        self, start: tuple[float, float], end: tuple[float, float], flush: bool = True
-    ) -> None: ...
-
-    def click(self, point: tuple[float, float]) -> None: ...
-
-    def key(self, key: Qt.Key, modifiers: Qt.KeyboardModifier = Qt.NoModifier) -> None: ...
-
-
-class _LabellerRig(_Rig):
-    def __init__(self, state: LabelerState, canvas: BboxCanvas):
-        self.state = state
-        self.canvas = canvas
-
-    @classmethod
-    def over(cls, qapp, image: Path) -> _LabellerRig:
-        state = LabelerState()
-        state.set_class_names(list(CLASSES))
-        canvas = BboxCanvas(state)
-        canvas.resize(800, 600)
-        canvas.show()
-        state.load_images(image.parent)
-        qapp.processEvents()
-        return cls(state, canvas)
-
-    def _point(self, image_xy: tuple[float, float]) -> QPoint:
-        point = self.canvas._i2w(QPointF(*image_xy))
-        return QPoint(round(point.x()), round(point.y()))
-
-    def boxes(self):
-        editor = self.state.current_editor
-        return (
-            [] if editor is None else [(b.x1, b.y1, b.x2, b.y2, b.class_id) for b in editor.boxes]
-        )
-
-    def selection(self) -> int:
-        editor = self.state.current_editor
-        return -1 if editor is None else editor.selection
-
-    def can_undo(self) -> bool:
-        editor = self.state.current_editor
-        return False if editor is None else editor.can_undo
-
-    def set_class(self, class_id: int) -> None:
-        self.state.set_active_class(class_id)
-
-    def drag(self, start, end, flush: bool = True) -> None:
-        QTest.mousePress(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(start))
-        QTest.mouseMove(self.canvas, self._point(end))
-        QTest.mouseRelease(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(end))
-        if flush:
-            QApplication.processEvents()
-
-    def click(self, point) -> None:
-        QTest.mousePress(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(point))
-        QTest.mouseRelease(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(point))
-        QApplication.processEvents()
-
-    def key(self, key, modifiers=Qt.NoModifier) -> None:
-        QTest.keyClick(self.canvas, key, modifiers)
-        QApplication.processEvents()
-
-    def tag_color(self, name: str) -> QColor:
-        """Colour the canvas painted the class tag of its newest box."""
-        x1, y1, x2, y2, _cls = self.boxes()[-1]
-        rect = self.canvas._box_rect(x1, y1, x2, y2)
-        tag = QRectF(rect.x(), rect.y() - 17, max(50, len(name) * 7 + 8), 17)
-        image = self.canvas.grab().toImage()
-        return image.pixelColor(round(tag.right() - 4), round(tag.y() + 8))
-
-
-class _GtRig(_Rig):
-    def __init__(self, canvas: AnnotCanvas):
-        self.canvas = canvas
-
-    @classmethod
-    def over(cls, qapp, image: Path) -> _GtRig:
-        canvas = AnnotCanvas()
-        canvas.resize(800, 600)
-        canvas.show()
-        canvas.set_class_names(list(CLASSES))
-        canvas.load_image(image, [])
-        canvas.zoom_100()
-        qapp.processEvents()
-        return cls(canvas)
-
-    def _point(self, image_xy: tuple[float, float]) -> QPointF:
-        return QPointF(self.canvas.mapFromScene(QPointF(*image_xy)))
-
-    def _send(self, kind, point: QPointF, button, buttons) -> None:
-        event = QMouseEvent(
-            kind,
-            point,
-            self.canvas.viewport().mapToGlobal(point),
-            button,
-            buttons,
-            Qt.NoModifier,
-        )
-        QApplication.sendEvent(self.canvas.viewport(), event)
-
-    def boxes(self):
-        return [(b.x1, b.y1, b.x2, b.y2, b.class_id) for b in self.canvas.boxes]
-
-    def selection(self) -> int:
-        return self.canvas.selection
-
-    def can_undo(self) -> bool:
-        editor = self.canvas.editor
-        return False if editor is None else editor.can_undo
-
-    def set_class(self, class_id: int) -> None:
-        self.canvas.set_active_class(class_id)
-
-    def drag(self, start, end, flush: bool = True) -> None:
-        self._send(QMouseEvent.MouseButtonPress, self._point(start), Qt.LeftButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseMove, self._point(end), Qt.NoButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseButtonRelease, self._point(end), Qt.LeftButton, Qt.NoButton)
-        if flush:
-            QApplication.processEvents()
-
-    def click(self, point) -> None:
-        self._send(QMouseEvent.MouseButtonPress, self._point(point), Qt.LeftButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseButtonRelease, self._point(point), Qt.LeftButton, Qt.NoButton)
-        QApplication.processEvents()
-
-    def key(self, key, modifiers=Qt.NoModifier) -> None:
-        QApplication.sendEvent(self.canvas, QKeyEvent(QEvent.KeyPress, key, modifiers))
-        QApplication.processEvents()
-
-    def tag_color(self, name: str) -> QColor:
-        """Colour the scene painted the class tag of its newest box."""
-        x1, y1, _x2, _y2, _cls = self.boxes()[-1]
-        width = len(name) * 9 + 12
-        point = self.canvas.mapFromScene(QPointF(x1 + width - 4, y1 - 18 + 9))
-        return self.canvas.viewport().grab().toImage().pixelColor(point)
+    return write_image(tmp_path / "imgs" / "plate.png", IMAGE_W, IMAGE_H, value=40)
 
 
 @pytest.fixture
 def rigs(qapp, image):
-    labeller = _LabellerRig.over(qapp, image)
-    gt = _GtRig.over(qapp, image)
+    labeller = LabellerRig.over(qapp, image.parent, CLASSES)
+    gt = GtRig.over(qapp, image, CLASSES)
     yield labeller, gt
     labeller.canvas.deleteLater()
     gt.canvas.close()
@@ -245,7 +82,7 @@ def rigs(qapp, image):
 # ── The contract: one gesture sequence, one result ─────────────────────────
 
 
-def _assert_same(labeller: _Rig, gt: _Rig) -> None:
+def _assert_same(labeller: CanvasRig, gt: CanvasRig) -> None:
     left, right = labeller.boxes(), gt.boxes()
     assert len(left) == len(right), (
         f"{len(left)} boxes in the Labeller, {len(right)} in the GT page"
@@ -258,13 +95,13 @@ def _assert_same(labeller: _Rig, gt: _Rig) -> None:
     assert labeller.selection() == gt.selection()
 
 
-def _move_by(rig: _Rig, index: int, dx: float, dy: float) -> None:
+def _move_by(rig: CanvasRig, index: int, dx: float, dy: float) -> None:
     x1, y1, x2, y2, _cls = rig.boxes()[index]
     centre = ((x1 + x2) / 2, (y1 + y2) / 2)
     rig.drag(centre, (centre[0] + dx, centre[1] + dy))
 
 
-def _resize_bottom_right_by(rig: _Rig, index: int, dx: float, dy: float) -> None:
+def _resize_bottom_right_by(rig: CanvasRig, index: int, dx: float, dy: float) -> None:
     _x1, _y1, x2, y2, _cls = rig.boxes()[index]
     rig.drag((x2, y2), (x2 + dx, y2 + dy))
 
@@ -369,7 +206,138 @@ def test_an_empty_click_is_a_click_in_both_editors(rigs):
     assert labeller.selection() == gt.selection() == -1
 
 
-# ── The 2 px rule: one core invariant, one on-screen message ──────────────
+# ── The annotation frame: the pixels, the editor and the .txt agree ───────
+
+
+def _write_exif_rotated_jpeg(path: Path) -> tuple[int, int]:
+    """A JPEG stored 60×40 but tagged to display as 40×60.
+
+    ``write_image`` writes the stored pixels; Pillow then tags orientation 6
+    (rotate 90° clockwise), so every reader that honours EXIF — cv2,
+    ``size_image`` — sees a 40×60 frame. Returns the displayed size.
+    """
+    Image = pytest.importorskip("PIL.Image")
+    write_image(path, 60, 40, suffix=".jpg")
+    with Image.open(path) as im:
+        exif = im.getexif()
+        exif[274] = 6
+        im.save(path, exif=exif)
+    return 40, 60
+
+
+@pytest.mark.parametrize("shell", ["labeller", "gt"])
+def test_an_exif_rotated_photo_is_annotated_in_the_frame_it_is_painted(qapp, tmp_path, shell):
+    """One frame per canvas: measured, painted and edited sizes must agree.
+
+    A photo tagged orientation 6 is stored 60×40 and displayed 40×60. Qt's
+    ``QPixmap(path)`` ignores the tag; cv2 — and therefore ``size_image`` —
+    honours it. If a canvas paints the unrotated pixels while the editor and
+    the .txt work in the rotated frame, boxes are drawn, hit-tested and saved
+    in two different geometries.
+    """
+    folder = tmp_path / "imgs"
+    path = folder / "rotated.jpg"
+    displayed = _write_exif_rotated_jpeg(path)
+    assert displayed != (60, 40), "the fixture must change the frame, not just tag it"
+
+    measured = size_image(path)
+    try:
+        if shell == "labeller":
+            rig = LabellerRig.over(qapp, folder)
+            editor = rig.state.current_editor
+            painted = rig.canvas._pixmap
+        else:
+            rig = GtRig.over(qapp, path)
+            editor = rig.canvas.editor
+            painted = rig.canvas._pixmap_item.pixmap()
+
+        painted_size = (painted.width(), painted.height())
+        editor_size = (editor.img_w, editor.img_h)
+        assert measured == displayed, f"size_image measured {measured}, not the displayed frame"
+        assert painted_size == measured, (
+            f"{shell} paints {painted_size} while size_image measures {measured}"
+        )
+        assert editor_size == measured, (
+            f"{shell} edits {editor_size} while size_image measures {measured}"
+        )
+
+        # A box drawn in the displayed frame saves normalized against it and
+        # reads back as the same absolute box through the same frame.
+        rig.drag((2, 2), (18, 26))
+        assert len(rig.boxes()) == 1
+        assert rig.boxes()[0][:4] == pytest.approx((2, 2, 18, 26), abs=1.0)
+        w, h = measured
+        if shell == "labeller":
+            rig.state.save_current()
+            boxes, _malformed = read_boxes(find_label_file(path))
+        else:
+            # What the page's save does for the loaded image: normalize the
+            # detections against size_image, the frame the canvas painted.
+            boxes = [bbox_from(det, w, h) for det in rig.canvas.detections()]
+        assert (boxes[0].cx * w, boxes[0].cy * h) == pytest.approx((10, 14), abs=0.5)
+    finally:
+        rig.canvas.deleteLater()
+        qapp.processEvents()
+
+
+# ── The 2 px rule: one core invariant, one silence, one message ───────────
+
+
+def test_a_click_a_one_px_drag_and_a_two_px_box_are_announced_alike(qapp, image):
+    """A 0 px click is silent, a 1 px drag speaks, a 2 px box commits."""
+    from polyx.gui.labeler.window import LabelerWindow
+
+    window = LabelerWindow()
+    gt = GtRig.over(qapp, image, CLASSES)
+    gt_messages: list[str] = []
+    gt.canvas.status_changed.connect(gt_messages.append)
+    rejected: list[float] = []
+    window.canvas.box_rejected.connect(rejected.append)
+    try:
+        window.show()
+        window.state.load_images(image.parent)
+        qapp.processEvents()
+        labeller = LabellerRig(window.state, window.canvas)
+
+        # 1. A click on empty space: a 0 px draw, refused without a message.
+        labeller.click((350, 280))
+        gt.click((350, 280))
+        assert rejected == []
+        assert _rejections(gt_messages) == []
+        assert window.lbl_status.text() == _("● Ready")
+        assert labeller.boxes() == []
+        assert gt.boxes() == []
+
+        # 2. A 1 px drag: refused with the translated message in both.
+        labeller.drag((20, 20), (21, 80), flush=False)
+        labeller_message = window.lbl_status.text()
+        gt.drag((20, 20), (21, 80))
+        gt_message = _rejections(gt_messages)[-1]
+        assert len(rejected) == 1
+        assert rejected[0] == pytest.approx(1.0, abs=0.3)
+        assert _side_of(gt_message) < MIN_SIDE_PX
+        # Each shell names the side the core refused; the template and the
+        # minimum are the same one, only widget rounding moves the number.
+        assert labeller_message == rejection_message(rejected[0])
+        assert gt_message == rejection_message(_side_of(gt_message))
+        assert re.sub(r"\d+(?:[.,]\d+)?\s*px", "<side>", labeller_message) == re.sub(
+            r"\d+(?:[.,]\d+)?\s*px", "<side>", gt_message
+        )
+        assert labeller.boxes() == []
+        assert gt.boxes() == []
+
+        # 3. A box at the 2 px minimum: a real mark, and no new message.
+        labeller.drag((20, 80), (22, 110), flush=False)
+        gt.drag((20, 80), (22, 110))
+        assert len(rejected) == 1  # unchanged: nothing was refused
+        assert len(_rejections(gt_messages)) == 1
+        assert len(labeller.boxes()) == len(gt.boxes()) == 1
+        assert min(labeller.boxes()[0][2] - labeller.boxes()[0][0], 2.0) >= MIN_SIDE_PX
+    finally:
+        gt.canvas.close()
+        gt.canvas.deleteLater()
+        window.deleteLater()
+        qapp.processEvents()
 
 
 def _side_of(message: str) -> float:
@@ -378,18 +346,28 @@ def _side_of(message: str) -> float:
     return float(match.group(1).replace(",", "."))
 
 
+def _rejections(messages: list[str]) -> list[str]:
+    """The messages that are a rejection, not a drawing-size readout.
+
+    The GT canvas reports both through ``status_changed``; the core owns the
+    rejection template, so a message is a rejection when it is exactly what
+    the helper renders for the side it names.
+    """
+    return [message for message in messages if message == rejection_message(_side_of(message))]
+
+
 def test_both_canvases_refuse_a_sub_two_pixel_box_with_the_same_visible_message(qapp, image):
     from polyx.gui.labeler.window import LabelerWindow
 
     window = LabelerWindow()
-    gt = _GtRig.over(qapp, image)
+    gt = GtRig.over(qapp, image, CLASSES)
     messages: list[str] = []
     gt.canvas.status_changed.connect(messages.append)
     try:
         window.show()
         window.state.load_images(image.parent)
         qapp.processEvents()
-        labeller = _LabellerRig(window.state, window.canvas)
+        labeller = LabellerRig(window.state, window.canvas)
 
         # A language change can rebuild the window on the next event flush;
         # read the status straight after the release, as the labeller sees it.
@@ -417,6 +395,104 @@ def test_both_canvases_refuse_a_sub_two_pixel_box_with_the_same_visible_message(
     assert re.sub(r"\d+(?:[.,]\d+)?\s*px", "<side>", labeller_message) == re.sub(
         r"\d+(?:[.,]\d+)?\s*px", "<side>", gt_message
     )
+
+
+# ── One class-key rule ─────────────────────────────────────────────────────
+
+
+def test_a_class_key_sets_the_active_class_and_reclassifies_the_selection(rigs):
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    # The selected box takes the class the key names, and so does the next draw.
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_3)
+    for rig in (labeller, gt):
+        assert rig.active_class() == 2
+        assert rig.boxes()[0][4] == 2
+
+    # One undo entry: the geometry stays, the class returns.
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_Z, Qt.ControlModifier)
+    for rig in (labeller, gt):
+        assert len(rig.boxes()) == 1
+        assert rig.boxes()[0][4] == 0
+        assert rig.selection() == 0
+
+    # With no selection the key only changes the next box's class: no class
+    # entry lands in the history, so the next undo removes the draw itself.
+    for rig in (labeller, gt):
+        rig.click((350, 280))
+        rig.key(Qt.Key_2)
+    for rig in (labeller, gt):
+        assert rig.selection() == -1
+        assert rig.active_class() == 1
+        assert rig.boxes()[0][4] == 0
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_Z, Qt.ControlModifier)
+    for rig in (labeller, gt):
+        assert rig.boxes() == []
+        assert rig.active_class() == 1
+
+
+# ── One handle grab tolerance ──────────────────────────────────────────────
+
+
+def test_both_canvases_grab_a_handle_at_the_same_widget_distance(rigs):
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    for rig in (labeller, gt):
+        widget_px = rig.canvas._handle_tolerance() * rig.image_scale()
+        assert widget_px == pytest.approx(editing.HANDLE_TOLERANCE_PX)
+    assert not hasattr(BboxCanvas, "HANDLE_TOLERANCE_PX")
+
+    # Behaviourally: half a tolerance outside the corner still grabs the
+    # handle, twice a tolerance away is empty space (a new box starts there).
+    for rig in (labeller, gt):
+        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
+        _x1, _y1, x2, y2, _cls = rig.boxes()[0]
+        rig.drag((x2 + tolerance_image_px / 2, y2), (x2, y2))
+        assert len(rig.boxes()) == 1, "the corner handle was not grabbed from half a tolerance"
+
+    for rig in (labeller, gt):
+        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
+        _x1, _y1, x2, y2, _cls = rig.boxes()[0]
+        far = 2 * tolerance_image_px
+        rig.drag((x2 + far, y2 + far), (x2 + far + 40, y2 + far + 40))
+        assert len(rig.boxes()) == 2, "a press far from any handle should start a new box"
+
+
+# ── One cursor map ─────────────────────────────────────────────────────────
+
+
+def test_both_canvases_show_the_same_cursor_over_each_handle(rigs):
+    """One handle → cursor map, shared by the shells."""
+    from polyx.core.editing import Handle
+    from polyx.gui.editing_qt import HANDLE_CURSORS
+
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    x1, y1, x2, y2, _cls = labeller.boxes()[0]
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    centres = {
+        Handle.TOP_LEFT: (x1, y1),
+        Handle.TOP_RIGHT: (x2, y1),
+        Handle.BOTTOM_RIGHT: (x2, y2),
+        Handle.BOTTOM_LEFT: (x1, y2),
+        Handle.TOP: (cx, y1),
+        Handle.RIGHT: (x2, cy),
+        Handle.BOTTOM: (cx, y2),
+        Handle.LEFT: (x1, cy),
+    }
+    for handle, point in centres.items():
+        for rig in (labeller, gt):
+            rig.hover(point)
+            assert rig.cursor() == HANDLE_CURSORS[handle]
 
 
 # ── One class-colour path ─────────────────────────────────────────────────
@@ -508,10 +584,32 @@ def test_the_canvases_and_the_labeller_panel_hold_no_colour_table():
 
 
 def test_the_minimum_side_has_one_name():
-    assert not hasattr(BboxCanvas, "SIDE_MINIMUM_PX")
+    """The threshold is the core's; neither canvas may declare its own copy.
+
+    Scoped to the editing core and the two shells on purpose: a tree-wide
+    grep would false-fail on an unrelated future module that legitimately
+    names a minimum side.
+    """
     offenders = [
-        path
-        for path in (SRC / "polyx").rglob("*.py")
-        if "SIDE_MINIMUM_PX" in path.read_text(encoding="utf-8")
+        path.name
+        for path in (
+            SRC / "polyx" / "core" / "editing.py",
+            SRC / "polyx" / "gui" / "labeler" / "canvas.py",
+            SRC / "polyx" / "gui" / "detector" / "pages" / "gt_manual.py",
+        )
+        if path.name != "editing.py" and "SIDE_MINIMUM_PX" in path.read_text(encoding="utf-8")
     ]
     assert offenders == []
+    assert not hasattr(BboxCanvas, "SIDE_MINIMUM_PX")
+
+
+def test_the_canvases_paint_white_from_the_theme_not_a_literal():
+    """Text and handle borders over a filled colour use the theme's ink token."""
+    for path in (
+        SRC / "polyx" / "gui" / "labeler" / "canvas.py",
+        SRC / "polyx" / "gui" / "detector" / "pages" / "gt_manual.py",
+    ):
+        source = path.read_text(encoding="utf-8")
+        assert 'QColor("white")' not in source, f"{path.name} hardcodes white"
+        assert "Qt.white" not in source, f"{path.name} hardcodes white"
+        assert "color: white" not in source, f"{path.name} hardcodes white in a stylesheet"
