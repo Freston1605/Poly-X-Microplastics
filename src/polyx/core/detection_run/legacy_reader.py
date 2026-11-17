@@ -150,6 +150,7 @@ def load_legacy_run(run_dir: Path, image_dir: Path | None = None) -> RunResult:
                         fp=int(counts.get("fp", 0)),
                         fn=int(counts.get("fn", 0)),
                         miscls=int(counts.get("miscls", 0)),
+                        has_identity=False,
                     )
                     if counts
                     else None

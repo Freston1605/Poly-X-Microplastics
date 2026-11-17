@@ -12,12 +12,20 @@ all describe the same run, not three matches of their own.
 
 from __future__ import annotations
 
+import csv
+import json
 from pathlib import Path
 
 import numpy as np
 
 from polyx.core.detect.protocol import Instance
 from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
+from polyx.core.detection_run.schema import (
+    DETECTION_COLUMNS,
+    build_run_payload,
+    detection_row,
+    load_run,
+)
 from polyx.core.quality.metrics import match_image
 
 MASK_BOX = (20, 20, 60, 60)
@@ -175,3 +183,24 @@ def misclassified_run(root: Path) -> RunResult:
         params=RunParams(),
         results={0: [misclassified_result(image)]},
     )
+
+
+def saved_run(run: RunResult) -> RunResult:
+    """Write ``run`` as a canonical folder and read it back with ``load_run``.
+
+    The predictions go through ``detections.csv``, which has no mask column:
+    a masked run reopened from disk therefore loses the masks and its recorded
+    counters may no longer be reproducible. That is the case the readers must
+    not mistake for a match with an identity.
+    """
+    run.run_dir.mkdir(parents=True, exist_ok=True)
+    (run.run_dir / "run.json").write_text(json.dumps(build_run_payload(run)), encoding="utf-8")
+    with (run.run_dir / "detections.csv").open("w", newline="", encoding="utf-8") as handle:
+        table = csv.DictWriter(handle, fieldnames=list(DETECTION_COLUMNS), extrasaction="ignore")
+        table.writeheader()
+        for model_idx, rows in run.results.items():
+            alias = run.models[model_idx].alias
+            for row in rows:
+                for prediction in row.predictions:
+                    table.writerow(detection_row(alias, row.image_path, prediction, None))
+    return load_run(run.run_dir)

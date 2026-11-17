@@ -45,17 +45,6 @@ from tests.match_fixtures import (  # noqa: E402
 )
 
 
-@pytest.fixture
-def english():
-    """Pin the source language: the criterion labels are the report's words."""
-    from polyx.core import i18n
-
-    previous = i18n.language()
-    assert i18n.set_language("en")
-    yield
-    i18n.set_language(previous)
-
-
 def _page_for(state: DetectorState) -> ResultsPage:
     page = ResultsPage(state)
     page.refresh()
@@ -307,6 +296,76 @@ def test_results_sweep_keeps_the_run_s_mask_rule(qapp, tmp_path):
     assert f1 == pytest.approx(2 / 3)
 
 
+def test_results_page_renders_the_display_name_not_the_alias(qapp, tmp_path, selected_language):
+    """#124: a generated alias is a folder key; the page speaks prose."""
+    from PySide6.QtCore import Qt
+
+    selected_language("en")
+    state = DetectorState()
+    state.model_slots[0].alias = "model_1"
+    state.model_slots[0].alias_generated = True
+    state.model_slots[0].path = tmp_path / "m0.pt"
+    state.results = {0: [misclassified_result(tmp_path / "plate.png")]}
+    page = _page_for(state)
+
+    assert page.table.item(0, 0).text() == "Model 1"
+    # The stable alias stays in UserRole: the annotated folder is named after it.
+    assert page.table.item(0, 0).data(Qt.UserRole) == "model_1"
+    assert "Model 1 — conf" in page.lbl_sugg.text()
+    assert "model_1" not in page.lbl_sugg.text()
+
+
+def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, selected_language):
+    """The KPI says localisation; the advice says with class; neither guesses."""
+    selected_language("en")
+    state = DetectorState()
+    state.model_slots[0].alias = "m0"
+    state.model_slots[0].path = tmp_path / "m0.pt"
+    result = misclassified_result(tmp_path / "plate.png")
+    state.results = {0: [result]}
+    page = _page_for(state)
+
+    localisation = Score.from_decision([result], Criterion.LOCALISATION, state.params.conf)
+    with_class = Score.from_decision([result], Criterion.WITH_CLASS, state.params.conf)
+    # The fixture disagrees between criteria on purpose: one F1 cannot be both.
+    assert localisation.f1 == pytest.approx(1.0)
+    assert with_class.f1 == pytest.approx(0.5)
+
+    assert page.kpi_f1.lbl_value.text() == f"{localisation.f1:.3f}"
+    assert page.kpi_f1.lbl_title.text() == "F1 (localisation)"
+    assert page.lbl_prec.text() == f"Precision (localisation):  {localisation.precision:.3f}"
+    assert page.lbl_rec.text() == f"Recall (localisation):  {localisation.recall:.3f}"
+    assert "with class" in page.lbl_sugg.text()
+    assert "localisation" not in page.lbl_sugg.text()
+
+
+def test_report_and_page_agree_on_one_fixture(qapp, tmp_path, selected_language):
+    """The report's two F1 columns and the page's KPI read one decision."""
+    from polyx.gui.report.sections import _section_models
+
+    selected_language("en")
+    run = misclassified_run(tmp_path)
+    result = run.results[0][0]
+    state = DetectorState()
+    state.model_slots[0].alias = run.models[0].alias
+    state.model_slots[0].path = run.models[0].path
+    state.params = run.params
+    state.results = run.results
+    page = _page_for(state)
+
+    localisation = Score.from_decision([result], Criterion.LOCALISATION, run.params.conf)
+    with_class = Score.from_decision([result], Criterion.WITH_CLASS, run.params.conf)
+    body = _section_models(run, run.results, [result], True)
+
+    # Both figures come from the same counters and are named where they appear.
+    assert localisation.f1 == pytest.approx(1.0)
+    assert with_class.f1 == pytest.approx(0.5)
+    assert f"<td class='r'>{localisation.f1:.3f}</td>" in body
+    assert f"<td class='r'>{with_class.f1:.3f}</td>" in body
+    assert "localisation" in body and "with class" in body
+    assert page.kpi_f1.lbl_value.text() == f"{localisation.f1:.3f}"
+
+
 def test_results_reload_gt_is_one_core_call_with_progress(qapp, tmp_path, monkeypatch):
     """The page is a progress dialog plus one call; it measures nothing itself.
 
@@ -343,52 +402,3 @@ def test_results_reload_gt_is_one_core_call_with_progress(qapp, tmp_path, monkey
     assert calls[0][0] is run
     assert calls[0][1] == state.gt_folder
     assert "plate.png" in page.lbl_recharge.text()
-
-
-def test_results_page_kpi_and_advice_use_named_criteria(qapp, tmp_path, english):
-    """The KPI says localisation; the advice says with class; neither guesses."""
-    state = DetectorState()
-    state.model_slots[0].alias = "m0"
-    state.model_slots[0].path = tmp_path / "m0.pt"
-    result = misclassified_result(tmp_path / "plate.png")
-    state.results = {0: [result]}
-    page = _page_for(state)
-
-    localisation = Score.from_decision([result], Criterion.LOCALISATION, state.params.conf)
-    with_class = Score.from_decision([result], Criterion.WITH_CLASS, state.params.conf)
-    # The fixture disagrees between criteria on purpose: one F1 cannot be both.
-    assert localisation.f1 == pytest.approx(1.0)
-    assert with_class.f1 == pytest.approx(0.5)
-
-    assert page.kpi_f1.lbl_value.text() == f"{localisation.f1:.3f}"
-    assert page.kpi_f1.lbl_title.text() == "F1 (localisation)"
-    assert page.lbl_prec.text() == f"Precision (localisation):  {localisation.precision:.3f}"
-    assert page.lbl_rec.text() == f"Recall (localisation):  {localisation.recall:.3f}"
-    assert "with class" in page.lbl_sugg.text()
-    assert "localisation" not in page.lbl_sugg.text()
-
-
-def test_report_and_page_agree_on_one_fixture(qapp, tmp_path, english):
-    """The report's two F1 columns and the page's KPI read one decision."""
-    from polyx.gui.report.sections import _section_models
-
-    run = misclassified_run(tmp_path)
-    result = run.results[0][0]
-    state = DetectorState()
-    state.model_slots[0].alias = run.models[0].alias
-    state.model_slots[0].path = run.models[0].path
-    state.params = run.params
-    state.results = run.results
-    page = _page_for(state)
-
-    localisation = Score.from_decision([result], Criterion.LOCALISATION, run.params.conf)
-    with_class = Score.from_decision([result], Criterion.WITH_CLASS, run.params.conf)
-    body = _section_models(run, run.results, [result], True)
-
-    # Both figures come from the same counters and are named where they appear.
-    assert localisation.f1 == pytest.approx(1.0)
-    assert with_class.f1 == pytest.approx(0.5)
-    assert f"<td class='r'>{localisation.f1:.3f}</td>" in body
-    assert f"<td class='r'>{with_class.f1:.3f}</td>" in body
-    assert "localisation" in body and "with class" in body
-    assert page.kpi_f1.lbl_value.text() == f"{localisation.f1:.3f}"

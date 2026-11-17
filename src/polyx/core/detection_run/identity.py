@@ -22,22 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from polyx.core.i18n import _
-
-#: Characters Windows rejects in a file name. The path separators are here too:
-#: an alias is one component of a run folder, never a path (ADR-0004).
-_INVALID_CHARS = frozenset('<>:"/\\|?*')
-
-#: Names Windows keeps for devices; a folder called ``CON`` cannot be created.
-_RESERVED_NAMES = frozenset(
-    {
-        "CON",
-        "PRN",
-        "AUX",
-        "NUL",
-        *(f"COM{i}" for i in range(1, 10)),
-        *(f"LPT{i}" for i in range(1, 10)),
-    }
-)
+from polyx.core.platform import INVALID_FILENAME_CHARS, RESERVED_FILENAME_NAMES
 
 #: The aliases the resolver invents, including their ``_2``, ``_3`` suffixes.
 _GENERATED_ALIAS = re.compile(r"^model_(\d+)(?:_\d+)*$")
@@ -72,14 +57,14 @@ def sanitize_alias(raw: str) -> str:
     text = unicodedata.normalize("NFC", str(raw)).strip()
     clean = "".join(
         "_"
-        if (character in _INVALID_CHARS or character == "\x00" or ord(character) < 32)
+        if (character in INVALID_FILENAME_CHARS or character == "\x00" or ord(character) < 32)
         else character
         for character in text
     )
     clean = clean.rstrip(" .")
     if clean in ("", ".", ".."):
         return ""
-    if clean.split(".", 1)[0].strip().upper() in _RESERVED_NAMES:
+    if clean.split(".", 1)[0].strip().upper() in RESERVED_FILENAME_NAMES:
         clean += "_"
     return clean
 
@@ -125,7 +110,7 @@ def resolve_identity(
     return ModelIdentity(alias=_unique(alias, taken), alias_generated=generated)
 
 
-def display_name(alias: str, alias_generated: bool, index: int = 0) -> str:
+def display_name(alias: str, alias_generated: bool, index: int) -> str:
     """What the interface shows for a model: a translated label or its name.
 
     A generated alias is ``model_<n>`` in every language; the interface reads

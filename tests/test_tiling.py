@@ -155,6 +155,17 @@ def test_describe_tiling_has_one_sentence(selected_language):
     assert decision.describe() == describe_tiling(decision)
 
 
+def test_a_persisted_plan_describes_itself_in_the_active_language(selected_language):
+    """#125: the record keeps numbers, not prose, so the reader phrases them."""
+    plan = TilingPlan(tile=2000, overlap=0.25, n_tiles=6, side=4096, threshold_px=2000)
+
+    selected_language("en")
+    assert plan.describe() == "4096 px longest side → 6 tiles of 2000 px, 25% overlap"
+
+    selected_language("es")
+    assert plan.describe() == "4096 px de lado mayor → 6 mosaicos de 2000 px, 25% de solape"
+
+
 def test_describe_tiling_is_resolved_when_called(monkeypatch):
     """The description is translated at call time, never frozen at import."""
     from polyx.core.detect import tiling as tiling_module

@@ -307,7 +307,7 @@ def test_detector_retranslates_and_keeps_loaded_state(qapp, tmp_path):
     window.state.images = [image]
     window.state.model_slots[0].path = model
     window.state.model_slots[0].alias = "my-model"
-    window.state.model_slots[0].alias_default = False
+    window.state.model_slots[0].alias_generated = False
     window.state.run_result = run
     window.stack.setCurrentIndex(4)
     window.sidebar_buttons[4].setChecked(True)
@@ -349,7 +349,7 @@ def test_generated_alias_keeps_its_run_folder_name_across_a_language_switch(qapp
     assert card.ed_alias.text() == "model_1", "the run folder name is not interface prose"
     assert "Model 1" in _texts(card)
     assert window.state.model_slots[0].alias == "model_1"
-    assert window.state.model_slots[0].alias_default is True
+    assert window.state.model_slots[0].alias_generated is True
     window.deleteLater()
 
 
@@ -861,11 +861,11 @@ def test_detector_keeps_the_loaded_slots_and_detection_set_across_a_switch(qapp,
     state.gt_image = images[1]
     state.model_slots[0].path = reference_path
     state.model_slots[0].alias = "reference"
-    state.model_slots[0].alias_default = False
+    state.model_slots[0].alias_generated = False
     state.model_slots[0].loaded = reference_model
     state.model_slots[2].path = candidate_path
     state.model_slots[2].alias = "candidate"
-    state.model_slots[2].alias_default = False
+    state.model_slots[2].alias_generated = False
     state.model_slots[2].loaded = candidate_model
     detections = {
         0: [_detection_result(images[0], 0)],

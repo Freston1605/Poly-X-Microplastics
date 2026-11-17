@@ -67,14 +67,30 @@ def _clue_label(station: str, stretch: str, plate: str | None = None) -> str:
     return label
 
 
-def _model_label(model, index: int = 0) -> str:
+def _model_label(model, index: int) -> str:
     """What a reader sees for a model: a translated label or its own name.
 
     The alias is a folder key (``model_1``); the report speaks prose. Resolving
     here, from ``(alias, alias_generated)``, keeps every table and caption in
     agreement and never retranslates an old run's recorded alias.
     """
-    return display_name(model.alias, getattr(model, "alias_generated", False), index)
+    return display_name(model.alias, model.alias_generated, index)
+
+
+def _tiling_value(all_results) -> str:
+    """The batch's distinct tiling decisions, phrased for the Methods table.
+
+    New folders record the invariant plan, which is phrased here in the
+    reader's language; a folder written before #125 only has the sentence the
+    run froze. A run that tiled nothing says so instead of leaving the row
+    blank.
+    """
+    descriptions: list[str] = []
+    for row in all_results:
+        text = row.tiling_plan.describe() if row.tiling_plan is not None else row.tiling.strip()
+        if text and text not in descriptions:
+            descriptions.append(text)
+    return "; ".join(descriptions) if descriptions else _("single pass")
 
 
 def _section_team(active) -> str:
@@ -388,7 +404,11 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
     # The run's own decision, image by image: the table below describes the
     # run, so it must not re-match with a rule of its own (box IoU over a run
     # matched by mask IoU showed errors the run never counted).
-    matched = [(r.predictions, r.gt, r.match) for r in rs if r.has_gt and r.match is not None]
+    matched = [
+        (r.predictions, r.gt, r.match)
+        for r in rs
+        if r.has_gt and r.match is not None and r.match.has_identity
+    ]
     cm = confusion_matrix_from_matches(matched, cls_ids)
     per_class_metrics = per_class_from_matches(matched, cls_ids)
     missing_identity = len([r for r in rs if r.has_gt]) - len(matched)
@@ -660,7 +680,7 @@ def _section_comparison(run, results_2) -> str:
                         [
                             (r.predictions, r.gt, r.match)
                             for r in rs
-                            if r.has_gt and r.match is not None
+                            if r.has_gt and r.match is not None and r.match.has_identity
                         ],
                         ids,
                     )
@@ -959,6 +979,7 @@ def _section_methods(
             f"{_match_rule_label(run.match_use_mask_iou)} {p.iou_tp:g}",
         ),
         (_("Image size (imgsz)"), f"{p.imgsz}"),
+        (_("Tiling"), _esc(_tiling_value(all_results))),
         (_("Device"), p.device),
         (_("μm per pixel"), um_px_txt),
         (

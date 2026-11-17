@@ -42,11 +42,11 @@ def test_generated_alias_is_a_stable_folder_key(selected_language):
 
     selected_language("es")
     assert identity.alias == "model_1"
-    assert display_name(identity.alias, identity.alias_generated) == "Modelo 1"
+    assert display_name(identity.alias, identity.alias_generated, 0) == "Modelo 1"
 
     selected_language("en")
     assert identity.alias == "model_1"
-    assert display_name(identity.alias, identity.alias_generated) == "Model 1"
+    assert display_name(identity.alias, identity.alias_generated, 0) == "Model 1"
 
 
 def test_typed_alias_is_kept_verbatim_and_never_translated(selected_language):
@@ -54,22 +54,22 @@ def test_typed_alias_is_kept_verbatim_and_never_translated(selected_language):
 
     assert identity == ModelIdentity(alias="my-model", alias_generated=False)
     selected_language("es")
-    assert display_name(identity.alias, identity.alias_generated) == "my-model"
+    assert display_name(identity.alias, identity.alias_generated, 0) == "my-model"
     selected_language("en")
-    assert display_name(identity.alias, identity.alias_generated) == "my-model"
+    assert display_name(identity.alias, identity.alias_generated, 0) == "my-model"
 
 
 def test_an_old_translated_alias_is_not_re_translated(selected_language):
     """A run written before #124 keeps the folder name it recorded."""
     selected_language("en")
-    assert display_name("Modelo 1", False) == "Modelo 1"
+    assert display_name("Modelo 1", False, 0) == "Modelo 1"
 
 
 def test_weights_stem_names_the_folder_without_becoming_a_generated_label():
     identity = _resolved(weights=Path("weights/polyx_pp.pt"), index=1)
 
     assert identity == ModelIdentity(alias="polyx_pp", alias_generated=False)
-    assert display_name(identity.alias, identity.alias_generated) == "polyx_pp"
+    assert display_name(identity.alias, identity.alias_generated, 0) == "polyx_pp"
 
 
 # ── Uniqueness ──────────────────────────────────────────────────────────
@@ -181,4 +181,4 @@ def test_old_run_json_defaults_alias_generated_to_false(tmp_path):
 
     assert loaded.models[0].alias == "Modelo 1"
     assert loaded.models[0].alias_generated is False
-    assert display_name(loaded.models[0].alias, loaded.models[0].alias_generated) == "Modelo 1"
+    assert display_name(loaded.models[0].alias, loaded.models[0].alias_generated, 0) == "Modelo 1"

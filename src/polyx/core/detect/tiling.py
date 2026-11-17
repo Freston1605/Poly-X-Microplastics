@@ -86,6 +86,25 @@ class TilingPlan:
     side: int
     threshold_px: int
 
+    def describe(self) -> str:
+        """Phrase this plan on its own, for a record that kept the numbers.
+
+        The :class:`TilingDecision` also carries the photo's two dimensions and
+        phrases them as ``W×H``; a persisted plan only has the longer side,
+        which is the one the policy compares. Translated when called, never at
+        import time.
+        """
+        return ngettext(
+            "%(side)d px longest side → %(tiles)d tile of %(tile)d px, %(overlap)d%% overlap",
+            "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(overlap)d%% overlap",
+            self.n_tiles,
+        ) % {
+            "side": int(self.side),
+            "tiles": int(self.n_tiles),
+            "tile": int(self.tile),
+            "overlap": round(self.overlap * 100),
+        }
+
 
 @dataclass(frozen=True)
 class TilingDecision:
@@ -167,8 +186,8 @@ def policy_tiling(
     if int(tile) > 0:
         t = int(tile)
     else:
-        candidates_2 = [v for v in (int(threshold_px), int(imgsz)) if v > 0]
-        t = min(candidates_2) if candidates_2 else 1280
+        candidate_sides = [v for v in (int(threshold_px), int(imgsz)) if v > 0]
+        t = min(candidate_sides) if candidate_sides else 1280
     t = max(256, min(t, side))
     overlap = min(max(float(overlap), 0.0), 0.9)
     step = max(1, int(round(t * (1.0 - overlap))))  # noqa: RUF046

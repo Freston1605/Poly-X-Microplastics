@@ -181,7 +181,7 @@ class ReviewDialog(QDialog):
             if not rs:
                 continue
             slot = self.state.model_slots[mi]
-            self.combo_model.addItem(display_name(slot.alias, slot.alias_default, mi))
+            self.combo_model.addItem(display_name(slot.alias, slot.alias_generated, mi))
             self._model_indices.append(mi)
         self.combo_model.blockSignals(False)
         if self._model_indices:
