@@ -7,6 +7,7 @@ backend. Review verdicts are GUI state and deliberately do not live here.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -263,13 +264,20 @@ class RunResult:
 
     @property
     def calibrations_by_name(self) -> dict[str, Calibration]:
-        """Filename-keyed view for callers that already worked that way.
+        """Filename-keyed view of the recorded calibrations.
 
-        This is a convenience for the GUI state, which keys previews by file
-        name. Callers that need an unambiguous lookup must use
-        :meth:`calibration_for`: two folders in one batch can hold photos with
-        the same basename.
+        .. deprecated:: #123
+            The GUI used to copy this into a name-keyed dictionary, which keeps
+            the last of two same-named photos and silently hands its scale to
+            both. Use :meth:`calibration_for`, which resolves the path first and
+            refuses an ambiguous basename. Kept only for external callers until
+            the next breaking pass.
         """
+        warnings.warn(
+            "RunResult.calibrations_by_name is deprecated; use calibration_for()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {path.name: calibration for path, calibration in self.calibrations.items()}
 
     def calibration_for(self, image: Path | str) -> Calibration | None:

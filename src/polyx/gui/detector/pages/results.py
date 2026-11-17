@@ -501,8 +501,13 @@ class ResultsPage(DetectorPage):
         return best, current
 
     def _update_histogram(self):
-        """Draws a histogram of diam_um per class; only when there is calibration."""
-        um_per_px = self.state.calibration.um_per_px
+        """Draws a histogram of diam_um per class; the data decides, not the policy.
+
+        In ``auto`` mode the policy's ``um_per_px`` is usually 0 while every
+        photo got a valid scale of its own, so asking the policy hid a
+        distribution the report already printed. A prediction carrying
+        ``diam_um`` is the answer: there is something to draw.
+        """
         all_results = [r for rs in self.state.results.values() for r in rs]
         sizes_by_class: dict[str, list[float]] = {}
         for r in all_results:
@@ -510,7 +515,7 @@ class ResultsPage(DetectorPage):
                 if p.diam_um and p.diam_um > 0:
                     sizes_by_class.setdefault(p.class_name, []).append(p.diam_um)
 
-        has_data = um_per_px > 0 and any(sizes_by_class.values())
+        has_data = bool(sizes_by_class)
 
         if not has_data:
             if self._hist_canvas:
@@ -577,11 +582,10 @@ class ResultsPage(DetectorPage):
         change language with the interface.
         """
         rows: list[list[object]] = [list(PAGE_COLUMNS)]
-        calibrations = getattr(self.state, "calibrations", None) or {}
         for mi, results in self.state.results.items():
             alias = self.state.model_slots[mi].alias
             for result in results:
-                calibration = calibrations.get(result.image_path.name)
+                calibration = self.state.calibration_for(result.image_path)
                 for prediction in result.predictions:
                     values = detection_row(alias, result.image_path, prediction, calibration)
                     rows.append([values[column] for column in PAGE_COLUMNS])
@@ -656,11 +660,16 @@ class ResultsPage(DetectorPage):
         # leaving the function: a Qt window with no live reference closes itself.
         self._viewer = ViewerWindow()
         self._viewer.state.load_single(img)
-        cal = (getattr(self.state, "calibrations", None) or {}).get(img.name)
-        if cal is not None and getattr(cal, "valid", False):
+        # The run's scale for THIS path. With two same-named photos the run
+        # answers nothing, and the Viewer must show a blank scale instead of
+        # taking a manual fallback or the other photo's scale.
+        cal = self.state.calibration_for(img)
+        if cal is not None and cal.valid:
             self._viewer.state.um_per_px = cal.um_por_px
-        elif self.state.calibration.um_per_px > 0:
+        elif self.state.run_result is None and self.state.calibration.um_per_px > 0:
             self._viewer.state.um_per_px = self.state.calibration.um_per_px
+        else:
+            self._viewer.state.um_per_px = 0.0
         self._viewer.state.detections = dets
         self._viewer.state.detections_changed.emit(dets)
         self._viewer.show()

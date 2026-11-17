@@ -19,6 +19,7 @@ from polyx.core.detection_run import (
     RunResult,
     generated_alias,
 )
+from polyx.core.measure.calibration import Calibration
 
 # Compatibility name used by the pages and by old headless folder readers.
 InferenceParams = RunParams
@@ -78,11 +79,9 @@ class DetectorState(QObject):
         # results[real_model_slot_idx] -> List[ImageResult]. The engine numbers
         # its active models densely; the runner maps those back to these slots.
         self.results: dict[int, list[ImageResult]] = {}
-        # Scale of each image and where it came from, by filename. The
-        # runner fills it; the report reports it. Without this the sizes in um
-        # would appear without saying what standard they were measured against.
-        self.calibrations: dict[str, object] = {}
         # The canonical run record backing this GUI state, once a run exists.
+        # Calibration has one owner and it is that record: the effective scale
+        # of each photo lives in ``run_result.calibrations``, keyed by path.
         self.run_result: RunResult | None = None
         # Review verdicts are GUI state, keyed by real model slot and image.
         self.verdicts: dict[tuple[int, Path], str] = {}
@@ -94,6 +93,15 @@ class DetectorState(QObject):
     # ── helpers ──
     def active_models(self) -> list[ModelSlot]:
         return [s for s in self.model_slots if s.path is not None]
+
+    def calibration_for(self, image: Path) -> Calibration | None:
+        """The scale the run recorded for ``image``, or ``None`` when it cannot tell.
+
+        Delegates to the run so the GUI keeps the run's guarantee: exact path
+        first, a basename only when it is unique, and ``None`` instead of
+        another photo's scale when two folders hold the same filename.
+        """
+        return self.run_result.calibration_for(image) if self.run_result else None
 
     def set_verdict(self, model_idx: int, image_path: Path, verdict: str | None) -> None:
         """Store (or clear) the review verdict of one image for one model slot."""
@@ -130,7 +138,6 @@ class DetectorState(QObject):
 
     def reset_results(self):
         self.results = {}
-        self.calibrations = {}
         self.run_result = None
         self.verdicts = {}
         self.run_dir = None
