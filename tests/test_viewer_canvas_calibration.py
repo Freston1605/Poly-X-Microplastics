@@ -17,7 +17,7 @@ from PySide6.QtGui import QPainter, QPixmap
 
 from polyx.core.measure import calibration
 from polyx.gui.viewer import canvas as canvas_module
-from polyx.gui.viewer.state import ViewerState
+from polyx.gui.viewer.state import CALIB_MODE_CIRCLE, ViewerState
 
 
 def _paint_preview(state: ViewerState) -> None:
@@ -34,7 +34,7 @@ def _paint_preview(state: ViewerState) -> None:
 def test_the_circle_preview_asks_the_core_for_the_circle(qapp, monkeypatch):
     """The centre and radius come from ``circumscribed_circle``, point for point."""
     state = ViewerState()
-    state.start_calib("circulo")
+    state.start_calib(CALIB_MODE_CIRCLE)
     for point in ((10.0, 20.0), (110.0, 20.0), (60.0, 70.0)):
         state.add_calib_point(QPointF(*point))
 
@@ -54,7 +54,7 @@ def test_the_circle_preview_asks_the_core_for_the_circle(qapp, monkeypatch):
 def test_the_preview_draws_no_circle_when_the_points_define_none(qapp, monkeypatch):
     """Collinear points have no circumcircle: nothing is drawn, nothing raises."""
     state = ViewerState()
-    state.start_calib("circulo")
+    state.start_calib(CALIB_MODE_CIRCLE)
     for point in ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)):
         state.add_calib_point(QPointF(*point))
 

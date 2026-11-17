@@ -42,7 +42,12 @@ from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
-from .state import FAILURE_NOT_ENOUGH_POINTS, ViewerState
+from .state import (
+    CALIB_MODE_CIRCLE,
+    CALIB_MODE_LINE,
+    FAILURE_NOT_ENOUGH_POINTS,
+    ViewerState,
+)
 
 
 def _calib_failure_text(failure: str) -> str:
@@ -427,9 +432,9 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         self.btn_circ.setCheckable(True)
 
-        self.btn_line.clicked.connect(lambda: self._start_calib("linea"))
+        self.btn_line.clicked.connect(lambda: self._start_calib(CALIB_MODE_LINE))
 
-        self.btn_circ.clicked.connect(lambda: self._start_calib("circulo"))
+        self.btn_circ.clicked.connect(lambda: self._start_calib(CALIB_MODE_CIRCLE))
 
         row_calib.addWidget(self.btn_line)
 
@@ -1212,15 +1217,15 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         self.state.start_calib(mode)
 
-        self.btn_line.setChecked(mode == "linea")
+        self.btn_line.setChecked(mode == CALIB_MODE_LINE)
 
-        self.btn_circ.setChecked(mode == "circulo")
+        self.btn_circ.setChecked(mode == CALIB_MODE_CIRCLE)
 
         self.lbl_calib_hint.setVisible(True)
 
         self.btn_cancel_calib.setVisible(True)
 
-        if mode == "linea":
+        if mode == CALIB_MODE_LINE:
             self.lbl_calib_hint.setText(_("Click 2 points on\na known reference."))
 
         else:
@@ -1243,7 +1248,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         mode = self.state.calib_mode
 
-        needed = 2 if mode == "linea" else 3
+        needed = 2 if mode == CALIB_MODE_LINE else 3
 
         self.lbl_calib_hint.setText(
             ngettext(
@@ -1266,7 +1271,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         mode = self.state.calib_mode
 
-        if mode == "linea":
+        if mode == CALIB_MODE_LINE:
             val, ok = QInputDialog.getDouble(
                 self,
                 _("Calibration — Line"),
@@ -1285,7 +1290,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             else:
                 self.state.cancel_calib()
 
-        elif mode == "circulo":
+        elif mode == CALIB_MODE_CIRCLE:
             # 100 mm by default: it is the diameter of the Petri dishes in the study
 
             val, ok = QInputDialog.getDouble(
@@ -1319,8 +1324,8 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
         mode_label = {
-            "línea": _("line"),
-            "círculo": _("circle"),
+            CALIB_MODE_LINE: _("line"),
+            CALIB_MODE_CIRCLE: _("circle"),
         }.get(mode_name, mode_name)
         self.lbl_calib_result.setText(
             _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_label}

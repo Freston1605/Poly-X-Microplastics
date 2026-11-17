@@ -49,7 +49,7 @@ def _collect(mode: str, *points: tuple[float, float]) -> ViewerState:
 
 
 def test_a_line_finish_keeps_the_31_um_per_px_scale_and_emits_once(qapp):
-    state = _collect("linea", (0.0, 0.0), (200.0, 0.0))
+    state = _collect("line", (0.0, 0.0), (200.0, 0.0))
     signals = _RecordingSignals(state)
 
     failure = state.finish_calib_line(6200.0)
@@ -58,14 +58,14 @@ def test_a_line_finish_keeps_the_31_um_per_px_scale_and_emits_once(qapp):
     assert state.um_per_px == pytest.approx(31.0)
     assert len(signals.changed) == 1
     assert signals.changed[0][0] == pytest.approx(31.0)
-    assert signals.changed[0][1] == "línea", "the mode-name contract is unchanged"
+    assert signals.changed[0][1] == "line", "the signal carries the English mode token"
     assert signals.points == [[]], "the collected points are cleared once"
     assert state.calib_pts == []
     assert state.calib_mode == "none"
 
 
 def test_a_line_finish_keeps_the_49_um_per_px_scale(qapp):
-    state = _collect("linea", (10.0, 10.0), (10.0, 210.0))
+    state = _collect("line", (10.0, 10.0), (10.0, 210.0))
     signals = _RecordingSignals(state)
 
     assert state.finish_calib_line(9800.0) == ""
@@ -74,16 +74,32 @@ def test_a_line_finish_keeps_the_49_um_per_px_scale(qapp):
 
 
 def test_a_circle_finish_keeps_the_100000_um_dish_scale(qapp):
-    state = _collect("circulo", (0.0, 0.0), (1000.0, 0.0), (500.0, 500.0))
+    state = _collect("circle", (0.0, 0.0), (1000.0, 0.0), (500.0, 500.0))
     signals = _RecordingSignals(state)
 
     assert state.finish_calib_circle(100_000.0) == ""
     assert state.um_per_px == pytest.approx(100.0)
     assert len(signals.changed) == 1
-    assert signals.changed[0][1] == "círculo"
+    assert signals.changed[0][1] == "circle"
 
 
 # ── The geometry helpers are gone ───────────────────────────────────────
+
+
+def test_the_calibration_modes_are_english_machine_tokens(qapp):
+    """The mode is a token, not copy: the words the user reads come from ``_()``.
+
+    It reaches ``calib_changed`` and the canvas, where a Spanish token would be
+    a second vocabulary inside Python that no catalog can translate.
+    """
+    state = ViewerState()
+    assert state.calib_mode == "none"
+
+    state.start_calib("line")
+    assert state.calib_mode == "line"
+
+    state.start_calib("circle")
+    assert state.calib_mode == "circle"
 
 
 def test_the_state_no_longer_carries_the_geometry_helpers():
@@ -106,7 +122,7 @@ def test_the_state_does_no_line_arithmetic_of_its_own(qapp, monkeypatch):
         return calibration.LineCalibration(length_px=1.0, um_per_px=12.5)
 
     monkeypatch.setattr(state_module, "line_calibration", fake_line)
-    state = _collect("linea", (0.0, 0.0), (200.0, 0.0))
+    state = _collect("line", (0.0, 0.0), (200.0, 0.0))
 
     state.finish_calib_line(6200.0)
 
@@ -118,43 +134,43 @@ def test_the_state_does_no_line_arithmetic_of_its_own(qapp, monkeypatch):
 
 _REFUSALS = [
     (
-        "linea",
+        "line",
         ((0.0, 0.0), (0.0, 0.0)),
         1000.0,
         calibration.FAILURE_ZERO_LENGTH,
     ),
     (
-        "linea",
+        "line",
         ((0.0, 0.0), (100.0, 0.0)),
         0.0,
         calibration.FAILURE_NON_POSITIVE_REAL_SIZE,
     ),
     (
-        "linea",
+        "line",
         ((math.nan, 0.0), (1.0, 1.0)),
         1000.0,
         calibration.FAILURE_NON_FINITE,
     ),
     (
-        "circulo",
+        "circle",
         ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)),
         100_000.0,
         calibration.FAILURE_COLLINEAR_POINTS,
     ),
     (
-        "circulo",
+        "circle",
         ((5.0, 5.0), (5.0, 5.0), (10.0, 10.0)),
         100_000.0,
         calibration.FAILURE_COINCIDENT_POINTS,
     ),
     (
-        "circulo",
+        "circle",
         ((0.0, 0.0), (1000.0, 0.0), (500.0, 500.0)),
         0.0,
         calibration.FAILURE_NON_POSITIVE_REAL_SIZE,
     ),
     (
-        "circulo",
+        "circle",
         ((math.nan, 0.0), (1000.0, 0.0), (500.0, 500.0)),
         100_000.0,
         calibration.FAILURE_NON_FINITE,
@@ -168,7 +184,7 @@ def test_a_degenerate_drawing_reports_the_named_failure(mode, points, real, expe
     state.um_per_px = 2.5
     signals = _RecordingSignals(state)
 
-    finish = state.finish_calib_line if mode == "linea" else state.finish_calib_circle
+    finish = state.finish_calib_line if mode == "line" else state.finish_calib_circle
     failure = finish(real)
 
     assert failure == expected
@@ -180,9 +196,9 @@ def test_a_degenerate_drawing_reports_the_named_failure(mode, points, real, expe
 
 def test_the_scale_of_an_earlier_calibration_survives_a_refused_circle(qapp):
     """31 µm/px stands when a later collinear drawing is rejected."""
-    state = _collect("linea", (0.0, 0.0), (200.0, 0.0))
+    state = _collect("line", (0.0, 0.0), (200.0, 0.0))
     assert state.finish_calib_line(6200.0) == ""
-    state.start_calib("circulo")
+    state.start_calib("circle")
     for point in ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)):
         state.add_calib_point(QPointF(*point))
     signals = _RecordingSignals(state)
@@ -196,8 +212,8 @@ def test_the_scale_of_an_earlier_calibration_survives_a_refused_circle(qapp):
 
 def test_a_finish_before_the_drawing_is_complete_is_refused_by_name(qapp):
     """No silent return: a caller hears why nothing happened."""
-    line = _collect("linea", (0.0, 0.0))
-    circle = _collect("circulo", (0.0, 0.0), (10.0, 0.0))
+    line = _collect("line", (0.0, 0.0))
+    circle = _collect("circle", (0.0, 0.0), (10.0, 0.0))
     line_signals = _RecordingSignals(line)
     circle_signals = _RecordingSignals(circle)
 
@@ -214,7 +230,7 @@ def test_a_finish_before_the_drawing_is_complete_is_refused_by_name(qapp):
 
 def test_each_click_redraws_the_points_it_has_collected(qapp):
     state = ViewerState()
-    state.start_calib("linea")
+    state.start_calib("line")
     signals = _RecordingSignals(state)
 
     state.add_calib_point(QPointF(10.0, 20.0))
@@ -227,7 +243,7 @@ def test_each_click_redraws_the_points_it_has_collected(qapp):
 
 
 def test_a_line_becomes_ready_at_two_points(qapp):
-    state = _collect("linea", (0.0, 0.0))
+    state = _collect("line", (0.0, 0.0))
     signals = _RecordingSignals(state)
 
     state.add_calib_point(QPointF(10.0, 0.0))
@@ -237,7 +253,7 @@ def test_a_line_becomes_ready_at_two_points(qapp):
 
 def test_a_circle_becomes_ready_at_three_points_not_two(qapp):
     state = ViewerState()
-    state.start_calib("circulo")
+    state.start_calib("circle")
     state.add_calib_point(QPointF(0.0, 0.0))
     signals = _RecordingSignals(state)
 
@@ -251,8 +267,8 @@ def test_a_circle_becomes_ready_at_three_points_not_two(qapp):
 # ── The dialog says why ─────────────────────────────────────────────────
 
 _REFUSAL_MESSAGES = [
-    ("linea", ((5.0, 5.0), (5.0, 5.0)), "same"),
-    ("circulo", ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)), "straight line"),
+    ("line", ((5.0, 5.0), (5.0, 5.0)), "same"),
+    ("circle", ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)), "straight line"),
 ]
 
 
