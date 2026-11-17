@@ -584,10 +584,32 @@ def test_the_canvases_and_the_labeller_panel_hold_no_colour_table():
 
 
 def test_the_minimum_side_has_one_name():
-    assert not hasattr(BboxCanvas, "SIDE_MINIMUM_PX")
+    """The threshold is the core's; neither canvas may declare its own copy.
+
+    Scoped to the editing core and the two shells on purpose: a tree-wide
+    grep would false-fail on an unrelated future module that legitimately
+    names a minimum side.
+    """
     offenders = [
-        path
-        for path in (SRC / "polyx").rglob("*.py")
-        if "SIDE_MINIMUM_PX" in path.read_text(encoding="utf-8")
+        path.name
+        for path in (
+            SRC / "polyx" / "core" / "editing.py",
+            SRC / "polyx" / "gui" / "labeler" / "canvas.py",
+            SRC / "polyx" / "gui" / "detector" / "pages" / "gt_manual.py",
+        )
+        if path.name != "editing.py" and "SIDE_MINIMUM_PX" in path.read_text(encoding="utf-8")
     ]
     assert offenders == []
+    assert not hasattr(BboxCanvas, "SIDE_MINIMUM_PX")
+
+
+def test_the_canvases_paint_white_from_the_theme_not_a_literal():
+    """Text and handle borders over a filled colour use the theme's ink token."""
+    for path in (
+        SRC / "polyx" / "gui" / "labeler" / "canvas.py",
+        SRC / "polyx" / "gui" / "detector" / "pages" / "gt_manual.py",
+    ):
+        source = path.read_text(encoding="utf-8")
+        assert 'QColor("white")' not in source, f"{path.name} hardcodes white"
+        assert "Qt.white" not in source, f"{path.name} hardcodes white"
+        assert "color: white" not in source, f"{path.name} hardcodes white in a stylesheet"

@@ -225,7 +225,8 @@ class BboxCanvas(QWidget):
             cls_name = class_name_for(box.class_id, names)
             tag = QRectF(rect_w.x(), rect_w.y() - 17, max(50, len(cls_name) * 7 + 8), 17)
             p.fillRect(tag, color)
-            p.setPen(QColor("white"))
+            # The theme's "on top of a filled colour" ink, not a literal.
+            p.setPen(QColor(T.ON_ACCENT))
             p.drawText(tag, Qt.AlignCenter, cls_name)
 
         # Box in progress
@@ -247,7 +248,7 @@ class BboxCanvas(QWidget):
 
     def _paint_handles(self, p: QPainter, editor: BoxEditor, color: QColor):
         box_side = self.HANDLE_RADIUS_PX * 2
-        p.setPen(QPen(QColor("white"), 1.2))
+        p.setPen(QPen(QColor(T.ON_ACCENT), 1.2))
         p.setBrush(color)
         for hx, hy in editor.handle_points():
             pt = self._i2w(QPointF(hx, hy))

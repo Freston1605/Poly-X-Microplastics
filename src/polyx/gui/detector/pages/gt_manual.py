@@ -265,7 +265,7 @@ class AnnotCanvas(QGraphicsView):
             label_bg.setBrush(QBrush(color))
             self.scene_.addItem(label_bg)
             txt = QGraphicsSimpleTextItem(name)
-            txt.setBrush(QBrush(Qt.white))
+            txt.setBrush(QBrush(QColor(T.ON_ACCENT)))
             f = QFont(T.APP_FONT_FAMILY, 9, QFont.Bold)
             txt.setFont(f)
             txt.setPos(b.x1 + 4, b.y1 - 17)
@@ -278,7 +278,7 @@ class AnnotCanvas(QGraphicsView):
                 hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)
                 for hx, hy in self._editor.handle_points(b):
                     h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
-                    h.setPen(QPen(Qt.white, 1.2))
+                    h.setPen(QPen(QColor(T.ON_ACCENT), 1.2))
                     h.setBrush(QBrush(color))
                     h.setZValue(10)
                     self.scene_.addItem(h)
@@ -548,7 +548,7 @@ class GTManualPage(DetectorPage):
         b_save = QPushButton(_("Save ground truth (.txt YOLO)"))
         b_save.setIcon(iconos.icon("guardar", 15, T.ON_ACCENT))
         b_save.setStyleSheet(
-            f"background: {T.ACCENT}; color: white; border: none; "
+            f"background: {T.ACCENT}; color: {T.ON_ACCENT}; border: none; "
             f"border-radius: 6px; padding: 8px 16px; font-weight: 600;"
         )
         b_save.setCursor(Qt.PointingHandCursor)
