@@ -14,6 +14,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- One operating-point module owns precision/recall/F1
+  (`core/detection_run/operating_point.py`). The Results KPIs read the match
+  the run decided under the localisation criterion; the confidence advice, the
+  Compare table and the report's second F1 column use the with-class
+  criterion, and every label on the page names the one it shows. The duplicate
+  helper in `core/report_metrics.py`, the arithmetic in the Compare page and
+  the report's threshold sweep were removed.
 - Re-reading the ground truth of a finished run now goes through the
   detection-run engine (`reload_ground_truth` in
   `core/detection_run/reload.py`) instead of a GUI copy of the sequence. The

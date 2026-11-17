@@ -441,9 +441,13 @@ class ResultsPage(DetectorPage):
         if common and distinct:
             lines.append(
                 _(
-                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
+                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f, %(criterion)s): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
                 )
-                % {"threshold": common[0], "mean": common[1]}
+                % {
+                    "threshold": common[0],
+                    "mean": common[1],
+                    "criterion": criterion_label(Criterion.WITH_CLASS),
+                }
             )
         elif max(optimal) > used_2 + 1e-9:
             lines.append(

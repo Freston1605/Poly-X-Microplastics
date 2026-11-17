@@ -185,3 +185,24 @@ def test_run_params_stay_the_run_s_threshold(tmp_path):
     measured = score([result], Criterion.LOCALISATION, RunParams().conf)
     assert measured.threshold == RunParams().conf
     assert measured.fp == 1  # the stray box survives at 0.25
+
+
+# ── One owner for the arithmetic ─────────────────────────────────────────
+
+
+def test_the_old_prf1_copies_are_gone():
+    """No reader keeps its own division of the counters."""
+    pytest.importorskip("PySide6")
+
+    import inspect
+
+    from polyx.core import report_metrics, stats
+    from polyx.gui.detector.pages import compare
+    from polyx.gui.report import sections
+
+    assert not hasattr(report_metrics, "_pr_f1")
+    for module in (compare, sections, stats):
+        source = inspect.getsource(module)
+        assert "_pr_f1" not in source, module.__name__
+        # The sweeps re-match through the operating-point module, never locally.
+        assert "match_image(" not in source, module.__name__
