@@ -176,6 +176,20 @@ marked reviewed or drawn on. "Reviewed, zero particles" is a datum; an
 image barely glanced at must not be recorded as reviewed. The policy
 lives in the GUI flows — the codec writes exactly what it is told.
 
+## Editing core
+
+The one Qt-free implementation of box editing (`polyx/core/editing.py`):
+the box under edit in absolute image pixels, its normalized YOLO currency
+through the label codec, and a per-image editor that owns the boxes, the
+selection, the bounded undo history and every gesture — draw, move, resize
+by handle, delete, clear, class assignment. Both annotation canvases are
+thin Qt shells over it, so the 2 px census minimum, the handle geometry,
+one undo entry per gesture and the active class are defined once and cannot
+drift between pages. Hit-test distances arrive in image pixels: the shell
+turns its roughly constant widget distance into that through the current
+zoom, which is why the core never needs Qt.
+_Avoid_: canvas logic, editor widget (the widget is the shell).
+
 ## Source language
 
 English. It is the language every user-facing string is written in, and the

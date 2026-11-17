@@ -26,7 +26,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from polyx.core.editing import rejection_message
 from polyx.core.i18n import N_, _, ngettext
+from polyx.core.labels import class_name_for
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
@@ -39,18 +41,6 @@ _PRESETS: dict[str, list[str]] = {
     N_("General (1 class)"): ["objeto"],
     N_("Custom"): [],
 }
-
-# Colors matching those of the canvas
-_CLS_COLORS = [
-    "#e3342f",
-    "#ff8c00",
-    "#ffd700",
-    "#00b4d8",
-    "#48cae4",
-    "#0077b6",
-    "#023e8a",
-    "#7b2d8b",
-]
 
 
 class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
@@ -123,6 +113,11 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         root.addWidget(self._build_left())
         self.canvas = BboxCanvas(self.state)
+        # The canvas is a new widget on every rebuild (a language change), so
+        # its signals are wired here, with the tree. The state signals are
+        # wired once in ``_connect_signals``: connecting them again on each
+        # rebuild would double every slot.
+        self.canvas.box_rejected.connect(self._on_box_rejected)
         root.addWidget(self.canvas, 1)
         root.addWidget(self._build_right())
 
@@ -349,7 +344,6 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self.state.active_class_changed.connect(self._on_active_class_changed)
         self.state.classes_changed.connect(self._rebuild_class_buttons)
         self.state.progress_changed.connect(self._on_progress_changed)
-        self.canvas.box_rejected.connect(self._on_box_rejected)
 
     def _on_progress_changed(self):
         idx = self.state.current_idx
@@ -358,11 +352,10 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._update_progress()
 
     def _on_box_rejected(self, side: float):
-        self._set_status(
-            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
-            % {"side": side, "minimum": self.canvas.SIDE_MINIMUM_PX},
-            T.WARN,
-        )
+        message = rejection_message(side)
+        if message is None:
+            return
+        self._set_status(message, T.WARN)
         QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):
@@ -382,7 +375,7 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._class_btns.clear()
 
         for i, name in enumerate(names):
-            color = _CLS_COLORS[i % len(_CLS_COLORS)]
+            color = T.class_qcolor_at(names, i).name()
             b = QPushButton(f"  {i + 1}  {name}")
             b.setCheckable(True)
             b.setChecked(i == self.state.active_class)
@@ -645,12 +638,9 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         n = len(boxes)
 
         cls_counts: dict[str, int] = {}
+        names = dict(enumerate(self.state.class_names))
         for b in boxes:
-            name = (
-                self.state.class_names[b.class_id]
-                if b.class_id < len(self.state.class_names)
-                else str(b.class_id)
-            )
+            name = class_name_for(b.class_id, names)
             cls_counts[name] = cls_counts.get(name, 0) + 1
 
         if cls_counts:

@@ -1,12 +1,20 @@
-"""Labeller state — images, annotations, undo/redo."""
+"""Labeller state — images, annotations, review policy and persistence.
+
+Editing itself — geometry, selection and undo — belongs to one
+:class:`polyx.core.editing.BoxEditor` per loaded image, kept here so the
+history survives navigating away and back. This object stays the host: the
+image list, review marks, census rules and what gets written to disk.
+"""
 
 from __future__ import annotations
 
 import contextlib
-import copy
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
+
+from polyx.core.detect.protocol import size_image
+from polyx.core.editing import BoxEditor, EditBox
 
 # The normalized box lives in the YOLO-label codec: one currency for every
 # module that reads or writes label files. Re-exported so the canvas and
@@ -40,9 +48,12 @@ class LabelerState(QObject):
         self.active_class: int = 0
         self.root_folder: Path | None = None
 
-        self._annotations: dict[str, list[BBox]] = {}
-        self._undo_stacks: dict[str, list[list[BBox]]] = {}
-        self._redo_stacks: dict[str, list[list[BBox]]] = {}
+        # One editor per image visited in this session. Keeping it is what
+        # makes ``Ctrl+Z`` work after going to another image and back.
+        self._editors: dict[str, BoxEditor] = {}
+        # Drawings cached for images not visited yet (batch pre-annotation);
+        # they seed the editor when the image is opened.
+        self._drawings: dict[str, list[BBox]] = {}
         # Images the operator declared reviewed. A census count needs
         # to distinguish "reviewed, zero particles" from "not looked at yet": both
         # have zero boxes, but only the first one is a datum.
@@ -57,48 +68,38 @@ class LabelerState(QObject):
 
     @property
     def current_boxes(self) -> list[BBox]:
+        editor = self.current_editor
+        return editor.to_bboxes() if editor is not None else []
+
+    @property
+    def current_editor(self) -> BoxEditor | None:
+        """The editor of the current image, created on first use."""
         img = self.current_image
-        return self._annotations.get(str(img), []) if img else []
+        return self._editor_for(img) if img is not None else None
 
     # ── Annotation editing ──────────────────────────────────
     def set_current_boxes(self, boxes: list[BBox], push_undo: bool = True):
-        img = self.current_image
-        if img is None:
+        editor = self.current_editor
+        if editor is None:
             return
-        key = str(img)
-        if push_undo:
-            self._push_undo(key)
-        self._annotations[key] = list(boxes)
+        editor.replace(
+            (EditBox.from_bbox(b, editor.img_w, editor.img_h) for b in boxes),
+            record=push_undo,
+        )
         self.annotations_changed.emit()
 
-    def _push_undo(self, key: str):
-        self._undo_stacks.setdefault(key, []).append(copy.deepcopy(self._annotations.get(key, [])))
-        self._redo_stacks.setdefault(key, []).clear()
+    def notify_edited(self):
+        """Announce an edit the canvas made directly on the current editor."""
+        self.annotations_changed.emit()
 
     def undo(self):
-        img = self.current_image
-        if not img:
-            return
-        key = str(img)
-        stack = self._undo_stacks.get(key, [])
-        if stack:
-            self._redo_stacks.setdefault(key, []).append(
-                copy.deepcopy(self._annotations.get(key, []))
-            )
-            self._annotations[key] = stack.pop()
+        editor = self.current_editor
+        if editor is not None and editor.undo():
             self.annotations_changed.emit()
 
     def redo(self):
-        img = self.current_image
-        if not img:
-            return
-        key = str(img)
-        stack = self._redo_stacks.get(key, [])
-        if stack:
-            self._undo_stacks.setdefault(key, []).append(
-                copy.deepcopy(self._annotations.get(key, []))
-            )
-            self._annotations[key] = stack.pop()
+        editor = self.current_editor
+        if editor is not None and editor.redo():
             self.annotations_changed.emit()
 
     # ── Navigation ───────────────────────────────────────────
@@ -106,9 +107,8 @@ class LabelerState(QObject):
         imgs = sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMAGE_EXTS)
         self.images = imgs
         self.root_folder = folder
-        self._annotations.clear()
-        self._undo_stacks.clear()
-        self._redo_stacks.clear()
+        self._editors.clear()
+        self._drawings.clear()
         # Restores progress from previous sessions: a .txt on disk means
         # that the image was already reviewed, whether or not it has boxes.
         # The codec decides which file that is: the conventional
@@ -129,7 +129,7 @@ class LabelerState(QObject):
             return
         self.save_current()
         self.current_idx = idx
-        self._load_labels_for(self.images[idx])
+        self._editor_for(self.images[idx])
         self.image_changed.emit(idx)
         self.annotations_changed.emit()
 
@@ -179,8 +179,16 @@ class LabelerState(QObject):
     # ── Persistence ──────────────────────────────────────────
     def save_current(self):
         img = self.current_image
-        if img:
-            self.save_labels(img, self.current_boxes)
+        if img is None:
+            return
+        editor = self.current_editor
+        if editor is None:
+            # The image could not be measured, so there is no frame to read
+            # the drawing in and ``current_boxes`` is empty for lack of an
+            # editor, not because the plate is empty. Writing that empty
+            # drawing would destroy a reviewed GT; leave the file alone.
+            return
+        self.save_labels(img, editor.to_bboxes())
 
     def save_labels(self, img: Path, boxes: list[BBox], force: bool = False):
         """Writes the .txt. With no boxes and not reviewed, it does NOT create the file.
@@ -197,25 +205,45 @@ class LabelerState(QObject):
         if boxes:
             self._reviewed.add(str(img))
 
-    def _load_labels_for(self, img: Path):
+    def _editor_for(self, img: Path) -> BoxEditor | None:
+        """The image's editor, created and cached on first use.
+
+        The drawing comes from the in-memory cache a batch pre-annotation may
+        have left, or from the label file the codec finds. The image size is
+        read header-only, with the EXIF orientation the canvas also applies.
+        """
         key = str(img)
-        if key in self._annotations:
-            return
-        boxes: list[BBox] = []
-        txt = find_label_file(img)
-        if txt is not None:
-            boxes, _malformed = read_boxes(txt)
-        self._annotations[key] = boxes
+        editor = self._editors.get(key)
+        if editor is None:
+            size = size_image(img)
+            if size is None:
+                return None
+            img_w, img_h = size
+            boxes = self._drawings.pop(key, None)
+            if boxes is None:
+                txt = find_label_file(img)
+                boxes = read_boxes(txt)[0] if txt is not None else []
+            editor = BoxEditor(
+                img_w,
+                img_h,
+                (EditBox.from_bbox(b, img_w, img_h) for b in boxes),
+            )
+            self._editors[key] = editor
+        editor.set_active_class(self.active_class)
+        return editor
 
     def box_count_for(self, img: Path) -> int:
-        """How many boxes the image has: the in-memory drawing or the file.
+        """How many boxes the image has: the live editor, the cache or the file.
 
-        A cached drawing wins, because it is what the operator currently
+        A drawing in memory wins, because it is what the operator currently
         sees; otherwise the count comes from the file the codec found.
         """
         key = str(img)
-        if key in self._annotations:
-            return len(self._annotations[key])
+        editor = self._editors.get(key)
+        if editor is not None:
+            return len(editor.boxes)
+        if key in self._drawings:
+            return len(self._drawings[key])
         txt = find_label_file(img)
         if txt is None:
             return 0
@@ -231,9 +259,18 @@ class LabelerState(QObject):
 
         Used by batch pre-annotation, which walks the whole list without
         navigating; the current image's edits go through
-        :meth:`set_current_boxes` so they push undo.
+        :meth:`set_current_boxes` so they push undo. A batch is not an
+        operator gesture, so replacing the drawing records no history.
         """
-        self._annotations[str(img)] = list(boxes)
+        key = str(img)
+        editor = self._editors.get(key)
+        if editor is not None:
+            editor.replace(
+                (EditBox.from_bbox(b, editor.img_w, editor.img_h) for b in boxes),
+                record=False,
+            )
+        else:
+            self._drawings[key] = list(boxes)
 
     def preannotate(self, boxes_by_image: dict[Path, list[BBox]]) -> int:
         """Applies and saves a batch of model drawings; returns how many it kept.
@@ -273,7 +310,21 @@ class LabelerState(QObject):
 
     # ── Classes ──────────────────────────────────────────────
     def set_active_class(self, cls_id: int):
+        """The class new boxes get, and the class the selection takes.
+
+        One rule for both annotation canvases: the key (or the class button)
+        sets the active class and, when a box is selected, reclassifies it
+        through the core — which records one undo entry and nothing when the
+        class is already the box's.
+        """
+        if not 0 <= cls_id < len(self.class_names):
+            return
         self.active_class = cls_id
+        editor = self.current_editor
+        if editor is not None:
+            editor.set_active_class(cls_id)
+            if editor.assign_class(cls_id):
+                self.annotations_changed.emit()
         self.active_class_changed.emit(cls_id)
 
     def set_class_names(self, names: list[str]):
