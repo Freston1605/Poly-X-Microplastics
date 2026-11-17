@@ -340,3 +340,28 @@ def test_the_wheel_zooms_and_a_middle_drag_pans(canvas):
         canvas_widget.horizontalScrollBar().value(),
         canvas_widget.verticalScrollBar().value(),
     ) != (h_before, v_before)
+
+
+# ── Class names come from the codec, including unknown ids ───────────────
+
+
+def test_a_box_outside_the_class_list_is_labelled_with_its_id(canvas):
+    """One lookup: the codec's, and a negative id is not the last class."""
+    from PySide6.QtWidgets import QGraphicsSimpleTextItem
+
+    rig, path = canvas
+    _load(
+        rig,
+        path,
+        [
+            Detection(class_id=-1, class_name="-1", conf=1.0, x1=20, y1=40, x2=60, y2=90),
+            Detection(class_id=9, class_name="9", conf=1.0, x1=120, y1=40, x2=160, y2=90),
+        ],
+    )
+
+    painted = sorted(
+        item.text()
+        for item in rig.canvas.scene_.items()
+        if isinstance(item, QGraphicsSimpleTextItem)
+    )
+    assert painted == ["-1", "9"]

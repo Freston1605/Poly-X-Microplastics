@@ -59,6 +59,7 @@ from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.labels import (
     STUDY_CLASSES,
     bbox_from,
+    class_name_for,
     classes_dir_for,
     find_label_file,
     label_dir_for,
@@ -240,6 +241,7 @@ class AnnotCanvas(QGraphicsView):
             return
 
         selected = self._editor.selection
+        names = dict(enumerate(self.class_names))
         for i, b in enumerate(self._editor.boxes):
             color = T.class_qcolor_at(self.class_names, b.class_id)
             sel = i == selected
@@ -253,12 +255,8 @@ class AnnotCanvas(QGraphicsView):
             rect.setBrush(QBrush(fill))
             self.scene_.addItem(rect)
 
-            # Label
-            name = (
-                self.class_names[b.class_id]
-                if b.class_id < len(self.class_names)
-                else str(b.class_id)
-            )
+            # Label: the codec's one class-name lookup.
+            name = class_name_for(b.class_id, names)
             label_bg = QGraphicsRectItem(QRectF(b.x1, b.y1 - 18, len(name) * 9 + 12, 18))
             label_bg.setPen(QPen(color, 1))
             label_bg.setBrush(QBrush(color))

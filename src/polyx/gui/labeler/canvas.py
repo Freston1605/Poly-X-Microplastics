@@ -34,6 +34,7 @@ from polyx.core.editing import (
     rejection_message,
 )
 from polyx.core.i18n import _
+from polyx.core.labels import class_name_for
 from polyx.gui import theme as T
 from polyx.gui.image_pixmap import qpixmap_from_file
 
@@ -203,6 +204,7 @@ class BboxCanvas(QWidget):
 
         font = QFont(T.APP_FONT_FAMILY, 8, QFont.Bold)
         p.setFont(font)
+        names = dict(enumerate(self.state.class_names))
         for i, box in enumerate(boxes):
             if i == live:
                 continue
@@ -221,12 +223,8 @@ class BboxCanvas(QWidget):
             p.setBrush(Qt.NoBrush)
             p.drawRect(rect_w)
 
-            # Class label
-            cls_name = (
-                self.state.class_names[box.class_id]
-                if box.class_id < len(self.state.class_names)
-                else str(box.class_id)
-            )
+            # Class label: the codec's one class-name lookup.
+            cls_name = class_name_for(box.class_id, names)
             tag = QRectF(rect_w.x(), rect_w.y() - 17, max(50, len(cls_name) * 7 + 8), 17)
             p.fillRect(tag, color)
             p.setPen(QColor("white"))
