@@ -184,31 +184,28 @@ class EditBox:
         total certainty, the same 1.0 the codec's ``to_instance`` uses for a
         box with no confidence column.
         """
-        return Instance(
-            class_id=self.class_id,
-            class_name=labels.class_name_for(self.class_id, class_names),
-            conf=1.0,
-            x1=self.x1,
-            y1=self.y1,
-            x2=self.x2,
-            y2=self.y2,
-        )
+        return self._instance(labels.class_name_for(self.class_id, class_names))
 
     @classmethod
     def from_detection(cls, det: Instance) -> EditBox:
         """A box from the canonical detection type (already in pixels)."""
         return cls(det.x1, det.y1, det.x2, det.y2, det.class_id)
 
-    def _as_instance(self) -> Instance:
+    def _instance(self, class_name: str) -> Instance:
+        """The canonical detection shape; the one place it is built."""
         return Instance(
             class_id=self.class_id,
-            class_name=str(self.class_id),
+            class_name=class_name,
             conf=1.0,
             x1=self.x1,
             y1=self.y1,
             x2=self.x2,
             y2=self.y2,
         )
+
+    def _as_instance(self) -> Instance:
+        """The geometry as a detection, for the codec's normalisation."""
+        return self._instance(str(self.class_id))
 
 
 class BoxEditor:
@@ -228,8 +225,7 @@ class BoxEditor:
         active_class: int = 0,
         history_limit: int = HISTORY_LIMIT,
     ) -> None:
-        if img_w <= 0 or img_h <= 0:
-            raise ValueError(f"image size must be positive, got {img_w}x{img_h}")
+        _validate_size(img_w, img_h)
         self._history_limit = max(1, history_limit)
         self.load(img_w, img_h, boxes)
         self.active_class = active_class
@@ -277,19 +273,14 @@ class BoxEditor:
         boxes: Iterable[EditBox] = (),
     ) -> None:
         """Replace the image and its boxes; history and selection reset."""
-        if img_w <= 0 or img_h <= 0:
-            raise ValueError(f"image size must be positive, got {img_w}x{img_h}")
+        _validate_size(img_w, img_h)
         self._img_w = img_w
         self._img_h = img_h
         self._boxes: list[EditBox] = list(boxes)
         self._selected = -1
         self._undo: list[tuple[tuple[EditBox, ...], int]] = []
         self._redo: list[tuple[tuple[EditBox, ...], int]] = []
-        self._mode = EditMode.IDLE
-        self._pending: tuple[tuple[EditBox, ...], int] | None = None
-        self._base_box: EditBox | None = None
-        self._press = (0.0, 0.0)
-        self._handle = Handle.NONE
+        self._reset_gesture()
 
     # ── Selection ───────────────────────────────────────────
     def select(self, index: int) -> bool:
@@ -353,10 +344,15 @@ class BoxEditor:
         boxes, selected = state
         self._boxes = list(boxes)
         self._selected = selected
+        self._reset_gesture()
+
+    def _reset_gesture(self) -> None:
+        """Drop the in-flight gesture state; boxes and selection stay."""
         self._mode = EditMode.IDLE
         self._pending = None
         self._base_box = None
         self._handle = Handle.NONE
+        self._press = (0.0, 0.0)
 
     def _record(self, state: tuple[tuple[EditBox, ...], int] | None = None) -> None:
         """Push a pre-edit snapshot and drop the redo branch."""
@@ -503,10 +499,7 @@ class BoxEditor:
         self._boxes[index] = box
         self._selected = index
         self._record(self._pending)
-        self._mode = EditMode.IDLE
-        self._pending = None
-        self._base_box = None
-        self._handle = Handle.NONE
+        self._reset_gesture()
         return CommitResult(True, side_px=side)
 
     def _cancel_gesture(self) -> None:
@@ -564,10 +557,7 @@ class BoxEditor:
             self._record()
         self._boxes = list(boxes)
         self._selected = -1
-        self._mode = EditMode.IDLE
-        self._pending = None
-        self._base_box = None
-        self._handle = Handle.NONE
+        self._reset_gesture()
 
     # ── Conversion ──────────────────────────────────────────
     def to_bboxes(self) -> list[labels.BBox]:
@@ -577,6 +567,12 @@ class BoxEditor:
     def detections(self, class_names: dict[int, str]) -> list[Instance]:
         """The boxes as the canonical detection type."""
         return [box.to_detection(class_names) for box in self._boxes]
+
+
+def _validate_size(img_w: int, img_h: int) -> None:
+    """Refuse an image size the geometry cannot be expressed in."""
+    if img_w <= 0 or img_h <= 0:
+        raise ValueError(f"image size must be positive, got {img_w}x{img_h}")
 
 
 def _clamp(box: EditBox, img_w: int, img_h: int) -> EditBox:
