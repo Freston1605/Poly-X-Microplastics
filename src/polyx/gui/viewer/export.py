@@ -6,6 +6,10 @@ Every export reads the fields the measurement layer wrote
 equal-area diameter in px appears only as a declared descriptor of the
 BOX — and as the fallback label when there is no calibration, because
 without um/px there are no micrometers to show.
+
+The CSV header is the shared detection-table contract (``VIEWER_COLUMNS``,
+ADR-0004): the same English tokens the run folder uses, plus ``diam_px``.
+Headers and ``size_source`` values do not follow the interface language.
 """
 
 from __future__ import annotations
@@ -15,19 +19,9 @@ import numpy as np
 from polyx.core.annotate import draw_detections
 from polyx.core.detect.protocol import equal_area_diameter
 from polyx.core.detect.yolo import Detection
+from polyx.core.detection_run.schema import VIEWER_COLUMNS
 
-HEADER = [
-    "clase",
-    "conf",
-    "x1",
-    "y1",
-    "x2",
-    "y2",
-    "diam_px",
-    "diam_um",
-    "area_um2",
-    "talla_origen",
-]
+HEADER = list(VIEWER_COLUMNS)
 
 
 def _box_diam_px(det: Detection) -> float:
@@ -75,10 +69,9 @@ def csv_rows(dets: list[Detection], um_per_px: float | None) -> list[list[str]]:
 
     ``diam_um``/``area_um2`` are whatever the measurement layer wrote —
     mask-measured, or the box fallback when segmentation failed — and
-    ``talla_origen`` says which. Without calibration there are no um, and
-    none are invented.
+    ``size_source`` says which (``mask`` | ``box``, the canonical values).
+    Without calibration there are no um, and none are invented.
     """
-    origin_in_csv = {"mask": "mascara", "box": "caja"}  # data is English; the CSV is UI
     rows = [HEADER]
     for det in dets:
         sized = um_per_px is not None and um_per_px > 0 and det.diam_um is not None
@@ -93,7 +86,7 @@ def csv_rows(dets: list[Detection], um_per_px: float | None) -> list[list[str]]:
                 f"{_box_diam_px(det):.2f}",
                 f"{det.diam_um:.2f}" if sized else "",
                 f"{det.area_um2:.2f}" if sized and det.area_um2 is not None else "",
-                origin_in_csv.get(det.size_source, "") if sized else "",
+                (det.size_source or "") if sized else "",
             ]
         )
     return rows

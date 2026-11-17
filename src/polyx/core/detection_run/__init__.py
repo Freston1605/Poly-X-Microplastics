@@ -31,7 +31,9 @@ from .reload import ReloadSummary, reload_ground_truth
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import (
     DETECTION_COLUMNS,
+    PAGE_COLUMNS,
     SCHEMA_VERSION,
+    VIEWER_COLUMNS,
     detection_row,
     load_run,
 )
@@ -40,7 +42,9 @@ __all__ = [
     "CALIBRATION_MODES",
     "DETECTION_COLUMNS",
     "IMAGE_EXTS",
+    "PAGE_COLUMNS",
     "SCHEMA_VERSION",
+    "VIEWER_COLUMNS",
     "CalibrationPolicy",
     "ImageResult",
     "ModelExecution",
