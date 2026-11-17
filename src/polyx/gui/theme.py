@@ -25,7 +25,7 @@ tokens. No window has to be touched.
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from PySide6.QtGui import QColor
 
@@ -241,6 +241,18 @@ from polyx.core.annotate import CLASS_COLOR_HEX, FALLBACK_COLOR_HEX  # noqa: E40
 
 def class_qcolor(name: str) -> QColor:
     return QColor(CLASS_COLOR_HEX.get(name, FALLBACK_COLOR_HEX))
+
+
+def class_qcolor_at(class_names: Sequence[str], class_id: int) -> QColor:
+    """Colour of class ``class_id`` in ``class_names``.
+
+    The single index → name → colour path the two annotation canvases and the
+    Labeller's class buttons share. An id outside the list resolves to the
+    same fallback as an unknown name, so a stale class id cannot raise while a
+    box is being painted.
+    """
+    name = class_names[class_id] if 0 <= class_id < len(class_names) else ""
+    return class_qcolor(name)
 
 
 APP_FONT_FAMILY = "Segoe UI"

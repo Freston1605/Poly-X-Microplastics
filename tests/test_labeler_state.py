@@ -14,11 +14,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import cv2
-import numpy as np
 import pytest
 
-from tests.conftest import split_dataset
+from tests.conftest import split_dataset, write_image
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -28,15 +26,6 @@ from polyx.core.labels import BBox
 from polyx.gui.labeler.state import LabelerState
 
 BOX_LINE = "0 0.500000 0.500000 0.100000 0.100000\n"
-
-
-def _png(path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    img = np.zeros((40, 60, 3), dtype=np.uint8)
-    ok, buf = cv2.imencode(".png", img)
-    assert ok
-    path.write_bytes(bytes(buf))
-    return path
 
 
 def _boxes(lines: int) -> str:
@@ -259,8 +248,8 @@ def test_classes_txt_is_written_once_at_the_dataset_root(tmp_path):
 
 def test_plain_folder_keeps_per_folder_classes(tmp_path):
     plain = tmp_path / "plain"
-    _png(plain / "a.png")
-    _png(plain / "sub" / "b.png")
+    write_image(plain / "a.png")
+    write_image(plain / "sub" / "b.png")
 
     state = LabelerState()
     state.load_images(plain)
@@ -290,3 +279,54 @@ def test_census_rule_is_unchanged(tmp_path):
     assert b == state.current_image
     assert (root / "labels" / "train" / "b.txt").is_file()
     assert (root / "labels" / "train" / "b.txt").read_text(encoding="utf-8") == ""
+
+
+def test_each_image_keeps_its_editor_so_history_survives_navigating(tmp_path):
+    """Ticket #145: one editor per loaded image, kept across ``goto``.
+
+    Undo history used to live in parallel per-image stacks on the state.
+    Now the editor owns it, so returning to an image must hand back the
+    same editor — and the same ``Ctrl+Z``.
+    """
+    root = split_dataset(tmp_path / "ds", {"train": {"a": None, "b": None}})
+    state = LabelerState()
+    state.load_images(root / "images" / "train")
+
+    first = state.current_editor
+    state.set_current_boxes([BBox(class_id=1, cx=0.5, cy=0.5, w=0.2, h=0.2)])
+    assert first is not None
+
+    state.next_image()
+    other = state.current_editor
+    assert other is not None and other is not first
+
+    state.prev_image()
+    assert state.current_editor is first
+
+    state.undo()
+    assert state.current_boxes == []
+
+
+def test_an_image_whose_size_cannot_be_read_keeps_its_reviewed_txt(tmp_path):
+    """An implicit save must not blank a reviewed GT it could not measure.
+
+    A file with an image suffix that cannot be decoded still counts as
+    reviewed (its ``.txt`` exists) but has no editor: the state cannot know
+    its frame. Writing the empty drawing over the reviewed ``.txt`` would
+    record "reviewed with zero particles" for an image nobody could see.
+    """
+    folder = tmp_path / "imgs"
+    folder.mkdir(parents=True)
+    (folder / "a.png").write_bytes(b"not an image")
+    write_image(folder / "b.png")
+    _txt(folder / "a.txt", 1)
+
+    state = LabelerState()
+    state.load_images(folder)
+    assert state.current_image == folder / "a.png"
+    assert state.current_editor is None
+
+    state.next_image()  # navigating away is what saves the previous image
+
+    assert state.current_image == folder / "b.png"
+    assert (folder / "a.txt").read_text(encoding="utf-8") == BOX_LINE

@@ -450,3 +450,13 @@ def test_no_module_uses_the_legacy_label_aliases():
         or "read_yolo_txt" in path.read_text(encoding="utf-8")
     ]
     assert offenders == []
+
+
+def test_class_name_for_uses_the_dataset_names_and_the_id_otherwise():
+    """One lookup: unknown, out-of-range and negative ids fall back to the id."""
+    names = {0: "PET", 1: "PP"}
+
+    assert L.class_name_for(1, names) == "PP"
+    assert L.class_name_for(7, names) == "7"
+    assert L.class_name_for(-1, names) == "-1"
+    assert L.class_name_for(0, {}) == "0"
