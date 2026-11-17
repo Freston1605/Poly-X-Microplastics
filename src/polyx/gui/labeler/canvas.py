@@ -55,7 +55,7 @@ class BboxCanvas(QWidget):
       - Left click on a box → selects it
       - Right click on a box→ assigns the active class
       - `Del` / Backspace   → deletes the selected box
-      - 1-9                 → changes the active class
+      - 1-9                 → changes the active class (and the selection's)
       - Space               → marks reviewed and moves on
       - F                   → reframes (fits to the window again)
       - Ctrl+Z / Ctrl+Y     → undo / redo
