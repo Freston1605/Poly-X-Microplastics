@@ -461,14 +461,17 @@ def run_detection(
                 _number_detections(predictions)
 
                 if has_gt:
+                    mask_iou_rule = _uses_mask_iou(predictions, gts)
                     match = match_image(
                         predictions,
                         gts,
                         iou_thr=config.params.iou_tp,
-                        use_mask_iou=_uses_mask_iou(predictions, gts),
+                        use_mask_iou=mask_iou_rule,
                     )
                     tp, fp, fn, miscls = match.tp, match.fp, match.fn, match.miscls
                 else:
+                    mask_iou_rule = False
+                    match = None
                     tp = fp = fn = miscls = 0
 
                 views = triptych(
@@ -488,6 +491,9 @@ def run_detection(
                     fp=fp,
                     fn=fn,
                     miscls=miscls,
+                    match=match,
+                    match_iou_thr=config.params.iou_tp,
+                    match_use_mask_iou=mask_iou_rule,
                     tiling=tiling,
                 )
                 result.results.setdefault(model_index, []).append(image_result)

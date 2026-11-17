@@ -18,8 +18,10 @@ from .metrics import (
     MatchResult,
     aggregate_per_class,
     confusion_matrix,
+    confusion_matrix_from_matches,
     iou,
     match_image,
+    per_class_from_matches,
 )
 
 __all__ = [
@@ -35,7 +37,9 @@ __all__ = [
     "audit_dataset",
     "class_id_reported",
     "confusion_matrix",
+    "confusion_matrix_from_matches",
     "iou",
     "mark_assignables",
     "match_image",
+    "per_class_from_matches",
 ]
