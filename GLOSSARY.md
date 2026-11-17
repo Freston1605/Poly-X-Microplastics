@@ -89,8 +89,19 @@ The decision, its geometry and its sentence belong to `core/detect/tiling.py`;
 neither a page nor the engine formats the numbers again.
 _Avoid_: mosaic (in code), `siempre`/`nunca` as current values
 
-## Model alias and display name
+## Calibration refusal
 
+How the Viewer answers a drawing that cannot support a µm/px — a zero-length
+line, a non-positive real size, two coincident points or three collinear ones.
+It is **refused by name**: a stable English token whose sentence is chosen
+where it is shown. Nothing is applied — the µm/px in force stays — and the
+drawing stays on screen, so the same points can be finished with another real
+size. It is never a zero scale: zero is a scale, and every size computed with
+it would silently come out zero.
+_Avoid_: "calibration failed" (does not say what happened to the scale),
+0 µm/px as a refusal
+
+## Model alias and display name
 Two values for the same model. The **alias** is the stable, filesystem-safe
 folder key inside a run (`model_1`, or the weights stem / a name somebody
 typed); it is an artifact and is never translated. The **display name** is the

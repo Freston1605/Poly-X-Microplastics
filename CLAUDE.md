@@ -634,11 +634,14 @@ Single-image inspection with μm/pixel calibration, detection and export.
 ships with 100000 μm as default, which is the study's Petri dish.
 
 The geometry lives in `core/measure/calibration.py` (`line_calibration`,
-`circle_calibration`), not in the Viewer state: it is plain arithmetic over
-coordinate tuples and is tested without Qt. A drawing that cannot support a
-scale — coincident points, three collinear points, zero length, a non-positive
-real size — is refused by name, leaves the previous µm/px in force and the
-dialog says why. The state keeps the clicked points and the signals.
+`circle_calibration`, `circumscribed_circle`), not in the Viewer state: it is
+plain arithmetic over coordinate tuples and is tested without Qt. The mode is
+an English machine token (`line`, `circle`, `none`); the words the user reads
+are chosen at the display site. A drawing that cannot support a scale —
+coincident points, three collinear points, zero length, a non-positive real
+size — is refused by name, leaves the previous µm/px in force, keeps the
+drawing on screen and the dialog says why. The state keeps the clicked points
+and the signals.
 
 > It was unusable until August 2026: `QInputDialog.getDouble()` was called
 > with `min=`/`max=`, which PySide6 does not accept as keywords, and it raised
@@ -647,10 +650,14 @@ dialog says why. The state keeps the clicked points and the signals.
 > positional:** `(parent, title, label, value, minValue, maxValue, decimals)`.
 
 **Detection.** Configurable `imgsz` (320–8192, default 2080) and GPU when
-available. It used to force `device="cpu"` and default `imgsz` 640: with
+available. The GPU checkbox means CPU when off and the best accelerator
+`core/platform` resolves (CUDA/ROCm → MPS → CPU) when on; the Viewer does not
+probe torch itself. It used to force `device="cpu"` and default `imgsz` 640: with
 particles of ~12 px in 4096 px photos, at 640 they collapse to ~2 px and **nothing
 is detected**. If the GPU runs out of memory, it explains how to lower `imgsz`
-instead of showing the raw exception.
+instead of showing the raw exception; when the model's own fallback ladder has
+already retried at a smaller size, the status that stays on screen names the
+`imgsz` that ran and the device, not the request.
 
 **Load labels (.txt).** Shows the YOLO annotations that accompany the
 image, with sizes already converted to μm. Useful for reviewing the manual count
