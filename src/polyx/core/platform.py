@@ -229,20 +229,20 @@ def label_devices() -> str:
 
 
 def description_device(device: str) -> str:
-    """Short phrase explaining what that device is, for the report."""
+    """Short phrase explaining what that device is, for the report and the Viewer."""
     d = (device or "").strip().lower()
-    if d in ("mps",):  # noqa: FURB171
-        return "GPU integrada del Mac (Metal Performance Shaders)"
+    if d == "mps":
+        return _("Mac integrated GPU (Metal Performance Shaders)")
     if d in ("cpu", "-1"):
-        return "procesador (CPU)"
+        return _("processor (CPU)")
     if d.isdigit():
         if is_rocm_available():
-            return f"GPU AMD #{d} (ROCm)"
-        return f"GPU NVIDIA #{d} (CUDA)"
+            return _("AMD GPU #%(index)s (ROCm)") % {"index": d}
+        return _("NVIDIA GPU #%(index)s (CUDA)") % {"index": d}
     if d in ("rocm", "hip", "amd"):
-        return "GPU AMD (ROCm)"
+        return _("AMD GPU (ROCm)")
     if d == "cuda":
-        return "GPU NVIDIA (CUDA)"
+        return _("NVIDIA GPU (CUDA)")
     return device or "—"
 
 

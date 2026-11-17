@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from polyx.core import platform
 from polyx.core.annotate import find_run_labels
 from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
@@ -41,18 +42,6 @@ from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
 from .state import ViewerState
-
-
-def _there_are_gpu() -> bool:
-    """CUDA available. Queried lazily: importing torch is slow."""
-
-    try:
-        import torch
-
-        return bool(torch.cuda.is_available())
-
-    except Exception:  # noqa: BLE001
-        return False
 
 
 class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
@@ -671,6 +660,17 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))
 
+    def _resolve_device(self) -> str:
+        """Inference device: CPU when the checkbox is off, else the platform's best.
+
+        The Viewer does not decide what hardware exists: ``device_available``
+        answers CUDA/ROCm → MPS → CPU, the same answer the Detector and the
+        Trainer get.
+        """
+        if not self.chk_gpu.isChecked():
+            return platform.DEVICE_CPU
+        return platform.device_available()
+
     def _detect(self):
 
         if not self.state.model:
@@ -687,12 +687,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         imgsz = int(round(self.spin_imgsz.value() / 32)) * 32  # multiple of stride  # noqa: RUF046
 
-        device = "0" if (self.chk_gpu.isChecked() and _there_are_gpu()) else "cpu"
+        device = self._resolve_device()
 
         try:
             self._set_status(
                 _("● Detecting (imgsz %(imgsz)d, %(device)s)…")
-                % {"imgsz": imgsz, "device": device},
+                % {"imgsz": imgsz, "device": platform.description_device(device)},
                 T.ACCENT,
             )
 
