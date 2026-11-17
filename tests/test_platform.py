@@ -114,8 +114,8 @@ def test_toda_descripcion_de_dispositivo_es_legible():
 
 
 def test_device_description_follows_the_language(selected_language):
-    """The phrase is read by the user in the report and in the Viewer, so it
-    must be translatable copy rather than a fixed constant."""
+    """The phrase is shown to the user (today in the Viewer's status line), so
+    it must be translatable copy rather than a fixed constant."""
     selected_language("es")
     spanish_text = P.description_device(P.DEVICE_CPU)
     selected_language("en")

@@ -229,7 +229,11 @@ def label_devices() -> str:
 
 
 def description_device(device: str) -> str:
-    """Short phrase explaining what that device is, for the report and the Viewer."""
+    """Short phrase explaining what that device is, for a person reading it.
+
+    The Viewer's status line is today's caller: it names the device that ran
+    the inference, not the bare token the model received.
+    """
     d = (device or "").strip().lower()
     if d == "mps":
         return _("Mac integrated GPU (Metal Performance Shaders)")

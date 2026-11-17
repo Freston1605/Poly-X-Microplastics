@@ -142,12 +142,25 @@ FAILURE_COLLINEAR_POINTS = "collinear_points"
 COLLINEAR_TOLERANCE = 1e-12
 
 
-def _is_finite_point(point: Point) -> bool:
-    return math.isfinite(point[0]) and math.isfinite(point[1])
+def _all_finite(*values: float) -> bool:
+    """Whether every number is a real one: NaN and ±inf cannot give a scale."""
+    return all(math.isfinite(value) for value in values)
 
 
 def _distance(p1: Point, p2: Point) -> float:
     return math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+
+
+def _scale(real_um: float, drawn_px: float) -> tuple[float | None, str | None]:
+    """µm per pixel, or the reason the real size cannot give one.
+
+    ``drawn_px`` is the pixel span the real size covers: the length of a line
+    or the diameter of a circle. The refusal of a non-positive real size lives
+    here, once, because the division it guards is the same one in both.
+    """
+    if real_um <= 0.0:
+        return None, FAILURE_NON_POSITIVE_REAL_SIZE
+    return real_um / drawn_px, None
 
 
 @dataclass(frozen=True)
@@ -156,34 +169,93 @@ class LineCalibration:
 
     length_px: float | None = None
     um_per_px: float | None = None
-    failure: str = ""
+    failure: str | None = None
 
 
 def line_calibration(p1: Point, p2: Point, real_um: float) -> LineCalibration:
     """µm/px from a line of known real length, in µm.
 
-    Returns ``None`` values plus a named failure instead of a scale when the
-    drawing cannot support one; a zero scale is still a scale, and every size
-    computed with it would silently come out zero.
+    Returns ``None`` plus a named failure instead of a scale when the drawing
+    cannot support one; a zero scale is still a scale, and every size computed
+    with it would silently come out zero.
     """
-    if not (_is_finite_point(p1) and _is_finite_point(p2) and math.isfinite(real_um)):
+    if not _all_finite(*p1, *p2, real_um):
         return LineCalibration(failure=FAILURE_NON_FINITE)
     length_px = _distance(p1, p2)
     if length_px == 0.0:
         return LineCalibration(length_px=0.0, failure=FAILURE_ZERO_LENGTH)
-    if real_um <= 0.0:
-        return LineCalibration(length_px=length_px, failure=FAILURE_NON_POSITIVE_REAL_SIZE)
-    return LineCalibration(length_px=length_px, um_per_px=real_um / length_px)
+    um_per_px, failure = _scale(real_um, length_px)
+    return LineCalibration(length_px=length_px, um_per_px=um_per_px, failure=failure)
+
+
+@dataclass(frozen=True)
+class CircumscribedCircle:
+    """Centre and radius of the circle through three drawn points."""
+
+    center: Point
+    radius_px: float
+
+
+def _circumscribed(
+    p1: Point, p2: Point, p3: Point
+) -> tuple[CircumscribedCircle | None, str | None]:
+    """The circle through three FINITE points, or the reason there is none.
+
+    Callers check finiteness first: this only tells apart the degenerate
+    triangles, which is the part that names a failure for the user.
+    """
+    ab = (p2[0] - p1[0], p2[1] - p1[1])
+    ac = (p3[0] - p1[0], p3[1] - p1[1])
+    ab_len = math.hypot(*ab)
+    ac_len = math.hypot(*ac)
+    if ab_len == 0.0 or ac_len == 0.0 or _distance(p2, p3) == 0.0:
+        return None, FAILURE_COINCIDENT_POINTS
+
+    cross = ab[0] * ac[1] - ab[1] * ac[0]
+    if abs(cross) <= COLLINEAR_TOLERANCE * ab_len * ac_len:
+        return None, FAILURE_COLLINEAR_POINTS
+
+    ab2 = ab[0] * ab[0] + ab[1] * ab[1]
+    ac2 = ac[0] * ac[0] + ac[1] * ac[1]
+    ux = (ac[1] * ab2 - ab[1] * ac2) / (2.0 * cross)
+    uy = (ab[0] * ac2 - ac[0] * ab2) / (2.0 * cross)
+    return CircumscribedCircle(
+        center=(p1[0] + ux, p1[1] + uy),
+        radius_px=math.hypot(ux, uy),
+    ), None
+
+
+def circumscribed_circle(p1: Point, p2: Point, p3: Point) -> CircumscribedCircle | None:
+    """Circle through three points, or ``None`` when there is no single one.
+
+    ``None`` covers a non-finite coordinate, two coincident points and three
+    collinear ones: none of the three defines a circle. The Viewer preview
+    needs only this geometry and has no real size to give, which is why it is
+    not asked for here. A caller that must tell the user WHICH refusal
+    happened asks :func:`circle_calibration`, which names it.
+    """
+    if not _all_finite(*p1, *p2, *p3):
+        return None
+    circle, _failure = _circumscribed(p1, p2, p3)
+    return circle
 
 
 @dataclass(frozen=True)
 class CircleCalibration:
     """Circumscribed circle and its scale, or why they were refused."""
 
-    center: Point | None = None
-    radius_px: float | None = None
+    circle: CircumscribedCircle | None = None
     um_per_px: float | None = None
-    failure: str = ""
+    failure: str | None = None
+
+    @property
+    def center(self) -> Point | None:
+        """Centre of the circle, or ``None`` when none was defined."""
+        return self.circle.center if self.circle is not None else None
+
+    @property
+    def radius_px(self) -> float | None:
+        return self.circle.radius_px if self.circle is not None else None
 
 
 def circle_calibration(
@@ -194,42 +266,15 @@ def circle_calibration(
     The radius is the circumradius of the triangle, so the result does not
     depend on where the first point was placed.
     """
-    if not (
-        _is_finite_point(p1)
-        and _is_finite_point(p2)
-        and _is_finite_point(p3)
-        and math.isfinite(real_diameter_um)
-    ):
+    if not _all_finite(*p1, *p2, *p3, real_diameter_um):
         return CircleCalibration(failure=FAILURE_NON_FINITE)
 
-    ab = (p2[0] - p1[0], p2[1] - p1[1])
-    ac = (p3[0] - p1[0], p3[1] - p1[1])
-    ab_len = math.hypot(*ab)
-    ac_len = math.hypot(*ac)
-    if ab_len == 0.0 or ac_len == 0.0 or _distance(p2, p3) == 0.0:
-        return CircleCalibration(failure=FAILURE_COINCIDENT_POINTS)
+    circle, failure = _circumscribed(p1, p2, p3)
+    if circle is None:
+        return CircleCalibration(failure=failure)
 
-    cross = ab[0] * ac[1] - ab[1] * ac[0]
-    if abs(cross) <= COLLINEAR_TOLERANCE * ab_len * ac_len:
-        return CircleCalibration(failure=FAILURE_COLLINEAR_POINTS)
-
-    ab2 = ab[0] * ab[0] + ab[1] * ab[1]
-    ac2 = ac[0] * ac[0] + ac[1] * ac[1]
-    ux = (ac[1] * ab2 - ab[1] * ac2) / (2.0 * cross)
-    uy = (ab[0] * ac2 - ac[0] * ab2) / (2.0 * cross)
-    radius_px = math.hypot(ux, uy)
-    center = (p1[0] + ux, p1[1] + uy)
-    if real_diameter_um <= 0.0:
-        return CircleCalibration(
-            center=center,
-            radius_px=radius_px,
-            failure=FAILURE_NON_POSITIVE_REAL_SIZE,
-        )
-    return CircleCalibration(
-        center=center,
-        radius_px=radius_px,
-        um_per_px=real_diameter_um / (2.0 * radius_px),
-    )
+    um_per_px, failure = _scale(real_diameter_um, 2.0 * circle.radius_px)
+    return CircleCalibration(circle=circle, um_per_px=um_per_px, failure=failure)
 
 
 def hough_approximate(bgr: np.ndarray) -> tuple | None:

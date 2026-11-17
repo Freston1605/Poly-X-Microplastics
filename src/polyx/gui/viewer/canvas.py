@@ -20,11 +20,11 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QWidget
 
 from polyx.core.i18n import _
-from polyx.core.measure.calibration import circle_calibration
+from polyx.core.measure.calibration import circumscribed_circle
 from polyx.gui import theme as T
 
 from .export import size_label
-from .state import ViewerState
+from .state import CALIB_MODE_CIRCLE, CALIB_MODE_LINE, CALIB_MODE_NONE, ViewerState
 
 _CLASS_COLORS = [
     T.CLASS_COLOR_HEX.get("PET", "#e3342f"),
@@ -47,8 +47,8 @@ class ViewerCanvas(QWidget):
 
     Modes:
       - `Normal`    : zoom/pan, shows image + detections
-      - `Calibración línea`  : 2 clicks → emits state.calib_ready
-      - `Calibración círculo`: 3 clicks → emits state.calib_ready
+      - `line`   : 2 clicks → emits state.calib_ready
+      - `circle` : 3 clicks → emits state.calib_ready
     Shortcuts:
       - Mouse wheel       → zoom
       - Middle button     → pan
@@ -223,7 +223,7 @@ class ViewerCanvas(QWidget):
     def _draw_calib_overlay(self, p: QPainter):
         pts = self.state.calib_pts
         mode = self.state.calib_mode
-        if mode == "none" or not pts:
+        if mode == CALIB_MODE_NONE or not pts:
             return
 
         accent = QColor(T.ACCENT)
@@ -237,7 +237,7 @@ class ViewerCanvas(QWidget):
             p.setBrush(QBrush(accent))
             p.drawEllipse(wp, 5, 5)
 
-        if mode == "linea":
+        if mode == CALIB_MODE_LINE:
             if len(w_pts) >= 2:
                 p.setPen(line_pen)
                 p.drawLine(w_pts[0], w_pts[1])
@@ -257,7 +257,7 @@ class ViewerCanvas(QWidget):
                 p.setPen(line_pen)
                 p.drawLine(w_pts[0], cw)
 
-        elif mode == "circulo":
+        elif mode == CALIB_MODE_CIRCLE:
             if len(w_pts) >= 2:
                 # Lines between points
                 p.setPen(line_pen)
@@ -266,17 +266,15 @@ class ViewerCanvas(QWidget):
 
             if len(pts) >= 3:
                 # Circumscribed circle. Only the geometry is drawn here and
-                # the real size plays no part in it, so any positive value
-                # gives the same centre and radius as the final calibration
-                # would. Collinear points have no circumcircle and none is
-                # drawn.
-                ring = circle_calibration(
+                # the real size plays no part in it, so the preview asks the
+                # core for the circle alone. Collinear points have no
+                # circumcircle and none is drawn.
+                ring = circumscribed_circle(
                     (pts[0].x(), pts[0].y()),
                     (pts[1].x(), pts[1].y()),
                     (pts[2].x(), pts[2].y()),
-                    1.0,
                 )
-                if ring.center is not None and ring.radius_px is not None:
+                if ring is not None:
                     cw = self._i2w(QPointF(*ring.center))
                     r_w = ring.radius_px * self._scale
                     circ_color = QColor(T.ACCENT)
@@ -304,12 +302,12 @@ class ViewerCanvas(QWidget):
             return
 
         if ev.button() == Qt.RightButton:
-            if self.state.calib_mode != "none":
+            if self.state.calib_mode != CALIB_MODE_NONE:
                 self.state.cancel_calib()
             return
 
         if ev.button() == Qt.LeftButton:  # noqa: SIM102
-            if self.state.calib_mode != "none":
+            if self.state.calib_mode != CALIB_MODE_NONE:
                 img_pt = self._w2i(pos)
                 self.state.add_calib_point(img_pt)
             # In normal mode the canvas is inspection-only (it does not edit)
@@ -321,7 +319,7 @@ class ViewerCanvas(QWidget):
             self._offset = self._pan_offset_start + delta
             self._user_view = True
             self.update()
-        elif self.state.calib_mode != "none":
+        elif self.state.calib_mode != CALIB_MODE_NONE:
             self._cursor_img = self._w2i(pos)
             self.update()
 
