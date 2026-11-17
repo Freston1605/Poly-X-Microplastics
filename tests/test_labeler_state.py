@@ -290,3 +290,29 @@ def test_census_rule_is_unchanged(tmp_path):
     assert b == state.current_image
     assert (root / "labels" / "train" / "b.txt").is_file()
     assert (root / "labels" / "train" / "b.txt").read_text(encoding="utf-8") == ""
+
+
+def test_each_image_keeps_its_editor_so_history_survives_navigating(tmp_path):
+    """Ticket #145: one editor per loaded image, kept across ``goto``.
+
+    Undo history used to live in parallel per-image stacks on the state.
+    Now the editor owns it, so returning to an image must hand back the
+    same editor — and the same ``Ctrl+Z``.
+    """
+    root = split_dataset(tmp_path / "ds", {"train": {"a": None, "b": None}})
+    state = LabelerState()
+    state.load_images(root / "images" / "train")
+
+    first = state.current_editor
+    state.set_current_boxes([BBox(class_id=1, cx=0.5, cy=0.5, w=0.2, h=0.2)])
+    assert first is not None
+
+    state.next_image()
+    other = state.current_editor
+    assert other is not None and other is not first
+
+    state.prev_image()
+    assert state.current_editor is first
+
+    state.undo()
+    assert state.current_boxes == []

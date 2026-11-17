@@ -617,7 +617,8 @@ folder keeps one per folder that holds labels.
 
 **Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
 unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
-selected box · `Ctrl+Z/Y` undo/redo · wheel zoom · middle-button pan.
+selected box · `Ctrl+Z/Y` undo/redo · drag to draw · drag a box to move it · drag a
+handle to resize · wheel zoom · middle-button pan.
 
 **Minimum box side: 2 px** (`BboxCanvas.SIDE_MINIMUM_PX`). It was 5 px and it silently
 discarded legitimate marks: the study's smallest particles measure ~8 px per side.

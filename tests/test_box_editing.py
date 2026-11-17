@@ -435,6 +435,30 @@ def test_assign_class_without_a_target_does_nothing():
     assert editor.can_undo is False
 
 
+def test_replacing_every_box_records_one_undo_entry_and_clears_the_selection():
+    """Pre-annotation replaces the drawing through the same history."""
+    editor = BoxEditor(100, 80, boxes=[_A])
+    editor.select(0)
+
+    editor.replace([_B, _C])
+
+    assert editor.boxes == (_B, _C)
+    assert editor.selection == -1
+    assert editor.undo() is True
+    assert editor.boxes == (_A,)
+
+
+def test_replacing_without_recording_leaves_history_and_undo_alone():
+    """A batch pre-annotation is not an operator gesture to undo."""
+    editor = BoxEditor(100, 80, boxes=[_A])
+
+    editor.replace([_B], record=False)
+
+    assert editor.boxes == (_B,)
+    assert editor.can_undo is False
+    assert editor.undo() is False
+
+
 # ── Undo history ─────────────────────────────────────────────────────────
 
 

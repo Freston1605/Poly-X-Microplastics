@@ -524,6 +524,23 @@ class BoxEditor:
         self._boxes[target] = EditBox(box.x1, box.y1, box.x2, box.y2, class_id)
         return True
 
+    def replace(self, boxes: Iterable[EditBox], record: bool = True) -> None:
+        """Swap the whole drawing, as a host policy does after pre-annotation.
+
+        ``record`` decides whether the previous drawing becomes one undo
+        entry: replacing by an operator gesture is undoable, a batch that
+        fills the blanks is not. The selection is cleared because the new
+        boxes have no history with it.
+        """
+        if record:
+            self._record()
+        self._boxes = list(boxes)
+        self._selected = -1
+        self._mode = EditMode.IDLE
+        self._pending = None
+        self._base_box = None
+        self._handle = Handle.NONE
+
     # ── Conversion ──────────────────────────────────────────
     def to_bboxes(self) -> list[labels.BBox]:
         """The boxes as normalized YOLO boxes, through the label codec."""
