@@ -396,6 +396,45 @@ def test_both_canvases_refuse_a_sub_two_pixel_box_with_the_same_visible_message(
     )
 
 
+# ── One class-key rule ─────────────────────────────────────────────────────
+
+
+def test_a_class_key_sets_the_active_class_and_reclassifies_the_selection(rigs):
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    # The selected box takes the class the key names, and so does the next draw.
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_3)
+    for rig in (labeller, gt):
+        assert rig.active_class() == 2
+        assert rig.boxes()[0][4] == 2
+
+    # One undo entry: the geometry stays, the class returns.
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_Z, Qt.ControlModifier)
+    for rig in (labeller, gt):
+        assert len(rig.boxes()) == 1
+        assert rig.boxes()[0][4] == 0
+        assert rig.selection() == 0
+
+    # With no selection the key only changes the next box's class: no class
+    # entry lands in the history, so the next undo removes the draw itself.
+    for rig in (labeller, gt):
+        rig.click((350, 280))
+        rig.key(Qt.Key_2)
+    for rig in (labeller, gt):
+        assert rig.selection() == -1
+        assert rig.active_class() == 1
+        assert rig.boxes()[0][4] == 0
+    for rig in (labeller, gt):
+        rig.key(Qt.Key_Z, Qt.ControlModifier)
+    for rig in (labeller, gt):
+        assert rig.boxes() == []
+        assert rig.active_class() == 1
+
+
 # ── One class-colour path ─────────────────────────────────────────────────
 
 

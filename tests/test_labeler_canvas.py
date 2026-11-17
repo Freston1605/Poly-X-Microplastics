@@ -72,13 +72,17 @@ def test_the_written_yolo_lines_are_byte_identical_to_the_pre_migration_output(l
     """Characterization: the same gestures must write the same bytes.
 
     The expected literal was captured from the pre-migration canvas with
-    this exact script (three boxes, one per class, disjoint areas).
+    this script (three boxes, one per class, disjoint areas). The empty
+    clicks only deselect: a class change now reclassifies a selected box
+    (review P3), and the bytes are still the pre-migration ones.
     """
     rig = labeller
 
     rig.drag((5, 5), (25, 21))
+    rig.click((45, 35))  # deselect: a class change now reclassifies a selection
     rig.set_class(1)
     rig.drag((30, 5.5), (50.25, 19.75))
+    rig.click((45, 35))
     rig.set_class(2)
     rig.drag((6.25, 24.5), (29.75, 37.5))
 

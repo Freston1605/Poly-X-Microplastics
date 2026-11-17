@@ -618,7 +618,8 @@ conventional layout `classes.txt` is written once at the dataset root; a plain
 folder keeps one per folder that holds labels.
 
 **Shortcuts:** `Space` marks reviewed and moves on · `Tab` jumps to the next
-unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` deletes the
+unreviewed · `F` reframes · `1-9` active class, and they reclassify the selected
+box (one undo entry) · `←/→` navigate · `Del` deletes the
 selected box · `Ctrl+Z/Y` undo/redo · drag to draw · drag a box to move it · drag a
 handle to resize · wheel zoom · middle-button pan.
 

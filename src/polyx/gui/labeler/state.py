@@ -310,11 +310,21 @@ class LabelerState(QObject):
 
     # ── Classes ──────────────────────────────────────────────
     def set_active_class(self, cls_id: int):
+        """The class new boxes get, and the class the selection takes.
+
+        One rule for both annotation canvases: the key (or the class button)
+        sets the active class and, when a box is selected, reclassifies it
+        through the core — which records one undo entry and nothing when the
+        class is already the box's.
+        """
+        if not 0 <= cls_id < len(self.class_names):
+            return
         self.active_class = cls_id
-        img = self.current_image
-        editor = self._editors.get(str(img)) if img is not None else None
+        editor = self.current_editor
         if editor is not None:
             editor.set_active_class(cls_id)
+            if editor.assign_class(cls_id):
+                self.annotations_changed.emit()
         self.active_class_changed.emit(cls_id)
 
     def set_class_names(self, names: list[str]):
