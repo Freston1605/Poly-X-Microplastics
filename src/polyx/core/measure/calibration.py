@@ -136,6 +136,17 @@ FAILURE_NON_POSITIVE_REAL_SIZE = "non_positive_real_size"
 FAILURE_COINCIDENT_POINTS = "coincident_points"
 FAILURE_COLLINEAR_POINTS = "collinear_points"
 
+#: Every named refusal this module can produce. A caller that maps failures to
+#: user-facing copy iterates this tuple, so a new refusal cannot silently fall
+#: through to a generic sentence.
+FAILURE_CODES = (
+    FAILURE_NON_FINITE,
+    FAILURE_ZERO_LENGTH,
+    FAILURE_NON_POSITIVE_REAL_SIZE,
+    FAILURE_COINCIDENT_POINTS,
+    FAILURE_COLLINEAR_POINTS,
+)
+
 # Relative tolerance of the collinearity test. A triangle thinner than this
 # has no numerically meaningful circumcircle; its radius would be dominated
 # by rounding error.
