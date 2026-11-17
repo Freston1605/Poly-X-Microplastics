@@ -102,6 +102,7 @@ _Avoid_: "calibration failed" (does not say what happened to the scale),
 0 µm/px as a refusal
 
 ## Model alias and display name
+
 Two values for the same model. The **alias** is the stable, filesystem-safe
 folder key inside a run (`model_1`, or the weights stem / a name somebody
 typed); it is an artifact and is never translated. The **display name** is the
