@@ -11,6 +11,7 @@ widget, and a clean interpreter must be able to import the core without Qt.
 
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -38,13 +39,46 @@ from polyx.core.editing import (  # noqa: E402
 
 
 def test_the_editing_core_imports_without_qt():
-    """A clean interpreter imports the editor without loading PySide6."""
-    script = (
-        "import sys\n"
-        "from polyx.core.editing import BoxEditor, EditBox, Handle\n"
-        "bad = sorted(m for m in sys.modules if m == 'PySide6' or m.startswith('PySide6.'))\n"
-        "print('QT_LOADED=' + repr(bad))\n"
-        "raise SystemExit(1 if bad else 0)\n"
+    """Every core module imports without Qt or the GUI package.
+
+    The core's boundary is "no Qt, no polyx.gui", not "the editing module
+    alone does not import PySide6". A fresh interpreter imports the editing
+    core first, then every importable ``polyx.core`` submodule, and the whole
+    loaded-module set is inspected: an indirect Qt dependency in any core
+    module fails here, not in a window test.
+
+    A static scan covers the lazy-import escape hatch (an import inside a
+    function that the walk would not execute).
+    """
+    script = "\n".join(
+        [
+            "import importlib",
+            "import pkgutil",
+            "import sys",
+            "OPTIONAL = {'sam2'}  # optional extra, not part of the core contract",
+            "import polyx.core.editing  # noqa: F401  imported first, deliberately",
+            "import polyx.core",
+            "failures = []",
+            "for module in pkgutil.walk_packages(polyx.core.__path__, 'polyx.core.'):",
+            "    try:",
+            "        importlib.import_module(module.name)",
+            "    except ModuleNotFoundError as exc:",
+            "        root = (exc.name or '').split('.')[0]",
+            "        if root not in OPTIONAL:",
+            "            failures.append(f'{module.name}: missing {exc.name}')",
+            "    except Exception as exc:  # noqa: BLE001",
+            "        failures.append(f'{module.name}: {type(exc).__name__}: {exc}')",
+            "qt_roots = {'PySide6', 'PySide2', 'PyQt5', 'PyQt6', 'qtpy', 'shiboken6'}",
+            "loaded = sorted(",
+            "    name for name in sys.modules",
+            "    if name.split('.')[0] in qt_roots",
+            "    or name == 'polyx.gui'",
+            "    or name.startswith('polyx.gui.')",
+            ")",
+            "print('FAILED=' + repr(failures))",
+            "print('GUI_OR_QT=' + repr(loaded))",
+            "raise SystemExit(1 if failures or loaded else 0)",
+        ]
     )
     env = dict(os.environ)
     env["PYTHONPATH"] = str(SRC) + os.pathsep + env.get("PYTHONPATH", "")
@@ -58,11 +92,43 @@ def test_the_editing_core_imports_without_qt():
         timeout=120,
     )
     assert result.returncode == 0, (
-        "importing the editing core dragged Qt or failed:\n"
+        "importing the core dragged Qt or the GUI package:\n"
         f"stdout: {result.stdout}\n"
         f"stderr: {result.stderr}"
     )
-    assert "QT_LOADED=[]" in result.stdout
+    assert "FAILED=[]" in result.stdout
+    assert "GUI_OR_QT=[]" in result.stdout
+
+    # The dynamic walk cannot execute a lazy import; the source must not import
+    # a Qt package or polyx.gui either.
+    forbidden_roots = {"PySide6", "PySide2", "PyQt5", "PyQt6", "qtpy", "shiboken6"}
+    offenders: list[str] = []
+    for path in (SRC / "polyx" / "core").rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            names: list[str] = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module]
+            elif isinstance(node, ast.Call):
+                func = node.func
+                called = getattr(func, "attr", getattr(func, "id", ""))
+                first = node.args[0] if node.args else None
+                if (
+                    called in {"import_module", "__import__"}
+                    and isinstance(first, ast.Constant)
+                    and isinstance(first.value, str)
+                ):
+                    names = [first.value]
+            offenders.extend(
+                f"{path.relative_to(ROOT)}:{node.lineno}: {name}"
+                for name in names
+                if name.split(".")[0] in forbidden_roots
+                or name == "polyx.gui"
+                or name.startswith("polyx.gui.")
+            )
+    assert offenders == [], "core imports a Qt package or the GUI package:\n" + "\n".join(offenders)
 
 
 # ── The value type ────────────────────────────────────────────────────────
