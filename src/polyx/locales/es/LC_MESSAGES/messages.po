@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 01:11-0300\n"
+"POT-Creation-Date: 2026-11-17 01:18-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1559,7 +1559,7 @@ msgstr "No se pudo leer el tamano de %(name)s"
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1403
+#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1407
 msgid "Error while saving"
 msgstr "Error al guardar"
 
@@ -2891,7 +2891,7 @@ msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acer
 msgid "● Folder loaded"
 msgstr "● Carpeta cargada"
 
-#: src/polyx/gui/labeler/window.py:442 src/polyx/gui/viewer/window.py:1493
+#: src/polyx/gui/labeler/window.py:442 src/polyx/gui/viewer/window.py:1497
 msgid "● Model loaded"
 msgstr "● Modelo cargado"
 
@@ -5866,7 +5866,7 @@ msgstr "  Sin imagen  —  Sin calibración"
 
 #: src/polyx/gui/viewer/window.py:261 src/polyx/gui/viewer/window.py:716
 #: src/polyx/gui/viewer/window.py:815 src/polyx/gui/viewer/window.py:929
-#: src/polyx/gui/viewer/window.py:1351 src/polyx/gui/viewer/window.py:1372
+#: src/polyx/gui/viewer/window.py:1355 src/polyx/gui/viewer/window.py:1376
 msgid "No image"
 msgstr "Sin imagen"
 
@@ -5938,7 +5938,7 @@ msgstr ""
 msgid "✕  Cancel calibration"
 msgstr "✕  Cancelar calibración"
 
-#: src/polyx/gui/viewer/window.py:468 src/polyx/gui/viewer/window.py:1357
+#: src/polyx/gui/viewer/window.py:468 src/polyx/gui/viewer/window.py:1361
 msgid "Not calibrated"
 msgstr "Sin calibrar"
 
@@ -5978,15 +5978,23 @@ msgstr "Carpeta de la corrida (runs/detect_...)"
 msgid "● Calibration mode active"
 msgstr "● Modo calibración activo"
 
-#: src/polyx/gui/viewer/window.py:1320
+#: src/polyx/gui/viewer/window.py:1283
+msgid "Calibration — Line"
+msgstr "Calibración — Línea"
+
+#: src/polyx/gui/viewer/window.py:1285
+msgid "Real length of the marked line (μm):"
+msgstr "Tamaño real de la línea marcada (μm):"
+
+#: src/polyx/gui/viewer/window.py:1325
 msgid "Calibration not applied"
 msgstr "Calibración no aplicada"
 
-#: src/polyx/gui/viewer/window.py:1321
+#: src/polyx/gui/viewer/window.py:1326
 msgid "● Calibration not applied"
 msgstr "● Calibración no aplicada"
 
-#: src/polyx/gui/viewer/window.py:1378
+#: src/polyx/gui/viewer/window.py:1382
 msgid "Output folder"
 msgstr "Carpeta de salida"
 
@@ -6136,29 +6144,37 @@ msgstr ""
 "Haz clic en 3 puntos del borde\n"
 "de un objeto circular conocido."
 
-#: src/polyx/gui/viewer/window.py:1277
-msgid "Calibration — Line"
-msgstr "Calibración — Línea"
+#: src/polyx/gui/viewer/window.py:1270
+msgid "Enter the real size to finish."
+msgstr "Introduce el tamaño real para terminar."
 
-#: src/polyx/gui/viewer/window.py:1278
-msgid "Real length of the marked line (μm):"
-msgstr "Tamaño real de la línea marcada (μm):"
+#: src/polyx/gui/viewer/window.py:1294
+msgid "Calibration — Circle"
+msgstr "Calibración — Círculo"
 
-#: src/polyx/gui/viewer/window.py:1331
+#: src/polyx/gui/viewer/window.py:1296
+msgid ""
+"Real diameter of the circular object (μm):\n"
+"100 mm Petri dish → 100000"
+msgstr ""
+"Diámetro real del objeto circular (μm):\n"
+"Placa Petri de 100 mm → 100000"
+
+#: src/polyx/gui/viewer/window.py:1335
 #, python-format
 msgid "%(value).4f μm/px  (%(mode)s)"
 msgstr "%(value).4f μm/px  (%(mode)s)"
 
-#: src/polyx/gui/viewer/window.py:1338
+#: src/polyx/gui/viewer/window.py:1342
 #, python-format
 msgid "● Calibration applied: %(value).4f μm/px"
 msgstr "● Calibración aplicada: %(value).4f μm/px"
 
-#: src/polyx/gui/viewer/window.py:1372
+#: src/polyx/gui/viewer/window.py:1376
 msgid "No image is open."
 msgstr "No hay imagen abierta."
 
-#: src/polyx/gui/viewer/window.py:1399
+#: src/polyx/gui/viewer/window.py:1403
 msgid "Saved"
 msgstr "Guardado"
 
@@ -6233,39 +6249,27 @@ msgstr "ancho       %(value)8.1f px"
 msgid "warning: %(message)s"
 msgstr "aviso: %(message)s"
 
-#: src/polyx/gui/viewer/window.py:1254
+#: src/polyx/gui/viewer/window.py:1259
 #, python-format
 msgid "Click %(count)d more point."
 msgid_plural "Click %(count)d more points."
 msgstr[0] "Haz clic en %(count)d punto más."
 msgstr[1] "Haz clic en %(count)d puntos más."
 
-#: src/polyx/gui/viewer/window.py:1298
-msgid "Calibration — Circle"
-msgstr "Calibración — Círculo"
-
-#: src/polyx/gui/viewer/window.py:1299
-msgid ""
-"Real diameter of the circular object (μm):\n"
-"100 mm Petri dish → 100000"
-msgstr ""
-"Diámetro real del objeto circular (μm):\n"
-"Placa Petri de 100 mm → 100000"
-
-#: src/polyx/gui/viewer/window.py:1327
+#: src/polyx/gui/viewer/window.py:1331
 msgid "line"
 msgstr "línea"
 
-#: src/polyx/gui/viewer/window.py:1328
+#: src/polyx/gui/viewer/window.py:1332
 msgid "circle"
 msgstr "círculo"
 
-#: src/polyx/gui/viewer/window.py:1396
+#: src/polyx/gui/viewer/window.py:1400
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr "● Guardado en %(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1399
+#: src/polyx/gui/viewer/window.py:1403
 #, python-format
 msgid ""
 "Files saved to:\n"
@@ -6274,7 +6278,7 @@ msgstr ""
 "Archivos guardados en:\n"
 "%(folder)s"
 
-#: src/polyx/gui/viewer/window.py:1405
+#: src/polyx/gui/viewer/window.py:1409
 msgid "● Error while saving"
 msgstr "● Error al guardar"
 
@@ -6318,7 +6322,7 @@ msgstr "  x %(scale).4f um/px = %(size).0f um"
 msgid "  = %(size).0f um"
 msgstr "  = %(size).0f um"
 
-#: src/polyx/gui/viewer/window.py:1496
+#: src/polyx/gui/viewer/window.py:1500
 #, python-format
 msgid "● Error: %(error)s"
 msgstr "● Error: %(error)s"

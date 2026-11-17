@@ -272,6 +272,34 @@ _REFUSAL_MESSAGES = [
 ]
 
 
+def test_the_hint_counts_the_points_missing_and_then_asks_for_the_size(
+    qapp, monkeypatch, selected_language
+):
+    """A kept drawing is complete: the hint must not ask for 0 or -1 points."""
+    from PySide6.QtWidgets import QMessageBox
+
+    from polyx.gui.viewer import window as window_module
+
+    selected_language("en")
+    monkeypatch.setattr(window_module.QInputDialog, "getDouble", lambda *a, **k: (1000.0, True))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *_args: None)
+    window = window_module.ViewerWindow()
+    window.state.start_calib("line")
+    try:
+        window.state.add_calib_point(QPointF(0.0, 0.0))
+        assert "1 more point." in window.lbl_calib_hint.text()
+
+        # Coincident points: the size is refused and the drawing stays.
+        window.state.add_calib_point(QPointF(0.0, 0.0))
+        assert "more point" not in window.lbl_calib_hint.text()
+        assert "real size" in window.lbl_calib_hint.text()
+
+        window.state.add_calib_point(QPointF(0.0, 0.0))
+        assert "-1" not in window.lbl_calib_hint.text()
+    finally:
+        window.close()
+
+
 @pytest.mark.parametrize(("mode", "points", "phrase"), _REFUSAL_MESSAGES)
 def test_a_refused_finish_tells_the_user_why_and_keeps_the_previous_scale(
     mode, points, phrase, qapp, monkeypatch, selected_language
@@ -299,4 +327,35 @@ def test_a_refused_finish_tells_the_user_why_and_keeps_the_previous_scale(
     assert len(warnings) == 1, "the failure is surfaced, not swallowed"
     assert phrase in warnings[0], "the message names the reason"
     assert "not applied" in window.lbl_status.text()
-    assert window.state.calib_mode == "none", "the drawing restarts cleanly"
+    assert window.state.calib_mode == mode, "the mode stays active"
+    assert len(window.state.calib_pts) == len(points), "the drawing is kept"
+
+
+def test_the_user_can_finish_from_the_kept_drawing_after_a_refusal(
+    qapp, monkeypatch, selected_language
+):
+    """A refusal leaves the points on screen: the next size applies to them.
+
+    Cancelling instead threw the drawing away and made the user click the same
+    two points again, which is what this replaces.
+    """
+    from PySide6.QtWidgets import QMessageBox
+
+    from polyx.gui.viewer import window as window_module
+
+    selected_language("en")
+    answers = iter((0.0, 1000.0))  # a refused size, then a usable one
+    monkeypatch.setattr(
+        window_module.QInputDialog, "getDouble", lambda *a, **k: (next(answers), True)
+    )
+    monkeypatch.setattr(QMessageBox, "warning", lambda *_args: None)
+    window = window_module.ViewerWindow()
+    window.state.start_calib("line")
+    try:
+        window.state.add_calib_point(QPointF(0.0, 0.0))
+        window.state.add_calib_point(QPointF(100.0, 0.0))  # refused: size 0
+        window.state.add_calib_point(QPointF(50.0, 0.0))  # applies to the kept points
+    finally:
+        window.close()
+
+    assert window.state.um_per_px == pytest.approx(10.0)
