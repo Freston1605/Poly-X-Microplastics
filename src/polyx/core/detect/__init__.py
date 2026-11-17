@@ -8,10 +8,17 @@ from .protocol import (
     Instance,
     SegmentationPrompts,
     SegmentationSource,
-    policy_tiling,
     size_image,
 )
 from .sam import Sam2Segmenter
+from .tiling import (
+    TilingDecision,
+    TilingMode,
+    TilingPlan,
+    decide_tiling,
+    describe_tiling,
+    policy_tiling,
+)
 from .two_stage import TwoStageDetector, build_two_stage
 from .yolo import Detection, YoloModel, YoloSegModel
 
@@ -24,10 +31,15 @@ __all__ = [
     "Sam2Segmenter",
     "SegmentationPrompts",
     "SegmentationSource",
+    "TilingDecision",
+    "TilingMode",
+    "TilingPlan",
     "TwoStageDetector",
     "YoloModel",
     "YoloSegModel",
     "build_two_stage",
+    "decide_tiling",
+    "describe_tiling",
     "list_detectors",
     "make_detector",
     "policy_tiling",

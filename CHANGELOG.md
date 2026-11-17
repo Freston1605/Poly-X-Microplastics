@@ -14,6 +14,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- Tiling has one owner: `polyx.core.detect.tiling` holds the decision
+  (`decide_tiling`), the typed plan and the one sentence each image's plan is
+  phrased with. The mode is English at every boundary (`auto`/`always`/`never`);
+  a saved legacy spelling still loads, the CLI keeps those as hidden
+  deprecated aliases, and `run.json` now records `tiling_plan` per image/model
+  while keeping the legacy `tiling` string for old readers.
 - **Detection CSV headers are one canonical English schema on every door**
   (ADR-0004, a schema change). The Results page and the Viewer stops writing
   Spanish headers: both export named subsets of `DETECTION_COLUMNS`

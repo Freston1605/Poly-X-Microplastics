@@ -13,6 +13,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
+from polyx.core.detect.tiling import TilingMode, TilingPlan
 from polyx.core.detect.yolo import Detection
 from polyx.core.measure.calibration import Calibration, summary_batch
 from polyx.core.platform import device_available
@@ -73,14 +74,20 @@ class RunParams:
     # at a diagonal is reported as a fragment. It costs ~0.2 ms per particle.
     measure_shape: bool = True
     # -- Automatic tiling --
-    # "auto" tiles only photos whose longest side exceeds tiling_threshold_px,
+    # `AUTO` tiles only photos whose longest side exceeds tiling_threshold_px,
     # infers each tile at native resolution and merges with global NMS. The
     # threshold is 2000 so the study crops (1630 px per side) fit in one piece
-    # and the full plates (~3260) get tiled.
-    tiling: str = "auto"  # `"auto"` | `"siempre"` | `"nunca"`
+    # and the full plates (~3260) get tiled. The mode is English; a legacy
+    # spelling saved by an older run is normalised when the params are read.
+    tiling: TilingMode = TilingMode.AUTO
     tiling_threshold_px: int = 2000
     tiling_tile: int = 0  # 0 = derive from min(threshold, imgsz)
     tiling_overlap: float = 0.25  # overlap between tiles; NMS removes the duplicate
+
+    def __post_init__(self) -> None:
+        # Every way in -- a saved run, the CLI, a caller written before the
+        # English identifiers -- ends as the one enum.
+        self.tiling = TilingMode.parse(self.tiling)
 
 
 @lru_cache(maxsize=12)
@@ -130,7 +137,12 @@ class ImageResult:
     annotated_path: Path | None = None  # prediction + GT (preview/errors)
     pred_path: Path | None = None  # model predictions only
     gt_path: Path | None = None  # GT only (None if absent)
-    # tiling geometry if the photo was split; "" = inferred as one piece
+    # The tiling decision the run took for this image and model. It is the
+    # invariant record (numbers, no prose) and it is what a reader should
+    # render through ``describe()``; ``None`` means a single pass.
+    tiling_plan: TilingPlan | None = None
+    # Legacy formatted description kept for old readers of ``run.json``.
+    # "" = inferred as one piece. New folders also carry ``tiling_plan``.
     tiling: str = ""
 
     @staticmethod
