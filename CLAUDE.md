@@ -629,6 +629,14 @@ same message as the Labeller; it is not a per-canvas constant any more. It was 5
 and it silently discarded legitimate marks: the study's smallest particles measure
 ~8 px per side. Now, if a box is rejected, the status bar says so.
 
+**One annotation frame.** Both canvases decode through
+`polyx.gui.image_pixmap.qpixmap_from_file`, and `size_image` measures the same
+EXIF-applied frame. `QPixmap(path)` ignores the orientation tag while cv2
+honours it, so painting through it put the pixels in one geometry and the
+editor and the `.txt` in another, for photos tagged as rotated. Painting,
+hit-testing, editor dimensions and the saved normalisation now share one frame
+per canvas.
+
 Zoom is kept between images (checkbox in the right panel), with size tolerance:
 crops from a grid differ by 1 px due to rounding, and demanding exact equality
 used to lose the zoom on every change.
