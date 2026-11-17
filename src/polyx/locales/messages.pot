@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 20:00-0300\n"
+"POT-Creation-Date: 2026-11-17 00:35-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -932,11 +932,11 @@ msgstr ""
 msgid "Detection review — Poly-X"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:664 src/polyx/gui/detector/review_dialog.py:74
+#: src/polyx/gui/detector/pages/gt_manual.py:538 src/polyx/gui/detector/review_dialog.py:74
 msgid "Fit (F)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:679
+#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:553
 #: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:76
 #: src/polyx/gui/detector/review_dialog.py:94 src/polyx/gui/detector/window.py:29
 #: src/polyx/gui/report/sections.py:345
@@ -947,11 +947,11 @@ msgstr ""
 msgid "Click and drag to draw · wheel: zoom · Space+drag: pan · Del: delete box."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:719 src/polyx/gui/detector/review_dialog.py:122
+#: src/polyx/gui/detector/pages/gt_manual.py:593 src/polyx/gui/detector/review_dialog.py:122
 msgid "←  Previous"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:722 src/polyx/gui/detector/review_dialog.py:125
+#: src/polyx/gui/detector/pages/gt_manual.py:596 src/polyx/gui/detector/review_dialog.py:125
 msgid "Next  →"
 msgstr ""
 
@@ -1087,8 +1087,8 @@ msgstr ""
 msgid "Models"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:637 src/polyx/gui/detector/pages/gt_manual.py:915
-#: src/polyx/gui/detector/pages/gt_manual.py:927 src/polyx/gui/detector/window.py:30
+#: src/polyx/gui/detector/pages/gt_manual.py:511 src/polyx/gui/detector/pages/gt_manual.py:789
+#: src/polyx/gui/detector/pages/gt_manual.py:801 src/polyx/gui/detector/window.py:30
 msgid "Manual GT"
 msgstr ""
 
@@ -1364,104 +1364,114 @@ msgid ""
 "complete photo."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:638
+#: src/polyx/gui/detector/pages/gt_manual.py:512
 msgid ""
 "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to "
 "resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · "
 "Ctrl+Z/Y: undo/redo · ←/→: previous/next image (autosaves)."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:646
+#: src/polyx/gui/detector/pages/gt_manual.py:520
 msgid "Annotation"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:651
+#: src/polyx/gui/detector/pages/gt_manual.py:525
 msgid "(no image selected)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:699
+#: src/polyx/gui/detector/pages/gt_manual.py:573
 msgid "Ready. Click and drag to draw."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:709
+#: src/polyx/gui/detector/pages/gt_manual.py:583
 msgid "Save ground truth (.txt YOLO)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:726
+#: src/polyx/gui/detector/pages/gt_manual.py:600
 msgid "Undo"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:730
+#: src/polyx/gui/detector/pages/gt_manual.py:604
 msgid "Redo"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:735
+#: src/polyx/gui/detector/pages/gt_manual.py:609
 msgid "Delete selection"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:739 src/polyx/gui/detector/pages/gt_manual.py:873
+#: src/polyx/gui/detector/pages/gt_manual.py:613 src/polyx/gui/detector/pages/gt_manual.py:747
 msgid "Clear all"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:744
+#: src/polyx/gui/detector/pages/gt_manual.py:618
 msgid "0 boxes"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:865
+#: src/polyx/gui/detector/pages/gt_manual.py:739
 #, python-format
 msgid "Delete the %(count)d box on this image?"
 msgid_plural "Delete the %(count)d boxes on this image?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:870
+#: src/polyx/gui/detector/pages/gt_manual.py:744
 msgid "(You can undo with Ctrl+Z)"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:941
+#: src/polyx/gui/detector/pages/gt_manual.py:815
 msgid "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:209
+#: src/polyx/gui/detector/pages/gt_manual.py:202
 msgid "Could not open the image."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:657
+#: src/polyx/gui/detector/pages/gt_manual.py:330 src/polyx/gui/labeler/window.py:362
+#, python-format
+msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
+msgstr ""
+
+#: src/polyx/gui/detector/pages/gt_manual.py:531
 msgid "Class:"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:859 src/polyx/gui/labeler/window.py:657
+#: src/polyx/gui/detector/pages/gt_manual.py:733 src/polyx/gui/labeler/window.py:657
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:915
+#: src/polyx/gui/detector/pages/gt_manual.py:789
 msgid "Select an image first."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:928
+#: src/polyx/gui/detector/pages/gt_manual.py:802
 msgid ""
 "No boxes have been drawn. Save this image as reviewed with zero particles? Any previous "
 "annotation will be overwritten."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:945
+#: src/polyx/gui/detector/pages/gt_manual.py:819
 #, python-format
 msgid "✓ Saved to: %(path)s%(warning)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:884
+#: src/polyx/gui/detector/pages/gt_manual.py:758
 #, python-format
 msgid "Could not read the size of %(name)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:907
+#: src/polyx/gui/detector/pages/gt_manual.py:781
 msgid "Autosaved."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1357
+#: src/polyx/gui/detector/pages/gt_manual.py:452
+#, python-format
+msgid "Drawing: %(width).0f×%(height).0f px"
+msgstr ""
+
+#: src/polyx/gui/detector/pages/gt_manual.py:784 src/polyx/gui/viewer/window.py:1357
 msgid "Error while saving"
 msgstr ""
 
@@ -2645,11 +2655,6 @@ msgstr ""
 #: src/polyx/gui/labeler/window.py:286 src/polyx/gui/trainer/pages/evaluate.py:98
 #: src/polyx/gui/trainer/pages/export.py:105
 msgid "imgsz:"
-msgstr ""
-
-#: src/polyx/gui/labeler/window.py:362
-#, python-format
-msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
 msgstr ""
 
 #: src/polyx/gui/labeler/window.py:422
