@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from polyx.core.detection_run import display_name
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
 from polyx.gui import iconos
@@ -236,10 +237,11 @@ class RunPage(DetectorPage):
         if not self.state.images:
             QMessageBox.warning(self, _("No images"), _("Select images in the Images tab."))
             return
-        # Update each preview title with the model alias
+        # Update each preview title with the model's display name: the alias is
+        # a folder key, the generated default reads as the translated label.
         for i, slot in enumerate(active):
             if i < len(self.previews):
-                self.previews[i].lbl_title.setText(slot.alias)
+                self.previews[i].lbl_title.setText(display_name(slot.alias, slot.alias_default, i))
 
         self.state.set_running(True)
         self.state.run_started.emit()

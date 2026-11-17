@@ -163,6 +163,105 @@ def test_repeatable_models_and_aliases_come_from_the_stems(tmp_path, monkeypatch
     assert (tmp_path / "run" / "detector_b").is_dir()
 
 
+def test_alias_option_names_the_folder_instead_of_the_stem(tmp_path, monkeypatch):
+    """#124: the folder key can be chosen, and is not translated."""
+    weights = weights_file(tmp_path, "best")
+    install_factory(monkeypatch, FakeDetector())
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(weights),
+            "--alias",
+            "my-model",
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(tmp_path / "run"),
+        ]
+    )
+
+    assert code == 0
+    run = load_run(tmp_path / "run")
+    assert [(model.alias, model.alias_generated) for model in run.models] == [("my-model", False)]
+    assert (tmp_path / "run" / "my-model" / "0000_plate1_annot.png").is_file()
+    assert not (tmp_path / "run" / "best").exists()
+
+
+def test_duplicate_weights_disambiguate_the_model_folders(tmp_path, monkeypatch):
+    """Two identical stems are two folders, not a failed run."""
+    weights = weights_file(tmp_path, "polyx_pp")
+    install_factory(monkeypatch, [FakeDetector(), FakeDetector()])
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(weights),
+            "--model",
+            str(weights),
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(tmp_path / "run"),
+        ]
+    )
+
+    assert code == 0
+    run = load_run(tmp_path / "run")
+    assert [model.alias for model in run.models] == ["polyx_pp", "polyx_pp_2"]
+    assert (tmp_path / "run" / "polyx_pp").is_dir()
+    assert (tmp_path / "run" / "polyx_pp_2").is_dir()
+
+
+def test_alias_count_must_match_the_model_count(tmp_path, monkeypatch, capsys):
+    first = weights_file(tmp_path, "detector_a")
+    second = weights_file(tmp_path, "detector_b")
+    install_factory(monkeypatch, [FakeDetector(), FakeDetector()])
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(first),
+            "--model",
+            str(second),
+            "--alias",
+            "only-one",
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(tmp_path / "run"),
+        ]
+    )
+
+    assert code == cli_detect.EXIT_USAGE
+    assert "--alias" in capsys.readouterr().err
+    assert not (tmp_path / "run").exists()
+
+
+def test_unsafe_alias_is_sanitised_into_one_folder_component(tmp_path, monkeypatch):
+    weights = weights_file(tmp_path, "best")
+    install_factory(monkeypatch, FakeDetector())
+
+    code = cli_detect.main(
+        [
+            "--model",
+            str(weights),
+            "--alias",
+            "a/b",
+            "--images",
+            str(image_folder(tmp_path, count=1)),
+            "--out",
+            str(tmp_path / "run"),
+        ]
+    )
+
+    assert code == 0
+    run = load_run(tmp_path / "run")
+    assert run.models[0].alias == "a_b"
+    assert (tmp_path / "run" / "a_b").is_dir()
+    assert not (tmp_path / "run" / "a").exists()
+
+
 def test_a_single_model_type_applies_to_every_model(tmp_path, monkeypatch):
     first = weights_file(tmp_path, "detector_a")
     second = weights_file(tmp_path, "detector_b")

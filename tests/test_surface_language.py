@@ -72,6 +72,26 @@ def test_compact_report_renders_the_selected_language(tmp_path, selected_languag
     assert "Poly-X run report" in english
 
 
+def test_compact_report_translates_a_generated_alias(tmp_path, selected_language):
+    """#124: the compact report reads the label from the flag, never the alias."""
+    from polyx.core.report_simple import generate
+
+    run = _canonical_run(tmp_path)
+    payload = json.loads((run / "run.json").read_text(encoding="utf-8"))
+    payload["models"] = [{"alias": "model_1", "alias_generated": True}]
+    (run / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    selected_language("es")
+    spanish = generate(run).read_text(encoding="utf-8")
+    selected_language("en")
+    english = generate(run).read_text(encoding="utf-8")
+
+    assert "Modelo 1" in spanish
+    assert "Model 1" in english
+    assert "model_1" not in spanish
+    assert "model_1" not in english
+
+
 def test_compact_report_uses_the_catalog_plural_forms(tmp_path, selected_language):
     from polyx.core.report_simple import generate
 

@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
+from polyx.core.detection_run import display_name
 from polyx.core.i18n import _, ngettext
 from polyx.core.labels import STUDY_CLASSES, bbox_from, write_classes, write_lines
 from polyx.core.paths import DATASET_CORRECTIONS_DIR
@@ -179,8 +180,8 @@ class ReviewDialog(QDialog):
         for mi, rs in self.state.results.items():
             if not rs:
                 continue
-            alias = self.state.model_slots[mi].alias
-            self.combo_model.addItem(alias)
+            slot = self.state.model_slots[mi]
+            self.combo_model.addItem(display_name(slot.alias, slot.alias_default, mi))
             self._model_indices.append(mi)
         self.combo_model.blockSignals(False)
         if self._model_indices:

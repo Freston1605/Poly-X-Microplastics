@@ -88,6 +88,7 @@ class DetectorRunner(QThread):
                 ModelSpec(
                     detector=slot.loaded,
                     alias=slot.alias,
+                    alias_generated=slot.alias_default,
                     path=slot.path,
                     model_type=slot.model_type or "yolo",
                     names=dict(slot.names or {}),
