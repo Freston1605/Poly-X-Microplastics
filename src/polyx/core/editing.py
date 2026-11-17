@@ -48,6 +48,12 @@ MIN_SIDE_PX = 2.0
 # Above it the message is shown, because the mark vanished without warning.
 SILENT_SIDE_PX = 0.3
 
+# How close, in widget pixels, a press must land to a handle's centre to grab
+# it. The shells scale it by their current zoom and pass image pixels to
+# :meth:`BoxEditor.handle_at`; the value is one constant so the two
+# annotation canvases cannot disagree about how forgiving a handle is.
+HANDLE_TOLERANCE_PX = 6.0
+
 # The GT page's current undo depth; the bounded history keeps one editor's
 # memory predictable while the Labeller keeps one editor per loaded image.
 HISTORY_LIMIT = 100
@@ -588,6 +594,7 @@ def _clamp(box: EditBox, img_w: int, img_h: int) -> EditBox:
 
 __all__ = [
     "HANDLES",
+    "HANDLE_TOLERANCE_PX",
     "HISTORY_LIMIT",
     "MIN_SIDE_PX",
     "SILENT_SIDE_PX",

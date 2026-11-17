@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.editing import (
+    HANDLE_TOLERANCE_PX,
     BoxEditor,
     EditBox,
     EditMode,
@@ -226,7 +227,7 @@ class AnnotCanvas(QGraphicsView):
     # ── internal helpers ───────────────────────────────────────────
     def _handle_tolerance(self) -> float:
         """The handle hit target, as a distance in image pixels."""
-        return HANDLE_SIZE / max(self.transform().m11(), 0.0001)
+        return HANDLE_TOLERANCE_PX / max(self.transform().m11(), 0.0001)
 
     def _refresh(self):
         """Redraws all the boxes + handles + labels (without touching the image)."""
@@ -270,8 +271,10 @@ class AnnotCanvas(QGraphicsView):
             self.scene_.addItem(txt)
 
             if sel:
-                # 8-point handles, positioned by the core
-                hs = self._handle_tolerance()  # size in scene
+                # 8-point handles, positioned by the core; the painted side
+                # stays the shell's HANDLE_SIZE, the grab distance is the
+                # core's HANDLE_TOLERANCE_PX.
+                hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)
                 for hx, hy in self._editor.handle_points(b):
                     h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
                     h.setPen(QPen(Qt.white, 1.2))

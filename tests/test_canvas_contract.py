@@ -40,6 +40,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
 
+from polyx.core import editing
 from polyx.core.detect.protocol import size_image
 from polyx.core.editing import MIN_SIDE_PX, rejection_message
 from polyx.core.i18n import _
@@ -433,6 +434,35 @@ def test_a_class_key_sets_the_active_class_and_reclassifies_the_selection(rigs):
     for rig in (labeller, gt):
         assert rig.boxes() == []
         assert rig.active_class() == 1
+
+
+# ── One handle grab tolerance ──────────────────────────────────────────────
+
+
+def test_both_canvases_grab_a_handle_at_the_same_widget_distance(rigs):
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    for rig in (labeller, gt):
+        widget_px = rig.canvas._handle_tolerance() * rig.image_scale()
+        assert widget_px == pytest.approx(editing.HANDLE_TOLERANCE_PX)
+    assert not hasattr(BboxCanvas, "HANDLE_TOLERANCE_PX")
+
+    # Behaviourally: half a tolerance outside the corner still grabs the
+    # handle, twice a tolerance away is empty space (a new box starts there).
+    for rig in (labeller, gt):
+        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
+        _x1, _y1, x2, y2, _cls = rig.boxes()[0]
+        rig.drag((x2 + tolerance_image_px / 2, y2), (x2, y2))
+        assert len(rig.boxes()) == 1, "the corner handle was not grabbed from half a tolerance"
+
+    for rig in (labeller, gt):
+        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
+        _x1, _y1, x2, y2, _cls = rig.boxes()[0]
+        far = 2 * tolerance_image_px
+        rig.drag((x2 + far, y2 + far), (x2 + far + 40, y2 + far + 40))
+        assert len(rig.boxes()) == 2, "a press far from any handle should start a new box"
 
 
 # ── One class-colour path ─────────────────────────────────────────────────

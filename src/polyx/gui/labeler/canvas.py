@@ -25,7 +25,14 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
-from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason, rejection_message
+from polyx.core.editing import (
+    HANDLE_TOLERANCE_PX,
+    BoxEditor,
+    EditMode,
+    Handle,
+    RejectionReason,
+    rejection_message,
+)
 from polyx.core.i18n import _
 from polyx.gui import theme as T
 from polyx.gui.image_pixmap import qpixmap_from_file
@@ -63,10 +70,9 @@ class BboxCanvas(QWidget):
     box_drawn = Signal()
     box_rejected = Signal(float)  # side in px of the discarded box
 
-    # Handle size and grab radius, in widget pixels. The core receives the
-    # radius in image pixels at the current scale.
+    # Painted handle size, in widget pixels. The grab distance is the core's
+    # HANDLE_TOLERANCE_PX, scaled to image pixels at the current zoom.
     HANDLE_RADIUS_PX = 4.0
-    HANDLE_TOLERANCE_PX = 6.0
 
     def __init__(self, state: LabelerState):
         super().__init__()
@@ -257,7 +263,7 @@ class BboxCanvas(QWidget):
 
     def _handle_tolerance(self) -> float:
         """The widget grab radius, in image pixels at the current zoom."""
-        return self.HANDLE_TOLERANCE_PX / self._scale
+        return HANDLE_TOLERANCE_PX / self._scale
 
     def mousePressEvent(self, ev: QMouseEvent):
         editor = self.state.current_editor
