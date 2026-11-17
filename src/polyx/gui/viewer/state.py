@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QPointF, Signal
 
 from polyx.core.detect.yolo import Detection
-from polyx.core.measure.calibration import circle_calibration, line_calibration
+from polyx.core.measure.calibration import (
+    CircleCalibration,
+    LineCalibration,
+    circle_calibration,
+    line_calibration,
+)
 from polyx.core.paths import IMAGE_EXTS
 
 # Named refusal that belongs to the collection, not to the geometry: the core
@@ -102,41 +108,49 @@ class ViewerState(QObject):
     def calib_pts(self) -> list[QPointF]:
         return list(self._calib_pts)
 
-    def finish_calib_line(self, real_um: float) -> str:
-        """Applies a line calibration; returns "" or the named failure.
+    def finish_calib_line(self, real_um: float) -> str | None:
+        """Applies a line calibration; returns ``None`` or the named failure.
 
         The geometry is the calibration core's: this method only hands it the
         clicked points. A refused drawing emits nothing and keeps whatever
         scale the Viewer already had.
         """
-        if len(self._calib_pts) < 2:
-            return FAILURE_NOT_ENOUGH_POINTS
-        p1, p2 = self._calib_pts[:2]
-        result = line_calibration((p1.x(), p1.y()), (p2.x(), p2.y()), real_um)
-        if result.um_per_px is None:
-            return result.failure
-        self._apply_calib(result.um_per_px, CALIB_MODE_LINE)
-        return ""
+        return self._finish(2, lambda p1, p2: line_calibration(p1, p2, real_um), CALIB_MODE_LINE)
 
-    def finish_calib_circle(self, real_diam_um: float) -> str:
-        """Applies a circle calibration; returns "" or the named failure.
+    def finish_calib_circle(self, real_diam_um: float) -> str | None:
+        """Applies a circle calibration; returns ``None`` or the named failure.
 
         Same contract as :meth:`finish_calib_line`: the circumscribed circle
         and the µm/px come from the core, and a refusal leaves the scale alone.
         """
-        if len(self._calib_pts) < 3:
-            return FAILURE_NOT_ENOUGH_POINTS
-        p1, p2, p3 = self._calib_pts[:3]
-        result = circle_calibration(
-            (p1.x(), p1.y()),
-            (p2.x(), p2.y()),
-            (p3.x(), p3.y()),
-            real_diam_um,
+        return self._finish(
+            3,
+            lambda p1, p2, p3: circle_calibration(p1, p2, p3, real_diam_um),
+            CALIB_MODE_CIRCLE,
         )
-        if result.um_per_px is None:
+
+    def _finish(
+        self,
+        needed: int,
+        compute: Callable[..., LineCalibration | CircleCalibration],
+        mode: str,
+    ) -> str | None:
+        """Applies the scale ``compute`` derives from the first ``needed`` points.
+
+        Both modes end the same way: too few points is a named refusal, the
+        core decides whether the drawing supports a scale, and only a scale
+        that exists replaces the current one. ``None`` is the success signal,
+        so nothing here reports success with a sentinel string.
+        """
+        if len(self._calib_pts) < needed:
+            return FAILURE_NOT_ENOUGH_POINTS
+        points = [(pt.x(), pt.y()) for pt in self._calib_pts[:needed]]
+        result = compute(*points)
+        if result.failure is not None:
             return result.failure
-        self._apply_calib(result.um_per_px, CALIB_MODE_CIRCLE)
-        return ""
+        assert result.um_per_px is not None  # no failure means there is a scale
+        self._apply_calib(result.um_per_px, mode)
+        return None
 
     def _apply_calib(self, um_per_px: float, mode_name: str):
         self.um_per_px = um_per_px

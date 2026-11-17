@@ -54,7 +54,7 @@ def test_a_line_finish_keeps_the_31_um_per_px_scale_and_emits_once(qapp):
 
     failure = state.finish_calib_line(6200.0)
 
-    assert failure == ""
+    assert failure is None, "no failure is the success signal"
     assert state.um_per_px == pytest.approx(31.0)
     assert len(signals.changed) == 1
     assert signals.changed[0][0] == pytest.approx(31.0)
@@ -68,7 +68,7 @@ def test_a_line_finish_keeps_the_49_um_per_px_scale(qapp):
     state = _collect("line", (10.0, 10.0), (10.0, 210.0))
     signals = _RecordingSignals(state)
 
-    assert state.finish_calib_line(9800.0) == ""
+    assert state.finish_calib_line(9800.0) is None
     assert state.um_per_px == pytest.approx(49.0)
     assert len(signals.changed) == 1
 
@@ -77,7 +77,7 @@ def test_a_circle_finish_keeps_the_100000_um_dish_scale(qapp):
     state = _collect("circle", (0.0, 0.0), (1000.0, 0.0), (500.0, 500.0))
     signals = _RecordingSignals(state)
 
-    assert state.finish_calib_circle(100_000.0) == ""
+    assert state.finish_calib_circle(100_000.0) is None
     assert state.um_per_px == pytest.approx(100.0)
     assert len(signals.changed) == 1
     assert signals.changed[0][1] == "circle"
@@ -197,7 +197,7 @@ def test_a_degenerate_drawing_reports_the_named_failure(mode, points, real, expe
 def test_the_scale_of_an_earlier_calibration_survives_a_refused_circle(qapp):
     """31 µm/px stands when a later collinear drawing is rejected."""
     state = _collect("line", (0.0, 0.0), (200.0, 0.0))
-    assert state.finish_calib_line(6200.0) == ""
+    assert state.finish_calib_line(6200.0) is None
     state.start_calib("circle")
     for point in ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)):
         state.add_calib_point(QPointF(*point))
