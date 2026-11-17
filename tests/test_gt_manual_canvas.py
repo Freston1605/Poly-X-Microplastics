@@ -365,3 +365,20 @@ def test_a_box_outside_the_class_list_is_labelled_with_its_id(canvas):
         if isinstance(item, QGraphicsSimpleTextItem)
     )
     assert painted == ["-1", "9"]
+
+
+# ── One owner for the active class ───────────────────────────────────────
+
+
+def test_the_editor_owns_the_active_class_once_an_image_is_loaded(canvas):
+    """No shadow copy: the canvas reads the core's value, it does not mirror it."""
+    rig, path = canvas
+    rig.set_class(1)
+
+    assert rig.canvas.active_class == rig.canvas.editor.active_class == 1
+    assert not hasattr(rig.canvas, "_active_class")
+    assert not hasattr(rig.canvas, "selected_idx")
+
+    # The choice is not lost when the next image arrives.
+    rig.canvas.load_image(path, [])
+    assert rig.canvas.active_class == 1

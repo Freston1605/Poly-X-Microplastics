@@ -527,11 +527,9 @@ class BoxEditor:
         self._selected = -1
         return True
 
-    def set_active_class(self, class_id: int) -> int:
-        """Change the class new boxes get; returns the previous class."""
-        previous = self.active_class
+    def set_active_class(self, class_id: int) -> None:
+        """Change the class new boxes get."""
         self.active_class = class_id
-        return previous
 
     def assign_class(self, class_id: int, index: int | None = None) -> bool:
         """Assign ``class_id`` to a box (the selection by default)."""

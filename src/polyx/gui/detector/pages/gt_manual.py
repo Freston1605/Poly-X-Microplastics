@@ -112,7 +112,10 @@ class AnnotCanvas(QGraphicsView):
         self._pixmap_item = None
         self._image_path: Path | None = None
         self._editor: BoxEditor | None = None
-        self._active_class = 0
+        # The class new boxes get while no image is loaded. Once an image is
+        # loaded the editor owns the active class: one owner, not a shadow
+        # copy that could drift.
+        self._class_before_load = 0
         self.class_names: list[str] = list(STUDY_CLASSES)
 
         # Interaction state the core does not own: panning and the space key.
@@ -137,19 +140,16 @@ class AnnotCanvas(QGraphicsView):
         return self._editor.selection if self._editor is not None else -1
 
     @property
-    def selected_idx(self) -> int:
-        """The selected box index; kept for the old public attribute."""
-        return self.selection
-
-    @property
     def active_class(self) -> int:
-        """The class new boxes get; the core owns it once an image is loaded."""
-        return self._editor.active_class if self._editor is not None else self._active_class
+        """The class new boxes get; the editor owns it once an image is loaded."""
+        if self._editor is not None:
+            return self._editor.active_class
+        return self._class_before_load
 
     def set_class_names(self, names: list[str]):
         self.class_names = list(names)
         if not 0 <= self.active_class < len(self.class_names):
-            self._active_class = 0
+            self._class_before_load = 0
             if self._editor is not None:
                 self._editor.set_active_class(0)
         self._refresh()
@@ -157,8 +157,8 @@ class AnnotCanvas(QGraphicsView):
     def set_active_class(self, idx: int):
         if not 0 <= idx < len(self.class_names):
             return
-        self._active_class = idx
         if self._editor is None:
+            self._class_before_load = idx
             return
         self._editor.set_active_class(idx)
         # if a box is selected, change its class (the core records the undo)
@@ -168,6 +168,8 @@ class AnnotCanvas(QGraphicsView):
 
     def load_image(self, path: Path, existing: list[Detection]):
         self._image_path = path
+        # The class choice survives the load; it is the one the next editor gets.
+        self._class_before_load = self.active_class
         pm = qpixmap_from_file(path)
         if pm.isNull():
             self.scene_.clear()
@@ -182,7 +184,7 @@ class AnnotCanvas(QGraphicsView):
             pm.width(),
             pm.height(),
             [EditBox.from_detection(d) for d in existing],
-            active_class=self._active_class,
+            active_class=self.active_class,
         )
         # Initial fit
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
