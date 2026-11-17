@@ -141,6 +141,15 @@ def bbox_from(det: Instance, img_w: int, img_h: int) -> BBox:
     )
 
 
+def class_name_for(class_id: int, class_names: dict[int, str]) -> str:
+    """The name for a class id: the dataset's, or the id itself.
+
+    One lookup for every module that converts a box to the canonical
+    detection type, so an unknown class is rendered the same everywhere.
+    """
+    return class_names.get(class_id, str(class_id))
+
+
 def to_instance(box: BBox, class_names: dict[int, str], img_w: int, img_h: int) -> Instance:
     """Denormalize a :class:`BBox` into an absolute-pixel :class:`Instance`.
 
@@ -148,7 +157,7 @@ def to_instance(box: BBox, class_names: dict[int, str], img_w: int, img_h: int) 
     """
     return Instance(
         class_id=box.class_id,
-        class_name=class_names.get(box.class_id, str(box.class_id)),
+        class_name=class_name_for(box.class_id, class_names),
         conf=box.conf if box.conf is not None else 1.0,
         x1=(box.cx - box.w / 2) * img_w,
         y1=(box.cy - box.h / 2) * img_h,
@@ -541,6 +550,7 @@ __all__ = [
     "STUDY_CLASSES",
     "BBox",
     "bbox_from",
+    "class_name_for",
     "classes_dir_for",
     "find_label_file",
     "format_line",
