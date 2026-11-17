@@ -115,20 +115,28 @@ class DetectorRunner(QThread):
         self.image_done.emit(real_idx, result)
 
     def _publish(self, result: RunResult) -> None:
-        """Make the engine's run record the state the GUI pages read.
+        """Adopt the engine's run record, keeping the streamed results as they are.
 
-        The callbacks have already appended each result as it appeared; this
-        final sync also covers a partial run whose failure landed between the
-        engine recording a result and calling back.
+        :meth:`_on_result` is the single write path: it appends each
+        ``ImageResult`` to ``state.results`` under its real slot as the engine
+        produces it, which is what lets the pages show progress. A completed
+        run therefore holds every result exactly once, and a run that aborts
+        or fails holds exactly the results received before it stopped.
+
+        This final sync only adopts the run-level fields and fills the one gap
+        the streaming can lose: a failure between the engine recording a
+        result and its callback firing. Missing objects are appended; the
+        streamed lists are never rebuilt, so nothing is written twice.
         """
         state = self.state
         state.run_result = result
         state.run_dir = result.run_dir
         state.calibrations = dict(result.calibrations_by_name)
-        mapped: dict[int, list[ImageResult]] = {i: [] for i in range(len(state.model_slots))}
         for dense_idx, rows in result.results.items():
-            mapped[self._active_indices[dense_idx]] = list(rows)
-        state.results = mapped
+            published = state.results.setdefault(self._active_indices[dense_idx], [])
+            for row in rows:
+                if not any(row is entry for entry in published):
+                    published.append(row)
 
     def _log_finish(self, result: RunResult, started: datetime, _log) -> None:
         """Emit the closing observability events of a completed run."""
