@@ -20,10 +20,11 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QWidget
 
 from polyx.core.i18n import _
+from polyx.core.measure.calibration import circle_calibration
 from polyx.gui import theme as T
 
 from .export import size_label
-from .state import ViewerState, _circumscribed_center, _circumscribed_radius
+from .state import ViewerState
 
 _CLASS_COLORS = [
     T.CLASS_COLOR_HEX.get("PET", "#e3342f"),
@@ -264,21 +265,30 @@ class ViewerCanvas(QWidget):
                     p.drawLine(w_pts[i], w_pts[(i + 1) % len(w_pts)])
 
             if len(pts) >= 3:
-                # Circumscribed circle
-                center_img = _circumscribed_center(pts)
-                radius_img = _circumscribed_radius(pts)
-                cw = self._i2w(center_img)
-                r_w = radius_img * self._scale
-                circ_color = QColor(T.ACCENT)
-                circ_color.setAlpha(180)
-                p.setPen(QPen(circ_color, 1.5, Qt.DashLine))
-                p.setBrush(Qt.NoBrush)
-                p.drawEllipse(cw, r_w, r_w)
-                # Center
-                p.setPen(QPen(accent, 1))
-                p.setBrush(Qt.NoBrush)
-                p.drawLine(QPointF(cw.x() - 6, cw.y()), QPointF(cw.x() + 6, cw.y()))
-                p.drawLine(QPointF(cw.x(), cw.y() - 6), QPointF(cw.x(), cw.y() + 6))
+                # Circumscribed circle. Only the geometry is drawn here and
+                # the real size plays no part in it, so any positive value
+                # gives the same centre and radius as the final calibration
+                # would. Collinear points have no circumcircle and none is
+                # drawn.
+                ring = circle_calibration(
+                    (pts[0].x(), pts[0].y()),
+                    (pts[1].x(), pts[1].y()),
+                    (pts[2].x(), pts[2].y()),
+                    1.0,
+                )
+                if ring.center is not None and ring.radius_px is not None:
+                    cw = self._i2w(QPointF(*ring.center))
+                    r_w = ring.radius_px * self._scale
+                    circ_color = QColor(T.ACCENT)
+                    circ_color.setAlpha(180)
+                    p.setPen(QPen(circ_color, 1.5, Qt.DashLine))
+                    p.setBrush(Qt.NoBrush)
+                    p.drawEllipse(cw, r_w, r_w)
+                    # Center
+                    p.setPen(QPen(accent, 1))
+                    p.setBrush(Qt.NoBrush)
+                    p.drawLine(QPointF(cw.x() - 6, cw.y()), QPointF(cw.x() + 6, cw.y()))
+                    p.drawLine(QPointF(cw.x(), cw.y() - 6), QPointF(cw.x(), cw.y() + 6))
 
     # ── Mouse ────────────────────────────────────────────────
     def _pos(self, ev) -> QPointF:

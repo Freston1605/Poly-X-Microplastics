@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QPointF, Signal
 
 from polyx.core.detect.yolo import Detection
+from polyx.core.measure.calibration import circle_calibration, line_calibration
 from polyx.core.paths import IMAGE_EXTS
+
+# Named refusal that belongs to the collection, not to the geometry: the core
+# names every degenerate drawing, and this one says there is no drawing yet.
+FAILURE_NOT_ENOUGH_POINTS = "not_enough_points"
 
 
 class ViewerState(QObject):
@@ -91,27 +95,41 @@ class ViewerState(QObject):
     def calib_pts(self) -> list[QPointF]:
         return list(self._calib_pts)
 
-    def finish_calib_line(self, real_um: float):
-        """Computes μm/px from the 2 line points and the entered real size."""
-        if len(self._calib_pts) < 2 or real_um <= 0:
-            return
-        p1, p2 = self._calib_pts[0], self._calib_pts[1]
-        px_dist = math.hypot(p2.x() - p1.x(), p2.y() - p1.y())
-        if px_dist == 0:
-            return
-        um_per_px = real_um / px_dist
-        self._apply_calib(um_per_px, "línea")
+    def finish_calib_line(self, real_um: float) -> str:
+        """Applies a line calibration; returns "" or the named failure.
 
-    def finish_calib_circle(self, real_diam_um: float):
-        """Computes μm/px from the 3 circle points and the real diameter."""
-        if len(self._calib_pts) < 3 or real_diam_um <= 0:
-            return
-        radius_px = _circumscribed_radius(self._calib_pts)
-        if radius_px <= 0:
-            return
-        diam_px = 2 * radius_px
-        um_per_px = real_diam_um / diam_px
-        self._apply_calib(um_per_px, "círculo")
+        The geometry is the calibration core's: this method only hands it the
+        clicked points. A refused drawing emits nothing and keeps whatever
+        scale the Viewer already had.
+        """
+        if len(self._calib_pts) < 2:
+            return FAILURE_NOT_ENOUGH_POINTS
+        p1, p2 = self._calib_pts[:2]
+        result = line_calibration((p1.x(), p1.y()), (p2.x(), p2.y()), real_um)
+        if result.um_per_px is None:
+            return result.failure
+        self._apply_calib(result.um_per_px, "línea")
+        return ""
+
+    def finish_calib_circle(self, real_diam_um: float) -> str:
+        """Applies a circle calibration; returns "" or the named failure.
+
+        Same contract as :meth:`finish_calib_line`: the circumscribed circle
+        and the µm/px come from the core, and a refusal leaves the scale alone.
+        """
+        if len(self._calib_pts) < 3:
+            return FAILURE_NOT_ENOUGH_POINTS
+        p1, p2, p3 = self._calib_pts[:3]
+        result = circle_calibration(
+            (p1.x(), p1.y()),
+            (p2.x(), p2.y()),
+            (p3.x(), p3.y()),
+            real_diam_um,
+        )
+        if result.um_per_px is None:
+            return result.failure
+        self._apply_calib(result.um_per_px, "círculo")
+        return ""
 
     def _apply_calib(self, um_per_px: float, mode_name: str):
         self.um_per_px = um_per_px
@@ -119,33 +137,3 @@ class ViewerState(QObject):
         self._calib_pts = []
         self.calib_pts_changed.emit([])
         self.calib_changed.emit(um_per_px, mode_name)
-
-
-def _circumscribed_radius(pts: list[QPointF]) -> float:
-    """Radius of the circle circumscribed to 3 points (analytic formula)."""
-    x1, y1 = pts[0].x(), pts[0].y()
-    x2, y2 = pts[1].x(), pts[1].y()
-    x3, y3 = pts[2].x(), pts[2].y()
-    ax, ay = x2 - x1, y2 - y1
-    bx, by = x3 - x1, y3 - y1
-    D = 2 * (ax * by - ay * bx)
-    if abs(D) < 1e-10:
-        return 0.0
-    ux = (by * (ax * ax + ay * ay) - ay * (bx * bx + by * by)) / D
-    uy = (ax * (bx * bx + by * by) - bx * (ax * ax + ay * ay)) / D
-    return math.hypot(ux, uy)
-
-
-def _circumscribed_center(pts: list[QPointF]) -> QPointF:
-    """Center of the circle circumscribed to 3 points."""
-    x1, y1 = pts[0].x(), pts[0].y()
-    x2, y2 = pts[1].x(), pts[1].y()
-    x3, y3 = pts[2].x(), pts[2].y()
-    ax, ay = x2 - x1, y2 - y1
-    bx, by = x3 - x1, y3 - y1
-    D = 2 * (ax * by - ay * bx)
-    if abs(D) < 1e-10:
-        return QPointF(x1, y1)
-    ux = (by * (ax * ax + ay * ay) - ay * (bx * bx + by * by)) / D
-    uy = (ax * (bx * bx + by * by) - bx * (ax * ax + ay * ay)) / D
-    return QPointF(x1 + ux, y1 + uy)

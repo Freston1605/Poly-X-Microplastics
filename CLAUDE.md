@@ -633,6 +633,13 @@ Single-image inspection with μm/pixel calibration, detection and export.
 **circle** (3 clicks over a circular edge + real diameter). The circle dialog
 ships with 100000 μm as default, which is the study's Petri dish.
 
+The geometry lives in `core/measure/calibration.py` (`line_calibration`,
+`circle_calibration`), not in the Viewer state: it is plain arithmetic over
+coordinate tuples and is tested without Qt. A drawing that cannot support a
+scale — coincident points, three collinear points, zero length, a non-positive
+real size — is refused by name, leaves the previous µm/px in force and the
+dialog says why. The state keeps the clicked points and the signals.
+
 > It was unusable until August 2026: `QInputDialog.getDouble()` was called
 > with `min=`/`max=`, which PySide6 does not accept as keywords, and it raised
 > `AttributeError` when the points were completed. The maths was always right;

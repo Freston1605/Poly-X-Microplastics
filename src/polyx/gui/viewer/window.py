@@ -34,6 +34,7 @@ from polyx.core import platform
 from polyx.core.annotate import find_run_labels
 from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
+from polyx.core.measure import calibration as calib
 from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
@@ -41,7 +42,33 @@ from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
-from .state import ViewerState
+from .state import FAILURE_NOT_ENOUGH_POINTS, ViewerState
+
+
+def _calib_failure_text(failure: str) -> str:
+    """Why a finished drawing yielded no scale, in the user's words.
+
+    The core names the failure; the sentence the user reads is chosen here,
+    one per reason. The fallback exists because a token added later must not
+    silence the dialog, but every current one has its own sentence.
+    """
+    messages = {
+        calib.FAILURE_ZERO_LENGTH: _(
+            "The two points are the same, so they span no line. Click two different points."
+        ),
+        calib.FAILURE_COINCIDENT_POINTS: _(
+            "Two of the three points are the same, so they define no circle. "
+            "Click three different points."
+        ),
+        calib.FAILURE_COLLINEAR_POINTS: _(
+            "The three points lie on a straight line, so they define no circle. "
+            "Click three points along the edge of the object."
+        ),
+        calib.FAILURE_NON_POSITIVE_REAL_SIZE: _("The real size must be greater than zero."),
+        calib.FAILURE_NON_FINITE: _("The points or the real size are not valid numbers."),
+        FAILURE_NOT_ENOUGH_POINTS: _("Not enough points have been clicked for this calibration."),
+    }
+    return messages.get(failure, _("These points do not define a calibration."))
 
 
 class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
@@ -1250,8 +1277,10 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 3,
             )
 
-            if ok and val > 0:
-                self.state.finish_calib_line(val)
+            if ok:
+                failure = self.state.finish_calib_line(val)
+                if failure:
+                    self._report_calib_failure(failure)
 
             else:
                 self.state.cancel_calib()
@@ -1269,11 +1298,23 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                 3,
             )
 
-            if ok and val > 0:
-                self.state.finish_calib_circle(val)
+            if ok:
+                failure = self.state.finish_calib_circle(val)
+                if failure:
+                    self._report_calib_failure(failure)
 
             else:
                 self.state.cancel_calib()
+
+    def _report_calib_failure(self, failure: str):
+        """Explains a refused calibration and restarts the drawing.
+
+        Nothing was applied: the scale already in force stays. The points are
+        dropped so the user can draw again without a stale shape on screen.
+        """
+        QMessageBox.warning(self, _("Calibration not applied"), _calib_failure_text(failure))
+        self._set_status(_("● Calibration not applied"), T.WARN)
+        self.state.cancel_calib()
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
