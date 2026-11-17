@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 00:37-0300\n"
+"POT-Creation-Date: 2026-11-17 00:49-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -972,11 +972,11 @@ msgstr "Claro"
 msgid "Detection review — Poly-X"
 msgstr "Revisión de detecciones — Poly-X"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:664 src/polyx/gui/detector/review_dialog.py:74
+#: src/polyx/gui/detector/pages/gt_manual.py:538 src/polyx/gui/detector/review_dialog.py:74
 msgid "Fit (F)"
 msgstr "Ajustar (F)"
 
-#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:679
+#: src/polyx/gui/detector/pages/compare.py:39 src/polyx/gui/detector/pages/gt_manual.py:553
 #: src/polyx/gui/detector/pages/images.py:31 src/polyx/gui/detector/pages/results.py:76
 #: src/polyx/gui/detector/review_dialog.py:94 src/polyx/gui/detector/window.py:29
 #: src/polyx/gui/report/sections.py:345
@@ -987,11 +987,11 @@ msgstr "Imágenes"
 msgid "Click and drag to draw · wheel: zoom · Space+drag: pan · Del: delete box."
 msgstr "Click y arrastra para dibujar · rueda: zoom · Espacio+arrastre: mover · Supr: borrar caja."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:719 src/polyx/gui/detector/review_dialog.py:122
+#: src/polyx/gui/detector/pages/gt_manual.py:593 src/polyx/gui/detector/review_dialog.py:122
 msgid "←  Previous"
 msgstr "←  Anterior"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:722 src/polyx/gui/detector/review_dialog.py:125
+#: src/polyx/gui/detector/pages/gt_manual.py:596 src/polyx/gui/detector/review_dialog.py:125
 msgid "Next  →"
 msgstr "Siguiente  →"
 
@@ -1133,8 +1133,8 @@ msgstr "No hay imágenes seleccionadas."
 msgid "Models"
 msgstr "Modelos"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:637 src/polyx/gui/detector/pages/gt_manual.py:915
-#: src/polyx/gui/detector/pages/gt_manual.py:927 src/polyx/gui/detector/window.py:30
+#: src/polyx/gui/detector/pages/gt_manual.py:511 src/polyx/gui/detector/pages/gt_manual.py:789
+#: src/polyx/gui/detector/pages/gt_manual.py:801 src/polyx/gui/detector/window.py:30
 msgid "Manual GT"
 msgstr "GT manual"
 
@@ -1430,7 +1430,7 @@ msgstr ""
 "solo para que el modelo pueda detectar: los resultados y el informe se entregan sobre la foto "
 "completa."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:638
+#: src/polyx/gui/detector/pages/gt_manual.py:512
 msgid ""
 "Full Ground Truth annotator. Left click to draw, click a box to select it, drag the handles to "
 "resize, Space or middle button to pan, wheel to zoom. Keys 1..9: active class · Del: delete · "
@@ -1441,77 +1441,82 @@ msgstr ""
 " zoom. Teclas 1..9: clase activa · Supr: borrar · Ctrl+Z/Y: undo/redo · ←/→: imagen "
 "anterior/siguiente (autoguarda)."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:646
+#: src/polyx/gui/detector/pages/gt_manual.py:520
 msgid "Annotation"
 msgstr "Anotación"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:651
+#: src/polyx/gui/detector/pages/gt_manual.py:525
 msgid "(no image selected)"
 msgstr "(sin imagen seleccionada)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:699
+#: src/polyx/gui/detector/pages/gt_manual.py:573
 msgid "Ready. Click and drag to draw."
 msgstr "Listo. Click y arrastra para dibujar."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:709
+#: src/polyx/gui/detector/pages/gt_manual.py:583
 msgid "Save ground truth (.txt YOLO)"
 msgstr "Guardar GT (.txt YOLO)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:726
+#: src/polyx/gui/detector/pages/gt_manual.py:600
 msgid "Undo"
 msgstr "Deshacer"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:730
+#: src/polyx/gui/detector/pages/gt_manual.py:604
 msgid "Redo"
 msgstr "Rehacer"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:735
+#: src/polyx/gui/detector/pages/gt_manual.py:609
 msgid "Delete selection"
 msgstr "Borrar selección"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:739 src/polyx/gui/detector/pages/gt_manual.py:873
+#: src/polyx/gui/detector/pages/gt_manual.py:613 src/polyx/gui/detector/pages/gt_manual.py:747
 msgid "Clear all"
 msgstr "Limpiar todo"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:744
+#: src/polyx/gui/detector/pages/gt_manual.py:618
 msgid "0 boxes"
 msgstr "0 cajas"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:865
+#: src/polyx/gui/detector/pages/gt_manual.py:739
 #, python-format
 msgid "Delete the %(count)d box on this image?"
 msgid_plural "Delete the %(count)d boxes on this image?"
 msgstr[0] "¿Borrar la %(count)d caja de esta imagen?"
 msgstr[1] "¿Borrar las %(count)d cajas de esta imagen?"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:870
+#: src/polyx/gui/detector/pages/gt_manual.py:744
 msgid "(You can undo with Ctrl+Z)"
 msgstr "(se puede deshacer con Ctrl+Z)"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:941
+#: src/polyx/gui/detector/pages/gt_manual.py:815
 msgid "   ⚠ Run the detection again: the report uses the ground truth read during the last run."
 msgstr "   ⚠ Vuelve a Ejecutar la detección: el informe usa el GT leído en la última corrida."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:209
+#: src/polyx/gui/detector/pages/gt_manual.py:202
 msgid "Could not open the image."
 msgstr "No se pudo abrir la imagen."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:657
+#: src/polyx/gui/detector/pages/gt_manual.py:330 src/polyx/gui/labeler/window.py:362
+#, python-format
+msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
+msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
+
+#: src/polyx/gui/detector/pages/gt_manual.py:531
 msgid "Class:"
 msgstr "Clase:"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:859 src/polyx/gui/labeler/window.py:657
+#: src/polyx/gui/detector/pages/gt_manual.py:733 src/polyx/gui/labeler/window.py:657
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
 msgstr[0] "%(count)d caja"
 msgstr[1] "%(count)d cajas"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:915
+#: src/polyx/gui/detector/pages/gt_manual.py:789
 msgid "Select an image first."
 msgstr "Selecciona primero una imagen."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:928
+#: src/polyx/gui/detector/pages/gt_manual.py:802
 msgid ""
 "No boxes have been drawn. Save this image as reviewed with zero particles? Any previous "
 "annotation will be overwritten."
@@ -1519,21 +1524,26 @@ msgstr ""
 "No hay ninguna caja dibujada. ¿Guardar esta imagen como revisada con cero partículas? Se "
 "sobrescribirá la anotación anterior, si la hubiera."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:945
+#: src/polyx/gui/detector/pages/gt_manual.py:819
 #, python-format
 msgid "✓ Saved to: %(path)s%(warning)s"
 msgstr "✓ Guardado en: %(path)s%(warning)s"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:884
+#: src/polyx/gui/detector/pages/gt_manual.py:758
 #, python-format
 msgid "Could not read the size of %(name)s"
 msgstr "No se pudo leer el tamano de %(name)s"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:907
+#: src/polyx/gui/detector/pages/gt_manual.py:781
 msgid "Autosaved."
 msgstr "Auto-guardado."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:910 src/polyx/gui/viewer/window.py:1357
+#: src/polyx/gui/detector/pages/gt_manual.py:452
+#, python-format
+msgid "Drawing: %(width).0f×%(height).0f px"
+msgstr "Dibujando: %(width).0f×%(height).0f px"
+
+#: src/polyx/gui/detector/pages/gt_manual.py:784 src/polyx/gui/viewer/window.py:1357
 msgid "Error while saving"
 msgstr "Error al guardar"
 
@@ -2855,11 +2865,6 @@ msgstr "conf:"
 #: src/polyx/gui/trainer/pages/export.py:105
 msgid "imgsz:"
 msgstr "imgsz:"
-
-#: src/polyx/gui/labeler/window.py:362
-#, python-format
-msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
-msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
 
 #: src/polyx/gui/labeler/window.py:422
 msgid "● Folder loaded"
