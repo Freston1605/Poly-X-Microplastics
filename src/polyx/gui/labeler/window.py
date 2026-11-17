@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from polyx.core.editing import MIN_SIDE_PX
+from polyx.core.editing import rejection_message
 from polyx.core.i18n import N_, _, ngettext
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
@@ -351,11 +351,10 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self._update_progress()
 
     def _on_box_rejected(self, side: float):
-        self._set_status(
-            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
-            % {"side": side, "minimum": MIN_SIDE_PX},
-            T.WARN,
-        )
+        message = rejection_message(side)
+        if message is None:
+            return
+        self._set_status(message, T.WARN)
         QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):

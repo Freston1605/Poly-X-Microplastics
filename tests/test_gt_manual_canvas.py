@@ -26,7 +26,7 @@ from PySide6.QtGui import QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication
 
 from polyx.core.detect.yolo import Detection
-from polyx.core.editing import BoxEditor
+from polyx.core.editing import BoxEditor, rejection_message
 from tests.canvas_rigs import GtRig
 from tests.conftest import write_image
 
@@ -163,8 +163,7 @@ def test_a_too_small_draw_is_refused_with_a_visible_message(canvas):
     assert rig.boxes() == []
     assert rig.canvas.detections() == []
     assert messages, "the rejection was not announced"
-    assert "descartada" in messages[-1]
-    assert "(mínimo 2 px)" in messages[-1]
+    assert messages[-1] == rejection_message(1.0)
 
 
 def test_a_too_small_box_is_refused_and_the_page_writes_no_txt(qapp, tmp_path):
@@ -188,7 +187,7 @@ def test_a_too_small_box_is_refused_and_the_page_writes_no_txt(qapp, tmp_path):
         rig.drag((20, 20), (21, 38))
 
         assert page.canvas.boxes == []
-        assert "descartada" in page.lbl_canvas_status.text()
+        assert page.lbl_canvas_status.text() == rejection_message(1.0)
         page._auto_save(image)
         assert not list(root.rglob("*.txt"))
     finally:

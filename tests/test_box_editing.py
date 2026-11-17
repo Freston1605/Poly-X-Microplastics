@@ -572,3 +572,26 @@ def test_detections_use_the_canonical_type_and_the_codec_class_lookup():
         Instance(class_id=1, class_name="PP", conf=1.0, x1=10.0, y1=20.0, x2=30.0, y2=60.0)
     ]
     assert editor.detections({})[0].class_name == "1"  # the codec's fallback
+
+
+# ── The rejection message: one threshold, one wording ────────────────────
+
+
+def test_a_refusal_is_silent_below_the_click_threshold_and_named_above_it():
+    """A 0 px click says nothing; a mark the operator meant is named."""
+    from polyx.core.editing import SILENT_SIDE_PX, rejection_message
+    from polyx.core.i18n import _
+
+    assert rejection_message(0.0) is None
+    assert rejection_message(SILENT_SIDE_PX - 0.01) is None
+
+    named = rejection_message(SILENT_SIDE_PX)
+    assert named is not None
+    assert named == _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in") % {
+        "side": SILENT_SIDE_PX,
+        "minimum": MIN_SIDE_PX,
+    }
+    # A refused 1.2 px mark names the side it measured and the shared minimum.
+    assert rejection_message(1.24) == _(
+        "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
+    ) % {"side": 1.24, "minimum": MIN_SIDE_PX}

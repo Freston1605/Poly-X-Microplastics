@@ -25,7 +25,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
-from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason
+from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason, rejection_message
 from polyx.core.i18n import _
 from polyx.gui import theme as T
 from polyx.gui.image_pixmap import qpixmap_from_file
@@ -34,10 +34,6 @@ from .state import LabelerState
 
 # A press that never moves this far is a click (select), not a move.
 _DRAG_THRESHOLD_PX = 3.0
-
-# A rejected gesture shorter than this is an accidental click, not a mark
-# the operator believed they made: it is discarded without a message.
-_SILENT_SIDE_PX = 0.3
 
 _DRAW = "draw"
 _MOVE = "move"
@@ -360,10 +356,12 @@ class BboxCanvas(QWidget):
             self.state.notify_edited()
             if drawn:
                 self.box_drawn.emit()
-        elif result.reason is RejectionReason.TOO_SMALL and result.side_px > _SILENT_SIDE_PX:
+        elif result.reason is RejectionReason.TOO_SMALL:
             # It used to be discarded silently: the operator believed they had
             # marked the particle and the mark disappeared without warning.
-            self.box_rejected.emit(result.side_px)
+            # The core owns the threshold and the wording (silent click).
+            if rejection_message(result.side_px) is not None:
+                self.box_rejected.emit(result.side_px)
 
     def _update_cursor(self, img_pt: QPointF):
         editor = self.state.current_editor

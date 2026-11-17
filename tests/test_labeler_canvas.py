@@ -24,7 +24,7 @@ from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from polyx.core.editing import MIN_SIDE_PX
+from polyx.core.editing import MIN_SIDE_PX, rejection_message
 from polyx.core.labels import label_path_for
 from tests.canvas_rigs import LabellerRig
 from tests.conftest import write_image
@@ -103,7 +103,6 @@ def test_a_box_under_two_px_is_refused_visibly_and_nothing_is_written(labeller):
 
 
 def test_the_rejection_message_is_shown_by_the_window(tmp_path, qapp):
-    from polyx.core.i18n import _
     from polyx.gui.labeler.window import LabelerWindow
 
     image_dir = tmp_path / "imgs"
@@ -126,11 +125,7 @@ def test_the_rejection_message_is_shown_by_the_window(tmp_path, qapp):
 
     assert window.state.current_boxes == []
     assert len(rejected) == 1
-    expected = _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in") % {
-        "side": rejected[0],
-        "minimum": MIN_SIDE_PX,
-    }
-    assert status == expected
+    assert status == rejection_message(rejected[0])
     assert not label_path_for(image).exists()
 
 

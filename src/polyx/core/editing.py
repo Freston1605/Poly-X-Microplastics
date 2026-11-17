@@ -36,11 +36,17 @@ from enum import Enum, IntEnum
 
 from polyx.core import labels
 from polyx.core.detect.protocol import Instance
+from polyx.core.i18n import _
 
 # A box shorter than this on either side is not a real particle mark. The
 # smallest particles in the study measure ~8 px; a 5 px threshold discarded
 # legitimate marks, so the census rule settled on 2.
 MIN_SIDE_PX = 2.0
+
+# A refused gesture whose side is under this was an accidental click, not a
+# mark the operator believed they made: it is discarded without a message.
+# Above it the message is shown, because the mark vanished without warning.
+SILENT_SIDE_PX = 0.3
 
 # The GT page's current undo depth; the bounded history keeps one editor's
 # memory predictable while the Labeller keeps one editor per loaded image.
@@ -88,6 +94,22 @@ class RejectionReason(Enum):
     """Why a finished gesture was not committed."""
 
     TOO_SMALL = "too-small"
+
+
+def rejection_message(side_px: float) -> str | None:
+    """The translated message a refused gesture shows, or ``None`` if silent.
+
+    One rule for both annotation shells: a side under :data:`SILENT_SIDE_PX`
+    is an accidental click and says nothing; anything above it, still under
+    :data:`MIN_SIDE_PX`, is a mark the operator believed they made — it is
+    refused and named, so it does not vanish without warning.
+    """
+    if side_px < SILENT_SIDE_PX:
+        return None
+    return _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in") % {
+        "side": side_px,
+        "minimum": MIN_SIDE_PX,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -568,10 +590,12 @@ __all__ = [
     "HANDLES",
     "HISTORY_LIMIT",
     "MIN_SIDE_PX",
+    "SILENT_SIDE_PX",
     "BoxEditor",
     "CommitResult",
     "EditBox",
     "EditMode",
     "Handle",
     "RejectionReason",
+    "rejection_message",
 ]

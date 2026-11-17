@@ -41,7 +41,8 @@ pytest.importorskip("PySide6")
 from PySide6.QtCore import Qt
 
 from polyx.core.detect.protocol import size_image
-from polyx.core.editing import MIN_SIDE_PX
+from polyx.core.editing import MIN_SIDE_PX, rejection_message
+from polyx.core.i18n import _
 from polyx.core.labels import STUDY_CLASSES, bbox_from, find_label_file, read_boxes
 from polyx.gui import theme as T
 from polyx.gui.detector.pages import gt_manual
@@ -278,13 +279,80 @@ def test_an_exif_rotated_photo_is_annotated_in_the_frame_it_is_painted(qapp, tmp
         qapp.processEvents()
 
 
-# ── The 2 px rule: one core invariant, one on-screen message ──────────────
+# ── The 2 px rule: one core invariant, one silence, one message ───────────
+
+
+def test_a_click_a_one_px_drag_and_a_two_px_box_are_announced_alike(qapp, image):
+    """A 0 px click is silent, a 1 px drag speaks, a 2 px box commits."""
+    from polyx.gui.labeler.window import LabelerWindow
+
+    window = LabelerWindow()
+    gt = GtRig.over(qapp, image, CLASSES)
+    gt_messages: list[str] = []
+    gt.canvas.status_changed.connect(gt_messages.append)
+    rejected: list[float] = []
+    window.canvas.box_rejected.connect(rejected.append)
+    try:
+        window.show()
+        window.state.load_images(image.parent)
+        qapp.processEvents()
+        labeller = LabellerRig(window.state, window.canvas)
+
+        # 1. A click on empty space: a 0 px draw, refused without a message.
+        labeller.click((350, 280))
+        gt.click((350, 280))
+        assert rejected == []
+        assert _rejections(gt_messages) == []
+        assert window.lbl_status.text() == _("● Ready")
+        assert labeller.boxes() == []
+        assert gt.boxes() == []
+
+        # 2. A 1 px drag: refused with the translated message in both.
+        labeller.drag((20, 20), (21, 80), flush=False)
+        labeller_message = window.lbl_status.text()
+        gt.drag((20, 20), (21, 80))
+        gt_message = _rejections(gt_messages)[-1]
+        assert len(rejected) == 1
+        assert rejected[0] == pytest.approx(1.0, abs=0.3)
+        assert _side_of(gt_message) < MIN_SIDE_PX
+        # Each shell names the side the core refused; the template and the
+        # minimum are the same one, only widget rounding moves the number.
+        assert labeller_message == rejection_message(rejected[0])
+        assert gt_message == rejection_message(_side_of(gt_message))
+        assert re.sub(r"\d+(?:[.,]\d+)?\s*px", "<side>", labeller_message) == re.sub(
+            r"\d+(?:[.,]\d+)?\s*px", "<side>", gt_message
+        )
+        assert labeller.boxes() == []
+        assert gt.boxes() == []
+
+        # 3. A box at the 2 px minimum: a real mark, and no new message.
+        labeller.drag((20, 80), (22, 110), flush=False)
+        gt.drag((20, 80), (22, 110))
+        assert len(rejected) == 1  # unchanged: nothing was refused
+        assert len(_rejections(gt_messages)) == 1
+        assert len(labeller.boxes()) == len(gt.boxes()) == 1
+        assert min(labeller.boxes()[0][2] - labeller.boxes()[0][0], 2.0) >= MIN_SIDE_PX
+    finally:
+        gt.canvas.close()
+        gt.canvas.deleteLater()
+        window.deleteLater()
+        qapp.processEvents()
 
 
 def _side_of(message: str) -> float:
     match = re.search(r"(\d+(?:[.,]\d+)?)\s*px", message)
     assert match, f"the message does not name the side: {message!r}"
     return float(match.group(1).replace(",", "."))
+
+
+def _rejections(messages: list[str]) -> list[str]:
+    """The messages that are a rejection, not a drawing-size readout.
+
+    The GT canvas reports both through ``status_changed``; the core owns the
+    rejection template, so a message is a rejection when it is exactly what
+    the helper renders for the side it names.
+    """
+    return [message for message in messages if message == rejection_message(_side_of(message))]
 
 
 def test_both_canvases_refuse_a_sub_two_pixel_box_with_the_same_visible_message(qapp, image):

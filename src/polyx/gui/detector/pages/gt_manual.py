@@ -47,12 +47,12 @@ from PySide6.QtWidgets import (
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
 from polyx.core.editing import (
-    MIN_SIDE_PX,
     BoxEditor,
     EditBox,
     EditMode,
     Handle,
     RejectionReason,
+    rejection_message,
 )
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.labels import (
@@ -293,10 +293,10 @@ class AnnotCanvas(QGraphicsView):
         self.setCursor(cursors.get(handle, Qt.CrossCursor))
 
     def _report_rejection(self, side_px: float):
-        self.status_changed.emit(
-            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
-            % {"side": side_px, "minimum": MIN_SIDE_PX}
-        )
+        """Announce a refused gesture, unless it was an accidental click."""
+        message = rejection_message(side_px)
+        if message is not None:
+            self.status_changed.emit(message)
 
     # ── events ────────────────────────────────────────────────────
     def wheelEvent(self, ev):

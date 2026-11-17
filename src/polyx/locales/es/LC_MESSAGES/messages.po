@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 02:01-0300\n"
+"POT-Creation-Date: 2026-11-17 02:05-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -321,6 +321,11 @@ msgstr "MEJOR: %(path)s"
 #, python-format
 msgid "epoch %(epoch)s: %(metrics)s"
 msgstr "época %(epoch)s: %(metrics)s"
+
+#: src/polyx/core/editing.py:109
+#, python-format
+msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
+msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
 
 #: src/polyx/core/platform.py:228
 msgid "Device (0/cpu):"
@@ -758,7 +763,7 @@ msgid "MODULES"
 msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:331
-#: src/polyx/gui/labeler/window.py:359 src/polyx/gui/labeler/window.py:674
+#: src/polyx/gui/labeler/window.py:358 src/polyx/gui/labeler/window.py:673
 #: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:566
 msgid "● Ready"
@@ -1496,16 +1501,11 @@ msgstr "   ⚠ Vuelve a Ejecutar la detección: el informe usa el GT leído en l
 msgid "Could not open the image."
 msgstr "No se pudo abrir la imagen."
 
-#: src/polyx/gui/detector/pages/gt_manual.py:297 src/polyx/gui/labeler/window.py:355
-#, python-format
-msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
-msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
-
 #: src/polyx/gui/detector/pages/gt_manual.py:502
 msgid "Class:"
 msgstr "Clase:"
 
-#: src/polyx/gui/detector/pages/gt_manual.py:704 src/polyx/gui/labeler/window.py:650
+#: src/polyx/gui/detector/pages/gt_manual.py:704 src/polyx/gui/labeler/window.py:649
 #, python-format
 msgid "%(count)d box"
 msgid_plural "%(count)d boxes"
@@ -1621,7 +1621,7 @@ msgstr "Seleccionar carpeta GT"
 msgid "Folder"
 msgstr "Carpeta"
 
-#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:559
+#: src/polyx/gui/detector/pages/images.py:172 src/polyx/gui/labeler/window.py:558
 #, python-format
 msgid "%(count)d image"
 msgid_plural "%(count)d images"
@@ -2026,7 +2026,7 @@ msgstr ""
 "asignar."
 
 #: src/polyx/gui/detector/pages/parameters.py:461 src/polyx/gui/labeler/window.py:258
-#: src/polyx/gui/labeler/window.py:441 src/polyx/gui/labeler/window.py:472
+#: src/polyx/gui/labeler/window.py:440 src/polyx/gui/labeler/window.py:471
 #: src/polyx/gui/viewer/window.py:296 src/polyx/gui/viewer/window.py:677
 msgid "No model"
 msgstr "Sin modelo"
@@ -2542,7 +2542,7 @@ msgstr ""
 msgid "Re-reading ground truth…"
 msgstr "Releyendo ground truth…"
 
-#: src/polyx/gui/detector/pages/results.py:306 src/polyx/gui/labeler/window.py:478
+#: src/polyx/gui/detector/pages/results.py:306 src/polyx/gui/labeler/window.py:477
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -2711,7 +2711,7 @@ msgstr "No se pudo guardar: %(error)s"
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
 
-#: src/polyx/gui/labeler/canvas.py:186
+#: src/polyx/gui/labeler/canvas.py:182
 msgid "Open an image folder to begin"
 msgstr "Abre una carpeta de imágenes para comenzar"
 
@@ -2805,43 +2805,43 @@ msgstr ""
 msgid "Save (.txt)"
 msgstr "Guardar (.txt)"
 
-#: src/polyx/gui/labeler/window.py:405
+#: src/polyx/gui/labeler/window.py:404
 msgid "New class"
 msgstr "Nueva clase"
 
-#: src/polyx/gui/labeler/window.py:405
+#: src/polyx/gui/labeler/window.py:404
 msgid "Class name:"
 msgstr "Nombre de la clase:"
 
-#: src/polyx/gui/labeler/window.py:411
+#: src/polyx/gui/labeler/window.py:410
 msgid "Select an image folder"
 msgstr "Seleccionar carpeta de imágenes"
 
-#: src/polyx/gui/labeler/window.py:420
+#: src/polyx/gui/labeler/window.py:419
 msgid "● Saved"
 msgstr "● Guardado"
 
-#: src/polyx/gui/labeler/window.py:425 src/polyx/gui/viewer/window.py:654
+#: src/polyx/gui/labeler/window.py:424 src/polyx/gui/viewer/window.py:654
 msgid "Load YOLO model"
 msgstr "Cargar modelo YOLO"
 
-#: src/polyx/gui/labeler/window.py:425 src/polyx/gui/viewer/window.py:654
+#: src/polyx/gui/labeler/window.py:424 src/polyx/gui/viewer/window.py:654
 msgid "YOLO model (*.pt)"
 msgstr "Modelo YOLO (*.pt)"
 
-#: src/polyx/gui/labeler/window.py:478
+#: src/polyx/gui/labeler/window.py:477
 msgid "Pre-annotating images…"
 msgstr "Pre-anotando imágenes…"
 
-#: src/polyx/gui/labeler/window.py:479
+#: src/polyx/gui/labeler/window.py:478
 msgid "Pre-annotating"
 msgstr "Pre-anotando"
 
-#: src/polyx/gui/labeler/window.py:503
+#: src/polyx/gui/labeler/window.py:502
 msgid "● Pre-annotation complete"
 msgstr "● Pre-anotación completa"
 
-#: src/polyx/gui/labeler/window.py:673
+#: src/polyx/gui/labeler/window.py:672
 msgid "● Autosaved"
 msgstr "● Autoguardado"
 
@@ -2866,56 +2866,56 @@ msgstr "conf:"
 msgid "imgsz:"
 msgstr "imgsz:"
 
-#: src/polyx/gui/labeler/window.py:415
+#: src/polyx/gui/labeler/window.py:414
 msgid "● Folder loaded"
 msgstr "● Carpeta cargada"
 
-#: src/polyx/gui/labeler/window.py:435 src/polyx/gui/viewer/window.py:1447
+#: src/polyx/gui/labeler/window.py:434 src/polyx/gui/viewer/window.py:1447
 msgid "● Model loaded"
 msgstr "● Modelo cargado"
 
-#: src/polyx/gui/labeler/window.py:441 src/polyx/gui/labeler/window.py:472
+#: src/polyx/gui/labeler/window.py:440 src/polyx/gui/labeler/window.py:471
 #: src/polyx/gui/viewer/window.py:677
 msgid "Load a .pt model first."
 msgstr "Carga un modelo .pt primero."
 
-#: src/polyx/gui/labeler/window.py:449
+#: src/polyx/gui/labeler/window.py:448
 msgid "Overwrite"
 msgstr "Sobrescribir"
 
-#: src/polyx/gui/labeler/window.py:450
+#: src/polyx/gui/labeler/window.py:449
 msgid "This image already has annotations. Overwrite them with the model?"
 msgstr "Esta imagen ya tiene anotaciones. ¿Sobrescribir con el modelo?"
 
-#: src/polyx/gui/labeler/window.py:607
+#: src/polyx/gui/labeler/window.py:606
 #, python-format
 msgid "%(done)d / %(total)d reviewed  (%(percent)d%%)   %(remaining)d left"
 msgstr "%(done)d / %(total)d revisadas  (%(percent)d%%)   faltan %(remaining)d"
 
-#: src/polyx/gui/labeler/window.py:620
+#: src/polyx/gui/labeler/window.py:619
 msgid "Counting complete"
 msgstr "Conteo completo"
 
-#: src/polyx/gui/labeler/window.py:620
+#: src/polyx/gui/labeler/window.py:619
 msgid "There are no unreviewed images left."
 msgstr "No quedan imágenes sin revisar."
 
-#: src/polyx/gui/labeler/window.py:655
+#: src/polyx/gui/labeler/window.py:654
 msgid "No annotations"
 msgstr "Sin anotaciones"
 
-#: src/polyx/gui/labeler/window.py:437 src/polyx/gui/viewer/window.py:672
+#: src/polyx/gui/labeler/window.py:436 src/polyx/gui/viewer/window.py:672
 msgid "Error loading the model"
 msgstr "Error al cargar modelo"
 
-#: src/polyx/gui/labeler/window.py:459
+#: src/polyx/gui/labeler/window.py:458
 #, python-format
 msgid "● Pre-annotated %(count)d box"
 msgid_plural "● Pre-annotated %(count)d boxes"
 msgstr[0] "● Pre-anotada %(count)d caja"
 msgstr[1] "● Pre-anotadas %(count)d cajas"
 
-#: src/polyx/gui/labeler/window.py:468
+#: src/polyx/gui/labeler/window.py:467
 msgid "Pre-annotation error"
 msgstr "Error en pre-anotación"
 
