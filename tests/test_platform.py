@@ -113,6 +113,17 @@ def test_toda_descripcion_de_dispositivo_es_legible():
         assert d != P.description_device(d), "debe explicar, no repetir"
 
 
+def test_device_description_follows_the_language(selected_language):
+    """The phrase is read by the user in the report and in the Viewer, so it
+    must be translatable copy rather than a fixed constant."""
+    selected_language("es")
+    spanish_text = P.description_device(P.DEVICE_CPU)
+    selected_language("en")
+    english_text = P.description_device(P.DEVICE_CPU)
+
+    assert spanish_text != english_text
+
+
 # ── Abrir archivos ──
 def test_abrir_algo_que_no_existe_devuelve_False_sin_lanzar():
     """Se usa tras generar un informe. Que no se abra el visor es molesto;
