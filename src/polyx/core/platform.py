@@ -194,7 +194,13 @@ torch_backend = accelerator_backend
 
 
 def device_available() -> str:
-    """The best device this machine can use: '0', 'mps' or 'cpu'."""
+    """The best device this machine can use: '0', 'mps' or 'cpu'.
+
+    ``"0"`` is the shared first-accelerator token: CUDA and ROCm both receive
+    it, and :func:`is_rocm_available` is what tells them apart for display.
+    Do not introduce a second token per backend; a consumer that needs to name
+    the backend asks :func:`description_device`.
+    """
     try:
         import torch
     except Exception:  # noqa: BLE001
@@ -231,8 +237,10 @@ def label_devices() -> str:
 def description_device(device: str) -> str:
     """Short phrase explaining what that device is, for a person reading it.
 
-    The Viewer's status line is today's caller: it names the device that ran
-    the inference, not the bare token the model received.
+    A numeric token is resolved through :func:`is_rocm_available`: ``"0"`` is
+    NVIDIA CUDA on a CUDA machine and AMD ROCm on a ROCm machine. The Viewer's
+    status line is today's caller and relies on that rule to name the backend
+    that actually ran, not the bare token the model received.
     """
     d = (device or "").strip().lower()
     if d == "mps":

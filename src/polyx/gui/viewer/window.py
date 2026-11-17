@@ -49,8 +49,14 @@ from .state import (
     ViewerState,
 )
 
+#: The refusal tokens this window has copy for: every geometric failure the
+#: calibration core can name, plus the collection-level "not enough points".
+#: The test suite iterates it, so a new core refusal fails the gate until it
+#: gets a sentence instead of the generic fallback.
+CALIB_FAILURE_CODES = (*calib.FAILURE_CODES, FAILURE_NOT_ENOUGH_POINTS)
 
-def _calib_failure_text(failure: str) -> str:
+
+def calib_failure_text(failure: str) -> str:
     """Why a finished drawing yielded no scale, in the user's words.
 
     The core names the failure; the sentence the user reads is chosen here,
@@ -1354,7 +1360,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         different real size, or start the mode again to throw them away.
         Cancelling here would discard the drawing for them.
         """
-        QMessageBox.warning(self, _("Calibration not applied"), _calib_failure_text(failure))
+        QMessageBox.warning(self, _("Calibration not applied"), calib_failure_text(failure))
         self._set_status(_("● Calibration not applied"), T.WARN)
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):

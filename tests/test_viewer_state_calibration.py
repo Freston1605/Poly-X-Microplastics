@@ -359,3 +359,24 @@ def test_the_user_can_finish_from_the_kept_drawing_after_a_refusal(
         window.close()
 
     assert window.state.um_per_px == pytest.approx(10.0)
+
+
+def test_every_calibration_failure_has_its_own_message(selected_language):
+    """The core's refusal codes and the window's copy cannot drift apart.
+
+    The window iterates ``CALIB_FAILURE_CODES`` (every core code plus the
+    collection-level one) in its test; a new core refusal would reach the
+    generic sentence and fail here until it gets its own.
+    """
+    from polyx.core.measure import calibration as calibration_core
+    from polyx.gui.viewer.state import FAILURE_NOT_ENOUGH_POINTS
+    from polyx.gui.viewer.window import CALIB_FAILURE_CODES, calib_failure_text
+
+    selected_language("en")
+    expected = set(calibration_core.FAILURE_CODES) | {FAILURE_NOT_ENOUGH_POINTS}
+    assert set(CALIB_FAILURE_CODES) == expected
+
+    generic = calib_failure_text("a_failure_from_the_future")
+    for code in CALIB_FAILURE_CODES:
+        assert calib_failure_text(code) != generic, f"{code} fell through to the generic text"
+        assert calib_failure_text(code)

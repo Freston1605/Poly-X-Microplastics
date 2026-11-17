@@ -113,6 +113,21 @@ def test_toda_descripcion_de_dispositivo_es_legible():
         assert d != P.description_device(d), "debe explicar, no repetir"
 
 
+def test_zero_is_the_shared_accelerator_token(monkeypatch):
+    """``0`` means the first accelerator; the backend is resolved for display.
+
+    CUDA and ROCm both receive ``0``. Only ``is_rocm_available`` distinguishes
+    them, and the Viewer's status line relies on that description.
+    """
+    monkeypatch.setattr(P, "is_rocm_available", lambda: True)
+    amd = P.description_device(P.DEVICE_CUDA)
+    assert "AMD" in amd and "ROCm" in amd
+
+    monkeypatch.setattr(P, "is_rocm_available", lambda: False)
+    nvidia = P.description_device(P.DEVICE_CUDA)
+    assert "NVIDIA" in nvidia and "CUDA" in nvidia
+
+
 def test_device_description_follows_the_language(selected_language):
     """The phrase is shown to the user (today in the Viewer's status line), so
     it must be translatable copy rather than a fixed constant."""
