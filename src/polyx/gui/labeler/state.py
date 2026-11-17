@@ -179,8 +179,16 @@ class LabelerState(QObject):
     # ── Persistence ──────────────────────────────────────────
     def save_current(self):
         img = self.current_image
-        if img:
-            self.save_labels(img, self.current_boxes)
+        if img is None:
+            return
+        editor = self.current_editor
+        if editor is None:
+            # The image could not be measured, so there is no frame to read
+            # the drawing in and ``current_boxes`` is empty for lack of an
+            # editor, not because the plate is empty. Writing that empty
+            # drawing would destroy a reviewed GT; leave the file alone.
+            return
+        self.save_labels(img, editor.to_bboxes())
 
     def save_labels(self, img: Path, boxes: list[BBox], force: bool = False):
         """Writes the .txt. With no boxes and not reviewed, it does NOT create the file.

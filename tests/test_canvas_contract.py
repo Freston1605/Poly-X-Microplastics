@@ -40,8 +40,9 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
 
+from polyx.core.detect.protocol import size_image
 from polyx.core.editing import MIN_SIDE_PX
-from polyx.core.labels import STUDY_CLASSES
+from polyx.core.labels import STUDY_CLASSES, bbox_from, find_label_file, read_boxes
 from polyx.gui import theme as T
 from polyx.gui.detector.pages import gt_manual
 from polyx.gui.labeler import canvas as labeler_canvas
@@ -201,6 +202,80 @@ def test_an_empty_click_is_a_click_in_both_editors(rigs):
         rig.click((350, 280))
     assert len(labeller.boxes()) == len(gt.boxes()) == 1
     assert labeller.selection() == gt.selection() == -1
+
+
+# ── The annotation frame: the pixels, the editor and the .txt agree ───────
+
+
+def _write_exif_rotated_jpeg(path: Path) -> tuple[int, int]:
+    """A JPEG stored 60×40 but tagged to display as 40×60.
+
+    ``write_image`` writes the stored pixels; Pillow then tags orientation 6
+    (rotate 90° clockwise), so every reader that honours EXIF — cv2,
+    ``size_image`` — sees a 40×60 frame. Returns the displayed size.
+    """
+    Image = pytest.importorskip("PIL.Image")
+    write_image(path, 60, 40, suffix=".jpg")
+    with Image.open(path) as im:
+        exif = im.getexif()
+        exif[274] = 6
+        im.save(path, exif=exif)
+    return 40, 60
+
+
+@pytest.mark.parametrize("shell", ["labeller", "gt"])
+def test_an_exif_rotated_photo_is_annotated_in_the_frame_it_is_painted(qapp, tmp_path, shell):
+    """One frame per canvas: measured, painted and edited sizes must agree.
+
+    A photo tagged orientation 6 is stored 60×40 and displayed 40×60. Qt's
+    ``QPixmap(path)`` ignores the tag; cv2 — and therefore ``size_image`` —
+    honours it. If a canvas paints the unrotated pixels while the editor and
+    the .txt work in the rotated frame, boxes are drawn, hit-tested and saved
+    in two different geometries.
+    """
+    folder = tmp_path / "imgs"
+    path = folder / "rotated.jpg"
+    displayed = _write_exif_rotated_jpeg(path)
+    assert displayed != (60, 40), "the fixture must change the frame, not just tag it"
+
+    measured = size_image(path)
+    try:
+        if shell == "labeller":
+            rig = LabellerRig.over(qapp, folder)
+            editor = rig.state.current_editor
+            painted = rig.canvas._pixmap
+        else:
+            rig = GtRig.over(qapp, path)
+            editor = rig.canvas.editor
+            painted = rig.canvas._pixmap_item.pixmap()
+
+        painted_size = (painted.width(), painted.height())
+        editor_size = (editor.img_w, editor.img_h)
+        assert measured == displayed, f"size_image measured {measured}, not the displayed frame"
+        assert painted_size == measured, (
+            f"{shell} paints {painted_size} while size_image measures {measured}"
+        )
+        assert editor_size == measured, (
+            f"{shell} edits {editor_size} while size_image measures {measured}"
+        )
+
+        # A box drawn in the displayed frame saves normalized against it and
+        # reads back as the same absolute box through the same frame.
+        rig.drag((2, 2), (18, 26))
+        assert len(rig.boxes()) == 1
+        assert rig.boxes()[0][:4] == pytest.approx((2, 2, 18, 26), abs=1.0)
+        w, h = measured
+        if shell == "labeller":
+            rig.state.save_current()
+            boxes, _malformed = read_boxes(find_label_file(path))
+        else:
+            # What the page's save does for the loaded image: normalize the
+            # detections against size_image, the frame the canvas painted.
+            boxes = [bbox_from(det, w, h) for det in rig.canvas.detections()]
+        assert (boxes[0].cx * w, boxes[0].cy * h) == pytest.approx((10, 14), abs=0.5)
+    finally:
+        rig.canvas.deleteLater()
+        qapp.processEvents()
 
 
 # ── The 2 px rule: one core invariant, one on-screen message ──────────────

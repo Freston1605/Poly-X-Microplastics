@@ -18,18 +18,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import cv2
-import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
-    QImage,
     QKeySequence,
     QPainter,
     QPen,
-    QPixmap,
     QShortcut,
 )
 from PySide6.QtWidgets import (
@@ -59,7 +55,6 @@ from polyx.core.editing import (
     RejectionReason,
 )
 from polyx.core.i18n import _, lazy, ngettext
-from polyx.core.image_io import read_image
 from polyx.core.labels import (
     STUDY_CLASSES,
     bbox_from,
@@ -74,33 +69,9 @@ from polyx.core.labels import (
 )
 from polyx.gui import iconos
 from polyx.gui import theme as T
+from polyx.gui.image_pixmap import qpixmap_from_file
 
 from ._base import DetectorPage
-
-
-def _qpixmap_de(path: Path) -> QPixmap:
-    """Decodes with cv2, not with the Qt reader.
-
-    The annotator and the detector have to work on the SAME pixel frame.
-    Qt applies the EXIF rotation when opening a JPEG and cv2 does not, so a
-    photo marked as rotated was annotated on one frame and read on another:
-    the saved boxes came out displaced -- some even outside the plate -- even
-    though in the annotator they looked perfectly placed. And the .txt has no
-    way to declare on which frame it was written.
-
-    As a bonus, ``cv2.imdecode`` over ``np.fromfile`` is the only thing that
-    reliably opens accented paths on Windows, which is the reason the rest of
-    the project already reads this way.
-    """
-    bgr = read_image(path)
-    if bgr is None:
-        return QPixmap()
-    h, w = bgr.shape[:2]
-    rgb = np.ascontiguousarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
-    # .copy() so the QImage owns its bytes: the numpy array is
-    # freed on exit, and without the copy it would point to dead memory.
-    return QPixmap.fromImage(QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
-
 
 HANDLE_SIZE = 8  # px on screen
 
@@ -194,7 +165,7 @@ class AnnotCanvas(QGraphicsView):
 
     def load_image(self, path: Path, existing: list[Detection]):
         self._image_path = path
-        pm = _qpixmap_de(path)
+        pm = qpixmap_from_file(path)
         if pm.isNull():
             self.scene_.clear()
             self._pixmap_item = None

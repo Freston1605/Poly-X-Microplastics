@@ -4,6 +4,10 @@ The shell only translates events, zooms and pans, paints, and reports what
 the labeller did. Geometry, hit-testing, the resize handles, selection and
 undo belong to :class:`polyx.core.editing.BoxEditor`, one per image, held by
 :class:`~polyx.gui.labeler.state.LabelerState`.
+
+The pixels are decoded by :func:`polyx.gui.image_pixmap.qpixmap_from_file`,
+the same EXIF-applied frame ``size_image`` measures and the editor works in:
+painting, hit-testing and the saved normalisation cannot disagree.
 """
 
 from __future__ import annotations
@@ -12,7 +16,6 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
-    QImage,
     QKeyEvent,
     QMouseEvent,
     QPainter,
@@ -25,6 +28,7 @@ from PySide6.QtWidgets import QWidget
 from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason
 from polyx.core.i18n import _
 from polyx.gui import theme as T
+from polyx.gui.image_pixmap import qpixmap_from_file
 
 from .state import LabelerState
 
@@ -113,18 +117,7 @@ class BboxCanvas(QWidget):
             self.update()
             return
 
-        pix = QPixmap(str(img_path))
-        if pix.isNull():
-            try:
-                import numpy as np
-                from PIL import Image
-
-                arr = np.array(Image.open(str(img_path)).convert("RGB"))
-                h, w, c = arr.shape
-                qimg = QImage(arr.data, w, h, w * c, QImage.Format_RGB888)
-                pix = QPixmap.fromImage(qimg)
-            except Exception:  # noqa: BLE001, S110
-                pass
+        pix = qpixmap_from_file(img_path)
         previous = self._pixmap
         self._pixmap = pix if not pix.isNull() else None
         # Keeps zoom and framing if the user adjusted them and the image is of
