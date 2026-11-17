@@ -67,6 +67,7 @@ src/                      # Source code (installable package)
     │   ├── metrics.py    # TP/FP/FN, IoU, confusion matrix
     │   ├── assignment.py # Abstention: detecting ≠ identifying
     │   ├── labels.py     # YOLO-label codec: the only label I/O (.txt, classes.txt)
+    │   ├── editing.py    # Box-editing core: absolute boxes, selection, handles, undo (no Qt)
     │   ├── annotate.py   # Plate annotation: palette, primitive, triptych, run-file naming
     │   ├── dataset_audit.py
     │   ├── detection_run/  # Canonical detection-run engine, folder and result
