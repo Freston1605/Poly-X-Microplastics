@@ -439,30 +439,58 @@ def test_a_class_key_sets_the_active_class_and_reclassifies_the_selection(rigs):
 # ── One handle grab tolerance ──────────────────────────────────────────────
 
 
-def test_both_canvases_grab_a_handle_at_the_same_widget_distance(rigs):
-    labeller, gt = rigs
-    for rig in (labeller, gt):
-        rig.drag((50, 40), (150, 140))
+@pytest.mark.parametrize("zoom", [0.5, 1.0, 2.0])
+def test_both_canvases_pass_the_same_image_pixel_tolerance(rigs, zoom):
+    """The shell converts one widget constant through its own zoom.
 
-    for rig in (labeller, gt):
-        widget_px = rig.canvas._handle_tolerance() * rig.image_scale()
-        assert widget_px == pytest.approx(editing.HANDLE_TOLERANCE_PX)
+    The tolerance is captured at the call into the Qt-free core, so Qt's
+    pointer rounding is not part of the assertion: the shell must pass
+    ``HANDLE_TOLERANCE_PX / image_scale`` exactly.
+    """
+    for rig in rigs:
+        rig.drag((50, 40), (150, 140))
+        rig.zoom_to(zoom)
+        editor = rig.editor()
+        assert editor is not None
+
+        seen: list[float] = []
+        original = editor.handle_at
+
+        def spy(x, y, tolerance, _original=original, _seen=seen):
+            _seen.append(tolerance)
+            return _original(x, y, tolerance)
+
+        editor.handle_at = spy
+        try:
+            _x1, _y1, x2, y2, _cls = rig.boxes()[0]
+            rig.hover((x2, y2))
+        finally:
+            del editor.handle_at
+
+        assert seen, "the shell did not hit-test a handle"
+        assert seen[-1] == pytest.approx(editing.HANDLE_TOLERANCE_PX / rig.image_scale())
+
     assert not hasattr(BboxCanvas, "HANDLE_TOLERANCE_PX")
 
-    # Behaviourally: half a tolerance outside the corner still grabs the
-    # handle, twice a tolerance away is empty space (a new box starts there).
-    for rig in (labeller, gt):
-        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
-        _x1, _y1, x2, y2, _cls = rig.boxes()[0]
-        rig.drag((x2 + tolerance_image_px / 2, y2), (x2, y2))
-        assert len(rig.boxes()) == 1, "the corner handle was not grabbed from half a tolerance"
 
-    for rig in (labeller, gt):
-        tolerance_image_px = editing.HANDLE_TOLERANCE_PX / rig.image_scale()
+def test_handle_hit_testing_changes_at_the_contract_boundaries(rigs):
+    """Inside half a tolerance is the handle; twice a tolerance is empty space.
+
+    This is the core contract in image pixels, not a widget gesture, so no
+    pointer rounding is involved.
+    """
+    for rig in rigs:
+        rig.drag((50, 40), (150, 140))
+        editor = rig.editor()
+        assert editor is not None
         _x1, _y1, x2, y2, _cls = rig.boxes()[0]
-        far = 2 * tolerance_image_px
-        rig.drag((x2 + far, y2 + far), (x2 + far + 40, y2 + far + 40))
-        assert len(rig.boxes()) == 2, "a press far from any handle should start a new box"
+        tolerance = editing.HANDLE_TOLERANCE_PX
+
+        assert editor.handle_at(x2 + tolerance / 2, y2, tolerance) is editing.Handle.BOTTOM_RIGHT
+        assert (
+            editor.handle_at(x2 + 2 * tolerance, y2 + 2 * tolerance, tolerance)
+            is editing.Handle.NONE
+        )
 
 
 # ── One cursor map ─────────────────────────────────────────────────────────

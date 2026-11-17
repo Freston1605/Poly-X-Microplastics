@@ -63,6 +63,14 @@ class CanvasRig:
         """Image pixels → widget pixels at the current zoom."""
         ...
 
+    def editor(self):
+        """The live :class:`BoxEditor` behind this shell, or ``None``."""
+        ...
+
+    def zoom_to(self, scale: float) -> None:
+        """Set the shell's zoom deterministically, for the tolerance contract."""
+        ...
+
     def tag_color(self, name: str) -> QColor:
         """Colour the shell painted the class tag of its newest box."""
         ...
@@ -151,6 +159,14 @@ class LabellerRig(CanvasRig):
     def image_scale(self) -> float:
         return self.canvas._scale
 
+    def editor(self):
+        return self.state.current_editor
+
+    def zoom_to(self, scale: float) -> None:
+        self.canvas._scale = scale
+        self.canvas.update()
+        QApplication.processEvents()
+
     def tag_color(self, name: str) -> QColor:
         """Colour the canvas painted the class tag of its newest box."""
         x1, y1, x2, y2, _cls = self.boxes()[-1]
@@ -233,6 +249,14 @@ class GtRig(CanvasRig):
 
     def image_scale(self) -> float:
         return self.canvas.transform().m11()
+
+    def editor(self):
+        return self.canvas.editor
+
+    def zoom_to(self, scale: float) -> None:
+        self.canvas.resetTransform()
+        self.canvas.scale(scale, scale)
+        QApplication.processEvents()
 
     def tag_color(self, name: str) -> QColor:
         """Colour the scene painted the class tag of its newest box."""
