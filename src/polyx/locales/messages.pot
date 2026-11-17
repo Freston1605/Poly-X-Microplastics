@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 21:56-0300\n"
+"POT-Creation-Date: 2026-11-16 22:07-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -992,7 +992,7 @@ msgstr ""
 msgid "·  %(verdict)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:649 src/polyx/gui/detector/review_dialog.py:294
+#: src/polyx/gui/detector/pages/results.py:603 src/polyx/gui/detector/review_dialog.py:294
 #: src/polyx/gui/viewer/window.py:868 src/polyx/gui/viewer/window.py:928
 msgid "Error"
 msgstr ""
@@ -2328,11 +2328,11 @@ msgstr ""
 msgid "Reload GT"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:573
+#: src/polyx/gui/detector/pages/results.py:593
 msgid "Export CSV"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:573
+#: src/polyx/gui/detector/pages/results.py:593
 msgid "CSV (*.csv)"
 msgstr ""
 
@@ -2387,16 +2387,16 @@ msgstr ""
 msgid "Size distribution by class"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:673 src/polyx/gui/detector/pages/results.py:690
-#: src/polyx/gui/detector/pages/results.py:697
+#: src/polyx/gui/detector/pages/results.py:627 src/polyx/gui/detector/pages/results.py:644
+#: src/polyx/gui/detector/pages/results.py:651
 msgid "Review"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:673
+#: src/polyx/gui/detector/pages/results.py:627
 msgid "Select a row from the table below first."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:690
+#: src/polyx/gui/detector/pages/results.py:644
 msgid "That image has no detections to review."
 msgstr ""
 
@@ -2459,12 +2459,12 @@ msgstr ""
 msgid "matplotlib is not available: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:649
+#: src/polyx/gui/detector/pages/results.py:603
 #, python-format
 msgid "Could not save: %(error)s"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/results.py:697
+#: src/polyx/gui/detector/pages/results.py:651
 #, python-format
 msgid "Could not open the Viewer: %(error)s"
 msgstr ""

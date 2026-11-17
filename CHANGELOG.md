@@ -14,6 +14,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- **Detection CSV headers are one canonical English schema on every door**
+  (ADR-0004, a schema change). The Results page and the Viewer stops writing
+  Spanish headers: both export named subsets of `DETECTION_COLUMNS`
+  (`PAGE_COLUMNS`, `VIEWER_COLUMNS`), and the Viewer's `size_source` values are
+  `mask`/`box` instead of `mascara`/`caja`. Scripts keyed on `modelo`,
+  `clase`, `imagen` or `talla_origen` must switch to `model`, `class`, `image`
+  and `size_source`; there is no compatibility option. The page's `image`
+  cell is the path the run recorded, as in `detections.csv`, not the bare file
+  name.
 - One operating-point module owns precision/recall/F1
   (`core/detection_run/operating_point.py`). The Results KPIs read the match
   the run decided under the localisation criterion; the confidence advice, the

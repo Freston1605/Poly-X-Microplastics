@@ -3,9 +3,9 @@
 ``detecciones.csv`` used to fabricate every size from the box sides
 (√(w·h), scaled) even when the particle had been measured over its mask.
 The exported row now reads the measured fields and declares their origin
-(``talla_origen``: mascara | caja). ``diam_px`` stays as a BOX descriptor
-— the equal-area diameter of the box, the same definition the fallback
-uses — never as the particle's size.
+(``size_source``: ``mask`` | ``box``, the canonical tokens of ADR-0004).
+``diam_px`` stays as a BOX descriptor — the equal-area diameter of the box,
+the same definition the fallback uses — never as the particle's size.
 """
 
 from __future__ import annotations
@@ -56,18 +56,18 @@ def test_csv_row_reports_the_measured_size():
     # ...but the sizes are the MEASURED ones — sqrt(w*h)*um would say 80.00.
     assert row[7] == "50.00"
     assert row[8] == "100.00"
-    assert row[9] == "mascara"
+    assert row[9] == "mask"
 
 
 def test_csv_row_declares_the_box_fallback():
     det = _en_caja()
     row = csv_rows([det], UM)[1]
     assert row[7] == f"{det.diam_um:.2f}"
-    assert row[9] == "caja"
+    assert row[9] == "box"
 
 
 def test_csv_header_declares_the_origin_column():
-    assert csv_rows([], UM)[0][-1] == "talla_origen"
+    assert csv_rows([], UM)[0][-1] == "size_source"
 
 
 def test_csv_row_without_calibration_leaves_sizes_empty():

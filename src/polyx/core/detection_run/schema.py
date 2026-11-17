@@ -54,6 +54,51 @@ DETECTION_COLUMNS = (
     "assignable",
 )
 
+# The Results page exports the columns it can fill from the review state: the
+# same names, in the canonical order, without the five that need the run
+# folder (``number``, ``class_id``, ``size_source``, ``has_mask``,
+# ``assignable``). A shorter view of one table, never a second vocabulary.
+PAGE_COLUMNS = (
+    "model",
+    "image",
+    "class",
+    "conf",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "um_per_px",
+    "calibration_origin",
+    "length_um",
+    "method_length",
+    "feret_um",
+    "geodesic_um",
+    "equivalent_rect_length_um",
+    "width_um",
+    "area_um2",
+    "diam_um",
+    "aspect",
+    "curvature",
+    "morphotype",
+)
+
+# The Viewer exports a particle from a photo no run owns. Nine of its ten
+# columns are the canonical tokens above; ``diam_px`` is the box descriptor
+# documented in CLAUDE.md, which only the Viewer publishes. Its values follow
+# the schema too: ``size_source`` is ``mask`` or ``box``, never translated.
+VIEWER_COLUMNS = (
+    "class",
+    "conf",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "diam_px",
+    "diam_um",
+    "area_um2",
+    "size_source",
+)
+
 
 # ── Small conversions ───────────────────────────────────────────────────
 
@@ -603,7 +648,9 @@ def load_run(run_dir: Path) -> RunResult:
 
 __all__ = [
     "DETECTION_COLUMNS",
+    "PAGE_COLUMNS",
     "SCHEMA_VERSION",
+    "VIEWER_COLUMNS",
     "aggregate_metrics",
     "build_run_payload",
     "calibration_from_dict",

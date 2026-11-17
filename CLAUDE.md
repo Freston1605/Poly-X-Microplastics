@@ -651,8 +651,10 @@ over the full plate without going back to the Labeller.
 
 **Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
 (one row per particle: `diam_px` is the box's equal-area diameter — a box
-descriptor; `diam_um`/`area_um2` are the measured values, with
-`talla_origen` declaring `mascara` or `caja`) and `resumen.json`. The
+descriptor; `diam_um`/`area_um2` are the measured values, with `size_source`
+declaring `mask` or `box`) and `resumen.json`. The headers and the
+`size_source` values are the canonical English tokens of ADR-0004
+(`VIEWER_COLUMNS`), not interface labels. The
 labels on the canvas and in the PNG carry a **`≈`** when the µm size came
 from the box fallback, so an approximate number is never shown as a
 measured one.

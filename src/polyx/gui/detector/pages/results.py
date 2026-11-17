@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from polyx.core.detection_run import reload_ground_truth
+from polyx.core.detection_run import PAGE_COLUMNS, detection_row, reload_ground_truth
 from polyx.core.detection_run.operating_point import (
     Criterion,
     Score,
@@ -567,6 +567,26 @@ class ResultsPage(DetectorPage):
             )
             self._hist_placeholder.setVisible(True)
 
+    def export_rows(self) -> list[list[object]]:
+        """The per-particle table in the canonical page columns.
+
+        One row per detection, with the values ``detection_row`` writes for
+        ``detections.csv``: the Results page exports the same table as the run
+        folder, only shorter. The names and their order are ``PAGE_COLUMNS``, a
+        named subset of ``DETECTION_COLUMNS`` (ADR-0004), so the file does not
+        change language with the interface.
+        """
+        rows: list[list[object]] = [list(PAGE_COLUMNS)]
+        calibrations = getattr(self.state, "calibrations", None) or {}
+        for mi, results in self.state.results.items():
+            alias = self.state.model_slots[mi].alias
+            for result in results:
+                calibration = calibrations.get(result.image_path.name)
+                for prediction in result.predictions:
+                    values = detection_row(alias, result.image_path, prediction, calibration)
+                    rows.append([values[column] for column in PAGE_COLUMNS])
+        return rows
+
     def _export_csv(self):
         """Exports all the detections to a CSV file."""
         path, _unused = QFileDialog.getSaveFileName(
@@ -574,75 +594,9 @@ class ResultsPage(DetectorPage):
         )
         if not path:
             return
-        all_results = [r for rs in self.state.results.values() for r in rs]  # noqa: F841
         try:
-            with open(path, "w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                # The real shape is exported in addition to the equivalent diameter: for
-                # a fibre, the equivalent diameter is not the quantity
-                # reported in the literature, which is its length.
-                w.writerow(
-                    [
-                        "modelo",
-                        "imagen",
-                        "clase",
-                        "conf",
-                        "x1",
-                        "y1",
-                        "x2",
-                        "y2",
-                        "um_por_px",
-                        "origen_escala",
-                        "largo_um",
-                        "metodo_largo",
-                        "feret_um",
-                        "geodesico_um",
-                        "largo_rect_eq_um",
-                        "ancho_um",
-                        "area_um2",
-                        "diam_um",
-                        "aspecto",
-                        "curvatura",
-                        "morfotipo",
-                    ]
-                )
-                cals = getattr(self.state, "calibrations", None) or {}
-                for mi, rs in self.state.results.items():
-                    alias = self.state.model_slots[mi].alias
-                    for r in rs:
-                        cal = cals.get(r.image_path.name)
-                        um = f"{cal.um_por_px:.4f}" if cal and cal.valid else ""
-                        origin_2 = cal.origin if cal and cal.valid else ""
-                        for p in r.predictions:
-
-                            def _n(v, dec=2):
-                                return f"{v:.{dec}f}" if v else ""
-
-                            w.writerow(
-                                [
-                                    alias,
-                                    r.image_path.name,
-                                    p.class_name,
-                                    f"{p.conf:.4f}",
-                                    f"{p.x1:.1f}",
-                                    f"{p.y1:.1f}",
-                                    f"{p.x2:.1f}",
-                                    f"{p.y2:.1f}",
-                                    um,
-                                    origin_2,
-                                    _n(p.length_um, 1),
-                                    p.method_length or "",
-                                    _n(p.feret_um, 1),
-                                    _n(p.geodesic_um, 1),
-                                    _n(p.equivalent_rect_length_um, 1),
-                                    _n(p.width_um, 1),
-                                    _n(p.area_um2, 1),
-                                    _n(p.diam_um),
-                                    _n(p.aspect),
-                                    _n(p.curvature),
-                                    p.morphotype or "",
-                                ]
-                            )
+            with Path(path).open("w", newline="", encoding="utf-8") as handle:
+                csv.writer(handle).writerows(self.export_rows())
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
 
