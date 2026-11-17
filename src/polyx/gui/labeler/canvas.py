@@ -36,16 +36,13 @@ from polyx.core.editing import (
 from polyx.core.i18n import _
 from polyx.core.labels import class_name_for
 from polyx.gui import theme as T
+from polyx.gui.editing_qt import cursor_for_handle
 from polyx.gui.image_pixmap import qpixmap_from_file
 
 from .state import LabelerState
 
 # A press that never moves this far is a click (select), not a move.
 _DRAG_THRESHOLD_PX = 3.0
-
-_DRAW = "draw"
-_MOVE = "move"
-_RESIZE = "resize"
 
 
 class BboxCanvas(QWidget):
@@ -92,7 +89,8 @@ class BboxCanvas(QWidget):
         self._zoom_user = False
 
         # The gesture the shell is translating; the editor holds the box.
-        self._gesture: str | None = None
+        # The enum, not a private string: the core already names the gestures.
+        self._gesture: EditMode | None = None
         # A press on a box does not move it until the pointer actually moves.
         self._move_armed = False
         self._move_origin = QPointF(0.0, 0.0)  # widget coords
@@ -288,11 +286,11 @@ class BboxCanvas(QWidget):
             if editor.select_at(x, y) < 0:
                 # Start drawing a new box.
                 editor.begin_draw(x, y)
-                self._gesture = _DRAW
+                self._gesture = EditMode.DRAW
             else:
                 handle = editor.handle_at(x, y, self._handle_tolerance())
                 if handle is not Handle.NONE and editor.begin_resize(handle, x, y):
-                    self._gesture = _RESIZE
+                    self._gesture = EditMode.RESIZE
                 else:
                     # A click selects; the move starts only if the pointer moves.
                     self._move_armed = True
@@ -314,20 +312,20 @@ class BboxCanvas(QWidget):
             return
         img_pt = self._w2i(pos)
 
-        if self._gesture == _DRAW:
+        if self._gesture is EditMode.DRAW:
             editor.update_draw(img_pt.x(), img_pt.y())
             self.update()
-        elif self._gesture == _MOVE:
+        elif self._gesture is EditMode.MOVE:
             editor.update_move(img_pt.x(), img_pt.y())
             self.update()
-        elif self._gesture == _RESIZE:
+        elif self._gesture is EditMode.RESIZE:
             editor.update_resize(img_pt.x(), img_pt.y())
             self.update()
         elif self._move_armed:
             if (pos - self._move_origin).manhattanLength() > _DRAG_THRESHOLD_PX:
                 origin = self._move_image_origin
                 if editor.begin_move(origin.x(), origin.y()):
-                    self._gesture = _MOVE
+                    self._gesture = EditMode.MOVE
                     editor.update_move(img_pt.x(), img_pt.y())
                 self._move_armed = False
                 self.update()
@@ -346,11 +344,11 @@ class BboxCanvas(QWidget):
         if editor is None:
             return
 
-        if gesture == _DRAW:
+        if gesture is EditMode.DRAW:
             self._settle(editor.finish_draw(), drawn=True)
-        elif gesture == _MOVE:
+        elif gesture is EditMode.MOVE:
             self._settle(editor.finish_move())
-        elif gesture == _RESIZE:
+        elif gesture is EditMode.RESIZE:
             self._settle(editor.finish_resize())
         self.update()
 
@@ -373,7 +371,7 @@ class BboxCanvas(QWidget):
             return
         handle = editor.handle_at(img_pt.x(), img_pt.y(), self._handle_tolerance())
         if handle is not Handle.NONE:
-            self.setCursor(_HANDLE_CURSORS[handle])
+            self.setCursor(cursor_for_handle(handle))
         elif editor.box_at(img_pt.x(), img_pt.y()) >= 0:
             self.setCursor(Qt.SizeAllCursor)
         else:
@@ -433,15 +431,3 @@ class BboxCanvas(QWidget):
             self.state.next_image()
         else:
             super().keyPressEvent(ev)
-
-
-_HANDLE_CURSORS = {
-    Handle.TOP_LEFT: Qt.SizeFDiagCursor,
-    Handle.TOP_RIGHT: Qt.SizeBDiagCursor,
-    Handle.BOTTOM_RIGHT: Qt.SizeFDiagCursor,
-    Handle.BOTTOM_LEFT: Qt.SizeBDiagCursor,
-    Handle.TOP: Qt.SizeVerCursor,
-    Handle.RIGHT: Qt.SizeHorCursor,
-    Handle.BOTTOM: Qt.SizeVerCursor,
-    Handle.LEFT: Qt.SizeHorCursor,
-}

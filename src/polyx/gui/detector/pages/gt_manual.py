@@ -71,6 +71,7 @@ from polyx.core.labels import (
 )
 from polyx.gui import iconos
 from polyx.gui import theme as T
+from polyx.gui.editing_qt import cursor_for_handle
 from polyx.gui.image_pixmap import qpixmap_from_file
 
 from ._base import DetectorPage
@@ -281,17 +282,7 @@ class AnnotCanvas(QGraphicsView):
                     self.scene_.addItem(h)
 
     def _set_cursor_for_handle(self, handle: Handle):
-        cursors = {
-            Handle.TOP_LEFT: Qt.SizeFDiagCursor,
-            Handle.BOTTOM_RIGHT: Qt.SizeFDiagCursor,
-            Handle.TOP_RIGHT: Qt.SizeBDiagCursor,
-            Handle.BOTTOM_LEFT: Qt.SizeBDiagCursor,
-            Handle.TOP: Qt.SizeVerCursor,
-            Handle.BOTTOM: Qt.SizeVerCursor,
-            Handle.LEFT: Qt.SizeHorCursor,
-            Handle.RIGHT: Qt.SizeHorCursor,
-        }
-        self.setCursor(cursors.get(handle, Qt.CrossCursor))
+        self.setCursor(cursor_for_handle(handle))
 
     def _report_rejection(self, side_px: float):
         """Announce a refused gesture, unless it was an accidental click."""

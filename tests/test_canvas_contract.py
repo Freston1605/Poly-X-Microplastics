@@ -465,6 +465,36 @@ def test_both_canvases_grab_a_handle_at_the_same_widget_distance(rigs):
         assert len(rig.boxes()) == 2, "a press far from any handle should start a new box"
 
 
+# ── One cursor map ─────────────────────────────────────────────────────────
+
+
+def test_both_canvases_show_the_same_cursor_over_each_handle(rigs):
+    """One handle → cursor map, shared by the shells."""
+    from polyx.core.editing import Handle
+    from polyx.gui.editing_qt import HANDLE_CURSORS
+
+    labeller, gt = rigs
+    for rig in (labeller, gt):
+        rig.drag((50, 40), (150, 140))
+
+    x1, y1, x2, y2, _cls = labeller.boxes()[0]
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    centres = {
+        Handle.TOP_LEFT: (x1, y1),
+        Handle.TOP_RIGHT: (x2, y1),
+        Handle.BOTTOM_RIGHT: (x2, y2),
+        Handle.BOTTOM_LEFT: (x1, y2),
+        Handle.TOP: (cx, y1),
+        Handle.RIGHT: (x2, cy),
+        Handle.BOTTOM: (cx, y2),
+        Handle.LEFT: (x1, cy),
+    }
+    for handle, point in centres.items():
+        for rig in (labeller, gt):
+            rig.hover(point)
+            assert rig.cursor() == HANDLE_CURSORS[handle]
+
+
 # ── One class-colour path ─────────────────────────────────────────────────
 
 

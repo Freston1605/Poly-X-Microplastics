@@ -51,6 +51,14 @@ class CanvasRig:
 
     def key(self, key: Qt.Key, modifiers: Qt.KeyboardModifier = Qt.NoModifier) -> None: ...
 
+    def hover(self, point: tuple[float, float]) -> None:
+        """Move the pointer without a button, as a user inspects a handle."""
+        ...
+
+    def cursor(self) -> Qt.CursorShape:
+        """The cursor the shell is showing now."""
+        ...
+
     def image_scale(self) -> float:
         """Image pixels → widget pixels at the current zoom."""
         ...
@@ -124,6 +132,21 @@ class LabellerRig(CanvasRig):
     def key(self, key, modifiers=Qt.NoModifier) -> None:
         QTest.keyClick(self.canvas, key, modifiers)
         QApplication.processEvents()
+
+    def hover(self, point) -> None:
+        event = QMouseEvent(
+            QEvent.MouseMove,
+            self._point(point),
+            self.canvas.mapToGlobal(self._point(point)),
+            Qt.NoButton,
+            Qt.NoButton,
+            Qt.NoModifier,
+        )
+        QApplication.sendEvent(self.canvas, event)
+        QApplication.processEvents()
+
+    def cursor(self) -> Qt.CursorShape:
+        return self.canvas.cursor().shape()
 
     def image_scale(self) -> float:
         return self.canvas._scale
@@ -200,6 +223,13 @@ class GtRig(CanvasRig):
     def key(self, key, modifiers=Qt.NoModifier) -> None:
         QApplication.sendEvent(self.canvas, QKeyEvent(QEvent.KeyPress, key, modifiers))
         QApplication.processEvents()
+
+    def hover(self, point) -> None:
+        self._send(QMouseEvent.MouseMove, self._point(point), Qt.NoButton, Qt.NoButton)
+        QApplication.processEvents()
+
+    def cursor(self) -> Qt.CursorShape:
+        return self.canvas.cursor().shape()
 
     def image_scale(self) -> float:
         return self.canvas.transform().m11()
