@@ -175,10 +175,55 @@ def test_batch_pre_annotation_can_cache_a_drawing_for_any_image(tmp_path):
     state.load_images(root / "images" / "train")
     b = root / "images" / "train" / "b.png"
 
-    assert state.has_annotations_for(b) is False
-    state.set_annotations_for(b, [BBox(class_id=1, cx=0.5, cy=0.5, w=0.2, h=0.2)])
-    assert state.has_annotations_for(b) is True
+    assert state.has_boxes_for(b) is False
+    state.set_boxes_for(b, [BBox(class_id=1, cx=0.5, cy=0.5, w=0.2, h=0.2)])
+    assert state.has_boxes_for(b) is True
     assert state.box_count_for(b) == 1
+
+
+def test_preannotation_fills_the_blanks_and_spares_the_drawings_on_disk(tmp_path):
+    """The batch owns "only annotate the empty ones", file included.
+
+    The last image has a ``.txt`` but no cached drawing — it was never
+    visited in this session. Pre-annotation must still leave it alone: an
+    existing label file is the operator's work, not a blank.
+    """
+    root = split_dataset(tmp_path / "ds", {"train": {"a_blank": None, "z_drawn": _boxes(2)}})
+    image_dir = root / "images" / "train"
+    blank, drawn = image_dir / "a_blank.png", image_dir / "z_drawn.png"
+
+    state = LabelerState()
+    state.load_images(image_dir)  # current image is a_blank; z_drawn stays uncached
+
+    emitted = []
+    state.annotations_changed.connect(lambda: emitted.append(1))
+    model_box = BBox(class_id=1, cx=0.5, cy=0.5, w=0.2, h=0.2)
+    made = state.preannotate({blank: [model_box], drawn: [model_box, model_box, model_box]})
+
+    assert made == 1
+    assert state.box_count_for(blank) == 1
+    assert (root / "labels" / "train" / "a_blank.txt").is_file()
+    assert state.box_count_for(drawn) == 2
+    assert (root / "labels" / "train" / "z_drawn.txt").read_text(encoding="utf-8") == _boxes(2)
+    assert emitted == [1]  # one redraw for the whole batch, not one per image
+
+
+def test_preannotation_writes_through_the_census_rule(tmp_path):
+    """An empty model result on an unreviewed image creates no ``.txt``.
+
+    The batch writes through the same persistence policy as the editor: the
+    empty-file census rule lives in the state, so a direct write here would
+    falsify the census.
+    """
+    root = split_dataset(tmp_path / "ds", {"train": {"a": None}})
+    image_dir = root / "images" / "train"
+    a = image_dir / "a.png"
+
+    state = LabelerState()
+    state.load_images(image_dir)
+
+    assert state.preannotate({a: []}) == 1
+    assert not (root / "labels" / "train" / "a.txt").exists()
 
 
 def test_list_display_uses_the_codec_lookup(tmp_path, qapp):
