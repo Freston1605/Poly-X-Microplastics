@@ -22,23 +22,11 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
-from polyx.core.editing import MIN_SIDE_PX, BoxEditor, EditMode, Handle, RejectionReason
+from polyx.core.editing import BoxEditor, EditMode, Handle, RejectionReason
 from polyx.core.i18n import _
 from polyx.gui import theme as T
 
 from .state import LabelerState
-
-# Extended palette: PET, PP, LDPE + extra colors for custom classes
-_CLASS_COLORS = [
-    T.CLASS_COLOR_HEX.get("PET", "#e3342f"),
-    T.CLASS_COLOR_HEX.get("PP", "#ff8c00"),
-    T.CLASS_COLOR_HEX.get("LDPE", "#ffd700"),
-    "#00b4d8",
-    "#48cae4",
-    "#0077b6",
-    "#023e8a",
-    "#7b2d8b",
-]
 
 # A press that never moves this far is a click (select), not a move.
 _DRAG_THRESHOLD_PX = 3.0
@@ -50,10 +38,6 @@ _SILENT_SIDE_PX = 0.3
 _DRAW = "draw"
 _MOVE = "move"
 _RESIZE = "resize"
-
-
-def _cls_color(cls_id: int) -> QColor:
-    return QColor(_CLASS_COLORS[cls_id % len(_CLASS_COLORS)])
 
 
 class BboxCanvas(QWidget):
@@ -78,9 +62,6 @@ class BboxCanvas(QWidget):
 
     box_drawn = Signal()
     box_rejected = Signal(float)  # side in px of the discarded box
-
-    # The core owns the invariant; the window reads it for the message.
-    SIDE_MINIMUM_PX = MIN_SIDE_PX
 
     # Handle size and grab radius, in widget pixels. The core receives the
     # radius in image pixels at the current scale.
@@ -231,7 +212,7 @@ class BboxCanvas(QWidget):
             if i == live:
                 continue
             rect_w = self._box_rect(box.x1, box.y1, box.x2, box.y2)
-            color = _cls_color(box.class_id)
+            color = T.class_qcolor_at(self.state.class_names, box.class_id)
             is_sel = i == editor.selection
 
             fill = QColor(color)
@@ -260,7 +241,7 @@ class BboxCanvas(QWidget):
         if live >= 0:
             box = boxes[live]
             rect_draw = self._box_rect(box.x1, box.y1, box.x2, box.y2)
-            act_color = _cls_color(box.class_id)
+            act_color = T.class_qcolor_at(self.state.class_names, box.class_id)
             fill_d = QColor(act_color)
             fill_d.setAlpha(55)
             p.fillRect(rect_draw, fill_d)
@@ -270,7 +251,8 @@ class BboxCanvas(QWidget):
 
         selected = editor.selected_box
         if selected is not None and editor.mode is not EditMode.DRAW:
-            self._paint_handles(p, editor, _cls_color(selected.class_id))
+            color = T.class_qcolor_at(self.state.class_names, selected.class_id)
+            self._paint_handles(p, editor, color)
 
     def _paint_handles(self, p: QPainter, editor: BoxEditor, color: QColor):
         box_side = self.HANDLE_RADIUS_PX * 2
