@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 00:35-0300\n"
+"POT-Creation-Date: 2026-11-17 00:49-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -2711,7 +2711,7 @@ msgstr "No se pudo guardar: %(error)s"
 msgid "Could not open the Viewer: %(error)s"
 msgstr "No se pudo abrir el Visor: %(error)s"
 
-#: src/polyx/gui/labeler/canvas.py:191
+#: src/polyx/gui/labeler/canvas.py:212
 msgid "Open an image folder to begin"
 msgstr "Abre una carpeta de imágenes para comenzar"
 
