@@ -17,10 +17,12 @@ The Qt-free guarantee of the core is owned by
 guard here covers the static half (no Qt import in the core source) and the
 shells (no private editing maths, no colour tables, no minimum-side alias).
 
-The Viewer canvas also carries a ``_CLASS_COLORS`` table with the same literal
-palette. It is out of card 07's scope (the two annotation editors) and its
-index-ordered colours are a different rule from the theme's name lookup, so it
-is left alone and reported rather than silently re-coloured.
+The two rigs live in ``tests/canvas_rigs.py``: one gesture script, either
+shell, so this module and the per-canvas modules drive the widgets the same
+way. The Viewer canvas also carries a ``_CLASS_COLORS`` table with the same
+literal palette. It is out of card 07's scope (the two annotation editors) and
+its index-ordered colours are a different rule from the theme's name lookup,
+so it is left alone and reported rather than silently re-coloured.
 """
 
 from __future__ import annotations
@@ -36,22 +38,17 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PySide6")
 
-import cv2
-import numpy as np
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent
-from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
 
 from polyx.core.editing import MIN_SIDE_PX
 from polyx.core.labels import STUDY_CLASSES
 from polyx.gui import theme as T
 from polyx.gui.detector.pages import gt_manual
-from polyx.gui.detector.pages.gt_manual import AnnotCanvas
 from polyx.gui.labeler import canvas as labeler_canvas
 from polyx.gui.labeler import window as labeler_window
 from polyx.gui.labeler.canvas import BboxCanvas
-from polyx.gui.labeler.state import LabelerState
+from tests.canvas_rigs import CanvasRig, GtRig, LabellerRig
+from tests.conftest import write_image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -63,178 +60,15 @@ CLASSES = [*STUDY_CLASSES, "HDPE"]
 # ── The two rigs: the same gestures through each shell's real events ──────
 
 
-def _write_image(path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    ok, buffer = cv2.imencode(".png", np.full((IMAGE_H, IMAGE_W, 3), 40, np.uint8))
-    assert ok
-    path.write_bytes(buffer.tobytes())
-    return path
-
-
 @pytest.fixture
 def image(tmp_path) -> Path:
-    return _write_image(tmp_path / "imgs" / "plate.png")
-
-
-class _Rig:
-    """The editing gestures a labeller makes, driven through one shell.
-
-    Both editors receive the same image coordinates; each adapter converts
-    them with its own widget transform, which is exactly the shell concern
-    that remains after card 07.
-    """
-
-    canvas: object
-
-    def boxes(self) -> list[tuple[float, float, float, float, int]]: ...
-
-    def selection(self) -> int: ...
-
-    def can_undo(self) -> bool: ...
-
-    def set_class(self, class_id: int) -> None: ...
-
-    def drag(
-        self, start: tuple[float, float], end: tuple[float, float], flush: bool = True
-    ) -> None: ...
-
-    def click(self, point: tuple[float, float]) -> None: ...
-
-    def key(self, key: Qt.Key, modifiers: Qt.KeyboardModifier = Qt.NoModifier) -> None: ...
-
-
-class _LabellerRig(_Rig):
-    def __init__(self, state: LabelerState, canvas: BboxCanvas):
-        self.state = state
-        self.canvas = canvas
-
-    @classmethod
-    def over(cls, qapp, image: Path) -> _LabellerRig:
-        state = LabelerState()
-        state.set_class_names(list(CLASSES))
-        canvas = BboxCanvas(state)
-        canvas.resize(800, 600)
-        canvas.show()
-        state.load_images(image.parent)
-        qapp.processEvents()
-        return cls(state, canvas)
-
-    def _point(self, image_xy: tuple[float, float]) -> QPoint:
-        point = self.canvas._i2w(QPointF(*image_xy))
-        return QPoint(round(point.x()), round(point.y()))
-
-    def boxes(self):
-        editor = self.state.current_editor
-        return (
-            [] if editor is None else [(b.x1, b.y1, b.x2, b.y2, b.class_id) for b in editor.boxes]
-        )
-
-    def selection(self) -> int:
-        editor = self.state.current_editor
-        return -1 if editor is None else editor.selection
-
-    def can_undo(self) -> bool:
-        editor = self.state.current_editor
-        return False if editor is None else editor.can_undo
-
-    def set_class(self, class_id: int) -> None:
-        self.state.set_active_class(class_id)
-
-    def drag(self, start, end, flush: bool = True) -> None:
-        QTest.mousePress(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(start))
-        QTest.mouseMove(self.canvas, self._point(end))
-        QTest.mouseRelease(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(end))
-        if flush:
-            QApplication.processEvents()
-
-    def click(self, point) -> None:
-        QTest.mousePress(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(point))
-        QTest.mouseRelease(self.canvas, Qt.LeftButton, Qt.NoModifier, self._point(point))
-        QApplication.processEvents()
-
-    def key(self, key, modifiers=Qt.NoModifier) -> None:
-        QTest.keyClick(self.canvas, key, modifiers)
-        QApplication.processEvents()
-
-    def tag_color(self, name: str) -> QColor:
-        """Colour the canvas painted the class tag of its newest box."""
-        x1, y1, x2, y2, _cls = self.boxes()[-1]
-        rect = self.canvas._box_rect(x1, y1, x2, y2)
-        tag = QRectF(rect.x(), rect.y() - 17, max(50, len(name) * 7 + 8), 17)
-        image = self.canvas.grab().toImage()
-        return image.pixelColor(round(tag.right() - 4), round(tag.y() + 8))
-
-
-class _GtRig(_Rig):
-    def __init__(self, canvas: AnnotCanvas):
-        self.canvas = canvas
-
-    @classmethod
-    def over(cls, qapp, image: Path) -> _GtRig:
-        canvas = AnnotCanvas()
-        canvas.resize(800, 600)
-        canvas.show()
-        canvas.set_class_names(list(CLASSES))
-        canvas.load_image(image, [])
-        canvas.zoom_100()
-        qapp.processEvents()
-        return cls(canvas)
-
-    def _point(self, image_xy: tuple[float, float]) -> QPointF:
-        return QPointF(self.canvas.mapFromScene(QPointF(*image_xy)))
-
-    def _send(self, kind, point: QPointF, button, buttons) -> None:
-        event = QMouseEvent(
-            kind,
-            point,
-            self.canvas.viewport().mapToGlobal(point),
-            button,
-            buttons,
-            Qt.NoModifier,
-        )
-        QApplication.sendEvent(self.canvas.viewport(), event)
-
-    def boxes(self):
-        return [(b.x1, b.y1, b.x2, b.y2, b.class_id) for b in self.canvas.boxes]
-
-    def selection(self) -> int:
-        return self.canvas.selection
-
-    def can_undo(self) -> bool:
-        editor = self.canvas.editor
-        return False if editor is None else editor.can_undo
-
-    def set_class(self, class_id: int) -> None:
-        self.canvas.set_active_class(class_id)
-
-    def drag(self, start, end, flush: bool = True) -> None:
-        self._send(QMouseEvent.MouseButtonPress, self._point(start), Qt.LeftButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseMove, self._point(end), Qt.NoButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseButtonRelease, self._point(end), Qt.LeftButton, Qt.NoButton)
-        if flush:
-            QApplication.processEvents()
-
-    def click(self, point) -> None:
-        self._send(QMouseEvent.MouseButtonPress, self._point(point), Qt.LeftButton, Qt.LeftButton)
-        self._send(QMouseEvent.MouseButtonRelease, self._point(point), Qt.LeftButton, Qt.NoButton)
-        QApplication.processEvents()
-
-    def key(self, key, modifiers=Qt.NoModifier) -> None:
-        QApplication.sendEvent(self.canvas, QKeyEvent(QEvent.KeyPress, key, modifiers))
-        QApplication.processEvents()
-
-    def tag_color(self, name: str) -> QColor:
-        """Colour the scene painted the class tag of its newest box."""
-        x1, y1, _x2, _y2, _cls = self.boxes()[-1]
-        width = len(name) * 9 + 12
-        point = self.canvas.mapFromScene(QPointF(x1 + width - 4, y1 - 18 + 9))
-        return self.canvas.viewport().grab().toImage().pixelColor(point)
+    return write_image(tmp_path / "imgs" / "plate.png", IMAGE_W, IMAGE_H, value=40)
 
 
 @pytest.fixture
 def rigs(qapp, image):
-    labeller = _LabellerRig.over(qapp, image)
-    gt = _GtRig.over(qapp, image)
+    labeller = LabellerRig.over(qapp, image.parent, CLASSES)
+    gt = GtRig.over(qapp, image, CLASSES)
     yield labeller, gt
     labeller.canvas.deleteLater()
     gt.canvas.close()
@@ -245,7 +79,7 @@ def rigs(qapp, image):
 # ── The contract: one gesture sequence, one result ─────────────────────────
 
 
-def _assert_same(labeller: _Rig, gt: _Rig) -> None:
+def _assert_same(labeller: CanvasRig, gt: CanvasRig) -> None:
     left, right = labeller.boxes(), gt.boxes()
     assert len(left) == len(right), (
         f"{len(left)} boxes in the Labeller, {len(right)} in the GT page"
@@ -258,13 +92,13 @@ def _assert_same(labeller: _Rig, gt: _Rig) -> None:
     assert labeller.selection() == gt.selection()
 
 
-def _move_by(rig: _Rig, index: int, dx: float, dy: float) -> None:
+def _move_by(rig: CanvasRig, index: int, dx: float, dy: float) -> None:
     x1, y1, x2, y2, _cls = rig.boxes()[index]
     centre = ((x1 + x2) / 2, (y1 + y2) / 2)
     rig.drag(centre, (centre[0] + dx, centre[1] + dy))
 
 
-def _resize_bottom_right_by(rig: _Rig, index: int, dx: float, dy: float) -> None:
+def _resize_bottom_right_by(rig: CanvasRig, index: int, dx: float, dy: float) -> None:
     _x1, _y1, x2, y2, _cls = rig.boxes()[index]
     rig.drag((x2, y2), (x2 + dx, y2 + dy))
 
@@ -382,14 +216,14 @@ def test_both_canvases_refuse_a_sub_two_pixel_box_with_the_same_visible_message(
     from polyx.gui.labeler.window import LabelerWindow
 
     window = LabelerWindow()
-    gt = _GtRig.over(qapp, image)
+    gt = GtRig.over(qapp, image, CLASSES)
     messages: list[str] = []
     gt.canvas.status_changed.connect(messages.append)
     try:
         window.show()
         window.state.load_images(image.parent)
         qapp.processEvents()
-        labeller = _LabellerRig(window.state, window.canvas)
+        labeller = LabellerRig(window.state, window.canvas)
 
         # A language change can rebuild the window on the next event flush;
         # read the status straight after the release, as the labeller sees it.

@@ -42,6 +42,30 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
 os.environ.setdefault("POLYX_LOCALE", "es")
 
 
+def write_image(
+    path: Path,
+    width: int = 60,
+    height: int = 40,
+    *,
+    value: int = 0,
+    suffix: str | None = None,
+) -> Path:
+    """Write a real, decodable image through the project's cv2 idiom.
+
+    The one image builder for the suite: ``cv2.imencode`` and ``write_bytes``
+    are what the program itself uses (``imread``/``imwrite`` fail silently on
+    accented Windows paths). ``value`` fills every channel, so a test that
+    needs a uniform colour can name it; the default is black.
+    """
+    fmt = suffix if suffix is not None else (path.suffix or ".png")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame = np.full((height, width, 3), value, dtype=np.uint8)
+    ok, buf = cv2.imencode(fmt, frame)
+    assert ok, f"cv2 could not encode a {width}x{height} {fmt} image"
+    path.write_bytes(buf.tobytes())
+    return path
+
+
 def split_dataset(
     root: Path,
     splits: dict[str, dict[str, str | None]],
@@ -67,9 +91,7 @@ def split_dataset(
         images_dir.mkdir(parents=True, exist_ok=True)
         labels_dir.mkdir(parents=True, exist_ok=True)
         for stem, label_text in images.items():
-            ok, buf = cv2.imencode(suffix, np.zeros((40, 60, 3), dtype=np.uint8))
-            assert ok
-            (images_dir / f"{stem}{suffix}").write_bytes(bytes(buf))
+            write_image(images_dir / f"{stem}{suffix}", suffix=suffix)
             if label_text is not None:
                 (labels_dir / f"{stem}.txt").write_text(label_text, encoding="utf-8")
 
