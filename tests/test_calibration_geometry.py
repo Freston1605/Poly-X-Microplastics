@@ -26,9 +26,18 @@ def test_line_scale_from_a_known_pixel_length_and_real_size():
     """200 px of drawn line stand for 6200 µm, the 31 µm/px per-photo case."""
     result = calibration.line_calibration((0.0, 0.0), (200.0, 0.0), 6200.0)
 
-    assert result.failure == ""
+    assert result.failure is None
     assert result.length_px == pytest.approx(200.0)
     assert result.um_per_px == pytest.approx(31.0)
+
+
+def test_a_successful_calibration_is_signalled_by_the_absence_of_a_failure():
+    """No second success signal: ``failure is None`` is what says it worked."""
+    line = calibration.line_calibration((0.0, 0.0), (200.0, 0.0), 6200.0)
+    circle = calibration.circle_calibration((0.0, 0.0), (1000.0, 0.0), (500.0, 500.0), 100_000.0)
+
+    assert line.failure is None
+    assert circle.failure is None
 
 
 def test_line_scale_does_not_depend_on_the_direction():
@@ -57,7 +66,7 @@ def test_circle_centre_and_radius_from_three_points():
     """
     result = calibration.circle_calibration((0.0, 0.0), (1000.0, 0.0), (500.0, 500.0), 100_000.0)
 
-    assert result.failure == ""
+    assert result.failure is None
     assert result.center == pytest.approx((500.0, 0.0))
     assert result.radius_px == pytest.approx(500.0)
     assert result.um_per_px == pytest.approx(100.0)
@@ -72,6 +81,40 @@ def test_circle_scale_works_away_from_the_origin():
     assert result.center == pytest.approx((650.0, 500.0))
     assert result.radius_px == pytest.approx(250.0)
     assert result.um_per_px == pytest.approx(200.0)
+
+
+# ── The circumscribed circle on its own ─────────────────────────────────
+
+
+def test_circumscribed_circle_returns_the_centre_and_radius():
+    """The geometry alone, without a real size: what the preview needs."""
+    circle = calibration.circumscribed_circle((900.0, 500.0), (650.0, 750.0), (400.0, 500.0))
+
+    assert circle is not None
+    assert circle.center == pytest.approx((650.0, 500.0))
+    assert circle.radius_px == pytest.approx(250.0)
+
+
+@pytest.mark.parametrize("order", tuple(permutations(range(3))))
+def test_circumscribed_circle_is_independent_of_point_order(order):
+    points = ((0.0, 0.0), (1000.0, 0.0), (500.0, 500.0))
+    circle = calibration.circumscribed_circle(*(points[i] for i in order))
+
+    assert circle is not None
+    assert circle.center == pytest.approx((500.0, 0.0))
+    assert circle.radius_px == pytest.approx(500.0)
+
+
+@pytest.mark.parametrize(
+    "points",
+    [
+        ((5.0, 5.0), (5.0, 5.0), (10.0, 10.0)),  # two points coincide
+        ((0.0, 0.0), (10.0, 10.0), (20.0, 20.0)),  # collinear
+        ((float("nan"), 0.0), (1000.0, 0.0), (500.0, 500.0)),  # not a number
+    ],
+)
+def test_circumscribed_circle_is_none_when_no_circle_is_defined(points):
+    assert calibration.circumscribed_circle(*points) is None
 
 
 # ── Refusals ────────────────────────────────────────────────────────────
