@@ -255,8 +255,10 @@ coincide. All text/background pairs across the four themes pass **4.5:1**.
 
 - **`CLASS_COLOR_HEX`** (PET/PP/LDPE) — these are domain data. If they changed with
   the theme, two screenshots of the same analysis would not be comparable.
-  Qt paint sites obtain a class `QColor` through `T.class_qcolor(name)`; an
-  unknown class gets `FALLBACK_COLOR_HEX` instead of raising.
+  Qt paint sites obtain a class `QColor` through `T.class_qcolor(name)`, or by class
+  id through `T.class_qcolor_at(names, id)`; an unknown class or an id outside the
+  list gets `FALLBACK_COLOR_HEX` instead of raising. The Labeller and the Manual GT
+  canvas share that path, so one class is the same colour in both.
 - **`T.DOC`** — frozen palette (the light one) for the **HTML reports**. A report
   gets printed, attached and archived: if it came out dark because whoever generated
   it works at night, it would waste ink and two reports of the same analysis would
@@ -620,9 +622,11 @@ unreviewed · `F` reframes · `1-9` active class · `←/→` navigate · `Del` 
 selected box · `Ctrl+Z/Y` undo/redo · drag to draw · drag a box to move it · drag a
 handle to resize · wheel zoom · middle-button pan.
 
-**Minimum box side: 2 px** (`BboxCanvas.SIDE_MINIMUM_PX`). It was 5 px and it silently
-discarded legitimate marks: the study's smallest particles measure ~8 px per side.
-Now, if a box is rejected, the status bar says so.
+**Minimum box side: 2 px** (`polyx.core.editing.MIN_SIDE_PX`). The rule lives in the
+shared editing core, so the Manual GT page's canvas rejects the same box with the
+same message as the Labeller; it is not a per-canvas constant any more. It was 5 px
+and it silently discarded legitimate marks: the study's smallest particles measure
+~8 px per side. Now, if a box is rejected, the status bar says so.
 
 Zoom is kept between images (checkbox in the right panel), with size tolerance:
 crops from a grid differ by 1 px due to rounding, and demanding exact equality

@@ -253,10 +253,6 @@ class AnnotCanvas(QGraphicsView):
         self.resetTransform()
 
     # ── internal helpers ───────────────────────────────────────────
-    def _class_color(self, cid: int) -> QColor:
-        name = self.class_names[cid] if cid < len(self.class_names) else ""
-        return T.class_qcolor(name)
-
     def _handle_tolerance(self) -> float:
         """The handle hit target, as a distance in image pixels."""
         return HANDLE_SIZE / max(self.transform().m11(), 0.0001)
@@ -273,7 +269,7 @@ class AnnotCanvas(QGraphicsView):
 
         selected = self._editor.selection
         for i, b in enumerate(self._editor.boxes):
-            color = self._class_color(b.class_id)
+            color = T.class_qcolor_at(self.class_names, b.class_id)
             sel = i == selected
             pen = QPen(color, 3 if sel else 2)
             if sel:
@@ -407,7 +403,11 @@ class AnnotCanvas(QGraphicsView):
                 ev.accept()
                 return
 
-            # Otherwise, draw a new one
+            # Otherwise, draw a new one. The empty press clears the selection,
+            # as the Labeller does and as this canvas did before the shared
+            # core: the zero-size draw that starts here is refused, and the
+            # refusal must not bring the old selection back with it.
+            self._editor.select(-1)
             self._editor.begin_draw(scene_pos.x(), scene_pos.y())
             self._refresh()
             ev.accept()
