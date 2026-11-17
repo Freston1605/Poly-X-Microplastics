@@ -16,8 +16,6 @@ Full bounding-box annotator with:
 
 from __future__ import annotations
 
-import copy
-from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -52,6 +50,14 @@ from PySide6.QtWidgets import (
 
 from polyx.core.detect.protocol import size_image
 from polyx.core.detect.yolo import Detection
+from polyx.core.editing import (
+    MIN_SIDE_PX,
+    BoxEditor,
+    EditBox,
+    EditMode,
+    Handle,
+    RejectionReason,
+)
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.image_io import read_image
 from polyx.core.labels import (
@@ -96,51 +102,19 @@ def _qpixmap_de(path: Path) -> QPixmap:
     return QPixmap.fromImage(QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888).copy())
 
 
-# Canvas modes
-MODE_IDLE = 0
-MODE_DRAW = 1
-MODE_MOVE = 2
-MODE_RESIZE = 3
-MODE_PAN = 4
-
-# Resize handles (order matters for the cursors)
-HANDLE_NONE = -1
-HANDLE_TL = 0  # top-left
-HANDLE_TR = 1
-HANDLE_BR = 2
-HANDLE_BL = 3
-HANDLE_T = 4  # top
-HANDLE_R = 5
-HANDLE_B = 6
-HANDLE_L = 7
-
 HANDLE_SIZE = 8  # px on screen
 
 
 # ────────────────────────────────────────────────────────────────────
-@dataclass
-class Box:
-    """Annotation box in absolute image coordinates."""
-
-    x1: float
-    y1: float
-    x2: float
-    y2: float
-    class_id: int = 0
-
-    def normalize(self):
-        if self.x1 > self.x2:
-            self.x1, self.x2 = self.x2, self.x1
-        if self.y1 > self.y2:
-            self.y1, self.y2 = self.y2, self.y1
-
-    def rect(self) -> QRectF:
-        return QRectF(self.x1, self.y1, self.x2 - self.x1, self.y2 - self.y1)
-
-
-# ────────────────────────────────────────────────────────────────────
 class AnnotCanvas(QGraphicsView):
-    """Advanced canvas: zoom, pan, draw/move/resize boxes."""
+    """Advanced canvas: zoom, pan, draw/move/resize boxes.
+
+    A thin shell around the shared editing core: it translates events,
+    paints, keeps zoom/pan and its signals. The boxes, selection, resize
+    handles and the undo/redo history live in
+    :class:`polyx.core.editing.BoxEditor`, so the Manual GT page and the
+    Labeller cannot drift apart again.
+    """
 
     boxes_changed = Signal()
     selection_changed = Signal(int)  # idx or -1
@@ -162,41 +136,61 @@ class AnnotCanvas(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self._pixmap_item = None
-        self._image_size = (0, 0)
         self._image_path: Path | None = None
-        self.boxes: list[Box] = []
-        self.selected_idx: int = -1
-        self.active_class: int = 0
+        self._editor: BoxEditor | None = None
+        self._active_class = 0
         self.class_names: list[str] = list(STUDY_CLASSES)
 
-        # Interaction state
-        self._mode = MODE_IDLE
-        self._mouse_press_scene: QPointF | None = None
-        self._mouse_press_box: Box | None = None
-        self._drag_handle: int = HANDLE_NONE
+        # Interaction state the core does not own: panning and the space key.
         self._space_pressed = False
-        self._last_pan_pos = None
-
-        # Undo/redo history
-        self._undo: list[list[Box]] = []
-        self._redo: list[list[Box]] = []
+        self._panning = False
+        self._last_pan_pos: QPointF | None = None
 
     # ── Public API ───────────────────────────────────────────────
+    @property
+    def editor(self) -> BoxEditor | None:
+        """The shared editing core of the loaded image, or ``None``."""
+        return self._editor
+
+    @property
+    def boxes(self) -> list[EditBox]:
+        """The current boxes in image pixels (a copy; edit through the canvas)."""
+        return list(self._editor.boxes) if self._editor is not None else []
+
+    @property
+    def selection(self) -> int:
+        """Index of the selected box, or ``-1``."""
+        return self._editor.selection if self._editor is not None else -1
+
+    @property
+    def selected_idx(self) -> int:
+        """The selected box index; kept for the old public attribute."""
+        return self.selection
+
+    @property
+    def active_class(self) -> int:
+        """The class new boxes get; the core owns it once an image is loaded."""
+        return self._editor.active_class if self._editor is not None else self._active_class
+
     def set_class_names(self, names: list[str]):
         self.class_names = list(names)
-        if self.active_class >= len(self.class_names):
-            self.active_class = 0
+        if not 0 <= self.active_class < len(self.class_names):
+            self._active_class = 0
+            if self._editor is not None:
+                self._editor.set_active_class(0)
         self._refresh()
 
     def set_active_class(self, idx: int):
-        if 0 <= idx < len(self.class_names):
-            self.active_class = idx
-            # if a box is selected, change its class
-            if 0 <= self.selected_idx < len(self.boxes):
-                self._push_undo()
-                self.boxes[self.selected_idx].class_id = idx
-                self._refresh()
-                self.boxes_changed.emit()
+        if not 0 <= idx < len(self.class_names):
+            return
+        self._active_class = idx
+        if self._editor is None:
+            return
+        self._editor.set_active_class(idx)
+        # if a box is selected, change its class (the core records the undo)
+        if self._editor.assign_class(idx):
+            self._refresh()
+            self.boxes_changed.emit()
 
     def load_image(self, path: Path, existing: list[Detection]):
         self._image_path = path
@@ -204,81 +198,50 @@ class AnnotCanvas(QGraphicsView):
         if pm.isNull():
             self.scene_.clear()
             self._pixmap_item = None
-            self.boxes = []
-            self.selected_idx = -1
+            self._editor = None
             self.status_changed.emit(_("Could not open the image."))
             return
-        self._image_size = (pm.width(), pm.height())
         self.scene_.clear()
         self._pixmap_item = self.scene_.addPixmap(pm)
         self.setSceneRect(QRectF(0, 0, pm.width(), pm.height()))
-        # Map Detection -> Box
-        self.boxes = [Box(d.x1, d.y1, d.x2, d.y2, class_id=d.class_id) for d in existing]
-        self.selected_idx = -1
-        self._undo.clear()
-        self._redo.clear()
+        self._editor = BoxEditor(
+            pm.width(),
+            pm.height(),
+            [EditBox.from_detection(d) for d in existing],
+            active_class=self._active_class,
+        )
         # Initial fit
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
         self._refresh()
         self.boxes_changed.emit()
 
     def detections(self) -> list[Detection]:
-        out = []
-        for b in self.boxes:
-            name = (
-                self.class_names[b.class_id]
-                if b.class_id < len(self.class_names)
-                else str(b.class_id)
-            )
-            out.append(
-                Detection(
-                    class_id=b.class_id,
-                    class_name=name,
-                    conf=1.0,
-                    x1=b.x1,
-                    y1=b.y1,
-                    x2=b.x2,
-                    y2=b.y2,
-                )
-            )
-        return out
+        if self._editor is None:
+            return []
+        return self._editor.detections(dict(enumerate(self.class_names)))
 
     def clear_boxes(self):
-        if not self.boxes:
+        if self._editor is None or not self._editor.clear():
             return
-        self._push_undo()
-        self.boxes = []
-        self.selected_idx = -1
         self._refresh()
         self.boxes_changed.emit()
 
     def delete_selected(self):
-        if not (0 <= self.selected_idx < len(self.boxes)):
+        if self._editor is None or not self._editor.delete_selected():
             return
-        self._push_undo()
-        del self.boxes[self.selected_idx]
-        self.selected_idx = -1
         self._refresh()
         self.boxes_changed.emit()
         self.selection_changed.emit(-1)
 
     def undo(self):
-        if not self._undo:
+        if self._editor is None or not self._editor.undo():
             return
-        self._redo.append(self._snapshot())
-        self.boxes = self._undo.pop()
-        if self.selected_idx >= len(self.boxes):
-            self.selected_idx = -1
         self._refresh()
         self.boxes_changed.emit()
 
     def redo(self):
-        if not self._redo:
+        if self._editor is None or not self._editor.redo():
             return
-        self._undo.append(self._snapshot())
-        self.boxes = self._redo.pop()
-        if self.selected_idx >= len(self.boxes):
-            self.selected_idx = -1
         self._refresh()
         self.boxes_changed.emit()
 
@@ -290,18 +253,13 @@ class AnnotCanvas(QGraphicsView):
         self.resetTransform()
 
     # ── internal helpers ───────────────────────────────────────────
-    def _snapshot(self) -> list[Box]:
-        return [copy.copy(b) for b in self.boxes]
-
-    def _push_undo(self):
-        self._undo.append(self._snapshot())
-        if len(self._undo) > 100:
-            self._undo.pop(0)
-        self._redo.clear()
-
     def _class_color(self, cid: int) -> QColor:
         name = self.class_names[cid] if cid < len(self.class_names) else ""
         return T.class_qcolor(name)
+
+    def _handle_tolerance(self) -> float:
+        """The handle hit target, as a distance in image pixels."""
+        return HANDLE_SIZE / max(self.transform().m11(), 0.0001)
 
     def _refresh(self):
         """Redraws all the boxes + handles + labels (without touching the image)."""
@@ -310,14 +268,17 @@ class AnnotCanvas(QGraphicsView):
             if it is self._pixmap_item:
                 continue
             self.scene_.removeItem(it)
+        if self._editor is None:
+            return
 
-        for i, b in enumerate(self.boxes):
+        selected = self._editor.selection
+        for i, b in enumerate(self._editor.boxes):
             color = self._class_color(b.class_id)
-            sel = i == self.selected_idx
+            sel = i == selected
             pen = QPen(color, 3 if sel else 2)
             if sel:
                 pen.setStyle(Qt.SolidLine)
-            rect = QGraphicsRectItem(b.rect())
+            rect = QGraphicsRectItem(QRectF(b.x1, b.y1, b.width, b.height))
             rect.setPen(pen)
             fill = QColor(color)
             fill.setAlpha(45 if sel else 0)
@@ -342,62 +303,33 @@ class AnnotCanvas(QGraphicsView):
             self.scene_.addItem(txt)
 
             if sel:
-                # 8-point handles
-                hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)  # size in scene
-                points = self._handle_points(b, hs)
-                for hidx, (hx, hy) in enumerate(points):  # noqa: B007
+                # 8-point handles, positioned by the core
+                hs = self._handle_tolerance()  # size in scene
+                for hx, hy in self._editor.handle_points(b):
                     h = QGraphicsRectItem(QRectF(hx - hs / 2, hy - hs / 2, hs, hs))
                     h.setPen(QPen(Qt.white, 1.2))
                     h.setBrush(QBrush(color))
                     h.setZValue(10)
                     self.scene_.addItem(h)
 
-    def _handle_points(self, b: Box, hs: float) -> list[tuple[float, float]]:
-        cx = (b.x1 + b.x2) / 2
-        cy = (b.y1 + b.y2) / 2
-        return [
-            (b.x1, b.y1),  # TL
-            (b.x2, b.y1),  # TR
-            (b.x2, b.y2),  # BR
-            (b.x1, b.y2),  # BL
-            (cx, b.y1),  # T
-            (b.x2, cy),  # R
-            (cx, b.y2),  # B
-            (b.x1, cy),  # L
-        ]
-
-    def _hit_handle(self, b: Box, pos: QPointF) -> int:
-        hs = HANDLE_SIZE / max(self.transform().m11(), 0.0001)
-        pts = self._handle_points(b, hs)
-        for hidx, (hx, hy) in enumerate(pts):
-            if abs(pos.x() - hx) <= hs and abs(pos.y() - hy) <= hs:
-                return hidx
-        return HANDLE_NONE
-
-    def _hit_box(self, pos: QPointF) -> int:
-        """Returns the idx of the first box containing `pos`, -1 if none.
-        Prefers the selected one when it is under the cursor."""
-        # the currently selected one first (preference)
-        if 0 <= self.selected_idx < len(self.boxes):  # noqa: SIM102
-            if self.boxes[self.selected_idx].rect().contains(pos):
-                return self.selected_idx
-        for i, b in enumerate(self.boxes):
-            if b.rect().contains(pos):
-                return i
-        return -1
-
-    def _set_cursor_for_handle(self, h: int):
+    def _set_cursor_for_handle(self, handle: Handle):
         cursors = {
-            HANDLE_TL: Qt.SizeFDiagCursor,
-            HANDLE_BR: Qt.SizeFDiagCursor,
-            HANDLE_TR: Qt.SizeBDiagCursor,
-            HANDLE_BL: Qt.SizeBDiagCursor,
-            HANDLE_T: Qt.SizeVerCursor,
-            HANDLE_B: Qt.SizeVerCursor,
-            HANDLE_L: Qt.SizeHorCursor,
-            HANDLE_R: Qt.SizeHorCursor,
+            Handle.TOP_LEFT: Qt.SizeFDiagCursor,
+            Handle.BOTTOM_RIGHT: Qt.SizeFDiagCursor,
+            Handle.TOP_RIGHT: Qt.SizeBDiagCursor,
+            Handle.BOTTOM_LEFT: Qt.SizeBDiagCursor,
+            Handle.TOP: Qt.SizeVerCursor,
+            Handle.BOTTOM: Qt.SizeVerCursor,
+            Handle.LEFT: Qt.SizeHorCursor,
+            Handle.RIGHT: Qt.SizeHorCursor,
         }
-        self.setCursor(cursors.get(h, Qt.CrossCursor))
+        self.setCursor(cursors.get(handle, Qt.CrossCursor))
+
+    def _report_rejection(self, side_px: float):
+        self.status_changed.emit(
+            _("⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in")
+            % {"side": side_px, "minimum": MIN_SIDE_PX}
+        )
 
     # ── events ────────────────────────────────────────────────────
     def wheelEvent(self, ev):
@@ -419,7 +351,8 @@ class AnnotCanvas(QGraphicsView):
         elif k in (Qt.Key_Delete, Qt.Key_Backspace):
             self.delete_selected()
         elif k == Qt.Key_Escape:
-            self.selected_idx = -1
+            if self._editor is not None:
+                self._editor.select(-1)
             self._refresh()
             self.selection_changed.emit(-1)
         elif Qt.Key_1 <= k <= Qt.Key_9:
@@ -443,15 +376,14 @@ class AnnotCanvas(QGraphicsView):
         super().keyReleaseEvent(ev)
 
     def mousePressEvent(self, ev):
-        if self._pixmap_item is None:
+        if self._editor is None:
             super().mousePressEvent(ev)
             return
         scene_pos = self.mapToScene(ev.position().toPoint())
-        self._mouse_press_scene = scene_pos
 
         # Pan: middle wheel or space+left
         if ev.button() == Qt.MiddleButton or (self._space_pressed and ev.button() == Qt.LeftButton):
-            self._mode = MODE_PAN
+            self._panning = True
             self._last_pan_pos = ev.position()
             self.setCursor(Qt.ClosedHandCursor)
             ev.accept()
@@ -459,69 +391,50 @@ class AnnotCanvas(QGraphicsView):
 
         if ev.button() == Qt.LeftButton:
             # Am I over a handle of the selected box?
-            if 0 <= self.selected_idx < len(self.boxes):
-                h = self._hit_handle(self.boxes[self.selected_idx], scene_pos)
-                if h != HANDLE_NONE:
-                    self._mode = MODE_RESIZE
-                    self._drag_handle = h
-                    self._mouse_press_box = copy.copy(self.boxes[self.selected_idx])
-                    self._push_undo()
-                    self._set_cursor_for_handle(h)
-                    ev.accept()
-                    return
+            handle = self._editor.handle_at(scene_pos.x(), scene_pos.y(), self._handle_tolerance())
+            if handle is not Handle.NONE and self._editor.begin_resize(
+                handle, scene_pos.x(), scene_pos.y()
+            ):
+                self._set_cursor_for_handle(handle)
+                ev.accept()
+                return
 
             # Am I over a box?
-            hit = self._hit_box(scene_pos)
-            if hit >= 0:
-                self.selected_idx = hit
-                self._mode = MODE_MOVE
-                self._mouse_press_box = copy.copy(self.boxes[hit])
-                self._push_undo()
+            if self._editor.begin_move(scene_pos.x(), scene_pos.y()):
                 self.setCursor(Qt.ClosedHandCursor)
                 self._refresh()
-                self.selection_changed.emit(self.selected_idx)
+                self.selection_changed.emit(self._editor.selection)
                 ev.accept()
                 return
 
             # Otherwise, draw a new one
-            self._mode = MODE_DRAW
-            self.selected_idx = -1
-            self._push_undo()
-            new_box = Box(
-                scene_pos.x(),
-                scene_pos.y(),
-                scene_pos.x(),
-                scene_pos.y(),
-                class_id=self.active_class,
-            )
-            self.boxes.append(new_box)
-            self.selected_idx = len(self.boxes) - 1
+            self._editor.begin_draw(scene_pos.x(), scene_pos.y())
             self._refresh()
             ev.accept()
             return
 
         if ev.button() == Qt.RightButton:
             # assign the active class to the box under the cursor
-            hit = self._hit_box(scene_pos)
-            if hit >= 0:
-                self._push_undo()
-                self.boxes[hit].class_id = self.active_class
-                self.selected_idx = hit
+            index = self._editor.box_at(scene_pos.x(), scene_pos.y())
+            if index >= 0:
+                changed = self._editor.assign_class(self.active_class, index)
+                self._editor.select(index)
                 self._refresh()
-                self.boxes_changed.emit()
-                self.selection_changed.emit(hit)
+                if changed:
+                    self.boxes_changed.emit()
+                self.selection_changed.emit(index)
             ev.accept()
             return
 
         super().mousePressEvent(ev)
 
     def mouseMoveEvent(self, ev):
-        if self._pixmap_item is None:
+        if self._editor is None:
             super().mouseMoveEvent(ev)
             return
         scene_pos = self.mapToScene(ev.position().toPoint())
 
-        if self._mode == MODE_PAN and self._last_pan_pos is not None:
+        if self._panning and self._last_pan_pos is not None:
             delta = ev.position() - self._last_pan_pos
             self._last_pan_pos = ev.position()
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - int(delta.x()))
@@ -529,62 +442,39 @@ class AnnotCanvas(QGraphicsView):
             ev.accept()
             return
 
-        if self._mode == MODE_DRAW and self.selected_idx >= 0:
-            b = self.boxes[self.selected_idx]
-            b.x2 = scene_pos.x()
-            b.y2 = scene_pos.y()
+        mode = self._editor.mode
+        if mode is EditMode.DRAW:
+            self._editor.update_draw(scene_pos.x(), scene_pos.y())
             self._refresh()
-            self.status_changed.emit(f"Dibujando: {abs(b.x2 - b.x1):.0f}×{abs(b.y2 - b.y1):.0f} px")
+            box = self._editor.selected_box
+            if box is not None:
+                self.status_changed.emit(
+                    _("Drawing: %(width).0f×%(height).0f px")
+                    % {"width": abs(box.width), "height": abs(box.height)}
+                )
             ev.accept()
             return
 
-        if (
-            self._mode == MODE_MOVE
-            and self._mouse_press_box
-            and 0 <= self.selected_idx < len(self.boxes)
-        ):
-            dx = scene_pos.x() - self._mouse_press_scene.x()
-            dy = scene_pos.y() - self._mouse_press_scene.y()
-            base = self._mouse_press_box
-            b = self.boxes[self.selected_idx]
-            b.x1, b.x2 = base.x1 + dx, base.x2 + dx
-            b.y1, b.y2 = base.y1 + dy, base.y2 + dy
+        if mode is EditMode.MOVE:
+            self._editor.update_move(scene_pos.x(), scene_pos.y())
             self._refresh()
             ev.accept()
             return
 
-        if (
-            self._mode == MODE_RESIZE
-            and self._mouse_press_box
-            and 0 <= self.selected_idx < len(self.boxes)
-        ):
-            base = self._mouse_press_box
-            b = self.boxes[self.selected_idx]
-            mx, my = scene_pos.x(), scene_pos.y()
-            x1, y1, x2, y2 = base.x1, base.y1, base.x2, base.y2
-            h = self._drag_handle
-            if h in (HANDLE_TL, HANDLE_T, HANDLE_TR):
-                y1 = my
-            if h in (HANDLE_TR, HANDLE_R, HANDLE_BR):
-                x2 = mx
-            if h in (HANDLE_BR, HANDLE_B, HANDLE_BL):
-                y2 = my
-            if h in (HANDLE_BL, HANDLE_L, HANDLE_TL):
-                x1 = mx
-            b.x1, b.y1, b.x2, b.y2 = x1, y1, x2, y2
+        if mode is EditMode.RESIZE:
+            self._editor.update_resize(scene_pos.x(), scene_pos.y())
             self._refresh()
             ev.accept()
             return
 
         # No button: update the cursor according to hover
-        if 0 <= self.selected_idx < len(self.boxes):
-            h = self._hit_handle(self.boxes[self.selected_idx], scene_pos)
-            if h != HANDLE_NONE:
-                self._set_cursor_for_handle(h)
-                ev.accept()
-                return
+        handle = self._editor.handle_at(scene_pos.x(), scene_pos.y(), self._handle_tolerance())
+        if handle is not Handle.NONE:
+            self._set_cursor_for_handle(handle)
+            ev.accept()
+            return
         # Hover over a box: hand cursor
-        if self._hit_box(scene_pos) >= 0 or self._space_pressed:
+        if self._editor.box_at(scene_pos.x(), scene_pos.y()) >= 0 or self._space_pressed:
             self.setCursor(Qt.OpenHandCursor)
         else:
             self.setCursor(Qt.CrossCursor)
@@ -592,40 +482,24 @@ class AnnotCanvas(QGraphicsView):
         super().mouseMoveEvent(ev)
 
     def mouseReleaseEvent(self, ev):
-        if self._mode == MODE_DRAW and 0 <= self.selected_idx < len(self.boxes):
-            b = self.boxes[self.selected_idx]
-            b.normalize()
-            # Discard tiny boxes
-            if (b.x2 - b.x1) < 4 or (b.y2 - b.y1) < 4:
-                del self.boxes[self.selected_idx]
-                self.selected_idx = -1
-                # also the aggregated undo; we can leave it (it does no harm)
-            else:
-                # Clip to the image
-                W, H = self._image_size
-                b.x1 = max(0, min(W, b.x1))
-                b.x2 = max(0, min(W, b.x2))
-                b.y1 = max(0, min(H, b.y1))
-                b.y2 = max(0, min(H, b.y2))
-            self._refresh()
-            self.boxes_changed.emit()
-            self.selection_changed.emit(self.selected_idx)
+        if self._editor is not None:
+            mode = self._editor.mode
+            result = None
+            if mode is EditMode.DRAW:
+                result = self._editor.finish_draw()
+            elif mode is EditMode.MOVE:
+                result = self._editor.finish_move()
+            elif mode is EditMode.RESIZE:
+                result = self._editor.finish_resize()
+            if result is not None:
+                self._refresh()
+                self.boxes_changed.emit()
+                if mode is EditMode.DRAW:
+                    self.selection_changed.emit(self._editor.selection)
+                if result.reason is RejectionReason.TOO_SMALL:
+                    self._report_rejection(result.side_px)
 
-        elif self._mode in (MODE_MOVE, MODE_RESIZE) and 0 <= self.selected_idx < len(self.boxes):
-            b = self.boxes[self.selected_idx]
-            b.normalize()
-            W, H = self._image_size
-            b.x1 = max(0, min(W, b.x1))
-            b.x2 = max(0, min(W, b.x2))
-            b.y1 = max(0, min(H, b.y1))
-            b.y2 = max(0, min(H, b.y2))
-            self._refresh()
-            self.boxes_changed.emit()
-
-        self._mode = MODE_IDLE
-        self._mouse_press_scene = None
-        self._mouse_press_box = None
-        self._drag_handle = HANDLE_NONE
+        self._panning = False
         self._last_pan_pos = None
         self.setCursor(Qt.CrossCursor)
         super().mouseReleaseEvent(ev)
