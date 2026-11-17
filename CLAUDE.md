@@ -784,6 +784,26 @@ match_use_mask_iou: bool             # property: any image matched by mask IoU
 legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
+### `Score` and `Criterion` (src/polyx/core/detection_run/operating_point.py)
+The one definition of precision, recall and F1, Qt-free. A run carries its own
+match; readers sum its counters with `Score.from_decision(...)` instead of
+matching again. `score(...)` is the hypothetical confidence sweep (it re-matches
+with the rule each image recorded) and `recommend(...)` returns the best
+observed threshold, carrying its criterion.
+```python
+criterion: Criterion     # localisation | with_class
+threshold: float
+tp, fp, fn, miscls: int  # the match counters the figure came from
+precision, recall, f1: float
+```
+`Criterion.LOCALISATION` asks only whether the particle was found: a
+misclassified box is reported apart and stays out of both denominators.
+`Criterion.WITH_CLASS` also requires the polymer, so that box is a false
+positive of the predicted class and a false negative of the true one. The
+Results KPIs use the run's decision under localisation; the confidence advice,
+the Compare table's F1 and the report's second F1 column use with class. Every
+label in the interface names the criterion it shows.
+
 ### `MatchResult` (src/polyx/core/quality/metrics.py)
 Prediction vs GT matching (box or mask IoU at the run's `iou_tp`):
 ```python

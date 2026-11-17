@@ -10,13 +10,14 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from polyx.core.detection_run import RunStatus, display_name
+from polyx.core.detection_run.operating_point import Criterion, Score
 from polyx.core.i18n import _, ngettext
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import (
     confusion_matrix_from_matches,
     per_class_from_matches,
 )
-from polyx.core.report_metrics import _ORDER_CLASSES, _count_per_class, _pr_f1
+from polyx.core.report_metrics import _ORDER_CLASSES, _count_per_class
 from polyx.core.stats import (
     _average_ic95,
     _kruskal_wallis,
@@ -460,7 +461,6 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
     # Publishing only the first overestimates performance, and also contradicts the
     # per-class table, which does penalize confusion. Both are declared.
     rows_models = ""
-    total_mc = 0
     for mi, slot in enumerate(run.models):
         rs = results_2.get(mi, [])
         n_img = len({r.image_path for r in rs})
@@ -470,9 +470,10 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
         fp = sum(r.fp for r in rs)
         fn = sum(r.fn for r in rs)
         mc = sum(r.miscls for r in rs)
-        total_mc += mc
-        _unused, _unused, f1_loc = _pr_f1(tp, fp, fn)
-        _unused, _unused, f1_cls = _pr_f1(tp, fp + mc, fn + mc)
+        # One decision, two criteria: the operating-point module owns both
+        # names and both denominators.
+        f1_loc = Score.from_decision(rs, Criterion.LOCALISATION, run.params.conf).f1
+        f1_cls = Score.from_decision(rs, Criterion.WITH_CLASS, run.params.conf).f1
         avg_cf = (sum(cf) / len(cf)) if cf else 0
         there_is_gt = any(r.has_gt for r in rs)
         c_loc = f"{f1_loc:.3f}" if there_is_gt else "—"
@@ -488,23 +489,20 @@ def _section_models(run, results_2, all_results, any_gt: bool) -> str:
     # Note that accompanies the table, with the figures from the batch itself.
     note_miscls = ""
     if any_gt:
-        tp_g = sum(r.tp for r in all_results)
-        fp_g = sum(r.fp for r in all_results)
-        fn_g = sum(r.fn for r in all_results)
-        p_loc, r_loc, f_loc = _pr_f1(tp_g, fp_g, fn_g)
-        p_cls, r_cls, f_cls = _pr_f1(tp_g, fp_g + total_mc, fn_g + total_mc)
+        localisation = Score.from_decision(all_results, Criterion.LOCALISATION, run.params.conf)
+        with_class = Score.from_decision(all_results, Criterion.WITH_CLASS, run.params.conf)
         note_miscls = ngettext(
             "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers whether the detector finds the particle (P %(pl)s · R %(rl)s · <strong>F1 %(fl)s</strong>). <em>With class</em> also requires getting the polymer right, counting each misclassified box as a false positive of the predicted class and a false negative of the real one (P %(pc)s · R %(rc)s · <strong>F1 %(fc)s</strong>).</p><p>The difference corresponds to <strong>%(mc)s</strong> particle located correctly but assigned to the wrong class. It is the figure that reconciles this table with the per-class precision in the error section.</p>",
             "<p><strong>The two F1 figures measure different things.</strong> <em>Localisation</em> answers whether the detector finds the particle (P %(pl)s · R %(rl)s · <strong>F1 %(fl)s</strong>). <em>With class</em> also requires getting the polymer right, counting each misclassified box as a false positive of the predicted class and a false negative of the real one (P %(pc)s · R %(rc)s · <strong>F1 %(fc)s</strong>).</p><p>The difference corresponds to <strong>%(mc)s</strong> particles located correctly but assigned to the wrong class. It is the figure that reconciles this table with the per-class precision in the error section.</p>",
-            total_mc,
+            with_class.miscls,
         ) % {
-            "pl": f"{p_loc:.3f}",
-            "rl": f"{r_loc:.3f}",
-            "fl": f"{f_loc:.3f}",
-            "pc": f"{p_cls:.3f}",
-            "rc": f"{r_cls:.3f}",
-            "fc": f"{f_cls:.3f}",
-            "mc": total_mc,
+            "pl": f"{localisation.precision:.3f}",
+            "rl": f"{localisation.recall:.3f}",
+            "fl": f"{localisation.f1:.3f}",
+            "pc": f"{with_class.precision:.3f}",
+            "rc": f"{with_class.recall:.3f}",
+            "fc": f"{with_class.f1:.3f}",
+            "mc": with_class.miscls,
         }
 
     return f"""
@@ -521,7 +519,7 @@ def _section_verdict(results_2, run) -> str:
     consumed before extraction."""
     text_2 = ""
     if any(r.has_gt for rs in results_2.values() for r in rs):
-        sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
+        sweep = _sweep_confidence(results_2, run.models, run.params.conf)
         if sweep:
             labels = {
                 model.alias: _model_label(model, index) for index, model in enumerate(run.models)
@@ -611,14 +609,8 @@ def _section_comparison(run, results_2) -> str:
             marker_2 = []
             for mi in active_2:
                 rs = results_2.get(mi, [])
-                tp = sum(r.tp for r in rs)
-                fp = sum(r.fp for r in rs)
-                fn = sum(r.fn for r in rs)
-                pr = tp / (tp + fp) if (tp + fp) else 0
-                rc = tp / (tp + fn) if (tp + fn) else 0
-                marker_2.append(
-                    (2 * pr * rc / (pr + rc) if (pr + rc) else 0, _model_label(run.models[mi], mi))
-                )
+                measured = Score.from_decision(rs, Criterion.LOCALISATION, run.params.conf)
+                marker_2.append((measured.f1, _model_label(run.models[mi], mi)))
             marker_2.sort(reverse=True)
             best_f1, best = marker_2[0]
             # This F1 is the permissive one (localization). It used to say only `F1 global` and
@@ -644,13 +636,19 @@ def _section_comparison(run, results_2) -> str:
             for mi in active_2:
                 alias = _model_label(run.models[mi], mi)
                 rs = [r for r in results_2.get(mi, []) if r.has_gt]
-                tp = sum(r.tp for r in rs)
-                fp = sum(r.fp for r in rs)
-                fn = sum(r.fn for r in rs)
-                mc = sum(r.miscls for r in rs)
-                p_l, r_l, f_l = _pr_f1(tp, fp, fn)
-                p_c, r_c, f_c = _pr_f1(tp, fp + mc, fn + mc)
-                data_bars.append((alias, p_l, r_l, f_l, p_c, r_c, f_c))
+                localisation = Score.from_decision(rs, Criterion.LOCALISATION, run.params.conf)
+                with_class = Score.from_decision(rs, Criterion.WITH_CLASS, run.params.conf)
+                data_bars.append(
+                    (
+                        alias,
+                        localisation.precision,
+                        localisation.recall,
+                        localisation.f1,
+                        with_class.precision,
+                        with_class.recall,
+                        with_class.f1,
+                    )
+                )
 
                 gts_m = [r.gt for r in rs]
                 preds_m = [r.predictions for r in rs]
@@ -733,7 +731,7 @@ def _section_comparison(run, results_2) -> str:
 
             # F1 curve against the threshold: it supports the choice of the operating
             # point with evidence, instead of asserting it.
-            sweep = _sweep_confidence(results_2, run.models, run.params.iou_tp, run.params.conf)
+            sweep = _sweep_confidence(results_2, run.models, run.params.conf)
             f_sweep = _fig_sweep(sweep)
             if f_sweep:
                 figures_cmp += (

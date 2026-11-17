@@ -21,9 +21,16 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core.detection_run import reload_ground_truth
+from polyx.core.detection_run.operating_point import (
+    Criterion,
+    Score,
+    criterion_label,
+    recommend,
+    score,
+)
 from polyx.core.i18n import _, lazy, ngettext
 from polyx.core.platform import open_in_system
-from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP, match_image
+from polyx.core.quality.metrics import LABEL_FN, LABEL_FP, LABEL_MISCLS, LABEL_TP
 from polyx.gui import iconos
 from polyx.gui import theme as T
 from polyx.gui.widgets import KPICard
@@ -50,6 +57,13 @@ class ResultsPage(DetectorPage):
     def __init__(self, state, parent=None):
         super().__init__(state, parent)
 
+        # The KPI row describes the run's own decision under ONE criterion, and
+        # it says which. The confidence advice below answers a different
+        # question (with class) and names its own, so the two cannot be read as
+        # the same number.
+        self._criterion = Criterion.LOCALISATION
+        criterion = criterion_label(self._criterion)
+
         # ── KPIs ──
         c1, l1 = self.card(_("General metrics"), "resultados")
         grid = QGridLayout()
@@ -61,7 +75,7 @@ class ResultsPage(DetectorPage):
         self.kpi_tp = KPICard(str(LABEL_TP), T.OK)
         self.kpi_fp = KPICard(str(LABEL_FP), T.WARN)
         self.kpi_fn = KPICard(str(LABEL_FN), T.ERR)
-        self.kpi_f1 = KPICard("F1", T.ACCENT_D)
+        self.kpi_f1 = KPICard(_("F1 (%(criterion)s)") % {"criterion": criterion}, T.ACCENT_D)
         grid.addWidget(self.kpi_imgs, 0, 0)
         grid.addWidget(self.kpi_dets, 0, 1)
         grid.addWidget(self.kpi_conf, 0, 2)
@@ -77,8 +91,8 @@ class ResultsPage(DetectorPage):
         c2, l2 = self.card(_("Detailed metrics (summed over all models)"), "lista")
         row = QHBoxLayout()
         row.setSpacing(20)
-        self.lbl_prec = QLabel(_("Precision:  —"))
-        self.lbl_rec = QLabel(_("Recall:  —"))
+        self.lbl_prec = QLabel(_("Precision (%(criterion)s):  —") % {"criterion": criterion})
+        self.lbl_rec = QLabel(_("Recall (%(criterion)s):  —") % {"criterion": criterion})
         self.lbl_mis = QLabel(f"{LABEL_MISCLS}:  —")
         for l in (self.lbl_prec, self.lbl_rec, self.lbl_mis):  # noqa: E741
             l.setStyleSheet(f"color: {T.INK2}; font-size: 10.5pt; font-weight: 500; border: none;")
@@ -196,9 +210,9 @@ class ResultsPage(DetectorPage):
         total_dets = sum(len(r.predictions) for r in all_results)
         confs = [p.conf for r in all_results for p in r.predictions]
         sizes = [p.diam_um for r in all_results for p in r.predictions if p.diam_um]
-        tp = sum(r.tp for r in all_results)
-        fp = sum(r.fp for r in all_results)
-        fn = sum(r.fn for r in all_results)
+        # The run's own decision (``ImageResult.match``), summed. The criterion
+        # only chooses the denominators; nothing is matched a second time.
+        measured = Score.from_decision(all_results, self._criterion, state.params.conf)
 
         # A retranslation rebuilds the page and refreshes it: an empty batch
         # must keep the "no data yet" dash, not report a measured zero.
@@ -207,22 +221,26 @@ class ResultsPage(DetectorPage):
         self.kpi_dets.set_value(total_dets if has_results else None)
         self.kpi_conf.set_value(f"{(sum(confs) / len(confs)):.3f}" if confs else None)
         self.kpi_size.set_value(f"{(sum(sizes) / len(sizes)):.1f}" if sizes else None)
-        self.kpi_tp.set_value(tp if has_results else None)
-        self.kpi_fp.set_value(fp if has_results else None)
-        self.kpi_fn.set_value(fn if has_results else None)
-        prec = tp / (tp + fp) if (tp + fp) else 0.0
-        rec = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
+        self.kpi_tp.set_value(measured.tp if has_results else None)
+        self.kpi_fp.set_value(measured.fp if has_results else None)
+        self.kpi_fn.set_value(measured.fn if has_results else None)
         any_gt = any(r.has_gt for r in all_results)
-        self.kpi_f1.set_value(f"{f1:.3f}" if any_gt else None)
+        self.kpi_f1.set_value(f"{measured.f1:.3f}" if any_gt else None)
         self.lbl_prec.setText(
-            _("Precision:  %(value).3f") % {"value": prec} if any_gt else _("Precision:  —")
+            _("Precision (%(criterion)s):  %(value).3f")
+            % {"criterion": measured.label, "value": measured.precision}
+            if any_gt
+            else _("Precision (%(criterion)s):  —") % {"criterion": measured.label}
         )
         self.lbl_rec.setText(
-            _("Recall:  %(value).3f") % {"value": rec} if any_gt else _("Recall:  —")
+            _("Recall (%(criterion)s):  %(value).3f")
+            % {"criterion": measured.label, "value": measured.recall}
+            if any_gt
+            else _("Recall (%(criterion)s):  —") % {"criterion": measured.label}
         )
-        mc = sum(r.miscls for r in all_results)
-        self.lbl_mis.setText(f"{LABEL_MISCLS}:  {mc}" if any_gt else f"{LABEL_MISCLS}:  —")
+        self.lbl_mis.setText(
+            f"{LABEL_MISCLS}:  {measured.miscls}" if any_gt else f"{LABEL_MISCLS}:  —"
+        )
 
         # Optimal threshold suggestion, model by model
         self.lbl_sugg.setText(self._text_suggestion() if any_gt else "")
@@ -381,12 +399,17 @@ class ResultsPage(DetectorPage):
             sugg = self._suggest_operating_point(rs)
             if not sugg:
                 continue
-            (tb, f1b, pb, rb), (ta, f1a, pa, ra) = sugg
-            head = f"{alias} — conf {ta:g}: F1 {f1a:.3f} (P {pa:.3f} / R {ra:.3f})."
+            best, current = sugg
+            # The criterion travels with the numbers: the KPI above is the
+            # run's decision under another one, and the words say which.
+            head = (
+                f"{alias} — conf {current.threshold:g}: F1 {current.f1:.3f} "
+                f"({current.label}; P {current.precision:.3f} / R {current.recall:.3f})."
+            )
             # A real improvement is required, not just a different threshold: with a flat F1, the
             # maximum falls anywhere, and advising a move there would be noise.
-            if tb > ta + 1e-9 and (f1b - f1a) > 0.002:
-                sign = "⚠" if (f1b - f1a) >= 0.01 else "·"
+            if best.threshold > current.threshold + 1e-9 and (best.f1 - current.f1) > 0.002:
+                sign = "⚠" if (best.f1 - current.f1) >= 0.01 else "·"
                 lines.append(
                     _(
                         "%(sign)s %(head)s  Its best threshold is %(threshold).2f: F1 %(f1b).3f (%(delta)+.3f), P %(pb).3f / R %(rb).3f."
@@ -394,22 +417,22 @@ class ResultsPage(DetectorPage):
                     % {
                         "sign": sign,
                         "head": head,
-                        "threshold": tb,
-                        "f1b": f1b,
-                        "delta": f1b - f1a,
-                        "pb": pb,
-                        "rb": rb,
+                        "threshold": best.threshold,
+                        "f1b": best.f1,
+                        "delta": best.f1 - current.f1,
+                        "pb": best.precision,
+                        "rb": best.recall,
                     }
                 )
-                optimal.append(tb)
+                optimal.append(best.threshold)
             else:
                 lines.append(
                     _(
                         "✓ %(head)s  It is the best in the explored range; below %(threshold)g there are no computed detections and they cannot be recovered by filtering."
                     )
-                    % {"head": head, "threshold": ta}
+                    % {"head": head, "threshold": current.threshold}
                 )
-                optimal.append(ta)
+                optimal.append(current.threshold)
         if not lines:
             return ""
 
@@ -418,9 +441,13 @@ class ResultsPage(DetectorPage):
         if common and distinct:
             lines.append(
                 _(
-                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
+                    "➜ Each model prefers a different threshold. Use %(threshold).2f for both (mean F1 %(mean).3f, %(criterion)s): it is the same operating point and the comparison stays clean. Change it in Parameters and run again."
                 )
-                % {"threshold": common[0], "mean": common[1]}
+                % {
+                    "threshold": common[0],
+                    "mean": common[1],
+                    "criterion": criterion_label(Criterion.WITH_CLASS),
+                }
             )
         elif max(optimal) > used_2 + 1e-9:
             lines.append(
@@ -444,9 +471,9 @@ class ResultsPage(DetectorPage):
         This is the hypothetical threshold sweep, not the run's decision: the
         numbers it returns answer "what if we had kept only the boxes above
         ``threshold``". The run's own totals are ``r.match`` and are never
-        recomputed here. The criterion (strict, misclassification penalised on
-        both sides) moves to the operating-point module in ARCH-03, which will
-        name it; the matching rule itself is already the run's own.
+        recomputed here. The criterion (with class: a misclassification is
+        penalised on both sides) and the matching rule are the operating-point
+        module's, so the page no longer owns either decision.
 
         Strict: a well placed box with the wrong class counts as a false
         positive of the predicted class and a false negative of the true one.
@@ -454,46 +481,24 @@ class ResultsPage(DetectorPage):
         overestimates the performance and moreover contradicts the per-class
         precision table.
         """
-        tp = fp = fn = mc = 0
-        for r in gt_results:
-            preds = [p for p in r.predictions if p.conf >= threshold]
-            m = match_image(
-                preds,
-                r.gt,
-                iou_thr=r.match_iou_thr,
-                use_mask_iou=r.match_use_mask_iou,
-            )
-            tp += m.tp
-            fp += m.fp
-            fn += m.fn
-            mc += m.miscls
-        prec = tp / (tp + fp + mc) if (tp + fp + mc) else 0.0
-        rec = tp / (tp + fn + mc) if (tp + fn + mc) else 0.0
-        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
-        return f1, prec, rec
+        measured = score(gt_results, Criterion.WITH_CLASS, threshold)
+        return measured.f1, measured.precision, measured.recall
 
     def _suggest_operating_point(self, all_results):
         """Searches for the confidence threshold with the best F1 over what was already detected.
 
-        Returns (best, current) as (threshold, f1, precision, recall) each.
-        It can only explore UPWARD from the threshold the run used: the
-        detections below it were never computed.
+        Returns ``(best, current)`` as two :class:`Score` values under the
+        with-class criterion, so the recommendation names what it measured and
+        cannot be read as the KPI's localisation figure. It can only explore
+        UPWARD from the threshold the run used: the detections below it were
+        never computed.
         """
         gt_results = [r for r in all_results if r.has_gt]
         if not gt_results:
             return None
-        confs = sorted({round(p.conf, 2) for r in gt_results for p in r.predictions})
-        if not confs:
-            return None
-        step = max(1, len(confs) // 25)  # limit to ~25 thresholds
-        best = None
-        for t in confs[::step]:
-            f1, prec, rec = self._metrics_to(gt_results, t)
-            if best is None or f1 > best[1]:
-                best = (t, f1, prec, rec)
-        used_2 = self.state.params.conf
-        f1_a, p_a, r_a = self._metrics_to(gt_results, used_2)
-        return best, (used_2, f1_a, p_a, r_a)
+        best = recommend(gt_results, Criterion.WITH_CLASS)
+        current = Score.from_decision(gt_results, Criterion.WITH_CLASS, self.state.params.conf)
+        return best, current
 
     def _update_histogram(self):
         """Draws a histogram of diam_um per class; only when there is calibration."""
