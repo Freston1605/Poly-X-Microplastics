@@ -356,7 +356,11 @@ def test_run_json_records_every_calibration_and_its_summary(tmp_path):
     summary = payload["calibration_summary"]
     assert summary["n"] == 2
     assert summary["origenes"] == {ORIGIN_INDEX: 1, ORIGIN_MANUAL: 1}
-    assert len(summary["avisos"]) == 1
+    # Persisted warnings are stable codes, never the sentence a person reads.
+    warnings = summary["warnings"]
+    assert len(warnings) == 1
+    assert warnings[0]["code"] == entries["second.png"]["warning"]["code"]
+    assert all(" " not in item["code"] for item in warnings)
 
     loaded = load_run(result.run_dir)
     assert loaded.calibrations[first].origin == ORIGIN_INDEX

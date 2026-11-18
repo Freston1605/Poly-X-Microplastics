@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 20:23-0300\n"
+"POT-Creation-Date: 2026-11-18 12:34-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -476,17 +476,17 @@ msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(ove
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/core/detection_run/engine.py:59
+#: src/polyx/core/detection_run/engine.py:64
 #, python-format
 msgid "output directory is not empty: %(path)s"
 msgstr ""
 
-#: src/polyx/core/detection_run/engine.py:69
+#: src/polyx/core/detection_run/engine.py:74
 #, python-format
 msgid "output path is not a directory: %(path)s"
 msgstr ""
 
-#: src/polyx/core/detection_run/engine.py:78
+#: src/polyx/core/detection_run/engine.py:83
 msgid "detection run failed"
 msgstr ""
 
@@ -503,6 +503,95 @@ msgstr ""
 
 #: src/polyx/core/detection_run/operating_point.py:53 src/polyx/gui/report/sections.py:532
 msgid "with class"
+msgstr ""
+
+#: src/polyx/core/measure/calibration.py:128
+msgid "not calibrated"
+msgstr ""
+
+#: src/polyx/core/measure/calibration.py:142
+#, python-format
+msgid "%(scale)s µm/px — entered by hand"
+msgstr ""
+
+#: src/polyx/core/measure/calibration.py:131
+#, python-format
+msgid "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px (%(points)s edge points)"
+msgstr ""
+
+#: src/polyx/core/measure/calibration.py:141
+#, python-format
+msgid "%(scale)s µm/px — inherited from the crop"
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:151
+msgid "The image could not be read or is empty."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:152
+msgid "The nominal plate diameter must be greater than zero."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:153
+msgid "The plate was not found in the photograph."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:154
+msgid "The fine ring fit failed; the scale was taken from Hough and is unreliable."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:157
+msgid "The adjusted radius is zero."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:158
+#, python-format
+msgid "Hough differed from the fine fit by %(detour_pct)s%%."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:159
+#, python-format
+msgid "The plate could not be measured: %(cause)s."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:160
+msgid "The manual calibration needs a positive micrometres-per-pixel value."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:163
+msgid "The image is not listed in the calibration index."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:164
+msgid "No mask was produced for the particle."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:165
+msgid "No contour was found in the particle mask."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:166
+msgid "The particle is too small to measure its shape."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:167
+msgid "The particle could not be separated from the background."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:168
+#, python-format
+msgid ""
+"The mask extended %(excess)s times its box diagonal and was clipped to the box; it may be a "
+"touching neighbour, so the size is underestimated."
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:172
+#, python-format
+msgid "OpenCV failed while segmenting: %(cause)s"
+msgstr ""
+
+#: src/polyx/core/measure/warnings.py:176
+msgid "An unrecognised warning was recorded."
 msgstr ""
 
 #: src/polyx/core/quality/assignment.py:103

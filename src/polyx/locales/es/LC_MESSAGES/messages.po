@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 20:23-0300\n"
+"POT-Creation-Date: 2026-11-18 12:34-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -483,17 +483,17 @@ msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(ove
 msgstr[0] "%(side)d px de lado mayor → %(tiles)d mosaico de %(tile)d px, %(overlap)d%% de solape"
 msgstr[1] "%(side)d px de lado mayor → %(tiles)d mosaicos de %(tile)d px, %(overlap)d%% de solape"
 
-#: src/polyx/core/detection_run/engine.py:59
+#: src/polyx/core/detection_run/engine.py:64
 #, python-format
 msgid "output directory is not empty: %(path)s"
 msgstr "el directorio de salida no está vacío: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:69
+#: src/polyx/core/detection_run/engine.py:74
 #, python-format
 msgid "output path is not a directory: %(path)s"
 msgstr "la ruta de salida no es un directorio: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:78
+#: src/polyx/core/detection_run/engine.py:83
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
 
@@ -511,6 +511,97 @@ msgstr "localización"
 #: src/polyx/core/detection_run/operating_point.py:53 src/polyx/gui/report/sections.py:532
 msgid "with class"
 msgstr "con clase"
+
+#: src/polyx/core/measure/calibration.py:128
+msgid "not calibrated"
+msgstr "sin calibrar"
+
+#: src/polyx/core/measure/calibration.py:142
+#, python-format
+msgid "%(scale)s µm/px — entered by hand"
+msgstr "%(scale)s µm/px — introducida a mano"
+
+#: src/polyx/core/measure/calibration.py:131
+#, python-format
+msgid "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px (%(points)s edge points)"
+msgstr "%(scale)s µm/px — placa de %(diameter)s mm, r=%(radius)s px (%(points)s puntos de borde)"
+
+#: src/polyx/core/measure/calibration.py:141
+#, python-format
+msgid "%(scale)s µm/px — inherited from the crop"
+msgstr "%(scale)s µm/px — heredada del recorte"
+
+#: src/polyx/core/measure/warnings.py:151
+msgid "The image could not be read or is empty."
+msgstr "No se pudo leer la imagen o está vacía."
+
+#: src/polyx/core/measure/warnings.py:152
+msgid "The nominal plate diameter must be greater than zero."
+msgstr "El diámetro nominal de la placa debe ser mayor que cero."
+
+#: src/polyx/core/measure/warnings.py:153
+msgid "The plate was not found in the photograph."
+msgstr "No se encontró la placa en la fotografía."
+
+#: src/polyx/core/measure/warnings.py:154
+msgid "The fine ring fit failed; the scale was taken from Hough and is unreliable."
+msgstr "El ajuste fino del anillo falló; la escala se tomó de Hough y no es fiable."
+
+#: src/polyx/core/measure/warnings.py:157
+msgid "The adjusted radius is zero."
+msgstr "El radio ajustado es cero."
+
+#: src/polyx/core/measure/warnings.py:158
+#, python-format
+msgid "Hough differed from the fine fit by %(detour_pct)s%%."
+msgstr "Hough difirió del ajuste fino en %(detour_pct)s%%."
+
+#: src/polyx/core/measure/warnings.py:159
+#, python-format
+msgid "The plate could not be measured: %(cause)s."
+msgstr "No se pudo medir la placa: %(cause)s."
+
+#: src/polyx/core/measure/warnings.py:160
+msgid "The manual calibration needs a positive micrometres-per-pixel value."
+msgstr "La calibración manual necesita un valor de micrómetros por píxel positivo."
+
+#: src/polyx/core/measure/warnings.py:163
+msgid "The image is not listed in the calibration index."
+msgstr "La imagen no figura en el índice de calibración."
+
+#: src/polyx/core/measure/warnings.py:164
+msgid "No mask was produced for the particle."
+msgstr "No se generó ninguna máscara para la partícula."
+
+#: src/polyx/core/measure/warnings.py:165
+msgid "No contour was found in the particle mask."
+msgstr "No se encontró ningún contorno en la máscara de la partícula."
+
+#: src/polyx/core/measure/warnings.py:166
+msgid "The particle is too small to measure its shape."
+msgstr "La partícula es demasiado pequeña para medir su forma."
+
+#: src/polyx/core/measure/warnings.py:167
+msgid "The particle could not be separated from the background."
+msgstr "No se pudo separar la partícula del fondo."
+
+#: src/polyx/core/measure/warnings.py:168
+#, python-format
+msgid ""
+"The mask extended %(excess)s times its box diagonal and was clipped to the box; it may be a "
+"touching neighbour, so the size is underestimated."
+msgstr ""
+"La máscara se salió %(excess)s veces la diagonal de su caja y se recortó a ella; puede ser una "
+"vecina pegada, y la talla se queda corta."
+
+#: src/polyx/core/measure/warnings.py:172
+#, python-format
+msgid "OpenCV failed while segmenting: %(cause)s"
+msgstr "OpenCV falló al segmentar: %(cause)s"
+
+#: src/polyx/core/measure/warnings.py:176
+msgid "An unrecognised warning was recorded."
+msgstr "Se registró una advertencia no reconocida."
 
 #: src/polyx/core/quality/assignment.py:103
 msgid "abstention disabled"

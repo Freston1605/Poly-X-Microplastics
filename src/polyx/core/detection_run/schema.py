@@ -18,6 +18,7 @@ from polyx.core.annotate import run_view_path
 from polyx.core.detect.protocol import Instance
 from polyx.core.detect.tiling import TilingMode, TilingPlan
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration
+from polyx.core.measure.warnings import warning_from_dict, warning_to_dict
 from polyx.core.quality.metrics import MatchResult, match_image
 
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
@@ -155,12 +156,19 @@ def calibration_to_dict(calibration: Calibration) -> dict:
     # When the plate was measured, ``Calibration.valid`` tests a numpy float
     # and yields ``numpy.bool_``, which is not JSON serialisable.
     data["valid"] = bool(calibration.valid)
+    # A warning leaves as a stable code plus structured parameters, never as
+    # the sentence a person reads. ``asdict`` already expands the dataclass;
+    # writing it explicitly keeps only the parameters that occurred.
+    data["warning"] = warning_to_dict(calibration.warning)
     return data
 
 
 def calibration_from_dict(data: dict | None) -> Calibration:
     known = {field.name for field in fields(Calibration)}
-    return Calibration(**{key: value for key, value in (data or {}).items() if key in known})
+    values = {key: value for key, value in (data or {}).items() if key in known}
+    if "warning" in values:
+        values["warning"] = warning_from_dict(values["warning"])
+    return Calibration(**values)
 
 
 def detection_to_dict(det: Instance) -> dict:
@@ -188,7 +196,7 @@ def detection_to_dict(det: Instance) -> dict:
         "number": det.number,
         "assignable": bool(getattr(det, "assignable", True)),
         "review": bool(getattr(det, "review", False)),
-        "warning_shape": getattr(det, "warning_shape", None),
+        "warning_shape": warning_to_dict(getattr(det, "warning_shape", None)),
         "has_mask": det.mask is not None,
     }
 
@@ -197,6 +205,8 @@ def _instance_from_mapping(data: dict) -> Instance:
     mapping = dict(data)
     if "class" in mapping and "class_name" not in mapping:
         mapping["class_name"] = mapping.pop("class")
+    if "warning_shape" in mapping:
+        mapping["warning_shape"] = warning_from_dict(mapping["warning_shape"])
     known = {field.name for field in fields(Instance)}
     return Instance(**{key: value for key, value in mapping.items() if key in known})
 
