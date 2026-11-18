@@ -33,6 +33,8 @@ from PySide6.QtWidgets import (
 from polyx.core import platform
 from polyx.core.annotate import parse_run_label_name
 from polyx.core.detect.tiling import TilingDecision, TilingMode
+from polyx.core.detection_run import is_canonical_run
+from polyx.core.detection_run.schema import read_json_object
 from polyx.core.i18n import _, ngettext
 from polyx.core.measure import calibration as calib
 from polyx.core.measure.warnings import warning_sentence
@@ -58,7 +60,7 @@ def _canonical_run_labels(run_dir: Path, stem: str) -> list[Path]:
     ``labels/`` files is never searched: a pre-canonical GUI run has no
     ``run.json`` and is refused before this helper is called.
     """
-    record = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    record = read_json_object(run_dir / "run.json")
     paths: list[Path] = []
     for model in record.get("models") or []:
         alias = model.get("alias")
@@ -890,7 +892,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         root_2 = Path(folder_2)
 
-        if not (root_2 / "run.json").is_file():
+        if not is_canonical_run(root_2):
             QMessageBox.warning(
                 self,
                 _("Old run"),
@@ -1467,7 +1469,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         # A folder with run.json is a canonical run. An export there risks
         # overwriting its prediction table, so refuse before creating anything.
 
-        if (Path(out_dir) / "run.json").exists():
+        if is_canonical_run(Path(out_dir)):
             QMessageBox.warning(
                 self,
                 _("Cannot export here"),

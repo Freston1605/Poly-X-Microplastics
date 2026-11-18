@@ -34,9 +34,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _write_full_report(run_dir: Path, output: Path | None) -> Path:
     """Render the full report from a canonical run folder only."""
-    from polyx.core.detection_run import load_run
+    from polyx.core.detection_run import is_canonical_run, load_run
 
-    if not (run_dir / "run.json").is_file():
+    if not is_canonical_run(run_dir):
         raise LegacyRunError(run_dir)
     run = load_run(run_dir)
 

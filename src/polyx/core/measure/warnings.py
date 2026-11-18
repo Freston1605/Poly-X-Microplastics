@@ -23,7 +23,6 @@ ZERO_ADJUSTED_RADIUS = "zero_adjusted_radius"
 DETOUR_HOUGH = "detour_hough"
 PLATE_MEASURE_FAILED = "plate_measure_failed"
 MANUAL_SCALE_MISSING = "manual_scale_missing"
-IMAGE_NOT_IN_INDEX = "image_not_in_index"
 
 # ── Shape warning codes ───────────────────────────────────────────────────
 
@@ -46,7 +45,6 @@ WARNING_CODES = (
     DETOUR_HOUGH,
     PLATE_MEASURE_FAILED,
     MANUAL_SCALE_MISSING,
-    IMAGE_NOT_IN_INDEX,
     NO_MASK,
     NO_CONTOUR,
     PARTICLE_TOO_SMALL,
@@ -160,7 +158,6 @@ def warning_sentence(warning: Warning | dict | str | None) -> str:
         MANUAL_SCALE_MISSING: _(
             "The manual calibration needs a positive micrometres-per-pixel value."
         ),
-        IMAGE_NOT_IN_INDEX: _("The image is not listed in the calibration index."),
         NO_MASK: _("No mask was produced for the particle."),
         NO_CONTOUR: _("No contour was found in the particle mask."),
         PARTICLE_TOO_SMALL: _("The particle is too small to measure its shape."),
@@ -175,21 +172,28 @@ def warning_sentence(warning: Warning | dict | str | None) -> str:
     if message is None:
         return _("An unrecognised warning was recorded.")
 
-    if code == PLATE_MEASURE_FAILED:
-        cause = warning_sentence(params.get("cause"))
-        return message % {"cause": cause}
-    if code == DETOUR_HOUGH:
-        return message % {"detour_pct": f"{float(params.get('detour_pct') or 0.0):.1f}"}
-    if code == MASK_CLIPPED:
-        return message % {"excess": f"{float(params.get('excess') or 0.0):.1f}"}
-    if code == OPENCV_ERROR:
-        return message % {"cause": str(params.get("cause") or "")}
-    return message
+    # The per-code formatters sit beside the messages and are built inside the
+    # call for the same reason: the active catalog is resolved at display time.
+    # A code with no structured fields maps to no formatter and keeps its
+    # message verbatim.
+    formatters = {
+        PLATE_MEASURE_FAILED: lambda msg, values: (
+            msg % {"cause": warning_sentence(values.get("cause"))}
+        ),
+        DETOUR_HOUGH: lambda msg, values: (
+            msg % {"detour_pct": f"{float(values.get('detour_pct') or 0.0):.1f}"}
+        ),
+        MASK_CLIPPED: lambda msg, values: (
+            msg % {"excess": f"{float(values.get('excess') or 0.0):.1f}"}
+        ),
+        OPENCV_ERROR: lambda msg, values: msg % {"cause": str(values.get("cause") or "")},
+    }
+    formatter = formatters.get(code)
+    return formatter(message, params) if formatter is not None else message
 
 
 __all__ = [
     "DETOUR_HOUGH",
-    "IMAGE_NOT_IN_INDEX",
     "IMAGE_UNREADABLE",
     "MANUAL_SCALE_MISSING",
     "MASK_CLIPPED",

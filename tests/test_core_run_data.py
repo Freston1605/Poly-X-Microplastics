@@ -360,9 +360,10 @@ def test_params_round_trip_english():
     assert params_from_dict({"tiling": "always"}).tiling is TilingMode.ALWAYS
     assert params_from_dict({"tiling": "never"}).tiling is TilingMode.NEVER
     assert params_from_dict({}).tiling is TilingMode.AUTO
-    # An unknown value is not a reason to refuse a folder; it falls back to auto.
-    assert params_from_dict({"tiling": "sideways"}).tiling is TilingMode.AUTO
-    assert params_from_dict({"tiling": "siempre"}).tiling is TilingMode.AUTO
+    # An unknown value is a bad artifact, not a reason to invent AUTO.
+    for legacy in ("sideways", "siempre"):
+        with pytest.raises(ValueError, match="auto, always, never"):
+            params_from_dict({"tiling": legacy})
 
     params = RunParams(tiling="never")
     assert params.tiling is TilingMode.NEVER

@@ -141,8 +141,8 @@ def params_from_dict(data: dict | None) -> RunParams:
     """Rebuild ``RunParams`` from JSON, ignoring unknown/missing fields.
 
     Only the English modes are read. An unknown value — including a legacy
-    spelling — falls back to ``AUTO`` with a warning; it is never translated to
-    a different English mode.
+    spelling — is rejected with a ``ValueError`` rather than translated or
+    replaced with ``AUTO``; a missing value keeps ``AUTO``.
     """
     known = {field.name for field in fields(RunParams)}
     values = {key: value for key, value in (data or {}).items() if key in known}
@@ -357,6 +357,16 @@ def detection_from_row(row: dict) -> Instance:
         number=_int(row.get("number")),
         assignable=_bool(row.get("assignable")),
     )
+
+
+def is_canonical_run(run_dir: Path) -> bool:
+    """Whether ``run_dir`` carries a regular ``run.json`` manifest file.
+
+    Every reader of a run folder asks this before opening anything. A folder
+    is canonical only when the manifest is a *file*: ``.exists()`` would also
+    accept a directory named ``run.json``, which cannot be a manifest.
+    """
+    return (Path(run_dir) / "run.json").is_file()
 
 
 def read_json_object(path: Path) -> dict:
@@ -750,6 +760,7 @@ __all__ = [
     "detection_from_row",
     "detection_row",
     "detection_to_dict",
+    "is_canonical_run",
     "isoformat",
     "load_run",
     "params_from_dict",

@@ -22,6 +22,7 @@ from polyx.core.measure.warnings import (
     NO_CONTOUR,
     NO_MASK,
     NOMINAL_DIAMETER_INVALID,
+    OPENCV_ERROR,
     PARTICLE_TOO_SMALL,
     PLATE_MEASURE_FAILED,
     PLATE_NOT_FOUND,
@@ -86,6 +87,15 @@ def test_all_warning_codes_are_english_tokens():
     for code in WARNING_CODES:
         assert code.isascii() and code.islower(), code
         assert " " not in code and "ñ" not in code and "á" not in code
+
+
+def test_image_not_in_index_code_is_gone():
+    """#190 removed the index reader, so this code has no producer left."""
+    from polyx.core.measure import warnings as warning_module
+
+    assert "image_not_in_index" not in WARNING_CODES
+    assert not hasattr(warning_module, "IMAGE_NOT_IN_INDEX")
+    assert "IMAGE_NOT_IN_INDEX" not in warning_module.__all__
 
 
 # ── Slice B: shape warnings are codes ──
@@ -210,6 +220,30 @@ def test_report_shows_gettext_sentences_for_the_stored_codes(tmp_path, selected_
     # The machine code and the Spanish prose are absent from the document.
     assert "plate_not_found" not in html
     assert "No se encontró la placa" not in html
+
+
+# ── Slice D.1: one formatter dispatch keeps every message verbatim ──────
+
+
+def test_warning_sentence_formats_structured_fields_verbatim(selected_language):
+    """The single dispatch preserves the wording, rounding and nested cause."""
+    from polyx.core.measure.warnings import warning_sentence
+
+    selected_language("en")
+    assert warning_sentence(Warning(DETOUR_HOUGH, detour_pct=12.34)) == (
+        "Hough differed from the fine fit by 12.3%."
+    )
+    assert warning_sentence(Warning(MASK_CLIPPED, excess=2.3)) == (
+        "The mask extended 2.3 times its box diagonal and was clipped to the box; "
+        "it may be a touching neighbour, so the size is underestimated."
+    )
+    assert warning_sentence(Warning(OPENCV_ERROR, cause="boom")) == (
+        "OpenCV failed while segmenting: boom"
+    )
+    assert warning_sentence(Warning(PLATE_MEASURE_FAILED, cause=PLATE_NOT_FOUND)) == (
+        "The plate could not be measured: The plate was not found in the photograph.."
+    )
+    assert warning_sentence(Warning("mystery")) == "An unrecognised warning was recorded."
 
 
 # ── Slice E: the Viewer shows the same sentence at display time ───────────
