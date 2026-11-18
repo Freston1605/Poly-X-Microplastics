@@ -174,9 +174,10 @@ def calibration_from_dict(data: dict | None) -> Calibration:
             values["um_por_px"] = value
         elif key in known:
             values[key] = value
-    if "warning" in values:
-        values["warning"] = warning_from_dict(values["warning"])
-    return Calibration(**values)
+    # Keep the warning out of ``**values``: widening that dict's value type to
+    # include ``Warning | None`` would make ``ty`` reject every other field.
+    warning = warning_from_dict(values.pop("warning", None))
+    return Calibration(**values, warning=warning)
 
 
 def detection_to_dict(det: Instance) -> dict:
