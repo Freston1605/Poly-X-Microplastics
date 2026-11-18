@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core import platform
-from polyx.core.annotate import find_run_labels
+from polyx.core.annotate import parse_run_label_name
 from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
 from polyx.core.measure import calibration as calib
@@ -49,6 +49,30 @@ from .state import (
     FAILURE_NOT_ENOUGH_POINTS,
     ViewerState,
 )
+
+
+def _canonical_run_labels(run_dir: Path, stem: str) -> list[Path]:
+    """Prediction labels of one photo from a canonical run's declared models.
+
+    Only folders named in ``run.json`` are considered. An arbitrary tree of
+    ``labels/`` files is never searched: a pre-canonical GUI run has no
+    ``run.json`` and is refused before this helper is called.
+    """
+    record = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    paths: list[Path] = []
+    for model in record.get("models") or []:
+        alias = model.get("alias")
+        if not isinstance(alias, str) or not alias:
+            continue
+        labels_dir = run_dir / alias / "labels"
+        if not labels_dir.is_dir():
+            continue
+        for path in labels_dir.glob("*.txt"):
+            parsed = parse_run_label_name(path.name)
+            if parsed is not None and parsed[1] == stem:
+                paths.append(path)
+    return sorted(paths)
+
 
 #: The refusal tokens this window has copy for: every geometric failure the
 #: calibration core can name, plus the collection-level "not enough points".
@@ -866,13 +890,23 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         root_2 = Path(folder_2)
 
-        # The runner names each file NNNN_<photo name>.txt, with an
+        if not (root_2 / "run.json").is_file():
+            QMessageBox.warning(
+                self,
+                _("Old run"),
+                _(
+                    "This run was written by an older version of Poly-X and cannot be opened here. "
+                    "Open it with an older version of Poly-X; see "
+                    "docs/specs/run-artifact-vocabulary.md."
+                ),
+            )
+            return
 
-        # index in front so that two homonymous photos from different folders do not
-
+        # The writer names each file NNNN_<photo name>.txt, with an index in
+        # front so that two homonymous photos from different folders do not
         # collide. The naming owner parses it back, so the Viewer cannot desync.
 
-        candidates = find_run_labels(root_2, img.stem)
+        candidates = _canonical_run_labels(root_2, img.stem)
 
         if not candidates:
             QMessageBox.information(

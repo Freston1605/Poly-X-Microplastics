@@ -15,6 +15,8 @@ import pytest
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "legacy_runs"
 HEADLESS_RUN = FIXTURES / "headless" / "run"
 HEADLESS_PHOTOS = FIXTURES / "headless" / "photos"
+GUI_RUN = FIXTURES / "gui" / "detect_20260101_120000"
+GUI_PHOTO = FIXTURES / "gui" / "photos" / "plate1.png"
 
 OLD_RUN_MESSAGE = "older version of Poly-X"
 
@@ -169,6 +171,43 @@ def test_cli_detect_refuses_the_index_calibration_flag(tmp_path, capsys):
 
     assert exc.value.code == 2
     assert "--index-calibration" in capsys.readouterr().err
+
+
+# ── Old GUI run labels are not read ────────────────────────────────────
+
+
+def test_the_old_gui_run_label_reader_is_removed():
+    """No arbitrary per-model label search survives in the annotation codec."""
+    import polyx.core.annotate as annotate
+
+    assert not hasattr(annotate, "find_run_labels")
+    assert "find_run_labels" not in annotate.__all__
+
+
+def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_language):
+    """The Viewer names an older version instead of loading old GUI predictions."""
+    selected_language("en")
+    pytest.importorskip("PySide6")
+    from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    warnings: list[str] = []
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(GUI_RUN))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(str(a[2])) or None)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: pytest.fail("model chooser"))
+
+    window = ViewerWindow()
+    try:
+        window.state.images = [GUI_PHOTO]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
+
+    assert any(OLD_RUN_MESSAGE in text for text in warnings)
+    assert window.state.detections == []
 
 
 # ── Canonical folders still work ───────────────────────────────────────
