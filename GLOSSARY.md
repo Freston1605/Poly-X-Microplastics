@@ -80,14 +80,15 @@ _Avoid_: F1 (unqualified), score
 ## Tiling mode and plan
 
 The decision about splitting a large photo before inference. The **mode** is
-`auto` (tile only above a threshold), `always` or `never`; the legacy Spanish
-spellings are read at the boundary and never written. The **plan** is the
+`auto` (tile only above a threshold), `always` or `never`; these are the only
+values accepted at any boundary — legacy Spanish spellings are no longer read.
+The **plan** is the
 geometry of one tiled photo — tile side, overlap, tile count and the photo's
 longer side — recorded in `run.json` instead of prose, so a reader can phrase
 it in their own language. A photo with no plan goes through in a single pass.
 The decision, its geometry and its sentence belong to `core/detect/tiling.py`;
 neither a page nor the engine formats the numbers again.
-_Avoid_: mosaic (in code), `siempre`/`nunca` as current values
+_Avoid_: mosaic (in code), `siempre`/`nunca` (legacy spellings, not values)
 
 ## Calibration refusal
 

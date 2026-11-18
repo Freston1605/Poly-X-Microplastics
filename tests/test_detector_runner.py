@@ -106,7 +106,7 @@ def _state(tmp_path: Path, images: list[Path]) -> DetectorState:
     state.images = images
     state.calibration.measure_plate = False
     state.calibration.um_per_px = 2.0  # manual scale, so the sizes come out in um
-    state.params.tiling = "nunca"
+    state.params.tiling = "never"
     return state
 
 
@@ -333,7 +333,7 @@ def test_dense_engine_indices_map_to_real_slots(qapp, tmp_path):
     state.images = [path]
     state.calibration.measure_plate = False
     state.calibration.um_per_px = 2.0
-    state.params.tiling = "nunca"
+    state.params.tiling = "never"
     runner = _runner_with_folder(state, tmp_path)
 
     events = _execute(runner)
@@ -366,7 +366,7 @@ def test_generated_alias_names_the_folder_and_is_persisted(qapp, tmp_path):
     state.images = [path]
     state.calibration.measure_plate = False
     state.calibration.um_per_px = 2.0
-    state.params.tiling = "nunca"
+    state.params.tiling = "never"
 
     events = _execute(_runner_with_folder(state, tmp_path))
 
