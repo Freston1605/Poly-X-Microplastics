@@ -443,6 +443,57 @@ def test_review_dialog_reads_and_writes_state_verdicts(qapp, tmp_path):
     dialog.close()
 
 
+def test_jsonl_events_use_english_data_keys(qapp, tmp_path):
+    """Structured detector events carry English data keys and keep the envelope.
+
+    The event names are already English ``verb.object``; this pins the payload
+    keys so one ``jq`` filter works across modules (spec #182, cross-cutting
+    logs). The envelope (ts/level/module/pid/thread/event/data) is unchanged.
+    """
+    import json
+
+    path = _plate(tmp_path / "photos" / "plate.png")
+    state = _state(tmp_path, [path])
+    _execute(_runner_with_folder(state, tmp_path))
+
+    log_file = tmp_path / "_polyx_logs" / "detector.jsonl"
+    assert log_file.is_file()
+    records = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    by_event = {record["event"]: record for record in records}
+
+    config = by_event["run.config"]["data"]
+    assert config["plates"] == 1
+    assert config["models"] == ["model_a"]
+    assert isinstance(config["measure_shape"], bool)
+    assert config["um_per_px"] == 2.0
+    # Keys that were already English stay untouched.
+    assert {"conf", "iou", "imgsz", "device"} <= set(config)
+
+    finish = by_event["run.finish"]["data"]
+    assert finish["plates"] == 1
+    assert "imgsz_used" in finish
+    assert "shapeless" in finish
+
+    # No legacy Spanish key survives in any payload, and the envelope is intact.
+    legacy = {
+        "placas",
+        "modelos",
+        "modelo",
+        "medir_forma",
+        "um_por_px",
+        "imgsz_usados",
+        "sin_forma",
+    }
+    for record in records:
+        assert not (legacy & set(record.get("data", {})))
+        assert {"ts", "level", "module", "pid", "thread", "event", "data"} <= set(record)
+        assert record["module"].endswith("detector")
+
+
 def test_run_without_models_fails_before_creating_folder(qapp, tmp_path):
     path = _plate(tmp_path / "photos" / "plate3.png")
     state = _state(tmp_path, [path])
