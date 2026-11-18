@@ -117,7 +117,7 @@ class ReportPage(DetectorPage):
 
         aid = QLabel(
             _(
-                "Saves every analysed photo with its boxes drawn on, at its original resolution. You pick a folder and a subfolder is created inside it for each option you tick (<code>conteo_manual</code>, <code>deteccion_modelo</code>, <code>ambas_superpuestas</code>), so they do not get mixed up. It honours the <b>scope</b> chosen above: if you ticked specific photos, only those are saved."
+                "Saves every analysed photo with its boxes drawn on, at its original resolution. You pick a folder and a subfolder is created inside it for each option you tick (<code>manual_count</code>, <code>model_detection</code>, <code>both_overlay</code>), so they do not get mixed up. It honours the <b>scope</b> chosen above: if you ticked specific photos, only those are saved."
             )
         )
         aid.setWordWrap(True)
@@ -154,15 +154,15 @@ class ReportPage(DetectorPage):
 
     # One subfolder per image type: mixing them forces one to read the name of
     # each file to know which is which, and there are hundreds.
-    FOLDER_MANUAL = "conteo_manual"
-    FOLDER_MODEL = "deteccion_modelo"
-    FOLDER_BOTH = "ambas_superpuestas"
+    FOLDER_MANUAL = "manual_count"
+    FOLDER_MODEL = "model_detection"
+    FOLDER_BOTH = "both_overlay"
 
     def _photos_to_export(self):
         """[(source_path, subfolder, destination_name)] according to checkboxes and scope."""
         marked = self._photos_marked()
-        # With `"solo las marcadas"` it filters; with `"completo"` or `"ambos"` everything is included,
-        # because `"ambos"` includes the complete work.
+        # With "only the photos I tick" it filters; with "whole job" or "both"
+        # everything is included, because "both" includes the whole job.
         solo_marked = self.rb_chosen.isChecked()
         # The alias only gets in the way when there is a single model: without it, the file
         # is named the same as the original photo, which is convenient for a figure.
@@ -415,9 +415,9 @@ class ReportPage(DetectorPage):
         row_2 = QHBoxLayout()
         row_2.setSpacing(8)
         for clue, label in (
-            ("completo", _("Full")),
-            ("resumen", _("Short summary")),
-            ("metodologico", _("Methodological")),
+            ("complete", _("Full")),
+            ("summary", _("Short summary")),
+            ("methodological", _("Methodological")),
         ):
             b = QPushButton(label)
             b.setCursor(Qt.PointingHandCursor)
@@ -442,7 +442,7 @@ class ReportPage(DetectorPage):
 
         # The gallery is what makes the file large: each photo is embedded in
         # base64 inside the HTML itself.
-        self.chk_sections["galeria"].setText(
+        self.chk_sections["gallery"].setText(
             _("Per-image gallery  (this is what makes the file big)")
         )
 
@@ -450,7 +450,7 @@ class ReportPage(DetectorPage):
         # sense when the analyzed images are spread across several
         # folders (sites, treatments...) and the user wants that
         # particular side-by-side view, not in every report.
-        self.chk_sections["talla_carpetas"].setChecked(False)
+        self.chk_sections["size_by_folder"].setChecked(False)
         return c
 
     def _apply_preset(self, clue: str):
