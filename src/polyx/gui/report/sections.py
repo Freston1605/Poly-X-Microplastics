@@ -12,6 +12,7 @@ import numpy as np
 from polyx.core.detection_run import RunStatus, display_name
 from polyx.core.detection_run.operating_point import Criterion, Score
 from polyx.core.i18n import _, ngettext
+from polyx.core.measure.warnings import warning_sentence
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import (
     confusion_matrix_from_matches,
@@ -363,33 +364,6 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         return ""
     active = run.models
     rs = results_2.get(0, [])
-    if run.legacy:
-        # Old headless folders kept per-image TP/FP/FN counts but not the GT
-        # boxes. Rebuilding the confusion matrix from the predictions alone
-        # would turn every legacy detection into a false positive, so report
-        # the counts the old run actually recorded instead.
-        rows_legacy = ""
-        for index, model in enumerate(active):
-            counts = run.metrics.get(index, {})
-            if not counts:
-                model_rows = rs if index == 0 else []
-                counts = {
-                    "tp": sum(row.tp for row in model_rows),
-                    "fp": sum(row.fp for row in model_rows),
-                    "fn": sum(row.fn for row in model_rows),
-                    "miscls": sum(row.miscls for row in model_rows),
-                }
-            rows_legacy += (
-                f"<tr><td>{_esc(_model_label(model, index))}</td>"
-                f"<td class='r'>{int(counts.get('tp', 0))}</td>"
-                f"<td class='r'>{int(counts.get('fp', 0))}</td>"
-                f"<td class='r'>{int(counts.get('fn', 0))}</td>"
-                f"<td class='r'>{int(counts.get('miscls', 0))}</td></tr>"
-            )
-        return f"""
-        <p>{_("This report comes from a folder written before the canonical format. That folder stored per-image counts but not the ground-truth boxes, so the confusion matrix and per-class metrics cannot be rebuilt. These are the counts the run did record:")}</p>
-        <table class='data'><tr>{_("<th>Model</th>")}<th>TP</th><th>FP</th><th>FN</th><th>MISCLS</th></tr>{rows_legacy}</table>
-        """
 
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]
@@ -1082,9 +1056,12 @@ def _section_calibration(run) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the run has
-    no effective calibrations, so the assembler drops the section like it does
-    today. The ``polyx.core.calibration`` import stays lazy inside this body:
-    it must not load at module import time (S01 laziness gate).
+    no calibrations (or none with a usable scale or a warning), so the assembler
+    drops the section like it does today. When every calibration failed, the
+    warning list and an explicit "no valid scales" message keep the section
+    alive instead of silently hiding the reasons. The ``polyx.core.calibration``
+    import stays lazy inside this body: it must not load at module import time
+    (S01 laziness gate).
     """
     # ── Scale calibration ──
     # The provenance is reported, not only the number: a size in µm without saying
@@ -1101,21 +1078,24 @@ def _section_calibration(run) -> str:
 
         res = summary_batch(list(cals.values()))
         if res["n"]:
+            # Numeric tables, provenance caveats and the figure need at least
+            # one usable scale. Warnings are handled below regardless of `n`,
+            # so a failed batch still says why it failed.
             label_2 = {
-                "placa": _("measured on this photograph's Petri dish"),
-                "indice": _("inherited from the crop (calibration index)"),
+                "plate": _("measured on this photograph's Petri dish"),
+                "index": _("inherited from the crop (calibration index)"),
                 "manual": _("entered by hand in Parameters"),
             }
             rows_2 = "".join(
                 f"<tr><td>{label_2.get(o, o)}</td>"
                 f"<td>{ngettext('%(count)s image', '%(count)s images', k) % {'count': k}}</td></tr>"
-                for o, k in sorted(res["origenes"].items())
+                for o, k in sorted(res["origins"].items())
             )
             warning = ""
-            if res["variacion"] > 1.05:
+            if res["variation"] > 1.05:
                 warning = _(
                     "<p><strong>The scale is not shared by the whole batch:</strong> it varies %(var)s× between the nearest and the farthest photograph. That is why each image is converted with its own factor; using a single one for all of them would give sizes off by as much as %(pct)s%%.</p>"
-                ) % {"var": f"{res['variacion']:.2f}", "pct": f"{100 * (res['variacion'] - 1):.0f}"}
+                ) % {"var": f"{res['variation']:.2f}", "pct": f"{100 * (res['variation'] - 1):.0f}"}
             _mic_calib = _average_ic95(
                 [c.um_por_px for c in cals.values() if getattr(c, "valid", False)]
             )
@@ -1130,7 +1110,7 @@ def _section_calibration(run) -> str:
             # calibrated by hand must not claim the scale was fitted to the
             # dish ring, and an index run must not claim it was measured here.
             scale_notes = ""
-            if "placa" in res["origenes"]:
+            if "plate" in res["origins"]:
                 scale_notes += _(
                     "<p>The length reference is the nominal outer diameter of the Petri dish. The radius in pixels comes from a least-squares circle fitted to the sampled ring edge in 720 directions, with outlier rejection; the Hough transform only supplies the approximate centre, because its radius can be off by 12&nbsp;% and that error would enter every reported size in full.</p>"
                 )
@@ -1142,11 +1122,11 @@ def _section_calibration(run) -> str:
                     % {"pared": THICKNESS_WALL_MM, "sesgo": BIAS_MAXIMUM_WALL_PCT}
                     + "</p>"
                 )
-            if "manual" in res["origenes"]:
+            if "manual" in res["origins"]:
                 scale_notes += _(
                     "<p>The scale was entered by hand in Parameters. It is not traced to a length standard, so any variation in shooting distance between photographs goes uncorrected.</p>"
                 )
-            if "indice" in res["origenes"]:
+            if "index" in res["origins"]:
                 scale_notes += _(
                     "<p>The scale is inherited from the calibration index, which associates it with each crop or plate. It is a declared value, not one measured on the photograph.</p>"
                 )
@@ -1155,17 +1135,31 @@ def _section_calibration(run) -> str:
 <table class='data'>
 <tr>{_("<th>µm per pixel</th><th>Value</th>")}</tr>
 <tr>{_("<td>minimum</td>")}<td>{res["min"]:.4f}</td></tr>
-<tr>{_("<td>median</td>")}<td>{res["mediana"]:.4f}</td></tr>
+<tr>{_("<td>median</td>")}<td>{res["median"]:.4f}</td></tr>
 <tr>{_("<td>maximum</td>")}<td>{res["max"]:.4f}</td></tr>
 {_row_average}
 </table>
 {warning}
 {scale_notes}
 {_figure_calibration(run)}"""
-            if res["avisos"]:
-                items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
-                if items:
-                    calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
+        elif res["warnings"]:
+            # Not one scale survived. The tables cannot be built, but the
+            # reasons still matter: say so explicitly so the section is not
+            # dropped as empty, then list the warnings below.
+            calib_html = _(
+                "<p><strong>No valid scales.</strong> Every calibration in this "
+                "batch failed, so sizes cannot be reported.</p>"
+            )
+        if res["warnings"]:
+            # The artifact holds codes; the sentence is chosen here, at
+            # display time, so the document can be read in any language.
+            items = "".join(
+                f"<li>{warning_sentence(warning)}</li>"
+                for warning in res["warnings"][:12]
+                if warning
+            )
+            if items:
+                calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
     return calib_html
 
 
@@ -1195,7 +1189,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
 
     if shapes:
         with_size = [(d, path_2) for d, path_2 in shapes if d.length_um]
-        fibers = sum(1 for d, _unused in shapes if d.morphotype == "fibra")
+        fibers = sum(1 for d, _unused in shapes if d.morphotype == "fibre")
         curves = sum(1 for d, _unused in shapes if d.curvature and d.curvature >= 1.15)
         pc_f = 100.0 * fibers / len(shapes)
 
@@ -1305,7 +1299,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
                 if not v:
                     continue
                 nf = sum(
-                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibra"
+                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibre"
                 )
                 rows_cls += (
                     f"<tr><td>{cls}</td><td>{len(v)}</td>"
@@ -1349,7 +1343,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
         rows_img = ""
         for name_2 in sorted(por_img):
             ds = por_img[name_2]
-            nf = sum(1 for d in ds if d.morphotype == "fibra")
+            nf = sum(1 for d in ds if d.morphotype == "fibre")
             lengths_i = [d.length_um for d in ds if d.length_um]
             rows_img += (
                 f"<tr><td style='font-size:9pt'>{_esc(name_2)}</td><td>{len(ds)}</td>"
@@ -1475,7 +1469,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
         from polyx.core.measure.drawing import draw_measurement
 
         chosen = choose_records(shapes, max_records)
-        n_fibers_sample = sum(1 for d, _unused in chosen if d.morphotype == "fibra")
+        n_fibers_sample = sum(1 for d, _unused in chosen if d.morphotype == "fibre")
         por_img_f: dict[str, list] = {}
         for d, path_2 in chosen:
             por_img_f.setdefault(str(path_2), []).append(d)
@@ -1528,7 +1522,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                         _("%(pct)s %% of the line outside the outline")
                         % {"pct": f"{100 * m.feret_outside:.0f}"}
                     )
-                color = "#1f6b5e" if d.morphotype == "fibra" else "#656d76"
+                color = "#1f6b5e" if d.morphotype == "fibre" else "#656d76"
                 label_morph = _morphotype(d.morphotype, lowercase=True)
                 # The warning is SHOWN. Before, it was computed and thrown away: a size
                 # inflated by several particles in contact reached the report
@@ -1540,9 +1534,12 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                 # looking at it meant the `⚠` never appeared.
                 alerta = ""
                 if getattr(d, "review", False):
+                    sentence = warning_sentence(d.warning_shape) or _(
+                        "the mask ran outside the box and was clipped to it"
+                    )
                     alerta = (
                         f"<div style='font-size:8.5pt;color:{T.DOC.WARN};margin-top:3px'>"
-                        f"⚠ {d.warning_shape or _('the mask ran outside the box and was clipped to it')}</div>"
+                        f"⚠ {sentence}</div>"
                     )
                 cards += (
                     f"<div style='display:inline-block;vertical-align:top;margin:0 14px 18px 0;"

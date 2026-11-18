@@ -1,12 +1,12 @@
-"""Que la muestra de particulas del informe enseñe lo que hay que comprobar.
+"""The report's particle sample must show what needs to be checked.
 
-Las fichas son el unico sitio del informe donde se puede VER si la medicion
-se hizo bien. Que particulas entran ahi no es un detalle de presentacion:
-decide que puede auditarse y que no.
+The cards are the only place in the report where one can SEE whether a
+measurement was made correctly. Which particles enter them is not a
+presentation detail: it decides what can be audited and what cannot.
 
-Antes entraban las primeras por orden de archivo, y con eso la particula
-mayor podia no salir y las fibras no salian nunca -- son ~1% del material.
-Estas pruebas fijan el reparto para que no se pierda al editar el informe.
+Before, the first particles by file order were used, which meant the largest
+particle could be missing and fibres never appeared -- they are ~1% of the
+material. These tests pin that split so editing the report cannot lose it.
 """
 
 from __future__ import annotations
@@ -14,97 +14,98 @@ from __future__ import annotations
 from polyx.gui.report.samples import choose_records
 
 
-class _Det:
-    """Lo minimo que mira elegir_fichas de una Detection."""
+class _Particle:
+    """The minimum `choose_records` reads from a Detection."""
 
-    def __init__(self, largo_um, morfotipo):
-        self.length_um = largo_um
-        self.morphotype = morfotipo
+    def __init__(self, length_um, morphotype):
+        self.length_um = length_um
+        self.morphotype = morphotype
 
-    def __repr__(self):  # para que un fallo se lea
+    def __repr__(self):  # so a failure reads clearly
         return f"<{self.morphotype} {self.length_um}>"
 
 
-def _lote(n_fibras: int, n_otras: int) -> list:
-    """Fibras de 100,200,... y particulas de 1000,2000,... (tallas distintas
-    y separadas para que el orden por tamaño sea inequivoco al comprobarlo)."""
-    formas = [(_Det((i + 1) * 100.0, "fibra"), f"f{i}.jpg") for i in range(n_fibras)]
-    formas += [(_Det((i + 1) * 1000.0, "fragmento"), f"p{i}.jpg") for i in range(n_otras)]
-    return formas
+def _lot(n_fibres: int, n_others: int) -> list:
+    """Fibres of 100, 200, ... and particles of 1000, 2000, ... (distinct
+    and separated sizes so the order by size is unambiguous when checking)."""
+    shapes = [(_Particle((i + 1) * 100.0, "fibre"), f"f{i}.jpg") for i in range(n_fibres)]
+    shapes += [(_Particle((i + 1) * 1000.0, "fragment"), f"p{i}.jpg") for i in range(n_others)]
+    return shapes
 
 
-def _cuenta(elegidas):
-    fib = sum(1 for d, _ in elegidas if d.morphotype == "fibra")
-    return fib, len(elegidas) - fib
+def _count(chosen):
+    fib = sum(1 for d, _ in chosen if d.morphotype == "fibre")
+    return fib, len(chosen) - fib
 
 
-# ── El reparto pedido ──
-def test_con_material_de_sobra_reparte_mitad_y_mitad():
-    fib, otras = _cuenta(choose_records(_lote(20, 20), 12))
-    assert (fib, otras) == (6, 6)
+# ── The requested split ──
+def test_with_plenty_of_material_it_splits_evenly():
+    fib, others = _count(choose_records(_lot(20, 20), 12))
+    assert (fib, others) == (6, 6)
 
 
-def test_entra_la_mayor_de_cada_morfotipo():
-    """Es la razon de ser del reparto: sobre la mayor se apoya cualquier
-    afirmacion de talla maxima, y hay una por tipo."""
-    elegidas = choose_records(_lote(20, 20), 12)
-    mayor_fibra = max(d.length_um for d, _ in elegidas if d.morphotype == "fibra")
-    mayor_otra = max(d.length_um for d, _ in elegidas if d.morphotype != "fibra")
-    assert mayor_fibra == 20 * 100.0
-    assert mayor_otra == 20 * 1000.0
+def test_the_largest_of_each_morphotype_enters():
+    """That is the reason for the split: any claim about maximum size rests on
+    the largest of each type."""
+    chosen = choose_records(_lot(20, 20), 12)
+    largest_fibre = max(d.length_um for d, _ in chosen if d.morphotype == "fibre")
+    largest_other = max(d.length_um for d, _ in chosen if d.morphotype != "fibre")
+    assert largest_fibre == 20 * 100.0
+    assert largest_other == 20 * 1000.0
 
 
-def test_dentro_de_cada_grupo_manda_el_tamaño():
-    elegidas = choose_records(_lote(20, 20), 12)
-    fibras = [d.length_um for d, _ in elegidas if d.morphotype == "fibra"]
-    assert fibras == sorted(fibras, reverse=True)
-    assert min(fibras) == 15 * 100.0, "deben ser las 6 mayores, no unas cualesquiera"
+def test_within_each_group_size_rules():
+    chosen = choose_records(_lot(20, 20), 12)
+    fibres = [d.length_um for d, _ in chosen if d.morphotype == "fibre"]
+    assert fibres == sorted(fibres, reverse=True)
+    assert min(fibres) == 15 * 100.0, "must be the 6 largest, not arbitrary ones"
 
 
-# ── Lotes reales: casi nunca hay fibras suficientes ──
-def test_sin_fibras_se_llena_con_particulas():
-    """El caso normal de este material. No debe devolver una muestra corta."""
-    fib, otras = _cuenta(choose_records(_lote(0, 30), 12))
-    assert (fib, otras) == (0, 12)
+# ── Real batches: almost never enough fibres ──
+def test_without_fibres_particles_fill_the_gap():
+    """The normal case for this material. It must not return a short sample."""
+    fib, others = _count(choose_records(_lot(0, 30), 12))
+    assert (fib, others) == (0, 12)
 
 
-def test_con_pocas_fibras_entran_todas_y_el_resto_se_completa():
-    """Dos fibras en el lote: las dos salen, y las 10 restantes son particulas.
-    Si esto se rompe, las fibras vuelven a desaparecer del informe."""
-    fib, otras = _cuenta(choose_records(_lote(2, 30), 12))
-    assert (fib, otras) == (2, 10)
+def test_with_few_fibres_all_enter_and_the_rest_is_filled():
+    """Two fibres in the batch: both enter, the other 10 are particles.
+    If this breaks, fibres disappear from the report again."""
+    fib, others = _count(choose_records(_lot(2, 30), 12))
+    assert (fib, others) == (2, 10)
 
 
-def test_con_pocas_particulas_el_hueco_lo_ocupan_las_fibras():
-    fib, otras = _cuenta(choose_records(_lote(30, 3), 12))
-    assert (fib, otras) == (9, 3)
+def test_with_few_particles_fibres_fill_the_gap():
+    fib, others = _count(choose_records(_lot(30, 3), 12))
+    assert (fib, others) == (9, 3)
 
 
-# ── Bordes ──
-def test_un_lote_mas_chico_que_el_cupo_entra_entero():
-    elegidas = choose_records(_lote(2, 3), 12)
-    assert len(elegidas) == 5
+# ── Edges ──
+def test_a_batch_smaller_than_the_quota_enters_whole():
+    chosen = choose_records(_lot(2, 3), 12)
+    assert len(chosen) == 5
 
 
-def test_lote_vacio_o_cupo_cero_no_revientan():
+def test_an_empty_batch_or_zero_quota_does_not_crash():
     assert choose_records([], 12) == []
-    assert choose_records(_lote(5, 5), 0) == []
+    assert choose_records(_lot(5, 5), 0) == []
 
 
-def test_nunca_devuelve_mas_de_lo_pedido():
-    for cupo in (1, 2, 5, 12, 40):
-        assert len(choose_records(_lote(50, 50), cupo)) <= cupo
+def test_it_never_returns_more_than_requested():
+    for quota in (1, 2, 5, 12, 40):
+        assert len(choose_records(_lot(50, 50), quota)) <= quota
 
 
-def test_no_repite_la_misma_particula():
-    """El relleno de huecos podria colar dos veces la misma si se compara mal."""
-    elegidas = choose_records(_lote(4, 4), 12)
-    ids = [id(d) for d, _ in elegidas]
+def test_it_does_not_repeat_the_same_particle():
+    """Filling the gap could let the same particle through twice if the
+    comparison is wrong."""
+    chosen = choose_records(_lot(4, 4), 12)
+    ids = [id(d) for d, _ in chosen]
     assert len(ids) == len(set(ids))
 
 
-def test_sin_talla_medida_no_se_cae():
-    """Sin calibracion, largo_um queda en None. La ficha sigue siendo util
-    -- la mascara se ve igual -- asi que no debe descartarse ni reventar."""
-    formas = [(_Det(None, "fragmento"), "a.jpg"), (_Det(None, "fibra"), "b.jpg")]
-    assert len(choose_records(formas, 12)) == 2
+def test_an_unmeasured_size_does_not_crash():
+    """Without calibration, length_um stays None. The card is still useful
+    -- the mask looks the same -- so it must not be discarded or crash."""
+    shapes = [(_Particle(None, "fragment"), "a.jpg"), (_Particle(None, "fibre"), "b.jpg")]
+    assert len(choose_records(shapes, 12)) == 2

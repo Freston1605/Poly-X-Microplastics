@@ -167,9 +167,10 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 > implementation. `polyx.gui.report_html` is a five-name compatibility shim
 > over that surface, and it is what the GUI page, the CLI and the audit tool
 > import. A new report section is one catalog entry in `registry.py` plus one
-> builder `(ctx) -> str` in `sections.py`, named for what it renders; section
-> ids stay stable Spanish keys because they are HTML anchors, not user-facing
-> strings.
+> builder `(ctx) -> str` in `sections.py`, named for what it renders. Section
+> ids and preset keys are stable **English** machine tokens (`summary`,
+> `methods`, …) and the id doubles as the HTML anchor; they are not
+> user-facing strings (spec #182, ADR-0005 superseded).
 
 ---
 
@@ -535,10 +536,16 @@ overrides; ADR-0001). The folder is the canonical run folder (ADR-0002):
   (`_annot`, `_pred`, `_gt`), `labels/{index:04d}_{stem}.txt` and `classes.txt`
 - `<data dir>/runs/detect_YYYYMMDD_HHMMSS/report.html` — Paper-quality report
 
-New runs never write `summary.json`, `metrics.json`, `resumen.json` or the
-old flat `images/` folder. Old GUI folders still open in the Viewer through
-their per-model `labels/*.txt`; old headless folders still load through the
-legacy reader. Neither is migrated or rewritten.
+New runs never write `summary.json`, `metrics.json` or the old `resumen.json`
+export. The Viewer writes `viewer_summary.json` inside a
+`viewer_<image>_<ts>/` folder; an export into a folder containing `run.json` is
+refused so a canonical prediction table cannot be overwritten. Pre-canonical
+folders (old GUI per-model labels, old headless `summary.json` +
+`centroids.csv`, legacy calibration index CSVs) stay on disk untouched but are
+not read: the CLI and the Viewer report that old runs need an older Poly-X
+version. The canonical per-image calibration index (`calibration_index.csv`,
+headers `image,um_per_px`) is a distinct English-only file. No file is migrated
+or rewritten.
 
 **Headless CLI.** `polyx-detect` runs the same engine synchronously:
 
@@ -547,7 +554,9 @@ polyx-detect --model best.pt --images ./photos --out ./run
 polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
     --images ./photos --out ./run --force
 polyx-detect --model best.pt --images ./photos --out ./run \
-    --calibrate auto --index-calibration ./indice.csv --gt-folder ./labels
+    --calibrate auto --gt-folder ./labels
+polyx-detect --model best.pt --images ./photos --out ./run \
+    --calibrate index --calibration-index ./calibration_index.csv
 ```
 
 - `--model` and `--model-type` repeat: aliases default to the weights stem,
@@ -558,7 +567,13 @@ polyx-detect --model best.pt --images ./photos --out ./run \
 - `--out` is the exact run folder. A non-empty folder is refused unless
   `--force` is given.
 - `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
-  alone implies `manual`, and `--index-calibration` supplies the explicit CSV.
+  alone implies `manual`, and `--calibration-index PATH` alone implies
+  `index`. The index must be the canonical English `calibration_index.csv`
+  with headers `image,um_per_px`; it is keyed by image basename and never
+  searched for. Image basenames must be unique within an index-calibrated
+  batch: two photos with the same name in different folders are refused before
+  inference, because one row would otherwise apply to both. Legacy index files
+  and Spanish headers are rejected with an error naming the canonical format.
 - Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
   `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
   `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
@@ -566,11 +581,12 @@ polyx-detect --model best.pt --images ./photos --out ./run \
 - `--full-report` renders the paper-quality report from the engine's
   `RunResult`; without it the run gets the compact HTML report.
 
-`polyx-report --run DIR [--output FILE] [--full-report] [--images DIR]`
-regenerates a report. It uses `load_run` for a canonical folder and
-`load_legacy_run` for an old `summary.json`/`centroids.csv` folder
-(`--images` supplies the original photographs); without `--full-report` it
-writes the compact report.
+`polyx-report --run DIR [--output FILE] [--full-report]` regenerates a report.
+Both modes require a canonical folder: a pre-canonical `summary.json` +
+`centroids.csv` folder is refused with a pointer to an older Poly-X version,
+and `--full-report` never falls back to the compact report on that error.
+Without `--full-report` it writes the compact report from `run.json` and
+`detections.csv`.
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -678,12 +694,13 @@ already retried at a smaller size, the status that stays on screen names the
 image, with sizes already converted to μm. Useful for reviewing the manual count
 over the full plate without going back to the Labeller.
 
-**Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
+**Export** to `viewer_<image>_<ts>/`: `<image>_annotated.png`, `detections.csv`
 (one row per particle: `diam_px` is the box's equal-area diameter — a box
 descriptor; `diam_um`/`area_um2` are the measured values, with `size_source`
-declaring `mask` or `box`) and `resumen.json`. The headers and the
-`size_source` values are the canonical English tokens of ADR-0004
-(`VIEWER_COLUMNS`), not interface labels. The
+declaring `mask` or `box`) and `viewer_summary.json` (keys `image`,
+`n_detections`, `by_class`, plus the already-English `timestamp` and
+`um_per_px`). The headers and the `size_source` values are the canonical
+English tokens of ADR-0004 (`VIEWER_COLUMNS`), not interface labels. The
 labels on the canvas and in the PNG carry a **`≈`** when the µm size came
 from the box fallback, so an approximate number is never shown as a
 measured one.
@@ -761,9 +778,10 @@ One module owns the tiling decision and its sentence: `TilingMode`
 `policy_tiling` stays as the geometry primitive and is re-exported from
 `protocol.py` and `yolo.py` for old importers.
 
-The mode is English at every boundary, and `TilingMode.parse` is the only
-place a saved `"siempre"`/`"nunca"` is understood — it is normalised on load
-and never written again. `run.json` records the plan per image/model in
+The mode is English at every boundary: `TilingMode.parse` accepts only
+`auto`/`always`/`never` and rejects a saved `"siempre"`/`"nunca"` with an error
+naming the canonical values; an empty value keeps `AUTO`.
+`run.json` records the plan per image/model in
 `tiling_plan`; the legacy `tiling` sentence stays so readers written before
 #125 keep working. The engine and the Parameters/Execute previews render the
 plan through `describe()`, which is translated at call time; no page formats
@@ -813,8 +831,8 @@ was which reads `match` instead of matching again with a rule of its own
 (box IoU on a mask-matched run shows errors the run never counted).
 
 ### `RunResult` (src/polyx/core/detection_run/result.py)
-The Qt-free record of one run. `load_run` rebuilds it from a canonical
-folder; `load_legacy_run` rebuilds what an old headless folder recorded.
+The Qt-free record of one run. `load_run` rebuilds it from a canonical folder;
+pre-canonical folders are not read.
 ```python
 run_dir: Path
 images: List[Path]
@@ -829,7 +847,6 @@ started_at, finished_at: Optional[datetime]
 execution: Dict[int, ModelExecution] # per-model images/detections/tiling/imgsz
 metrics: Dict[int, Dict[str, int]]   # per-model tp/fp/fn/miscls/totals
 match_use_mask_iou: bool             # property: any image matched by mask IoU
-legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
 ### `Score` and `Criterion` (src/polyx/core/detection_run/operating_point.py)
@@ -885,15 +902,16 @@ run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
 RunResult  (dense active-model indices, partial on abort/failure)
     ├→ DetectorRunner: map indices onto model_slots → Qt signals
     ├→ generate_report(RunResult) (GUI report page and polyx-detect --full-report)
-    ├→ polyx-report: load_run (canonical) or load_legacy_run (old headless)
+    ├→ polyx-report: load_run (canonical); pre-canonical folders are refused
     └→ <user data dir>/runs/detect_YYYYMMDD_HHMMSS/
          run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
 
-Legacy inputs are read, never rewritten: the Viewer opens old GUI folders
-through their per-model `labels/*.txt`, `load_legacy_run` rebuilds a
-`RunResult` from old `summary.json` + `centroids.csv`, and the compact report
-keeps that same old fallback. New runs are the canonical folder only.
+Legacy inputs are never rewritten, but they are not read either: the Viewer
+requires a canonical `run.json`, `load_legacy_run` is gone, and the compact
+report reads only `run.json` + `detections.csv`. Old GUI folders, old headless
+folders and legacy calibration index CSVs stay on disk and require an older
+Poly-X version; the canonical per-image index is English-only and explicit.
 
 ### Trainer
 ```
@@ -991,12 +1009,23 @@ claims a scale.
 ```python
 mode: str = "auto"              # "auto" | "manual" | "index" | "none"
 um_per_px: float = 0.0          # manual fallback / manual-only value
-index_path: Path | None = None  # explicit index CSV (auto merges it with the searched one)
+index_path: Path | None = None  # explicit canonical English index file, index mode
 measure_plate: bool = True      # auto only: measure the Petri dish per photo
 diameter_plate_mm: float = 100.0
 height_plate_mm: float = 0.0    # parallax correction, 0 = off
 distance_camera_mm: float = 0.0
 ```
+
+`index` mode reads `calibration_index.csv` once per run through
+`core.measure.calibration.read_calibration_index` and looks up `image_path.name`.
+A row found becomes `Calibration(origin=ORIGIN_INDEX)` for that photo alone;
+an image absent from the index carries `IMAGE_NOT_IN_INDEX` and no scale, never
+the batch-wide manual value. Before inference the engine also refuses a batch
+where two images share a basename (`_reject_duplicate_image_names`): the
+basename is the key, so one row must never silently scale two photos. The
+reader refuses legacy filenames and Spanish headers by name, rejects duplicates
+and non-positive or non-finite values, and never searches the filesystem or
+rewrites the file it was given.
 
 ### Abstention: detecting ≠ identifying
 

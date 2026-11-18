@@ -1,12 +1,12 @@
-"""Headless detection: the canonical run engine, its folder and legacy reads.
+"""Headless detection: the canonical run engine, its folder and run reader.
 
 The canonical engine lives in :mod:`polyx.core.detection_run.engine`; it is
 Qt-free and owns decode, ground-truth reading, measurement, matching, drawing
-and the run folder. ``load_run`` reopens a canonical folder and
-``load_legacy_run`` rebuilds a ``RunResult`` from a pre-canonical headless
-folder, both without Qt. ``reload_ground_truth`` re-reads the labels of a
-finished run through the same rules, so correcting an annotation does not need
-a second inference pass nor a second implementation of the sequence.
+and the run folder. ``load_run`` reopens a canonical folder without Qt.
+``reload_ground_truth`` re-reads the labels of a finished run through the same
+rules, so correcting an annotation does not need a second inference pass nor
+a second implementation of the sequence. Pre-canonical folders are not read:
+old runs must be opened with an older version of Poly-X.
 """
 
 from polyx.core.paths import IMAGE_EXTS
@@ -26,7 +26,6 @@ from .identity import (
     resolve_identity,
     sanitize_alias,
 )
-from .legacy_reader import load_legacy_run
 from .reload import ReloadSummary, reload_ground_truth
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 from .schema import (
@@ -35,7 +34,9 @@ from .schema import (
     SCHEMA_VERSION,
     VIEWER_COLUMNS,
     detection_row,
+    is_canonical_run,
     load_run,
+    validate_manifest_version,
 )
 
 __all__ = [
@@ -63,10 +64,11 @@ __all__ = [
     "detection_row",
     "display_name",
     "generated_alias",
-    "load_legacy_run",
+    "is_canonical_run",
     "load_run",
     "reload_ground_truth",
     "resolve_identity",
     "run_detection",
     "sanitize_alias",
+    "validate_manifest_version",
 ]

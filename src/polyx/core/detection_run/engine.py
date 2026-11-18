@@ -24,13 +24,19 @@ from polyx.core.i18n import _
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.calibration import (
+    ORIGIN_INDEX,
     ORIGIN_NONE,
     Calibration,
-    carry_index,
+    read_calibration_index,
     resolver,
-    search_index,
 )
 from polyx.core.measure.shape import measure_detections
+from polyx.core.measure.warnings import (
+    IMAGE_NOT_IN_INDEX,
+    IMAGE_UNREADABLE,
+    MANUAL_SCALE_MISSING,
+    Warning,
+)
 from polyx.core.provenance import logger_for, provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import MatchResult, match_image
@@ -140,36 +146,53 @@ def _validated_calibration_mode(policy: CalibrationPolicy) -> str:
     return mode
 
 
-def _calibration_index(
-    policy: CalibrationPolicy,
-    mode: str,
-    images: list[Path],
-) -> dict[str, float]:
-    """Load the filename-to-scale map once for the whole run.
+def _load_calibration_index(policy: CalibrationPolicy, mode: str) -> dict[str, float]:
+    """Load the per-image map once, before the run touches its output folder.
 
-    ``index`` uses the explicit CSV when given, otherwise searches the known
-    index names from the image root. ``auto`` merges both: the explicit values
-    win for the images they list, and the searched index still covers the
-    images the explicit file lacks before the plate/manual fallback. That is
-    the run-level half of the agreed order; the per-image half (index, then
-    plate, then manual) lives in ``resolver``.
+    Only ``index`` mode consults the file, and only at the path the caller
+    named: there is no search and no legacy alias. A bad or absent file fails
+    here with the reader's actionable message instead of silently scaling a
+    crop with a value that belongs to a different photo.
     """
-    if mode not in ("auto", "index"):
+    if mode != "index":
         return {}
-    searched = search_index(images[0]) if images else {}
     if policy.index_path is None:
-        return searched
-    explicit = carry_index(policy.index_path)
-    if mode == "index":
-        return explicit
-    return {**searched, **explicit}
+        raise ValueError(
+            _("index calibration needs a calibration index CSV (--calibration-index PATH)")
+        )
+    return read_calibration_index(policy.index_path)
 
 
-def _missing_calibration_warning(calibration: Calibration, warning: str) -> Calibration:
-    """Attach a mode-specific warning when the resolver did not provide one."""
+def _reject_duplicate_image_names(images: list[Path]) -> None:
+    """Refuse two images sharing a basename when the index is the scale source.
+
+    The reader reduces index paths to basenames and the engine looks up
+    ``image_path.name``, so two photos in different folders with the same name
+    can never hold distinct scales: one row would silently apply to both. In
+    index mode the basename is the lookup key, so reject the batch before any
+    inference or output folder is touched and let the caller rename the files.
+    Other calibration modes do not key on the basename and are unaffected.
+    """
+    seen: dict[str, Path] = {}
+    for image in images:
+        name = image.name
+        if name in seen:
+            raise ValueError(
+                _(
+                    "index calibration (--calibration-index) needs unique image "
+                    "basenames: %(first)s and %(second)s both have the basename "
+                    "%(name)s; give each image a unique name for index calibration"
+                )
+                % {"first": seen[name], "second": image, "name": name}
+            )
+        seen[name] = image
+
+
+def _missing_calibration_warning(calibration: Calibration, code: str) -> Calibration:
+    """Attach a mode-specific warning code when the resolver provided none."""
     if calibration.valid or calibration.warning:
         return calibration
-    return replace(calibration, warning=warning)
+    return replace(calibration, warning=Warning(code))
 
 
 def _resolve_calibration(
@@ -184,6 +207,18 @@ def _resolve_calibration(
     if mode == "none":
         return Calibration(origin=ORIGIN_NONE, diameter_mm=diameter_mm)
 
+    if mode == "index":
+        um_per_px = index.get(image_path.name)
+        if um_per_px is None:
+            # Never fall back to a batch-wide scale here: a crop whose name is
+            # absent from the index has no known scale for THIS photo.
+            return Calibration(
+                origin=ORIGIN_NONE,
+                diameter_mm=diameter_mm,
+                warning=Warning(IMAGE_NOT_IN_INDEX),
+            )
+        return Calibration(um_por_px=um_per_px, origin=ORIGIN_INDEX, diameter_mm=diameter_mm)
+
     if mode == "manual":
         calibration = resolver(
             image_path,
@@ -192,27 +227,11 @@ def _resolve_calibration(
             measure_plate=False,
         )
         if not calibration.valid and not calibration.warning:
-            return _missing_calibration_warning(
-                calibration, "manual calibration needs a positive um_per_px"
-            )
-        return calibration
-
-    if mode == "index":
-        calibration = resolver(
-            image_path,
-            index=index,
-            diameter_mm=diameter_mm,
-            measure_plate=False,
-        )
-        if not calibration.valid and not calibration.warning:
-            return _missing_calibration_warning(
-                calibration, "image is not listed in the calibration index"
-            )
+            return _missing_calibration_warning(calibration, MANUAL_SCALE_MISSING)
         return calibration
 
     return resolver(
         image_path,
-        index=index,
         um_por_px_manual=policy.um_per_px,
         diameter_mm=diameter_mm,
         measure_plate=policy.measure_plate,
@@ -355,9 +374,15 @@ def run_detection(
     if not config.models:
         raise ValueError("a detection run needs at least one model")
     mode = _validated_calibration_mode(config.calibration)
+    # A missing or malformed index is a usage error: fail before creating the
+    # run folder, so no partial run is left behind for a file we never read.
+    index = _load_calibration_index(config.calibration, mode)
 
     images = [Path(path) for path in config.images]
-    index = _calibration_index(config.calibration, mode, images)
+    if mode == "index":
+        # The basename is the index lookup key: refuse ambiguous batches before
+        # the output folder is created or any model runs (no partial run left).
+        _reject_duplicate_image_names(images)
     output_dir = Path(config.output_dir)
 
     try:
@@ -436,7 +461,7 @@ def run_detection(
                 result.calibrations[image_path] = Calibration(
                     origin=ORIGIN_NONE,
                     diameter_mm=config.calibration.diameter_plate_mm,
-                    warning="the image could not be read",
+                    warning=Warning(IMAGE_UNREADABLE),
                 )
                 writer.record_skip()
                 done += len(models)

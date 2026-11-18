@@ -19,15 +19,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from polyx.core.i18n import ngettext
-from polyx.core.provenance import logger_for
 
 
 class TilingMode(enum.StrEnum):
     """What the run is allowed to decide about tiling.
 
-    A ``str`` enum so ``json.dumps`` keeps writing ``"always"`` and an old
-    caller can still pass a plain string. The legacy Spanish ``"siempre"`` and
-    ``"nunca"`` are accepted by :meth:`parse` and normalised on the spot.
+    A ``str`` enum so ``json.dumps`` keeps writing ``"always"`` and a caller
+    can still pass a plain string. The three English values are the only modes;
+    there are no legacy spellings and :meth:`parse` never translates one.
     """
 
     AUTO = "auto"
@@ -36,39 +35,29 @@ class TilingMode(enum.StrEnum):
 
     @classmethod
     def parse(cls, value: object) -> TilingMode:
-        """Normalise a mode from any boundary; an unknown value falls back to AUTO.
+        """Normalise a mode from any boundary; a non-empty unknown value fails.
 
-        This is the only place the deprecated Spanish values are understood:
-        a saved ``run.json``, an old script or a caller written before the
-        English identifiers keep working, and everything downstream sees a
-        :class:`TilingMode`.
+        Only the three English values are modes. ``None`` and an empty string
+        mean "no mode set" and keep returning ``AUTO``. Every other value —
+        including a legacy spelling — is a bad artifact: it is rejected with an
+        error naming the canonical values, never translated or silently
+        replaced with ``AUTO``.
         """
         if isinstance(value, cls):
             return value
         text = str(value).strip().lower() if value is not None else ""
+        if not text:
+            return cls.AUTO
         if text in cls._value2member_map_:
             return cls(text)
-        legacy = _LEGACY_MODES.get(text)
-        if legacy is not None:
-            return legacy
-        if text:
-            logger_for("detector").warning("tiling.unknown_mode value=%r", value)
-        return cls.AUTO
+        raise ValueError(
+            f"unknown tiling mode {value!r}: choose {', '.join(mode.value for mode in cls)}"
+        )
 
 
-#: Deprecated spellings of :class:`TilingMode`, read at the boundary and never
-#: written: a mode that leaves the program is English.
-_LEGACY_MODES: dict[str, TilingMode] = {
-    "siempre": TilingMode.ALWAYS,
-    "nunca": TilingMode.NEVER,
-}
-
-#: Every text a boundary accepts as a mode, including the deprecated spellings.
-#: The command line validates against it without listing the legacy values.
-TILING_VALUES: tuple[str, ...] = (
-    *(mode.value for mode in TilingMode),
-    *_LEGACY_MODES,
-)
+#: Every text a boundary accepts as a mode: the English values, nothing else.
+#: The command line validates against this exact tuple.
+TILING_VALUES: tuple[str, ...] = tuple(mode.value for mode in TilingMode)
 
 
 @dataclass(frozen=True)

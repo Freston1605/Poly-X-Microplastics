@@ -61,7 +61,7 @@ def test_en_fibra_curva_gana_el_geodesico():
     """En un arco, Feret da la cuerda y se queda corto; el camino geodésico
     rodea la curva. Si esta prueba falla, el método volvió a medir cuerdas."""
     m = M.measure(arco(180)[0])
-    assert m.method.startswith("geodesico")
+    assert m.method == M.Method.GEODESIC
     assert m.geodesic_px > m.feret_px * 1.3
 
 
@@ -69,7 +69,7 @@ def test_en_particula_compacta_gana_feret():
     """En un círculo el camino más largo es el recto, y el geodésico no debe
     inflarlo rodeando nada."""
     m = M.measure(circulo()[0])
-    assert m.method.startswith("Feret")
+    assert m.method == M.Method.FERET
 
 
 def test_el_geodesico_no_se_usa_en_particula_gruesa():
@@ -81,7 +81,7 @@ def test_el_geodesico_no_se_usa_en_particula_gruesa():
     """
     mascara, real = grumo_con_muesca()
     m = M.measure(mascara)
-    assert m.method.startswith("Feret"), "un grumo grueso no debe medirse por el camino geodésico"
+    assert m.method == M.Method.FERET, "un grumo grueso no debe medirse por el camino geodésico"
     assert m.length_px <= real * 1.10
 
 

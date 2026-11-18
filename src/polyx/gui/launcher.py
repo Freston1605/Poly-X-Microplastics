@@ -66,7 +66,7 @@ def _register_boot() -> None:
             "bootstrap.finish",
             version=__version__,
             python=sys.version.split()[0],
-            sistema=name_system(),
+            system=name_system(),
         )
     except Exception:  # noqa: BLE001, S110
         pass
@@ -107,7 +107,7 @@ def _spawn_module(dotted: str) -> bool:
                 observability.logger_for("app"),
                 "module.launch.error",
                 level=logging.WARNING,
-                modulo=dotted,
+                module=dotted,
                 error=str(e),
             )
         except Exception:  # noqa: BLE001, S110
@@ -116,7 +116,7 @@ def _spawn_module(dotted: str) -> bool:
     try:
         from polyx.core import observability
 
-        observability.event(observability.logger_for("app"), "module.launch", modulo=dotted)
+        observability.event(observability.logger_for("app"), "module.launch", module=dotted)
     except Exception:  # noqa: BLE001, S110
         pass
     return True

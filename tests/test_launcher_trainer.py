@@ -108,7 +108,7 @@ class TestSpawnModuleModuloInexistente:
         errors = [e for e in eventos if e["event"] == "module.launch.error"]
         assert len(errors) == 1
         assert errors[0]["level"] == "WARNING"
-        assert "modulo.que.no.existe" in errors[0]["data"]["modulo"]
+        assert "modulo.que.no.existe" in errors[0]["data"]["module"]
 
 
 class TestSpawnModulePopenFalla:

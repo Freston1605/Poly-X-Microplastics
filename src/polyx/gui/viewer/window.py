@@ -31,10 +31,13 @@ from PySide6.QtWidgets import (
 )
 
 from polyx.core import platform
-from polyx.core.annotate import find_run_labels
+from polyx.core.annotate import parse_run_label_name
 from polyx.core.detect.tiling import TilingDecision, TilingMode
+from polyx.core.detection_run import is_canonical_run, validate_manifest_version
+from polyx.core.detection_run.schema import read_json_object
 from polyx.core.i18n import _, ngettext
 from polyx.core.measure import calibration as calib
+from polyx.core.measure.warnings import warning_sentence
 from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
@@ -48,6 +51,30 @@ from .state import (
     FAILURE_NOT_ENOUGH_POINTS,
     ViewerState,
 )
+
+
+def _canonical_run_labels(run_dir: Path, stem: str) -> list[Path]:
+    """Prediction labels of one photo from a canonical run's declared models.
+
+    Only folders named in ``run.json`` are considered. An arbitrary tree of
+    ``labels/`` files is never searched: a pre-canonical GUI run has no
+    ``run.json`` and is refused before this helper is called.
+    """
+    record = read_json_object(run_dir / "run.json")
+    paths: list[Path] = []
+    for model in record.get("models") or []:
+        alias = model.get("alias")
+        if not isinstance(alias, str) or not alias:
+            continue
+        labels_dir = run_dir / alias / "labels"
+        if not labels_dir.is_dir():
+            continue
+        for path in labels_dir.glob("*.txt"):
+            parsed = parse_run_label_name(path.name)
+            if parsed is not None and parsed[1] == stem:
+                paths.append(path)
+    return sorted(paths)
+
 
 #: The refusal tokens this window has copy for: every geometric failure the
 #: calibration core can name, plus the collection-level "not enough points".
@@ -865,13 +892,28 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         root_2 = Path(folder_2)
 
-        # The runner names each file NNNN_<photo name>.txt, with an
+        # is_canonical_run only sees that run.json is a file. The shared v2 gate
+        # also refuses a v1 manifest or unparseable JSON before any model alias
+        # is read, so compatible-looking labels cannot reopen an old run.
+        try:
+            validate_manifest_version(root_2)
+        except (ValueError, OSError):
+            QMessageBox.warning(
+                self,
+                _("Old run"),
+                _(
+                    "This run was written by an older version of Poly-X and cannot be opened here. "
+                    "Open it with an older version of Poly-X; see "
+                    "docs/specs/run-artifact-vocabulary.md."
+                ),
+            )
+            return
 
-        # index in front so that two homonymous photos from different folders do not
-
+        # The writer names each file NNNN_<photo name>.txt, with an index in
+        # front so that two homonymous photos from different folders do not
         # collide. The naming owner parses it back, so the Viewer cannot desync.
 
-        candidates = find_run_labels(root_2, img.stem)
+        candidates = _canonical_run_labels(root_2, img.stem)
 
         if not candidates:
             QMessageBox.information(
@@ -1081,7 +1123,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         measure_detections(dets, bgr, um)
 
-        fib = sum(1 for d in dets if d.morphotype == "fibra")
+        fib = sum(1 for d in dets if d.morphotype == "fibre")
 
         sin = sum(1 for d in dets if d.morphotype is None)
 
@@ -1162,7 +1204,11 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             img, m = None, None
 
         if img is None or m is None or not m.ok:
-            self.lbl_record.setText(_("This particle could not be separated from the background"))
+            message = _("This particle could not be separated from the background")
+            sentence = warning_sentence(det.warning_shape)
+            if sentence:
+                message = f"{message} — {sentence}"
+            self.lbl_record.setText(message)
 
             self.lbl_record_data.setText("")
 
@@ -1214,8 +1260,11 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             % {"aspect": m.aspect, "curvature": m.curvature},
         ]
 
-        if m.warning:
-            lines.append(_("warning: %(message)s") % {"message": m.warning})
+        # The stored warning on the detection and the one from the live drawing
+        # are the same kind of structured code; both become a sentence here.
+        warning = m.warning or getattr(det, "warning_shape", None)
+        if warning:
+            lines.append(_("warning: %(message)s") % {"message": warning_sentence(warning)})
 
         self.lbl_record_data.setText("\n".join(lines))
 
@@ -1422,9 +1471,24 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         if not out_dir:
             return
 
+        # A folder with run.json is a canonical run. An export there risks
+        # overwriting its prediction table, so refuse before creating anything.
+
+        if is_canonical_run(Path(out_dir)):
+            QMessageBox.warning(
+                self,
+                _("Cannot export here"),
+                _(
+                    "This folder contains run.json, which marks a canonical run. "
+                    "Choose a different output folder so the prediction table is not overwritten."
+                ),
+            )
+
+            return
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        save_dir = Path(out_dir) / f"visor_{img.stem}_{ts}"
+        save_dir = Path(out_dir) / f"viewer_{img.stem}_{ts}"
 
         save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1463,7 +1527,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         annotated = render_annotated_frame(frame, self.state.detections, self.state.um_per_px)
 
-        out_path = save_dir / f"{img.stem}_anotada.png"
+        out_path = save_dir / f"{img.stem}_annotated.png"
 
         ok, buf = cv2.imencode(".png", annotated)
 
@@ -1474,7 +1538,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         import csv
 
-        out = save_dir / "detecciones.csv"
+        out = save_dir / "detections.csv"
 
         rows = csv_rows(self.state.detections, self.state.um_per_px)
 
@@ -1488,19 +1552,19 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         um = self.state.um_per_px
 
         summary = {
-            "imagen": img.name,
+            "image": img.name,
             "timestamp": datetime.now().isoformat(),
             "um_per_px": um if um > 0 else None,
-            "n_detecciones": len(self.state.detections),
-            "por_clase": {},
+            "n_detections": len(self.state.detections),
+            "by_class": {},
         }
 
         for det in self.state.detections:
-            entry = summary["por_clase"].setdefault(det.class_name, {"n": 0})
+            entry = summary["by_class"].setdefault(det.class_name, {"n": 0})
 
             entry["n"] += 1
 
-        out = save_dir / "resumen.json"
+        out = save_dir / "viewer_summary.json"
 
         out.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 

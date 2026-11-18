@@ -18,11 +18,12 @@ from polyx.core.annotate import run_view_path
 from polyx.core.detect.protocol import Instance
 from polyx.core.detect.tiling import TilingMode, TilingPlan
 from polyx.core.measure.calibration import ORIGIN_NONE, Calibration
+from polyx.core.measure.warnings import warning_from_dict, warning_to_dict
 from polyx.core.quality.metrics import MatchResult, match_image
 
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Order is the published contract: the Viewer export and the compact report
 # read it positionally only through the header, but users diff the header.
@@ -129,7 +130,7 @@ def params_to_dict(params: RunParams) -> dict:
 
     ``TilingMode`` is a ``str``, so ``asdict`` plus ``json`` already wrote a
     string. Converting explicitly keeps that true for a caller that assigned a
-    legacy value after construction.
+    plain string after construction.
     """
     data = asdict(params)
     data["tiling"] = TilingMode.parse(data.get("tiling")).value
@@ -139,9 +140,9 @@ def params_to_dict(params: RunParams) -> dict:
 def params_from_dict(data: dict | None) -> RunParams:
     """Rebuild ``RunParams`` from JSON, ignoring unknown/missing fields.
 
-    A legacy ``"siempre"``/``"nunca"`` is mapped to its English mode; an
-    unknown mode falls back to ``AUTO`` with a warning, because a run that
-    cannot be re-read is worse than one that tiled differently.
+    Only the English modes are read. An unknown value — including a legacy
+    spelling — is rejected with a ``ValueError`` rather than translated or
+    replaced with ``AUTO``; a missing value keeps ``AUTO``.
     """
     known = {field.name for field in fields(RunParams)}
     values = {key: value for key, value in (data or {}).items() if key in known}
@@ -155,12 +156,28 @@ def calibration_to_dict(calibration: Calibration) -> dict:
     # When the plate was measured, ``Calibration.valid`` tests a numpy float
     # and yields ``numpy.bool_``, which is not JSON serialisable.
     data["valid"] = bool(calibration.valid)
+    # The artifact uses the English machine token; the Python field keeps its
+    # historic name so existing callers of Calibration are unaffected.
+    data["um_per_px"] = data.pop("um_por_px")
+    # A warning leaves as a stable code plus structured parameters, never as
+    # the sentence a person reads. ``asdict`` already expands the dataclass;
+    # writing it explicitly keeps only the parameters that occurred.
+    data["warning"] = warning_to_dict(calibration.warning)
     return data
 
 
 def calibration_from_dict(data: dict | None) -> Calibration:
     known = {field.name for field in fields(Calibration)}
-    return Calibration(**{key: value for key, value in (data or {}).items() if key in known})
+    values = {}
+    for key, value in (data or {}).items():
+        if key == "um_per_px":
+            values["um_por_px"] = value
+        elif key in known:
+            values[key] = value
+    # Keep the warning out of ``**values``: widening that dict's value type to
+    # include ``Warning | None`` would make ``ty`` reject every other field.
+    warning = warning_from_dict(values.pop("warning", None))
+    return Calibration(**values, warning=warning)
 
 
 def detection_to_dict(det: Instance) -> dict:
@@ -188,7 +205,7 @@ def detection_to_dict(det: Instance) -> dict:
         "number": det.number,
         "assignable": bool(getattr(det, "assignable", True)),
         "review": bool(getattr(det, "review", False)),
-        "warning_shape": getattr(det, "warning_shape", None),
+        "warning_shape": warning_to_dict(getattr(det, "warning_shape", None)),
         "has_mask": det.mask is not None,
     }
 
@@ -197,6 +214,8 @@ def _instance_from_mapping(data: dict) -> Instance:
     mapping = dict(data)
     if "class" in mapping and "class_name" not in mapping:
         mapping["class_name"] = mapping.pop("class")
+    if "warning_shape" in mapping:
+        mapping["warning_shape"] = warning_from_dict(mapping["warning_shape"])
     known = {field.name for field in fields(Instance)}
     return Instance(**{key: value for key, value in mapping.items() if key in known})
 
@@ -257,15 +276,22 @@ def _int(value: object) -> int | None:
 
 
 def _bool(value: object, *, default: bool = True) -> bool:
-    """Read a persisted boolean, keeping ``default`` when the cell is empty.
+    """Read a persisted boolean; ``true`` and ``false`` are the only spellings.
 
-    Runs written before abstention existed have no ``assignable`` column; those
-    detections were all assignable, so the missing value must not turn into a
-    silent abstention.
+    An empty cell keeps ``default``: runs written before abstention existed
+    have no ``assignable`` column, and those detections were all assignable.
+    Every other spelling — including the old ``1``, ``yes``, ``y``, ``si`` and
+    ``sí`` — is rejected with an error naming the canonical format, so a stale
+    artifact fails clearly instead of being silently translated.
     """
     if value is None or value == "":
         return default
-    return str(value).strip().lower() in ("1", "true", "yes", "y", "si", "sí")
+    text = str(value).strip().lower()
+    if text == "true":
+        return True
+    if text == "false":
+        return False
+    raise ValueError(f"invalid boolean cell {value!r}: expected 'true' or 'false'")
 
 
 def detection_row(
@@ -333,11 +359,23 @@ def detection_from_row(row: dict) -> Instance:
     )
 
 
+def is_canonical_run(run_dir: Path) -> bool:
+    """Whether ``run_dir`` carries a regular ``run.json`` manifest file.
+
+    Every reader of a run folder asks this before opening anything. A folder
+    is canonical only when the manifest is a *file*: ``.exists()`` would also
+    accept a directory named ``run.json``, which cannot be a manifest.
+    """
+    return (Path(run_dir) / "run.json").is_file()
+
+
 def read_json_object(path: Path) -> dict:
     """Read a JSON object, returning ``{}`` for a missing or malformed file.
 
-    Both the canonical reader and the compact/legacy report paths need the same
-    forgiving read; keeping one helper stops their error handling drifting.
+    Kept for genuinely forgiving reads where an absent or broken file means
+    "nothing to show" (for example the Viewer's optional label listing). It is
+    deliberately *not* the gate a reader uses before acting on ``run.json``:
+    see :func:`validate_manifest_version` for that.
     """
     if not path.is_file():
         return {}
@@ -346,6 +384,44 @@ def read_json_object(path: Path) -> dict:
     except (OSError, json.JSONDecodeError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def validate_manifest_version(run_dir: Path) -> dict:
+    """Return the parsed ``run.json``, refusing old or unreadable manifests.
+
+    :func:`is_canonical_run` only checks that the manifest is a file. Every
+    reader that acts on its contents must call this first so a version-1 run
+    or a malformed document can never be rendered as a modern report or opened
+    in the Viewer. The actionable error is the one :func:`load_run` has always
+    used, so all three readers reject the same artifacts for the same reason.
+    """
+    run_json = Path(run_dir) / "run.json"
+    if not run_json.is_file():
+        raise FileNotFoundError(f"not a canonical run folder: {run_json}")
+    try:
+        data = json.loads(run_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            f"cannot read run manifest {run_json}: invalid JSON ({exc}); "
+            "see docs/specs/run-artifact-vocabulary.md"
+        ) from exc
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"cannot read run manifest {run_json}: expected a JSON object; "
+            "see docs/specs/run-artifact-vocabulary.md"
+        )
+    version = data.get("schema_version")
+    if version != SCHEMA_VERSION:
+        detail = (
+            "version 1 is the old run format and is not supported"
+            if version == 1
+            else f"expected schema version {SCHEMA_VERSION}"
+        )
+        raise ValueError(
+            f"unsupported run schema version {version!r}: {detail}; "
+            "see docs/specs/run-artifact-vocabulary.md"
+        )
+    return data
 
 
 def read_csv_rows(path: Path) -> list[dict]:
@@ -601,13 +677,7 @@ def _match_from_record(
 def load_run(run_dir: Path) -> RunResult:
     """Reconstruct a :class:`RunResult` from a canonical folder, without Qt."""
     run_dir = Path(run_dir)
-    run_json = run_dir / "run.json"
-    if not run_json.is_file():
-        raise FileNotFoundError(f"not a canonical run folder: {run_json}")
-    data = json.loads(run_json.read_text(encoding="utf-8"))
-    version = data.get("schema_version")
-    if version != SCHEMA_VERSION:
-        raise ValueError(f"unsupported run schema version: {version!r}")
+    data = validate_manifest_version(run_dir)
 
     models = [_model_from_payload(entry) for entry in data.get("models") or []]
     params = params_from_dict(data.get("params"))
@@ -716,6 +786,7 @@ __all__ = [
     "detection_from_row",
     "detection_row",
     "detection_to_dict",
+    "is_canonical_run",
     "isoformat",
     "load_run",
     "params_from_dict",
@@ -727,4 +798,5 @@ __all__ = [
     "tiling_plan_from_dict",
     "tiling_plan_to_dict",
     "utcnow",
+    "validate_manifest_version",
 ]

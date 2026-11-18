@@ -1,14 +1,13 @@
-"""Generate an HTML report from a detection run folder.
+"""Generate an HTML report from a canonical detection run folder.
 
-The default is the compact, Qt-free report. ``--full-report`` renders the
-paper-quality report through the same ``RunResult`` seam as the GUI: a
-canonical folder is reopened with ``load_run`` and a pre-canonical headless
-folder through ``load_legacy_run``. ``--images`` is only needed by the legacy
-reader when the original photographs no longer sit beside the run.
+``--full-report`` renders the paper-quality report through the same
+``RunResult`` seam as the GUI; a canonical folder is reopened with ``load_run``.
+Pre-canonical folders are not read: they need an older version of Poly-X and
+are reported as such instead of falling back to a partial result.
 
 Usage:
     polyx-report --run ./run --output ./run/report.html
-    polyx-report --run ./old-run --images ./photos --full-report
+    polyx-report --run ./run --full-report
 """
 
 from __future__ import annotations
@@ -18,19 +17,13 @@ import sys
 from pathlib import Path
 
 from polyx.core.i18n import _
-from polyx.core.report_simple import generate
+from polyx.core.report_simple import LegacyRunError, generate
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=_("Generate an HTML report from a run folder"))
     parser.add_argument("--run", required=True)
     parser.add_argument("--output", default=None)
-    parser.add_argument(
-        "--images",
-        default=None,
-        metavar="DIR",
-        help=_("original photographs of a pre-canonical headless run"),
-    )
     parser.add_argument(
         "--full-report",
         action="store_true",
@@ -39,14 +32,13 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _write_full_report(run_dir: Path, output: Path | None, images: Path | None) -> Path:
-    """Render the full report from a canonical or a legacy run folder."""
-    from polyx.core.detection_run import load_legacy_run, load_run
+def _write_full_report(run_dir: Path, output: Path | None) -> Path:
+    """Render the full report from a canonical run folder only."""
+    from polyx.core.detection_run import is_canonical_run, load_run
 
-    if (run_dir / "run.json").is_file():
-        run = load_run(run_dir)
-    else:
-        run = load_legacy_run(run_dir, image_dir=images)
+    if not is_canonical_run(run_dir):
+        raise LegacyRunError(run_dir)
+    run = load_run(run_dir)
 
     from polyx.gui.qt import require_qt
 
@@ -56,26 +48,32 @@ def _write_full_report(run_dir: Path, output: Path | None, images: Path | None) 
     return generate_report(run, output or (run_dir / "report.html"))
 
 
+def _reject_old_run(exc: LegacyRunError) -> int:
+    """Tell the user plainly that this version cannot open a pre-canonical run."""
+    print(_("Cannot open the run: %(error)s") % {"error": exc}, file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     run_dir = Path(args.run)
     output = Path(args.output) if args.output else None
-    images = Path(args.images) if args.images else None
 
     if args.full_report:
         try:
-            path = _write_full_report(run_dir, output, images)
+            path = _write_full_report(run_dir, output)
+        except LegacyRunError as exc:
+            return _reject_old_run(exc)
         except Exception as exc:  # noqa: BLE001
-            print(
-                _("Full report unavailable (%(error)s); writing compact report.") % {"error": exc}
-            )
-            print(_("COMPACT REPORT: %(path)s") % {"path": generate(run_dir, output)})
-        else:
-            print(_("FULL REPORT: %(path)s") % {"path": path})
+            print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
+            return 1
+        print(_("FULL REPORT: %(path)s") % {"path": path})
         return 0
 
     try:
         path = generate(run_dir, output)
+    except LegacyRunError as exc:
+        return _reject_old_run(exc)
     except Exception as exc:  # noqa: BLE001
         print(_("ERROR: %(error)s") % {"error": exc}, file=sys.stderr)
         return 1

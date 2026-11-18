@@ -45,7 +45,9 @@ today. Class-name precedence today is explicit `class_names` →
 `classes.txt` → `STUDY_CLASSES`; the planned dataset module
 (`polyx/core/data/`, still empty) will own the YAML names and pass them in
 as `class_names`, adding the `data.yaml` step once it lands. The codec never
-parses YAML.
+parses YAML. This fallback is a **dataset-label** convention, not a run reader:
+pre-canonical run folders are not opened by it (see *Canonical run folder*
+below).
 
 ## Detection run
 
@@ -80,14 +82,15 @@ _Avoid_: F1 (unqualified), score
 ## Tiling mode and plan
 
 The decision about splitting a large photo before inference. The **mode** is
-`auto` (tile only above a threshold), `always` or `never`; the legacy Spanish
-spellings are read at the boundary and never written. The **plan** is the
+`auto` (tile only above a threshold), `always` or `never`; these are the only
+values accepted at any boundary — legacy Spanish spellings are no longer read.
+The **plan** is the
 geometry of one tiled photo — tile side, overlap, tile count and the photo's
 longer side — recorded in `run.json` instead of prose, so a reader can phrase
 it in their own language. A photo with no plan goes through in a single pass.
 The decision, its geometry and its sentence belong to `core/detect/tiling.py`;
 neither a page nor the engine formats the numbers again.
-_Avoid_: mosaic (in code), `siempre`/`nunca` as current values
+_Avoid_: mosaic (in code), `siempre`/`nunca` (legacy spellings, not values)
 
 ## Calibration refusal
 
@@ -100,6 +103,26 @@ size. It is never a zero scale: zero is a scale, and every size computed with
 it would silently come out zero.
 _Avoid_: "calibration failed" (does not say what happened to the scale),
 0 µm/px as a refusal
+
+## Per-image calibration index
+
+The canonical English CSV `calibration_index.csv`, with the headers
+`image,um_per_px`, that supplies one µm/px scale per image basename. It is the
+safe source for crops where the Petri dish is not visible: a single batch-wide
+manual scale would mis-size photos shot at different distances. The file is
+named explicitly, never searched for; a missing row is a warning
+(`image_not_in_index`) and never a silent fallback. The legacy Spanish files
+and headers are refused by name. Because the basename is the lookup key, an
+index-calibrated batch must give every photo a unique basename: two images with
+the same name in different folders are refused before inference rather than one
+row silently scaling both.
+_Avoid_: calibration index CSV (ambiguous: could mean a legacy file),
+batch-wide fallback for crops
+
+## Warning code
+
+A stable English token recorded in an artifact when a measurement cannot be completed as requested. It names what happened; the sentence a person reads is chosen at display time, and numeric details travel as separate structured values.
+_Avoid_: warning message, error text
 
 ## Model alias and display name
 
@@ -119,8 +142,36 @@ The folder a detection run owns, written by the canonical engine:
 image records) plus `detections.csv` (predictions only) and one folder per
 model alias with the triptych PNGs, `labels/*.txt` and `classes.txt`. Read it
 with `load_run`; do not add a second schema. Pre-canonical folders
-(`summary.json` + `centroids.csv`, or the old GUI per-model labels) are legacy
-inputs, readable without migration.
+(`summary.json` + `centroids.csv`, old GUI per-model labels and legacy
+calibration index CSVs) are legacy inputs: new code does not read them, and the
+CLI and Viewer report that an old run needs an older version of Poly-X. The
+canonical per-image index is a distinct, English-only file; see
+[Per-image calibration index](#per-image-calibration-index).
+
+## Machine-readable artifact
+
+A file whose content carries a token that a program reads or writes across a disk boundary. This is the unit the vocabulary spec covers: neither pixels nor translated prose are artifacts in this sense, and neither is state that never reaches a file. Every machine-readable artifact belongs to one of four classes.
+_Avoid_: output, file, report (as umbrella terms)
+
+## Canonical run artifact
+
+A machine-readable artifact written by a detection run into the folder it owns: its manifest, prediction table, per-model labels and report identifiers.
+_Avoid_: run output
+
+## Cross-cutting log
+
+A structured record of events written by several modules to one shared contract, not owned by a single detection run.
+_Avoid_: debug log, console output
+
+## Tool output
+
+A machine-readable artifact written by a supporting tool — training, evaluation, export or preference storage — outside a detection run's folder.
+_Avoid_: run artifact
+
+## Legacy input
+
+A machine-readable artifact from a pre-canonical format. New code neither reads nor writes it.
+_Avoid_: legacy run (when the file, not the run, is meant)
 
 ## Report section
 

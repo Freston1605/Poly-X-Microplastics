@@ -27,7 +27,7 @@ def _canonical_run(tmp_path: Path) -> Path:
         json.dumps(
             {
                 "status": "completed",
-                "schema_version": 1,
+                "schema_version": 2,
                 "images": [{"path": "plate1.png"}],
                 "models": [{"alias": "m1"}],
                 "metrics": {
@@ -250,9 +250,9 @@ def _viewer_with_particles():
         _bgr_current=None,
     )
     dets = [
-        SimpleNamespace(y1=10.0, x1=10.0, morphotype="fibra"),
-        SimpleNamespace(y1=20.0, x1=20.0, morphotype="fragmento"),
-        SimpleNamespace(y1=30.0, x1=30.0, morphotype="fragmento"),
+        SimpleNamespace(y1=10.0, x1=10.0, morphotype="fibre"),
+        SimpleNamespace(y1=20.0, x1=20.0, morphotype="fragment"),
+        SimpleNamespace(y1=30.0, x1=30.0, morphotype="fragment"),
     ]
     return ViewerWindow, viewer, dets
 

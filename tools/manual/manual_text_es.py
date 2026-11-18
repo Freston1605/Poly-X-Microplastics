@@ -1116,8 +1116,10 @@ ancho y aspecto. Al seleccionar una fila se ve <b>sobre que se midió</b>:</p>
       cajas pintadas encima.</li>
   <li><b>Arrastrar y soltar</b> una imagen o un modelo directamente sobre el
       lienzo.</li>
-  <li><b>Exportar</b> la imagen anotada, <code>detecciones.csv</code> y
-      <code>resumen.json</code>.</li>
+  <li><b>Exportar</b> la imagen anotada, <code>detections.csv</code> y
+      <code>viewer_summary.json</code> en una carpeta
+      <code>viewer_&lt;image&gt;_&lt;timestamp&gt;/</code>. Una carpeta de
+      ejecución (que contenga <code>run.json</code>) se rechaza.</li>
 </ul>
 """,
     },
@@ -1652,9 +1654,12 @@ desinstalación no llega.</p>
   </tbody>
 </table>
 </div>
-<p>Las corridas anteriores a este formato se siguen abriendo sin migrarlas:
-las carpetas del Detector antiguo conservan sus <code>labels/</code> por modelo
-y el informe compacto lee <code>summary.json</code> + <code>centroids.csv</code>.</p>
+<p>Las corridas anteriores a este formato se dejan donde están, pero esta
+versión no las abre: las carpetas antiguas del Detector con <code>labels/</code>
+por modelo, las carpetas headless con <code>summary.json</code> +
+<code>centroids.csv</code> y los CSV antiguos de calibración requieren una
+versión anterior de Poly-X. No se migra, reescribe ni borra nada. El índice
+canónico por imagen es un archivo distinto, en inglés, descrito más abajo.</p>
 
 <h3>Comandos sin ventana (CLI)</h3>
 <p>El detector también corre sin abrir la interfaz y escribe exactamente la
@@ -1663,14 +1668,17 @@ misma carpeta canónica:</p>
 <span class="p">polyx-detect</span> --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
     --images ./fotos --out ./corrida --force
 <span class="p">polyx-detect</span> --model best.pt --images ./fotos --out ./corrida \
-    --calibrate auto --index-calibration ./indice.csv --gt-folder ./etiquetas</code></pre>
+    --calibrate auto --gt-folder ./etiquetas
+<span class="p">polyx-detect</span> --model best.pt --images ./fotos --out ./corrida \
+    --calibrate index --calibration-index ./calibration_index.csv</code></pre>
 <div class="tabla-env">
 <table>
   <thead><tr><th>Opción</th><th>Efecto</th></tr></thead>
   <tbody>
     <tr><td><code>--model</code>, <code>--model-type</code></td><td>se repiten una vez por modelo; el alias sale del nombre del archivo. Un solo tipo se aplica a todos; sin tipo se usa <code>yolo</code>.</td></tr>
     <tr><td><code>--out</code>, <code>--force</code></td><td>la carpeta exacta de la corrida. Si ya tiene contenido se rechaza, salvo con <code>--force</code>.</td></tr>
-    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>calibración por foto; por defecto <code>auto</code>. <code>--um-per-px</code> solo implica <code>manual</code> y <code>--index-calibration</code> da el CSV explícito.</td></tr>
+    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>calibración por foto; por defecto <code>auto</code>. <code>--um-per-px</code> solo implica <code>manual</code>; <code>--calibration-index PATH</code> solo implica <code>index</code>. Los CSV antiguos de calibración no se leen.</td></tr>
+    <tr><td><code>--calibration-index PATH</code></td><td>el índice inglés <code>calibration_index.csv</code> con las cabeceras <code>image,um_per_px</code>, clave por nombre de imagen. Una escala por foto, para recortes sin placa visible. Los nombres antiguos y las cabeceras en español se rechazan.</td></tr>
     <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>umbrales e inferencia.</td></tr>
     <tr><td><code>--gt-folder</code>, <code>--no-measure-shape</code></td><td>ground truth y medición de forma.</td></tr>
     <tr><td><code>--tiling</code>, <code>--tiling-threshold-px</code>, <code>--tiling-tile</code>, <code>--tiling-overlap</code></td><td>troceado de fotos grandes.</td></tr>
@@ -1679,12 +1687,27 @@ misma carpeta canónica:</p>
   </tbody>
 </table>
 </div>
+<p><b>Formato del índice.</b> <code>calibration_index.csv</code> tiene exactamente
+dos columnas, <code>image,um_per_px</code>, con un número positivo en cada fila.
+El archivo se lee solo desde la ruta indicada: nunca se busca, y cada fila se
+empareja con una foto por su nombre de archivo. Dos fotos de la misma corrida
+pueden tener escalas distintas. Si una foto no figura en el índice se registra
+con la advertencia <code>image_not_in_index</code> y sin tallas en micrómetros;
+no se sustituye por un valor común a todo el lote. Como la clave es el nombre de
+archivo, cada foto de una corrida con índice debe tener un nombre único: dos
+imágenes con el mismo nombre en carpetas distintas se rechazan antes de cualquier
+inferencia, porque una sola fila daría la misma escala a ambas. Un nombre antiguo
+como <code>indice.csv</code> o una cabecera en español como <code>recorte</code> se
+rechazan con un mensaje que nombra el archivo y las cabeceras canónicas, y el
+archivo queda intacto.</p>
 <p>Para regenerar un informe ya existente:
-<code>polyx-report --run ./corrida [--output informe.html] [--full-report] [--images ./fotos]</code>.
-Una carpeta canónica se lee con <code>load_run</code>; una carpeta headless
-antigua (<code>summary.json</code> + <code>centroids.csv</code>) con
-<code>load_legacy_run</code>, y <code>--images</code> le indica dónde están las
-fotos originales. Sin <code>--full-report</code> se escribe el informe compacto.</p>
+<code>polyx-report --run ./corrida [--output informe.html] [--full-report]</code>.
+Ambos modos exigen una carpeta canónica (<code>run.json</code> +
+<code>detections.csv</code>). Una carpeta anterior se rechaza con un mensaje que
+indica que las corridas antiguas requieren una versión anterior de Poly-X;
+<code>--full-report</code> nunca recurre al informe compacto ante ese error.
+Sin <code>--full-report</code> se escribe el informe compacto desde la carpeta
+canónica.</p>
 
 <div class="aviso">
   <span class="et">Las diferencias entre sistemas están en un solo archivo</span>

@@ -198,11 +198,14 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
   — the Feret line in yellow, the geodesic path in magenta — plus the full
   pixels-to-micrometres arithmetic. A size you cannot see being measured cannot
   be verified
-- **Load predictions from a closed run** in `runs/detect_.../`, without running
-  the model again. It always opens the original photo and never the annotated
-  PNG, which has the boxes painted onto it
+- **Load predictions from a closed canonical run** in `runs/detect_.../`
+  (the folder has `run.json`), without running the model again. It always
+  opens the original photo and never the annotated PNG, which has the boxes
+  painted onto it. Runs from older versions are left untouched but need an
+  older Poly-X version to open
 - **Drag and drop** an image or a `.pt` model straight onto the canvas
-- Exports: annotated image + `detecciones.csv` + `resumen.json`
+- Exports: annotated image + `detections.csv` + `viewer_summary.json` in a
+  `viewer_<image>_<timestamp>/` folder (never into a run folder)
 
 ---
 
@@ -253,6 +256,19 @@ approximate centre is located with Hough, the edge is sampled in **720
 directions** and a circle is fitted by least squares with outlier rejection.
 Hough's radius is not used, because it can be off by 12 % and that error would go
 straight into every size.
+
+For crops where the dish is not visible, the plate cannot be measured. Supply
+an English per-image index instead: `calibration_index.csv` with the headers
+`image,um_per_px`, keyed by image basename. Run with
+`polyx-detect --calibrate index --calibration-index calibration_index.csv` (the
+flag alone also selects index mode); each photo then uses **its own** scale. A
+photo with no row is reported with `image_not_in_index` and stays uncalibrated
+rather than silently inheriting a batch-wide value. Image basenames must be
+unique within an index-calibrated batch: two photos with the same name in
+different folders are refused before any inference, since a single row would
+otherwise apply to both. Legacy Spanish index files are rejected by name or
+header with an error naming the canonical format; they are never searched for,
+rewritten or deleted.
 
 > **Which edge the 100 mm are, and which way it can be wrong.** The rim has a wall
 > about **2 mm** thick — measured on this study's photographs: the inner edge falls

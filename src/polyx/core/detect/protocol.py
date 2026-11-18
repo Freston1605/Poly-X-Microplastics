@@ -8,9 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from polyx.core.measure.warnings import Warning
 
 # ``policy_tiling`` lives in ``tiling`` with the decision and the sentence;
 # it is re-exported here because this module was its historical home and other
@@ -51,7 +54,8 @@ class Instance:
     # particle) or "box" (the declared fallback). None = never sized.
     size_source: Literal["mask", "box"] | None = None
     review: bool = False
-    warning_shape: str | None = None
+    # Stable machine code plus structured parameters; prose is chosen at display time.
+    warning_shape: Warning | None = None
     number: int | None = None
     assignable: bool = True
     # ── Segmentation mask (optional) ──────────────────────────────────────

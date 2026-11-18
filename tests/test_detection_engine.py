@@ -157,7 +157,7 @@ def test_two_models_write_the_canonical_folder_and_round_trip(tmp_path):
 
     # run.json and detections.csv are the canonical machine surface.
     payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["status"] == "completed"
     assert [model["alias"] for model in payload["models"]] == ["model_a", "model_b"]
     assert [entry["path"] for entry in payload["images"]] == [str(path) for path in images]
@@ -685,7 +685,7 @@ def test_manual_calibration_records_origin_and_sizes(tmp_path):
     assert {row["um_per_px"] for row in rows} == {"1.5"}
     assert {row["calibration_origin"] for row in rows} == {ORIGIN_MANUAL}
     payload = json.loads((result.run_dir / "run.json").read_text(encoding="utf-8"))
-    assert payload["calibrations"][0]["um_por_px"] == pytest.approx(1.5)
+    assert payload["calibrations"][0]["um_per_px"] == pytest.approx(1.5)
     assert payload["calibrations"][0]["origin"] == ORIGIN_MANUAL
     assert payload["calibrations"][0]["valid"] is True
 

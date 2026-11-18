@@ -1,6 +1,6 @@
 # ADR-0002: One detection-run engine
 
-- **Status:** Accepted
+- **Status:** Superseded by [English-only run artifact vocabulary](../specs/run-artifact-vocabulary.md) (spec #182, ticket #190). The single canonical engine decision still holds; the "legacy folders are read" decision below does not: those readers are removed, old folders stay on disk and need an older Poly-X version. ADR-0004 stays in force.
 - **Date:** 2026-11-06
 - **Landed in:** #64
 
@@ -32,7 +32,7 @@ The run folder is canonical and self-describing:
 
 ```text
 <run>/
-  run.json               # schema_version 1: status, params, models,
+  run.json               # schema_version 2: status, params, models,
                          #   calibrations, metrics, images, skipped/error
   detections.csv         # predictions, one row per detection
   <alias>/
@@ -48,17 +48,15 @@ calibrations) and keeps review verdicts GUI-side. `polyx-detect`,
 `polyx-report --full-report` and `generate_report` all consume the same
 `RunResult`; none of them rebuilds a GUI state.
 
-Legacy folders are read, never migrated or rewritten. Old headless folders
-(`summary.json` + `centroids.csv`) go through
-`polyx.core.detection_run.load_legacy_run`, which rebuilds a `RunResult` from
-the counts and predictions the old writer did record. Old GUI run folders keep
-their per-model `labels/*.txt` and stay readable in the Viewer. The compact
-report keeps its `summary.json`/`centroids.csv` fallback.
+**Superseded by spec #182:** legacy folders are no longer read. They are
+never migrated or rewritten: old headless folders (`summary.json` +
+`centroids.csv`), old GUI per-model `labels/*.txt`, the calibration index CSV
+and the compact report's legacy fallback all stay on disk but are refused by
+new code with a pointer to an older Poly-X version. Only canonical folders are
+opened, through `load_run`.
 
-`run_batch` and the old headless writer are deleted. The old GUI
-`run_state` loader is deleted too: it rebuilt a `DetectorState` that nothing
-reads any more, and its compatibility name only delegated to
-`load_legacy_run`. `polyx.core` exposes the canonical engine surface only.
+`run_batch`, the old headless writer and the old GUI `run_state` loader are
+deleted. `polyx.core` exposes the canonical engine surface only.
 
 ## Considered options
 
@@ -85,13 +83,12 @@ reads any more, and its compatibility name only delegated to
 - New runs write only `run.json`, `detections.csv`, per-model views/labels and
   `report.html`; they never write `summary.json`, `metrics.json`,
   `resumen.json` or the flat `images/` folder.
-- Existing folders remain readable without migration: the Viewer for old GUI
-  runs, `load_legacy_run` for old headless runs and the compact report for
-  both.
-- Old headless GT boxes were never persisted, so a legacy `RunResult` carries
-  the per-image TP/FP/FN counts but an empty GT box list. Reports from those
-  folders cannot redraw the GT; they describe the counts the old run
-  recorded.
+- Existing folders remain on disk untouched but are not readable by this
+  version: the Viewer, `polyx-report` and the compact report all require a
+  canonical folder. Old runs need an older Poly-X version.
+- Old headless GT boxes were never persisted. That is one reason those folders
+  are refused rather than partially rebuilt: a report from them would have to
+  invent the confusion matrix.
 - Segmentation masks are measurement inputs, not report artifacts: the
   canonical folder records their effect in the size fields, `size_source` and
   `has_mask`, but not the mask arrays. `load_run` rebuilds the report-facing
@@ -99,5 +96,5 @@ reads any more, and its compatibility name only delegated to
 - ADR-0001 still governs where runs live. This ADR only decides what a run is
   and how it is written.
 - The architecture is pinned by `tests/test_detection_engine.py`,
-  `tests/test_legacy_runs.py`, `tests/test_cli_detect.py` and
-  `tests/test_report_runresult.py`.
+  `tests/test_legacy_runs.py` (now the rejection paths for pre-canonical
+  folders), `tests/test_cli_detect.py` and `tests/test_report_runresult.py`.

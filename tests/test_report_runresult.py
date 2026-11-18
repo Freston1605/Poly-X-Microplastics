@@ -67,7 +67,7 @@ def test_generate_report_accepts_a_run_result(tmp_path):
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path)
-    output = generate_report(run, tmp_path / "report.html", sections=["resumen", "metodos"])
+    output = generate_report(run, tmp_path / "report.html", sections=["summary", "methods"])
 
     html = output.read_text(encoding="utf-8")
     assert "best" in html
@@ -79,7 +79,7 @@ def test_manual_calibration_report_does_not_claim_the_dish_was_measured(tmp_path
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path)
-    html = generate_report(run, tmp_path / "report.html", sections=["calibracion"]).read_text(
+    html = generate_report(run, tmp_path / "report.html", sections=["calibration"]).read_text(
         encoding="utf-8"
     )
 
@@ -93,7 +93,7 @@ def test_completed_and_aborted_runs_are_reportable(tmp_path, status):
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path, status=status)
-    assert generate_report(run, tmp_path / "report.html", sections=["resumen"]).is_file()
+    assert generate_report(run, tmp_path / "report.html", sections=["summary"]).is_file()
 
 
 def test_failed_runs_are_reportable_but_visibly_marked_as_partial(tmp_path):
@@ -102,7 +102,7 @@ def test_failed_runs_are_reportable_but_visibly_marked_as_partial(tmp_path):
 
     run = make_run(tmp_path, status=RunStatus.FAILED)
     run.error = "RuntimeError: inference exploded"
-    output = generate_report(run, tmp_path / "report.html", sections=["resumen"])
+    output = generate_report(run, tmp_path / "report.html", sections=["summary"])
 
     html = output.read_text(encoding="utf-8")
     assert "failed" in html
@@ -147,9 +147,9 @@ def test_assignable_round_trips_through_detections_csv_and_the_report(tmp_path):
             calibration=CalibrationPolicy(mode="none"),
         )
     )
-    live = generate_report(run, tmp_path / "live.html", sections=["metodos"]).read_text("utf-8")
+    live = generate_report(run, tmp_path / "live.html", sections=["methods"]).read_text("utf-8")
     loaded = load_run(run.run_dir)
-    rebuilt = generate_report(loaded, tmp_path / "loaded.html", sections=["metodos"]).read_text(
+    rebuilt = generate_report(loaded, tmp_path / "loaded.html", sections=["methods"]).read_text(
         "utf-8"
     )
 
@@ -222,9 +222,11 @@ def test_report_page_refuses_when_there_is_no_run(qapp, monkeypatch):
     assert page._check_results() is False
 
 
-def test_the_transitional_adapter_is_gone_and_the_legacy_loader_is_qt_free():
-    """New runs never rebuild GUI state; old headless folders use core."""
-    from polyx.core.detection_run import load_legacy_run
+def test_the_transitional_adapter_and_the_legacy_loader_are_gone():
+    """New runs never rebuild GUI state; pre-canonical folders are not read."""
+    import polyx.core as core
+    import polyx.core.detection_run as detection_run
 
-    assert callable(load_legacy_run)
-    assert load_legacy_run.__module__ == "polyx.core.detection_run.legacy_reader"
+    assert not hasattr(core, "build_state_from_run")
+    assert not hasattr(detection_run, "load_legacy_run")
+    assert callable(detection_run.load_run)

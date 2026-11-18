@@ -45,7 +45,7 @@ _TABLE_T95 = {
     120: 1.980,
 }
 
-_NAME_MORPHOTYPE = {"fibra": N_("Fibre"), "fragmento": N_("Particle")}
+_NAME_MORPHOTYPE = {"fibre": N_("Fibre"), "fragment": N_("Particle")}
 
 
 def _chi2_sf(h: float, df: int) -> float:

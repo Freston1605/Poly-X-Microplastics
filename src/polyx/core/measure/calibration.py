@@ -35,9 +35,23 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from polyx.core.i18n import _
+
 # Canonical implementation lives in polyx.core.image_io; re-exported here
 # for backwards compatibility with callers that import from this module.
 from polyx.core.image_io import read_image
+
+from .warnings import (
+    DETOUR_HOUGH,
+    IMAGE_UNREADABLE,
+    NOMINAL_DIAMETER_INVALID,
+    PLATE_MEASURE_FAILED,
+    PLATE_NOT_FOUND,
+    RING_FIT_FAILED,
+    ZERO_ADJUSTED_RADIUS,
+    Warning,
+    warning_to_dict,
+)
 
 # Directions in which the ring edge is searched. 720 = one every half degree:
 # enough for the fit to survive reflections and partial occlusions.
@@ -75,10 +89,18 @@ BIAS_MAXIMUM_WALL_PCT = 4.2
 
 # Where the scale came from, from most to least reliable. It goes into the report: a measurement without
 # its provenance is not verifiable.
-ORIGIN_PLATE = "placa"  # fitted on the ring of this same photo
-ORIGIN_INDEX = "indice"  # inherited from the crop via `indice.csv`
-ORIGIN_MANUAL = "manual"  # typed by hand in `Parametros`
-ORIGIN_NONE = "ninguna"  # not calibrated; sizes cannot be reported
+ORIGIN_PLATE = "plate"  # fitted on the ring of this same photo
+ORIGIN_INDEX = "index"  # inherited from the crop via the calibration index
+ORIGIN_MANUAL = "manual"  # typed by hand in Parameters
+ORIGIN_NONE = "none"  # not calibrated; sizes cannot be reported
+
+# Canonical per-image calibration index. It is an English machine contract
+# (ADR-0004): the file is named and asked for explicitly, never searched for,
+# and the legacy Spanish files and headers are refused rather than parsed.
+CALIBRATION_INDEX_NAME = "calibration_index.csv"
+CALIBRATION_INDEX_HEADER = ("image", "um_per_px")
+LEGACY_INDEX_NAMES = ("indice.csv", "calibracion_placas.csv")
+LEGACY_INDEX_HEADERS = ("recorte", "placa", "um_por_px")
 
 
 @dataclass
@@ -97,25 +119,35 @@ class Calibration:
     # sizes are underestimated by an amount that depends on the shooting
     # distance. It is stored so it can be declared in the report.
     factor_parallax: float = 1.0
-    warning: str = ""
+    # Stable machine code plus structured parameters; never translated prose.
+    warning: Warning | None = None
 
     @property
     def valid(self) -> bool:
         return self.um_por_px > 0
 
     def description(self) -> str:
-        """Short phrase for the interface and the report."""
+        """Short gettext sentence for the interface and the report.
+
+        English is the source language and the message id; the translated
+        wording is chosen here at display time, never stored in an artifact.
+        """
         if not self.valid:
-            return "sin calibrar"
+            return _("not calibrated")
+        scale = f"{self.um_por_px:.4f}"
         if self.origin == ORIGIN_PLATE:
-            return (
-                f"{self.um_por_px:.4f} µm/px — placa de "
-                f"{self.diameter_mm:g} mm, r={self.radius_px:.0f} px "
-                f"({self.n_points} puntos de borde)"
-            )
+            return _(
+                "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px "
+                "(%(points)s edge points)"
+            ) % {
+                "scale": scale,
+                "diameter": f"{self.diameter_mm:g}",
+                "radius": f"{self.radius_px:.0f}",
+                "points": self.n_points,
+            }
         if self.origin == ORIGIN_INDEX:
-            return f"{self.um_por_px:.4f} µm/px — heredada del recorte"
-        return f"{self.um_por_px:.4f} µm/px — introducida a mano"
+            return _("%(scale)s µm/px — inherited from the crop") % {"scale": scale}
+        return _("%(scale)s µm/px — entered by hand") % {"scale": scale}
 
 
 # ── Interactive line and circle calibration ─────────────────────────────
@@ -353,7 +385,7 @@ def adjust_circle(pts: np.ndarray) -> tuple:
 
 def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> tuple | None:
     """Fits and discards distant points; the ring has reflections and occlusions."""
-    for _ in range(iterations):
+    for _iteration in range(iterations):
         if len(pts) < 30:
             return None
         cx, cy, r = adjust_circle(pts)
@@ -425,14 +457,14 @@ def calibrate_from_plate(
     run must be able to continue with the rest.
     """
     if bgr is None or bgr.size == 0:
-        return Calibration(warning="imagen vacia o ilegible")
+        return Calibration(warning=Warning(IMAGE_UNREADABLE))
     if diameter_mm <= 0:
-        return Calibration(warning="diametro nominal invalido")
+        return Calibration(warning=Warning(NOMINAL_DIAMETER_INVALID))
 
     gris = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     seed = hough_approximate(bgr)
     if seed is None:
-        return Calibration(diameter_mm=diameter_mm, warning="no se encontro la placa en la foto")
+        return Calibration(diameter_mm=diameter_mm, warning=Warning(PLATE_NOT_FOUND))
     hx, hy, hr = seed
 
     pts = edge_points(gris, hx, hy, hr)
@@ -441,17 +473,17 @@ def calibrate_from_plate(
         # Hough as a last resort: it serves to avoid losing the photo, but its radius
         # is precisely what is unreliable, so a warning is recorded.
         cx, cy, r, n = hx, hy, hr, 0
-        warning = "el ajuste fino del anillo fallo; escala tomada de Hough (poco fiable)"
+        warning: Warning | None = Warning(RING_FIT_FAILED)
     else:
         cx, cy, r, n = fine
-        warning = ""
+        warning = None
 
     detour = 100.0 * (r - hr) / hr if hr > 0 else 0.0
-    if not warning and abs(detour) > 8:
-        warning = f"Hough erraba {detour:+.1f}% respecto del ajuste fino"
+    if warning is None and abs(detour) > 8:
+        warning = Warning(DETOUR_HOUGH, detour_pct=detour)
 
     if r <= 0:
-        return Calibration(diameter_mm=diameter_mm, warning="radio ajustado nulo")
+        return Calibration(diameter_mm=diameter_mm, warning=Warning(ZERO_ADJUSTED_RADIUS))
 
     um_aro = (diameter_mm * 1000.0) / (2 * r)
     um_base, factor = correct_parallax(um_aro, height_plate_mm, distance_camera_mm)
@@ -472,65 +504,96 @@ def calibrate_from_plate(
     )
 
 
-def carry_index(path_csv: str | Path) -> dict[str, float]:
-    """Reads a CSV mapping image name to its already-calibrated um/px.
+class CalibrationIndexError(ValueError):
+    """The file is not the canonical English per-image calibration index."""
 
-    Meant for the crops: the full plate does not appear in a crop, so its
-    scale cannot be re-measured on it and must be inherited from the photo the
-    crop came from. ``cortar_placas.py`` leaves that mapping in
-    ``indice.csv``, and ``detectar_placa.py`` leaves the one for full plates
-    in ``calibracion_placas.csv``.
 
-    Both headers are accepted because they are the two files the pipeline
-    produces; it returns ``{}`` if the file does not exist or lacks the
-    column.
+def read_calibration_index(path: str | Path) -> dict[str, float]:
+    """Read ``image,um_per_px`` from the one file the caller points at.
+
+    The index is the per-image scale source for crops whose dish is not
+    visible: a single batch-wide fallback cannot scale photos that were shot
+    at different distances. The reader is deliberately strict -- the legacy
+    Spanish filenames and headers are refused with an actionable error that
+    names the canonical format, and duplicate or invalid rows are never
+    silently skipped. It only reads the given path: it never searches the
+    filesystem and never rewrites or deletes the user's file.
+
+    Values are keyed by image basename, which is what the run looks up. A
+    relative path in the ``image`` column is reduced to its basename too.
     """
-    path_2 = Path(path_csv)
-    if not path_2.is_file():
-        return {}
-    map_value: dict[str, float] = {}
-    try:
-        with path_2.open(newline="", encoding="utf-8") as fh:
-            for row in csv.DictReader(fh):
-                name_2 = row.get("recorte") or row.get("placa") or ""
-                try:
-                    um = float(row.get("um_por_px", "") or 0)
-                except ValueError:
-                    continue
-                if name_2 and um > 0:
-                    map_value[name_2] = um
-    except (OSError, csv.Error):
-        return {}
-    return map_value
+    path = Path(path)
+    canonical = _("use 'calibration_index.csv' with the headers image,um_per_px")
+    if path.name in LEGACY_INDEX_NAMES:
+        raise CalibrationIndexError(
+            _("'%(name)s' is a legacy calibration index and is not read; %(canonical)s")
+            % {"name": path.name, "canonical": canonical}
+        )
+    if not path.is_file():
+        raise CalibrationIndexError(_("calibration index not found: %(path)s") % {"path": path})
 
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = csv.reader(handle)
+        try:
+            raw_header = next(rows)
+        except StopIteration:
+            raise CalibrationIndexError(
+                _("'%(name)s' is empty; %(canonical)s")
+                % {"name": path.name, "canonical": canonical}
+            ) from None
+        header = [field.lstrip("\ufeff").strip() for field in raw_header]
+        if tuple(header) != CALIBRATION_INDEX_HEADER:
+            legacy = next((field for field in header if field in LEGACY_INDEX_HEADERS), None)
+            if legacy is not None:
+                raise CalibrationIndexError(
+                    _("legacy header '%(header)s' in '%(name)s' is not read; %(canonical)s")
+                    % {"header": legacy, "name": path.name, "canonical": canonical}
+                )
+            raise CalibrationIndexError(
+                _(
+                    "'%(name)s' must carry the headers image,um_per_px; got %(header)s; %(canonical)s"
+                )
+                % {"name": path.name, "header": ",".join(header), "canonical": canonical}
+            )
 
-NAMES_INDEX = ("indice.csv", "calibracion_placas.csv")
-
-
-def search_index(image_path: str | Path, levels: int = 3) -> dict[str, float]:
-    """Finds a calibration CSV next to the images, walking some levels up.
-
-    It is searched for instead of required because the paper pipeline writes
-    the CSV into the crops folder or the one above it, and having to point at
-    it by hand is exactly the step that gets forgotten; forgetting it raises
-    no error, it produces a report with the wrong scale.
-    """
-    folder = Path(image_path)
-    folder = folder.parent if folder.is_file() else folder
-    for _ in range(max(1, levels)):
-        for name_2 in NAMES_INDEX:
-            map_value = carry_index(folder / name_2)
-            if map_value:
-                return map_value
-        if folder.parent == folder:
-            break
-        folder = folder.parent
-    return {}
+        invalid_value = _("invalid um/px for '%(image)s' in '%(name)s': expected a positive number")
+        mapping: dict[str, float] = {}
+        for line_number, row in enumerate(rows, start=2):
+            if not row or all(not cell.strip() for cell in row):
+                continue
+            if len(row) != 2:
+                raise CalibrationIndexError(
+                    _("row %(line)d in '%(name)s' must have two columns: image,um_per_px")
+                    % {"line": line_number, "name": path.name}
+                )
+            image = row[0].strip()
+            if not image:
+                raise CalibrationIndexError(
+                    _("row %(line)d in '%(name)s' has a blank image name; %(canonical)s")
+                    % {"line": line_number, "name": path.name, "canonical": canonical}
+                )
+            try:
+                value = float(row[1].strip())
+            except ValueError:
+                raise CalibrationIndexError(
+                    invalid_value % {"image": image, "name": path.name}
+                ) from None
+            if not math.isfinite(value) or value <= 0:
+                raise CalibrationIndexError(invalid_value % {"image": image, "name": path.name})
+            basename = Path(image.replace("\\", "/")).name
+            if basename in mapping:
+                raise CalibrationIndexError(
+                    _(
+                        "duplicate image '%(image)s' in '%(name)s'; each image needs one um_per_px value"
+                    )
+                    % {"image": image, "name": path.name}
+                )
+            mapping[basename] = value
+    return mapping
 
 
 def resolver(
     image_path: str | Path,
-    index: dict[str, float] | None = None,
     um_por_px_manual: float = 0.0,
     diameter_mm: float = DIAMETER_PLATE_MM,
     measure_plate: bool = False,
@@ -540,29 +603,23 @@ def resolver(
 ) -> Calibration:
     """Scale of an image, in order of reliability.
 
-    1. ``indice`` -- already calibrated against the plate, per photo. It is
-       what the crops have and costs nothing.
-    2. measure the plate on the photo itself, if requested and visible.
-    3. the value typed in Parametros, which applies a single value to the
+    1. measure the plate on the photo itself, if requested and visible.
+    2. the value typed in Parameters, which applies a single value to the
        whole batch.
 
     Order matters: the manual value comes last because it is unique for the
     whole batch, and in this material the true scale varies up to 1.5x between
-    photos.
+    photos. Pre-canonical index CSVs are no longer read.
 
     ``bgr`` avoids re-reading from disk when the caller already has the image
     decoded, which is the runner's case: 12 MP per photo.
     """
-    name_2 = Path(image_path).name
-    if index and name_2 in index:
-        return Calibration(um_por_px=index[name_2], origin=ORIGIN_INDEX, diameter_mm=diameter_mm)
-
     if measure_plate:
         if bgr is None:
             bgr = read_image(image_path)
         if bgr is None:
             return Calibration(
-                origin=ORIGIN_NONE, diameter_mm=diameter_mm, warning="no se pudo leer la imagen"
+                origin=ORIGIN_NONE, diameter_mm=diameter_mm, warning=Warning(IMAGE_UNREADABLE)
             )
         cal = calibrate_from_plate(bgr, diameter_mm, height_plate_mm, distance_camera_mm)
         if cal.valid:
@@ -572,7 +629,10 @@ def resolver(
                 um_por_px=um_por_px_manual,
                 origin=ORIGIN_MANUAL,
                 diameter_mm=diameter_mm,
-                warning=f"no se pudo medir la placa ({cal.warning})",
+                warning=Warning(
+                    PLATE_MEASURE_FAILED,
+                    cause=cal.warning.code if cal.warning is not None else None,
+                ),
             )
         return cal
 
@@ -631,9 +691,13 @@ def summary_batch(calibrations) -> dict:
     Dispersion is the reported figure: if the photos do not share a scale, a
     size histogram pooled over all of them mixes units.
     """
+    # Warnings are stable codes plus structured parameters, never prose. The
+    # list is groupable and countable by ``code``. Collect it before the early
+    # return so a batch where every scale failed still reports why.
+    warning_dicts = [warning_to_dict(c.warning) for c in calibrations if c.warning]
     ums = [c.um_por_px for c in calibrations if c.valid]
     if not ums:
-        return {"n": 0, "origenes": {}}
+        return {"n": 0, "origins": {}, "warnings": warning_dicts}
     a = np.array(ums, dtype=float)
     origins: dict[str, int] = {}
     for c in calibrations:
@@ -643,12 +707,12 @@ def summary_batch(calibrations) -> dict:
         "n": len(ums),
         "min": float(a.min()),
         "max": float(a.max()),
-        "media": float(a.mean()),
+        "mean": float(a.mean()),
         # ddof=1 (sample standard deviation): with n photos the estimate is of the
         # spread of the population of photos, not merely a description of these n.
         "std": float(a.std(ddof=1)) if len(a) > 1 else 0.0,
-        "mediana": float(np.median(a)),
-        "variacion": float(a.max() / a.min()) if a.min() > 0 else 0.0,
-        "origenes": origins,
-        "avisos": [c.warning for c in calibrations if c.warning],
+        "median": float(np.median(a)),
+        "variation": float(a.max() / a.min()) if a.min() > 0 else 0.0,
+        "origins": origins,
+        "warnings": warning_dicts,
     }

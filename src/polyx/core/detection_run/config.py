@@ -48,11 +48,12 @@ class ModelSpec:
 class CalibrationPolicy:
     """How each photo gets its micrometres-per-pixel scale.
 
-    ``auto`` looks the image up in an explicit index CSV when one is given,
-    then in the index files searched from the image root, then measures the
-    plate on the photo itself, and finally falls back to ``um_per_px``.
-    ``manual`` uses only ``um_per_px``, ``index`` only the CSV and ``none``
-    leaves the image uncalibrated, so no micrometre size is invented.
+    ``auto`` measures the plate on the photo itself and finally falls back to
+    ``um_per_px``. ``manual`` uses only ``um_per_px`` and ``none`` leaves the
+    image uncalibrated, so no micrometre size is invented. ``index`` reads the
+    canonical English ``calibration_index.csv`` at ``index_path`` and looks up
+    each image by basename, the safe source for crops without a visible dish.
+    It never searches for a file and never reads the legacy Spanish index CSVs.
 
     ``measure_plate`` only gates the plate step of ``auto``: the explicit
     modes never measure it.

@@ -1,10 +1,9 @@
-"""Legacy run readers: old headless folders and old GUI run folders.
+"""Pre-canonical formats are rejected: old runs need an older Poly-X version.
 
-Pre-canonical headless runs wrote ``summary.json`` + ``centroids.csv`` and a
-flat ``images/`` folder; the canonical engine writes ``run.json`` +
-``detections.csv`` with one folder per model. Old GUI runs still have their
-per-model ``labels/*.txt`` and keep opening in the Viewer. Both readers are
-pinned against the frozen folders in ``tests/fixtures/legacy_runs``.
+The hard cut removes every reader of a pre-canonical artifact. Old files stay
+on disk untouched, but the compact report, the report CLI and the run reader
+must refuse them with a clear pointer to an older version instead of emitting
+a partial or misleading result. Canonical folders keep working unchanged.
 """
 
 from __future__ import annotations
@@ -19,215 +18,328 @@ HEADLESS_PHOTOS = FIXTURES / "headless" / "photos"
 GUI_RUN = FIXTURES / "gui" / "detect_20260101_120000"
 GUI_PHOTO = FIXTURES / "gui" / "photos" / "plate1.png"
 
-
-# ── Old headless folders ───────────────────────────────────────────────
-
-
-def test_legacy_headless_folder_becomes_a_run_result():
-    """The old folder is read without Qt and without inventing values."""
-    from polyx.core.detection_run import load_legacy_run
-
-    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
-
-    assert run.run_dir == HEADLESS_RUN
-    assert run.status == "completed"
-    assert [path.name for path in run.images] == ["plate1.png", "plate2.png"]
-    assert len(run.models) == 1
-    assert run.models[0].alias == "model"
-    assert run.models[0].model_type == "YoloModel"
-    assert run.models[0].names == {0: "PET", 1: "PP"}
-
-    assert run.params.conf == pytest.approx(0.3)
-    assert run.params.iou_nms == pytest.approx(0.45)
-    assert run.params.imgsz == 640
-    assert run.params.device == "cpu"
-    assert not hasattr(run.params, "um_per_px")
-    assert run.params.measure_shape is False
-    # The old batch-wide manual scale becomes the effective per-image record.
-    assert {calibration.origin for calibration in run.calibrations.values()} == {"manual"}
-    assert all(
-        calibration.um_por_px == pytest.approx(2.5) for calibration in run.calibrations.values()
-    )
-
-    by_name = {result.image_path.name: result for result in run.results[0]}
-    assert set(by_name) == {"plate1.png", "plate2.png"}
-
-    first = by_name["plate1.png"]
-    assert first.image_path == HEADLESS_PHOTOS / "plate1.png"
-    assert first.annotated_path == HEADLESS_RUN / "images" / "plate1.png"
-    assert [det.class_name for det in first.predictions] == ["PET", "PP"]
-    assert first.predictions[0].conf == pytest.approx(0.9)
-    assert first.predictions[0].diam_um == pytest.approx(40.0)
-    assert (first.tp, first.fp, first.fn, first.miscls) == (1, 0, 0, 0)
-    assert first.has_gt is True
-
-    second = by_name["plate2.png"]
-    assert [det.class_name for det in second.predictions] == ["PET"]
-    assert (second.tp, second.fp, second.fn, second.miscls) == (0, 1, 1, 0)
-    assert second.has_gt is True
+OLD_RUN_MESSAGE = "older version of Poly-X"
 
 
-def test_legacy_headless_folder_keeps_its_recorded_counts_as_its_match():
-    """Old headless folders have counts but no GT boxes: they say so.
-
-    The ``match`` is the counters the run recorded, with no pair indices,
-    because nothing in the folder can prove which box was which. Readers get
-    a decision to read instead of a silent ``None`` next to ``has_gt=True``.
-    """
-    from polyx.core.detection_run import load_legacy_run
-    from polyx.core.quality.metrics import MatchResult
-
-    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
-    by_name = {result.image_path.name: result for result in run.results[0]}
-
-    first = by_name["plate1.png"]
-    assert isinstance(first.match, MatchResult)
-    assert (first.match.tp, first.match.fp, first.match.fn, first.match.miscls) == (1, 0, 0, 0)
-    assert first.match.tp_pairs == []
-    assert first.match.fp_idx == []
-
-    second = by_name["plate2.png"]
-    assert isinstance(second.match, MatchResult)
-    assert (second.match.tp, second.match.fp, second.match.fn) == (0, 1, 1)
-    assert second.match.fn_idx == [] and second.match.fp_idx == []
+# ── The pre-canonical run reader is gone ────────────────────────────────
 
 
-def test_legacy_headless_folder_without_originals_still_loads():
-    """A folder copied away from its photos stays readable: names are enough."""
-    from polyx.core.detection_run import load_legacy_run
+def test_the_precanonical_run_reader_is_removed():
+    """No reader, no export and no per-result legacy flag survives."""
+    import polyx.core.detection_run as detection_run
+    from polyx.core.detection_run import RunResult
 
-    run = load_legacy_run(HEADLESS_RUN)
+    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
 
-    assert [path.name for path in run.images] == ["plate1.png", "plate2.png"]
-    assert run.results[0][0].annotated_path == HEADLESS_RUN / "images" / "plate1.png"
-
-
-def test_legacy_headless_folder_renders_the_full_report(tmp_path, selected_language):
-    """The rebuilt RunResult feeds the same report seam as a canonical run."""
-    selected_language("es")
-    from polyx.core.detection_run import load_legacy_run
-    from polyx.gui.report_html import generate_report
-
-    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
-    output = generate_report(run, tmp_path / "report.html")
-
-    html = output.read_text(encoding="utf-8")
-    assert "Informe de detección" in html
-    assert "model" in html
-    assert "PET" in html
-    # The old folder stored counts, not GT boxes: the report must say so
-    # instead of rebuilding a confusion matrix that turns every legacy
-    # prediction into a false positive.
-    assert "no se puede reconstruir la matriz de confusión" in html
-    assert "Matriz de confusión" not in html
+    assert not hasattr(detection_run, "load_legacy_run")
+    assert "load_legacy_run" not in detection_run.__all__
+    assert not (source / "core" / "detection_run" / "legacy_reader.py").exists()
+    texts = {path: path.read_text(encoding="utf-8") for path in source.rglob("*.py")}
+    assert [str(p.relative_to(source)) for p, t in texts.items() if "load_legacy_run" in t] == []
+    assert "legacy" not in {field.name for field in RunResult.__dataclass_fields__.values()}
 
 
-def test_compact_report_keeps_reading_old_headless_folders(tmp_path, selected_language):
-    """The Qt-free compact report still has its pre-canonical fallback."""
-    selected_language("es")
+# ── Compact report: canonical only ─────────────────────────────────────
+
+
+def test_compact_report_refuses_a_precanonical_folder(tmp_path, selected_language):
+    """A summary.json + centroids.csv folder is not silently summarised."""
+    selected_language("en")
+    from polyx.core.report_simple import LegacyRunError, generate
+
+    output = tmp_path / "report.html"
+    with pytest.raises(LegacyRunError, match=OLD_RUN_MESSAGE):
+        generate(HEADLESS_RUN, output)
+
+    assert not output.exists()
+
+
+def test_compact_report_refuses_a_v1_manifest(tmp_path, selected_language):
+    """A version-1 manifest names the old format and writes no report."""
+    selected_language("en")
+    import json
+
     from polyx.core.report_simple import generate
 
-    output = generate(HEADLESS_RUN, tmp_path / "report.html")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "status": "completed", "images": ["plate.png"]}),
+        encoding="utf-8",
+    )
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="version 1 is the old run format"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_compact_report_refuses_a_malformed_manifest(tmp_path, selected_language):
+    """Unparseable JSON fails clearly instead of rendering an empty report."""
+    selected_language("en")
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text("{not json", encoding="utf-8")
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="invalid JSON"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_report_cli_refuses_v1_and_malformed_manifests(tmp_path, capsys, selected_language):
+    """`polyx-report` names the bad manifest and writes no report for either."""
+    selected_language("en")
+    from polyx.cli.report import main
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    output = tmp_path / "report.html"
+
+    for content, expected in (
+        ('{"schema_version": 1}', "version 1 is the old run format"),
+        ("{not json", "invalid JSON"),
+    ):
+        (run_dir / "run.json").write_text(content, encoding="utf-8")
+        code = main(["--run", str(run_dir), "--output", str(output)])
+
+        captured = capsys.readouterr()
+        assert code != 0
+        assert expected in captured.err
+        assert "docs/specs/run-artifact-vocabulary.md" in captured.err
+        assert not output.exists()
+
+
+def test_compact_report_still_reads_a_canonical_folder(tmp_path, selected_language):
+    """The Qt-free report keeps its canonical seam after the fallback is cut."""
+    selected_language("en")
+    import json
+
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "status": "completed",
+                "images": ["plate.png"],
+                "models": [{"alias": "best", "alias_generated": False}],
+                "metrics": {"0": {"tp": 1, "fp": 0, "fn": 0, "miscls": 0, "detections": 1}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "detections.csv").write_text("class,image\nPET,plate.png\n", encoding="utf-8")
+
+    output = generate(run_dir, tmp_path / "report.html")
 
     html = output.read_text(encoding="utf-8")
-    assert "Informe de ejecución de Poly-X" in html
-    assert "Imágenes: 2" in html
-    assert "Detecciones: 3" in html
-    assert "PET" in html
+    assert "Poly-X run report" in html
+    assert "Images:" in html
+    assert "Detections:" in html
 
 
-def test_report_cli_renders_a_full_report_from_a_legacy_folder(tmp_path, capsys, selected_language):
-    """`polyx-report --full-report` is a real consumer of the legacy loader."""
-    selected_language("es")
+# ── Report CLI: both modes reject old runs ─────────────────────────────
+
+
+def test_report_cli_refuses_a_precanonical_folder(tmp_path, capsys, selected_language):
+    """`polyx-report` names an older version instead of writing a compact report."""
+    selected_language("en")
     from polyx.cli.report import main
 
     output = tmp_path / "report.html"
-    code = main(
-        [
-            "--run",
-            str(HEADLESS_RUN),
-            "--images",
-            str(HEADLESS_PHOTOS),
-            "--full-report",
-            "--output",
-            str(output),
-        ]
-    )
+    code = main(["--run", str(HEADLESS_RUN), "--output", str(output)])
 
-    assert code == 0
-    assert "INFORME COMPLETO:" in capsys.readouterr().out
-    assert "Informe de detección" in output.read_text(encoding="utf-8")
+    captured = capsys.readouterr()
+    assert code != 0
+    assert OLD_RUN_MESSAGE in captured.err
+    assert not output.exists()
 
 
-def test_report_cli_renders_the_compact_report_from_a_legacy_folder(
-    tmp_path, capsys, selected_language
-):
-    """`polyx-report` without --full-report also reads old headless folders."""
-    selected_language("es")
+def test_report_cli_full_report_refuses_a_precanonical_folder(tmp_path, capsys, selected_language):
+    """`--full-report` must not fall back to a compact report on rejection."""
+    selected_language("en")
     from polyx.cli.report import main
 
-    output = tmp_path / "compact.html"
-    code = main(
-        [
-            "--run",
-            str(HEADLESS_RUN),
-            "--images",
-            str(HEADLESS_PHOTOS),
-            "--output",
-            str(output),
-        ]
-    )
+    output = tmp_path / "report.html"
+    code = main(["--run", str(HEADLESS_RUN), "--full-report", "--output", str(output)])
 
-    assert code == 0
-    assert "ESCRITO:" in capsys.readouterr().out
-    html = output.read_text(encoding="utf-8")
-    assert "Informe de ejecución de Poly-X" in html
-    assert "Imágenes: 2" in html
-    assert "Detecciones: 3" in html
+    captured = capsys.readouterr()
+    assert code != 0
+    assert OLD_RUN_MESSAGE in captured.err
+    assert "COMPACT REPORT" not in captured.out
+    assert not output.exists()
 
 
-# ── Old GUI run folders ────────────────────────────────────────────────
+def test_report_cli_no_longer_accepts_the_images_flag(capsys):
+    """The flag existed only to feed the deleted legacy reader."""
+    from polyx.cli.report import main
+
+    with pytest.raises(SystemExit) as exc:
+        main(["--run", str(HEADLESS_RUN), "--images", str(HEADLESS_PHOTOS)])
+
+    assert exc.value.code == 2
+    assert "--images" in capsys.readouterr().err
 
 
-def test_old_gui_run_labels_are_found_per_model():
-    """Each model folder contributes its own prediction label for the photo."""
-    from polyx.core.annotate import find_run_labels
-
-    found = find_run_labels(GUI_RUN, "plate1")
-
-    assert [path.parent.parent.name for path in found] == ["alpha", "beta"]
-    assert [path.name for path in found] == ["0000_plate1.txt", "0000_plate1.txt"]
+# ── Legacy calibration readers stay gone; the canonical one is distinct ──
 
 
-def test_old_gui_run_labels_ignore_other_photos_and_files():
-    from polyx.core.annotate import find_run_labels
+def test_legacy_calibration_readers_are_gone_and_the_canonical_reader_is_distinct():
+    """The legacy names never return; the English index is a different seam."""
+    import inspect
 
-    assert find_run_labels(GUI_RUN, "plate2") == []
-    assert find_run_labels(GUI_RUN, "0000_plate1") == []
+    from polyx.core.detection_run import CALIBRATION_MODES, CalibrationPolicy
+    from polyx.core.measure import __all__ as measure_exports
+    from polyx.core.measure import calibration as cal
+
+    for name in ("carry_index", "NAMES_INDEX", "search_index"):
+        assert not hasattr(cal, name)
+        assert name not in measure_exports
+
+    assert "index" not in inspect.signature(cal.resolver).parameters
+    assert callable(cal.read_calibration_index)
+    assert "read_calibration_index" in measure_exports
+    assert hasattr(CalibrationPolicy(), "index_path")
+    assert "index" in CALIBRATION_MODES
 
 
-def test_viewer_loads_predictions_from_an_old_gui_run_folder(qapp, monkeypatch):
-    """The Viewer offers both models and opens the chosen model's labels."""
+def test_cli_detect_refuses_the_index_calibration_flag(tmp_path, capsys):
+    """`--index-calibration` belonged only to the deleted CSV reader."""
+    from polyx.cli.detect import main
+
+    index = tmp_path / "indice.csv"
+    index.write_text("recorte,um_per_px\nplate1.png,31.0\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        main(
+            [
+                "--model",
+                "model.pt",
+                "--images",
+                str(HEADLESS_PHOTOS),
+                "--out",
+                str(tmp_path / "run"),
+                "--index-calibration",
+                str(index),
+            ]
+        )
+
+    assert exc.value.code == 2
+    assert "--index-calibration" in capsys.readouterr().err
+
+
+# ── Old GUI run labels are not read ────────────────────────────────────
+
+
+def test_the_old_gui_run_label_reader_is_removed():
+    """No arbitrary per-model label search survives in the annotation codec."""
+    import polyx.core.annotate as annotate
+
+    assert not hasattr(annotate, "find_run_labels")
+    assert "find_run_labels" not in annotate.__all__
+
+
+def test_viewer_run_labels_use_the_shared_json_reader(tmp_path):
+    """A malformed manifest reads as no labels instead of crashing the import."""
+    from polyx.gui.viewer.window import _canonical_run_labels
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text("{not json", encoding="utf-8")
+    assert _canonical_run_labels(run_dir, "plate1") == []
+
+
+def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_language):
+    """The Viewer names an older version instead of loading old GUI predictions."""
+    selected_language("en")
     pytest.importorskip("PySide6")
     from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
     from polyx.gui.viewer.window import ViewerWindow
 
+    warnings: list[str] = []
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(GUI_RUN))
-    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: ("alpha", True))
-    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(str(a[2])) or None)
     monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: pytest.fail("model chooser"))
 
     window = ViewerWindow()
-    window.state.images = [GUI_PHOTO]
-    window.state.current_idx = 0
-    window._run_load()
+    try:
+        window.state.images = [GUI_PHOTO]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
 
-    assert [det.class_name for det in window.state.detections] == ["PET"]
-    assert len(window.state.detections) == 1
+    assert any(OLD_RUN_MESSAGE in text for text in warnings)
+    assert window.state.detections == []
 
 
-# ── Canonical folders ──────────────────────────────────────────────────
+def test_viewer_refuses_a_v1_manifest_with_prediction_labels(
+    qapp, monkeypatch, selected_language, tmp_path
+):
+    """A v1 run.json with compatible labels is refused, not loaded."""
+    selected_language("en")
+    pytest.importorskip("PySide6")
+    import json
+
+    from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    run_dir = tmp_path / "detect_v1"
+    (run_dir / "alpha" / "labels").mkdir(parents=True)
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "models": [{"alias": "alpha"}]}),
+        encoding="utf-8",
+    )
+    (run_dir / "alpha" / "classes.txt").write_text("PET\n", encoding="utf-8")
+    (run_dir / "alpha" / "labels" / "0000_plate1.txt").write_text(
+        "0 0.5 0.5 0.2 0.2 0.9\n", encoding="utf-8"
+    )
+
+    warnings: list[str] = []
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(run_dir))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(str(a[2])) or None)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: pytest.fail("model chooser"))
+
+    window = ViewerWindow()
+    try:
+        window.state.images = [GUI_PHOTO]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
+
+    assert warnings
+    assert window.state.detections == []
+
+
+# ── Canonical folders still work ───────────────────────────────────────
+
+
+def test_is_canonical_run_requires_a_regular_run_json_file(tmp_path):
+    """A directory named run.json is not the manifest the four readers look for."""
+    from polyx.core.detection_run import is_canonical_run
+
+    assert not is_canonical_run(tmp_path / "missing")
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    (folder / "run.json").mkdir()
+    assert not is_canonical_run(folder)
+
+    (folder / "run.json").rmdir()
+    (folder / "run.json").write_text("{}", encoding="utf-8")
+    assert is_canonical_run(folder)
 
 
 def test_core_exposes_the_canonical_engine_and_not_the_old_batch():
@@ -240,43 +352,6 @@ def test_core_exposes_the_canonical_engine_and_not_the_old_batch():
     assert core.RunConfig is detection_run.RunConfig
     assert core.RunResult is detection_run.RunResult
     assert core.load_run is detection_run.load_run
-
-
-def test_the_old_headless_writer_is_deleted_and_the_legacy_reader_is_single():
-    """No dead second engine and no second name for the legacy reader."""
-    source = Path(__file__).resolve().parents[1] / "src" / "polyx"
-    assert not (source / "core" / "detection_run" / "legacy.py").exists()
-    assert not (source / "gui" / "detector" / "run_state.py").exists()
-    texts = {path: path.read_text(encoding="utf-8") for path in source.rglob("*.py")}
-    offenders = [
-        str(path.relative_to(source)) for path, text in texts.items() if "run_batch" in text
-    ]
-    assert offenders == []
-    # The legacy reader has one definition and no compatibility re-export.
-    definers = [
-        str(path.relative_to(source))
-        for path, text in texts.items()
-        if "def load_legacy_run" in text
-    ]
-    assert definers == ["core/detection_run/legacy_reader.py"]
-    second_names = [
-        str(path.relative_to(source))
-        for path, text in texts.items()
-        if "build_state_from_run" in text
-    ]
-    assert second_names == []
-
-
-def test_load_legacy_run_resolves_predictions_against_the_image_dir():
-    """The core reader is the only seam; it returns the canonical RunResult."""
-    from polyx.core.detection_run import RunResult, load_legacy_run
-
-    run = load_legacy_run(HEADLESS_RUN, image_dir=HEADLESS_PHOTOS)
-
-    assert isinstance(run, RunResult)
-    assert run.run_dir == HEADLESS_RUN
-    assert [path.name for path in run.images] == ["plate1.png", "plate2.png"]
-    assert run.results[0][0].image_path == HEADLESS_PHOTOS / "plate1.png"
 
 
 def test_canonical_folder_loads_and_renders_the_full_report(tmp_path):

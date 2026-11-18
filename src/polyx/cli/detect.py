@@ -5,10 +5,12 @@ folder to the exact ``--out`` path. ``--model`` and ``--model-type`` are
 repeatable: one type applies to every model, one per model must match, and no
 type means YOLO. A non-empty ``--out`` is refused unless ``--force`` is given.
 
-Calibration defaults to ``auto``: an explicit ``--index-calibration`` CSV,
-then the index files searched from the image root, then the plate measured on
-each photo, then ``--um-per-px``. ``--um-per-px`` alone selects ``manual``;
-``--calibrate none`` refuses every scale.
+Calibration defaults to ``auto``: the plate measured on each photo, then
+``--um-per-px``. ``--um-per-px`` alone selects ``manual``; ``--calibrate none``
+refuses every scale. ``--calibration-index`` (or ``--calibrate index`` with it)
+selects the canonical English ``image,um_per_px`` per-image index, the safe
+source for crops whose dish is not visible. The legacy Spanish index CSVs are
+not read; an old run needs an older version of Poly-X.
 
 Usage:
     polyx-detect --model best.pt --images ./photos --out ./run
@@ -17,7 +19,7 @@ Usage:
     polyx-detect --model best.pt --alias baseline --images ./photos --out ./run
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
-        --index-calibration ./indice.csv
+        --calibration-index ./calibration_index.csv
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate none
     polyx-detect --model best.pt --images ./photos --out ./run --tiling auto \\
         --tiling-tile 1024 --size-min-um 10 --conf-assignment 0.5
@@ -117,10 +119,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help=_("manual µm/px; used alone it selects --calibrate manual"),
     )
     parser.add_argument(
-        "--index-calibration",
+        "--calibration-index",
         default=None,
-        metavar="CSV",
-        help=_("explicit index CSV mapping image names to µm/px"),
+        metavar="PATH",
+        help=_(
+            "English per-image index CSV (headers image,um_per_px); used alone it selects "
+            "--calibrate index"
+        ),
     )
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
@@ -214,17 +219,18 @@ def _resolve_calibration_mode(args) -> str:
     """Resolve the mode: an explicit ``--calibrate`` wins over the implication."""
     if getattr(args, "calibrate_given", False):
         return str(args.calibrate)
+    if args.calibration_index:
+        return "index"
     if args.um_per_px > 0:
         return "manual"
     return str(args.calibrate)
 
 
 def _tiling_argument(value: str) -> TilingMode:
-    """Map the English flag to a mode, still accepting the deprecated spellings.
+    """Map the English flag to a mode; there are no legacy aliases.
 
-    ``siempre`` and ``nunca`` are hidden aliases: an old script keeps working,
-    but ``--help`` only advertises the English choices and the value that
-    leaves this function is already the mode the rest of the program uses.
+    ``--help`` advertises the same three choices this function validates, and
+    the value that leaves it is already the mode the rest of the program uses.
     """
     text = str(value).strip().lower()
     if text not in TILING_VALUES:
@@ -253,7 +259,7 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     calibration = CalibrationPolicy(
         mode=_resolve_calibration_mode(args),
         um_per_px=args.um_per_px,
-        index_path=Path(args.index_calibration) if args.index_calibration else None,
+        index_path=Path(args.calibration_index) if args.calibration_index else None,
     )
     return RunConfig(
         images=find_images(Path(args.images)),

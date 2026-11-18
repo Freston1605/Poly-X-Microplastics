@@ -96,7 +96,6 @@ def test_run_params_keep_the_inference_defaults():
         "diameter_plate_mm",
         "height_plate_mm",
         "distance_camera_mm",
-        "index_calibration",
     ):
         assert not hasattr(params, field), f"RunParams must not own {field}"
 
@@ -297,7 +296,7 @@ def test_non_tiling_detectors_delegate_predict_auto_to_predict(monkeypatch, tmp_
         iou=0.55,
         imgsz=1024,
         device="cpu",
-        tiling="siempre",
+        tiling="always",
         threshold_px=100,
         tile=512,
         overlap=0.1,
@@ -334,7 +333,7 @@ def test_yolo_predict_auto_uses_predict_when_tiling_is_disabled(monkeypatch, tmp
         iou=0.55,
         imgsz=1024,
         device="cpu",
-        tiling="nunca",
+        tiling="never",
         record=record,
     )
 
@@ -354,21 +353,22 @@ def test_yolo_predict_auto_uses_predict_when_tiling_is_disabled(monkeypatch, tmp
 # ── Tiling parameters and the recorded plan ────────────────────────────
 
 
-def test_params_round_trip_english_and_legacy():
-    """Old runs load their Spanish mode; new dumps always carry the English one."""
+def test_params_round_trip_english():
+    """Boundary modes are English; a legacy spelling is not translated any more."""
     from polyx.core.detect.tiling import TilingMode
     from polyx.core.detection_run.schema import params_from_dict, params_to_dict
 
-    assert params_from_dict({"tiling": "siempre"}).tiling is TilingMode.ALWAYS
-    assert params_from_dict({"tiling": "nunca"}).tiling is TilingMode.NEVER
     assert params_from_dict({"tiling": "always"}).tiling is TilingMode.ALWAYS
+    assert params_from_dict({"tiling": "never"}).tiling is TilingMode.NEVER
     assert params_from_dict({}).tiling is TilingMode.AUTO
-    # An unknown value is not a reason to refuse a folder; it falls back to auto.
-    assert params_from_dict({"tiling": "sideways"}).tiling is TilingMode.AUTO
+    # An unknown value is a bad artifact, not a reason to invent AUTO.
+    for legacy in ("sideways", "siempre"):
+        with pytest.raises(ValueError, match="auto, always, never"):
+            params_from_dict({"tiling": legacy})
 
-    legacy_in_memory = RunParams(tiling="nunca")
-    assert legacy_in_memory.tiling is TilingMode.NEVER
-    dumped = params_to_dict(legacy_in_memory)
+    params = RunParams(tiling="never")
+    assert params.tiling is TilingMode.NEVER
+    dumped = params_to_dict(params)
     assert dumped["tiling"] == "never"
     assert '"tiling": "never"' in json.dumps(dumped)
 
@@ -410,7 +410,7 @@ def test_run_json_records_tiling_plan_and_loads_old_string(tmp_path):
     folder = tmp_path / "old_run"
     folder.mkdir()
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "models": [{"alias": "model_1"}],
         "images": [
             {
@@ -437,3 +437,63 @@ def test_run_json_records_tiling_plan_and_loads_old_string(tmp_path):
     loaded = load_run(folder).results[0][0]
     assert loaded.tiling_plan == plan
     assert loaded.tiling == sentence
+
+
+# ── Boolean cells: one canonical spelling ───────────────────────────────
+
+
+@pytest.mark.parametrize("cell", ["true", "false", True, False])
+def test_canonical_boolean_cells_load(cell, tmp_path):
+    """`true`/`false` — and their JSON boolean forms — are the cells we read."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1", "alias_generated": cell}],
+        "images": [],
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_run(folder)
+    assert loaded.models[0].alias_generated is (cell is True or cell == "true")
+
+
+@pytest.mark.parametrize("cell", ["1", "yes", "y", "si", "sí"])
+def test_legacy_boolean_cells_are_rejected(cell, tmp_path):
+    """A legacy truthy cell fails with an error naming `true`/`false`."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1", "alias_generated": cell}],
+        "images": [],
+    }
+    (folder / "run.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"true.*false"):
+        load_run(folder)
+
+
+def test_legacy_boolean_cell_in_detections_csv_is_rejected(tmp_path):
+    """The CSV `assignable` cell obeys the same one-spelling rule."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1"}],
+        "images": [{"index": 0, "path": "photo.png", "models": [{"model": 0}]}],
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    (folder / "detections.csv").write_text(
+        "model,image,class,conf,assignable\nmodel_1,photo.png,PET,0.9,si\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"true.*false"):
+        load_run(folder)

@@ -2,10 +2,10 @@
 
 from .calibration import (
     Calibration,
+    CalibrationIndexError,
     calibrate_from_plate,
-    carry_index,
+    read_calibration_index,
     resolver,
-    search_index,
     summary_batch,
 )
 from .drawing import (
@@ -63,6 +63,7 @@ __all__ = [
     "THINNESS_FOR_GEODESIC",
     "THRESHOLD_CORE",
     "Calibration",
+    "CalibrationIndexError",
     "Method",
     "Morphology",
     "Morphotype",
@@ -76,7 +77,6 @@ __all__ = [
     "apply_to_detection",
     "box_margin",
     "calibrate_from_plate",
-    "carry_index",
     "draw_measurement",
     "extremes_feret",
     "feret_maximum",
@@ -85,8 +85,8 @@ __all__ = [
     "measure_detection",
     "measure_detections",
     "path_geodesic",
+    "read_calibration_index",
     "resolver",
-    "search_index",
     "segment",
     "separate_glued",
     "summary_batch",

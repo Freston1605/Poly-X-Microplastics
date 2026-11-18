@@ -1,6 +1,6 @@
 # ADR-0005: The report package is internal
 
-- **Status:** Accepted
+- **Status:** Superseded by [English-only run artifact vocabulary](../specs/run-artifact-vocabulary.md) (spec #182, ticket #184). The surface decision below still holds, but its "section ids stay Spanish" paragraph does not: section ids and preset keys are now English machine tokens and the ids double as report anchors. ADR-0004 stays in force.
 - **Date:** 2026-11-08
 - **Landed in:** #88
 
@@ -52,9 +52,11 @@ English names (`build_shape`, `build_size_by_folder`), not the section id.
 `polyx.gui.report_html` stays as a five-name compatibility alias whose
 `__file__` points at the package, so existing importers do not change.
 
-Section ids stay Spanish (`resumen`, `metodos`, …) as stable, locale-invariant
-keys and HTML anchors. They are identifiers, not user-facing strings: the
-visible titles are English `N_()` message ids resolved at render time.
+Section ids used to stay Spanish (`resumen`, `metodos`, …) as locale-invariant
+keys and HTML anchors. **Superseded by spec #182:** they are now English
+identifiers (`summary`, `methods`, …), with the same id serving as the anchor
+and preset value. They remain machine tokens, not user-facing strings: the
+visible titles are still English `N_()` message ids resolved at render time.
 
 ## Considered options
 
@@ -83,8 +85,9 @@ visible titles are English `N_()` message ids resolved at render time.
 - The frozen benign baseline remains the behavioural contract, so the
   refactor cannot quietly change output. The render is byte-identical and the
   baseline is not recaptured.
-- No message id changes: section titles stay English `N_()` ids and no
-  translation catalog is edited.
+- Section-title message ids stayed English `N_()` ids. The catalog was later
+  re-extracted for the figure-folder rename under spec #182; that is a
+  superseding change, not part of this decision.
 - The batch precompute stays pure and Qt-free, and the calibration import
   stays lazy, so importing the report does not pull the scientific stack.
 

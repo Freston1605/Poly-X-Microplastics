@@ -195,6 +195,40 @@ def test_se_guarda_tema_y_animaciones_juntos(tmp_path, monkeypatch) -> None:
         T.set_animations(True)
 
 
+def test_spanish_keyed_dotfiles_are_not_read_or_migrated(tmp_path, monkeypatch) -> None:
+    """The old tema/animaciones/idioma files are ignored: no read, no write, no migration."""
+    from polyx.core import preferences
+
+    target = tmp_path / "polyx_preferences.json"
+    monkeypatch.setattr(preferences, "FILE", target)
+    # Point whatever legacy paths the reader knows at this sandbox. The
+    # attribute is gone once the reader is removed; raising=False keeps the
+    # test meaningful if a legacy reader is ever reintroduced.
+    monkeypatch.setattr(
+        preferences,
+        "_LEGACY",
+        (
+            (tmp_path / ".polyx_tema.json", {"tema": "theme", "animaciones": "animations"}),
+            (tmp_path / ".polyx_theme.json", {"tema": "theme", "animaciones": "animations"}),
+            (tmp_path / ".polyx_idioma.json", {"idioma": "locale"}),
+        ),
+        raising=False,
+    )
+
+    (tmp_path / ".polyx_tema.json").write_text(
+        json.dumps({"tema": "azul", "animaciones": False}), encoding="utf-8"
+    )
+    (tmp_path / ".polyx_theme.json").write_text(json.dumps({"tema": "rojo"}), encoding="utf-8")
+    (tmp_path / ".polyx_idioma.json").write_text(json.dumps({"idioma": "es"}), encoding="utf-8")
+
+    assert preferences.read() == {}
+    assert not target.exists(), "read() must not create the canonical file"
+
+    assert preferences.peek("theme") is None
+    assert preferences.peek("locale") is None
+    assert not target.exists(), "peek() must stay write-free"
+
+
 def test_utilidades_de_color() -> None:
     assert T.mingle("#000000", "#ffffff", 0.0) == "#000000"
     assert T.mingle("#000000", "#ffffff", 1.0) == "#ffffff"

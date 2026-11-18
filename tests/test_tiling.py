@@ -103,17 +103,30 @@ def test_policy_tiling_is_re_exported_for_existing_importers():
         ("always", TilingMode.ALWAYS),
         ("never", TilingMode.NEVER),
         (TilingMode.ALWAYS, TilingMode.ALWAYS),
-        # Deprecated values a saved run or an old script still carries.
-        ("siempre", TilingMode.ALWAYS),
-        ("nunca", TilingMode.NEVER),
         (" ALWAYS ", TilingMode.ALWAYS),
         ("", TilingMode.AUTO),
         (None, TilingMode.AUTO),
-        ("sideways", TilingMode.AUTO),
     ],
 )
-def test_tiling_mode_normalises_legacy_values(raw, expected):
+def test_tiling_mode_normalises_boundary_values(raw, expected):
     assert TilingMode.parse(raw) is expected
+
+
+def test_legacy_tiling_spellings_are_not_modes():
+    """`siempre`/`nunca` are gone: parsing them fails instead of translating them."""
+    from polyx.core.detect.tiling import TILING_VALUES
+
+    assert TILING_VALUES == ("auto", "always", "never")
+    for legacy in ("siempre", "nunca"):
+        with pytest.raises(ValueError, match="auto, always, never"):
+            TilingMode.parse(legacy)
+
+
+def test_unknown_mode_warning_names_the_canonical_values():
+    """An invalid boundary value is rejected with the canonical values in the error."""
+    with pytest.raises(ValueError) as exc:
+        TilingMode.parse("sideways")
+    assert all(word in str(exc.value) for word in ("auto", "always", "never"))
 
 
 def test_never_forces_single_pass():
@@ -180,7 +193,7 @@ def test_the_decision_is_rebuilt_from_the_backend_record():
     record = {"width": 4096, "height": 3072, "tiled": True, "plan": plan}
     decision = TilingDecision.from_record(record, TilingMode.AUTO)
     assert decision == TilingDecision(mode=TilingMode.AUTO, width=4096, height=3072, plan=plan)
-    empty = TilingDecision.from_record({}, "nunca")
+    empty = TilingDecision.from_record({}, "never")
     assert empty == TilingDecision(mode=TilingMode.NEVER, width=0, height=0, plan=None)
 
 

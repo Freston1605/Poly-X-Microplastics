@@ -401,7 +401,7 @@ def _fig_profile_depth(profiles: dict) -> str:
 
 
 # ── How each morphotype is named for the user ──
-# The code distinguishes `fibra` and `fragmento` (morfologia.FIBRA / FRAGMENTO) and
+# The code distinguishes `fibre` and `fragment` (Morphotype.FIBER / Morphotype.FRAGMENT) and
 # that does NOT change: it is the classification used to measure and to decide whether the length
 # comes from Feret or from the geodesic path. What changes is the word that is printed.
 #

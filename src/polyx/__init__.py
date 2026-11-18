@@ -41,3 +41,11 @@ def _ensure_standard_output() -> None:
 
 
 _ensure_standard_output()
+
+# Public vocabulary of the wheel (ADR-0004): the machine tokens a consumer
+# imports from the package root are the same English values written into
+# run.json and detections.csv. The canonical definitions live in the measure
+# layer and are re-exported here; both surfaces are the same enum objects.
+from polyx.core.measure import Method, Morphotype  # noqa: E402
+
+__all__ = ["Method", "Morphotype", "__author__", "__version__"]
