@@ -19,7 +19,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from polyx.core.i18n import ngettext
-from polyx.core.provenance import logger_for
 
 
 class TilingMode(enum.StrEnum):
@@ -36,24 +35,24 @@ class TilingMode(enum.StrEnum):
 
     @classmethod
     def parse(cls, value: object) -> TilingMode:
-        """Normalise a mode from any boundary; an unknown value falls back to AUTO.
+        """Normalise a mode from any boundary; a non-empty unknown value fails.
 
-        Only the three English values are modes. A legacy spelling is not
-        translated: it is an unknown value, logged with the canonical choices
-        and treated as ``AUTO`` so a bad cell cannot crash the program.
+        Only the three English values are modes. ``None`` and an empty string
+        mean "no mode set" and keep returning ``AUTO``. Every other value —
+        including a legacy spelling — is a bad artifact: it is rejected with an
+        error naming the canonical values, never translated or silently
+        replaced with ``AUTO``.
         """
         if isinstance(value, cls):
             return value
         text = str(value).strip().lower() if value is not None else ""
+        if not text:
+            return cls.AUTO
         if text in cls._value2member_map_:
             return cls(text)
-        if text:
-            logger_for("detector").warning(
-                "tiling.unknown_mode value=%r (choose %s)",
-                value,
-                ", ".join(mode.value for mode in cls),
-            )
-        return cls.AUTO
+        raise ValueError(
+            f"unknown tiling mode {value!r}: choose {', '.join(mode.value for mode in cls)}"
+        )
 
 
 #: Every text a boundary accepts as a mode: the English values, nothing else.

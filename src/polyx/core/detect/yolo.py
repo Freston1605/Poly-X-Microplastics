@@ -327,8 +327,8 @@ class YoloModel:
 
         ``tiling``: ``AUTO`` decides on the longer side against
         ``threshold_px``; ``ALWAYS`` forces tiling; ``NEVER`` forces the single
-        pass. The English value is the interface one; a deprecated Spanish
-        value from an old caller is normalised once, here.
+        pass. The English values are the only ones accepted; an unknown value
+        is rejected when the mode is resolved.
 
         If ``record`` is passed, it is filled with the decision taken so it can
         be declared in the report: counting 500 particles with tiling or

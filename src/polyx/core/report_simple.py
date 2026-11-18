@@ -13,7 +13,7 @@ import html
 from pathlib import Path
 
 from polyx.core.detection_run.identity import display_name
-from polyx.core.detection_run.schema import read_csv_rows, read_json_object
+from polyx.core.detection_run.schema import is_canonical_run, read_csv_rows, read_json_object
 from polyx.core.i18n import _, language, ngettext
 
 
@@ -50,7 +50,7 @@ def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
 def generate(run_dir: Path, output: Path | None = None) -> Path:
     """Render a canonical run folder, or refuse a pre-canonical one."""
     run_dir = Path(run_dir)
-    if not (run_dir / "run.json").is_file():
+    if not is_canonical_run(run_dir):
         raise LegacyRunError(run_dir)
 
     canonical = read_json_object(run_dir / "run.json")

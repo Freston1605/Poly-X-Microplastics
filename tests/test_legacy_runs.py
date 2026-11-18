@@ -184,6 +184,16 @@ def test_the_old_gui_run_label_reader_is_removed():
     assert "find_run_labels" not in annotate.__all__
 
 
+def test_viewer_run_labels_use_the_shared_json_reader(tmp_path):
+    """A malformed manifest reads as no labels instead of crashing the import."""
+    from polyx.gui.viewer.window import _canonical_run_labels
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text("{not json", encoding="utf-8")
+    assert _canonical_run_labels(run_dir, "plate1") == []
+
+
 def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_language):
     """The Viewer names an older version instead of loading old GUI predictions."""
     selected_language("en")
@@ -211,6 +221,22 @@ def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_langua
 
 
 # ── Canonical folders still work ───────────────────────────────────────
+
+
+def test_is_canonical_run_requires_a_regular_run_json_file(tmp_path):
+    """A directory named run.json is not the manifest the four readers look for."""
+    from polyx.core.detection_run import is_canonical_run
+
+    assert not is_canonical_run(tmp_path / "missing")
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    (folder / "run.json").mkdir()
+    assert not is_canonical_run(folder)
+
+    (folder / "run.json").rmdir()
+    (folder / "run.json").write_text("{}", encoding="utf-8")
+    assert is_canonical_run(folder)
 
 
 def test_core_exposes_the_canonical_engine_and_not_the_old_batch():

@@ -34,6 +34,7 @@ from .schema import (
     SCHEMA_VERSION,
     VIEWER_COLUMNS,
     detection_row,
+    is_canonical_run,
     load_run,
 )
 
@@ -62,6 +63,7 @@ __all__ = [
     "detection_row",
     "display_name",
     "generated_alias",
+    "is_canonical_run",
     "load_run",
     "reload_ground_truth",
     "resolve_identity",

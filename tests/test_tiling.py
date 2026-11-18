@@ -106,7 +106,6 @@ def test_policy_tiling_is_re_exported_for_existing_importers():
         (" ALWAYS ", TilingMode.ALWAYS),
         ("", TilingMode.AUTO),
         (None, TilingMode.AUTO),
-        ("sideways", TilingMode.AUTO),
     ],
 )
 def test_tiling_mode_normalises_boundary_values(raw, expected):
@@ -114,29 +113,20 @@ def test_tiling_mode_normalises_boundary_values(raw, expected):
 
 
 def test_legacy_tiling_spellings_are_not_modes():
-    """`siempre`/`nunca` are gone: the published values are English-only and
-    the old words are no longer translated into ALWAYS/NEVER."""
+    """`siempre`/`nunca` are gone: parsing them fails instead of translating them."""
     from polyx.core.detect.tiling import TILING_VALUES
 
     assert TILING_VALUES == ("auto", "always", "never")
-    assert TilingMode.parse("siempre") is TilingMode.AUTO
-    assert TilingMode.parse("nunca") is TilingMode.AUTO
+    for legacy in ("siempre", "nunca"):
+        with pytest.raises(ValueError, match="auto, always, never"):
+            TilingMode.parse(legacy)
 
 
-def test_unknown_mode_warning_names_the_canonical_values(monkeypatch):
-    """An invalid boundary value is rejected with a message naming the modes."""
-    from polyx.core.detect import tiling as tiling_module
-
-    warnings: list[str] = []
-
-    class _Logger:
-        def warning(self, message: str, *args: object) -> None:
-            warnings.append(message % args if args else message)
-
-    monkeypatch.setattr(tiling_module, "logger_for", lambda module: _Logger())
-    assert tiling_module.TilingMode.parse("siempre") is TilingMode.AUTO
-    assert warnings
-    assert all(word in warnings[0] for word in ("auto", "always", "never"))
+def test_unknown_mode_warning_names_the_canonical_values():
+    """An invalid boundary value is rejected with the canonical values in the error."""
+    with pytest.raises(ValueError) as exc:
+        TilingMode.parse("sideways")
+    assert all(word in str(exc.value) for word in ("auto", "always", "never"))
 
 
 def test_never_forces_single_pass():
