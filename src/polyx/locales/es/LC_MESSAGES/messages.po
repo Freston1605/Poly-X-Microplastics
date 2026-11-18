@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 15:26-0300\n"
+"POT-Creation-Date: 2026-11-18 16:06-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -513,6 +513,16 @@ msgstr "la ruta de salida no es un directorio: %(path)s"
 #: src/polyx/core/detection_run/engine.py:84
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
+
+#: src/polyx/core/detection_run/engine.py:181
+#, python-format
+msgid ""
+"index calibration (--calibration-index) needs unique image basenames: %(first)s and %(second)s "
+"both have the basename %(name)s; give each image a unique name for index calibration"
+msgstr ""
+"la calibración por índice (--calibration-index) necesita nombres de imagen únicos: %(first)s y "
+"%(second)s tienen ambos el nombre %(name)s; dé a cada imagen un nombre único para la "
+"calibración por índice"
 
 #: src/polyx/core/detection_run/identity.py:124 src/polyx/gui/detector/pages/execute.py:213
 #: src/polyx/gui/detector/pages/execute.py:214 src/polyx/gui/detector/pages/execute.py:215

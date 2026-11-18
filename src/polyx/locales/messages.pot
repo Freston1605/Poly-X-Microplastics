@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 15:26-0300\n"
+"POT-Creation-Date: 2026-11-18 16:06-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -500,6 +500,13 @@ msgstr ""
 
 #: src/polyx/core/detection_run/engine.py:84
 msgid "detection run failed"
+msgstr ""
+
+#: src/polyx/core/detection_run/engine.py:181
+#, python-format
+msgid ""
+"index calibration (--calibration-index) needs unique image basenames: %(first)s and %(second)s "
+"both have the basename %(name)s; give each image a unique name for index calibration"
 msgstr ""
 
 #: src/polyx/core/detection_run/identity.py:124 src/polyx/gui/detector/pages/execute.py:213

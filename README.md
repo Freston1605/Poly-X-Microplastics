@@ -263,9 +263,12 @@ an English per-image index instead: `calibration_index.csv` with the headers
 `polyx-detect --calibrate index --calibration-index calibration_index.csv` (the
 flag alone also selects index mode); each photo then uses **its own** scale. A
 photo with no row is reported with `image_not_in_index` and stays uncalibrated
-rather than silently inheriting a batch-wide value. Legacy Spanish index files
-are rejected by name or header with an error naming the canonical format; they
-are never searched for, rewritten or deleted.
+rather than silently inheriting a batch-wide value. Image basenames must be
+unique within an index-calibrated batch: two photos with the same name in
+different folders are refused before any inference, since a single row would
+otherwise apply to both. Legacy Spanish index files are rejected by name or
+header with an error naming the canonical format; they are never searched for,
+rewritten or deleted.
 
 > **Which edge the 100 mm are, and which way it can be wrong.** The rim has a wall
 > about **2 mm** thick — measured on this study's photographs: the inner edge falls

@@ -112,7 +112,10 @@ safe source for crops where the Petri dish is not visible: a single batch-wide
 manual scale would mis-size photos shot at different distances. The file is
 named explicitly, never searched for; a missing row is a warning
 (`image_not_in_index`) and never a silent fallback. The legacy Spanish files
-and headers are refused by name.
+and headers are refused by name. Because the basename is the lookup key, an
+index-calibrated batch must give every photo a unique basename: two images with
+the same name in different folders are refused before inference rather than one
+row silently scaling both.
 _Avoid_: calibration index CSV (ambiguous: could mean a legacy file),
 batch-wide fallback for crops
 

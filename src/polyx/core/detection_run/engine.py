@@ -163,6 +163,31 @@ def _load_calibration_index(policy: CalibrationPolicy, mode: str) -> dict[str, f
     return read_calibration_index(policy.index_path)
 
 
+def _reject_duplicate_image_names(images: list[Path]) -> None:
+    """Refuse two images sharing a basename when the index is the scale source.
+
+    The reader reduces index paths to basenames and the engine looks up
+    ``image_path.name``, so two photos in different folders with the same name
+    can never hold distinct scales: one row would silently apply to both. In
+    index mode the basename is the lookup key, so reject the batch before any
+    inference or output folder is touched and let the caller rename the files.
+    Other calibration modes do not key on the basename and are unaffected.
+    """
+    seen: dict[str, Path] = {}
+    for image in images:
+        name = image.name
+        if name in seen:
+            raise ValueError(
+                _(
+                    "index calibration (--calibration-index) needs unique image "
+                    "basenames: %(first)s and %(second)s both have the basename "
+                    "%(name)s; give each image a unique name for index calibration"
+                )
+                % {"first": seen[name], "second": image, "name": name}
+            )
+        seen[name] = image
+
+
 def _missing_calibration_warning(calibration: Calibration, code: str) -> Calibration:
     """Attach a mode-specific warning code when the resolver provided none."""
     if calibration.valid or calibration.warning:
@@ -354,6 +379,10 @@ def run_detection(
     index = _load_calibration_index(config.calibration, mode)
 
     images = [Path(path) for path in config.images]
+    if mode == "index":
+        # The basename is the index lookup key: refuse ambiguous batches before
+        # the output folder is created or any model runs (no partial run left).
+        _reject_duplicate_image_names(images)
     output_dir = Path(config.output_dir)
 
     try:

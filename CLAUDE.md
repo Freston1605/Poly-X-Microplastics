@@ -570,8 +570,10 @@ polyx-detect --model best.pt --images ./photos --out ./run \
   alone implies `manual`, and `--calibration-index PATH` alone implies
   `index`. The index must be the canonical English `calibration_index.csv`
   with headers `image,um_per_px`; it is keyed by image basename and never
-  searched for. Legacy index files and Spanish headers are rejected with an
-  error naming the canonical format.
+  searched for. Image basenames must be unique within an index-calibrated
+  batch: two photos with the same name in different folders are refused before
+  inference, because one row would otherwise apply to both. Legacy index files
+  and Spanish headers are rejected with an error naming the canonical format.
 - Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
   `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
   `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
@@ -1018,9 +1020,12 @@ distance_camera_mm: float = 0.0
 `core.measure.calibration.read_calibration_index` and looks up `image_path.name`.
 A row found becomes `Calibration(origin=ORIGIN_INDEX)` for that photo alone;
 an image absent from the index carries `IMAGE_NOT_IN_INDEX` and no scale, never
-the batch-wide manual value. The reader refuses legacy filenames and Spanish
-headers by name, rejects duplicates and non-positive or non-finite values, and
-never searches the filesystem or rewrites the file it was given.
+the batch-wide manual value. Before inference the engine also refuses a batch
+where two images share a basename (`_reject_duplicate_image_names`): the
+basename is the key, so one row must never silently scale two photos. The
+reader refuses legacy filenames and Spanish headers by name, rejects duplicates
+and non-positive or non-finite values, and never searches the filesystem or
+rewrites the file it was given.
 
 ### Abstention: detecting ≠ identifying
 
