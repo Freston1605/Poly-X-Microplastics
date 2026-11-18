@@ -53,6 +53,15 @@ class ClusterLayout:
         return self.work / "checkpoints"
 
     @property
+    def studies(self) -> Path:
+        """Optuna study files on work, never on scratch."""
+        return self.work / "studies"
+
+    def study_path(self, name: str) -> Path:
+        """SQLite file of one named study, stable across resumed jobs."""
+        return self.studies / f"{name}.db"
+
+    @property
     def tmp(self) -> Path:
         """Temporary files on the scratch filesystem."""
         return self.scratch / "polyx"

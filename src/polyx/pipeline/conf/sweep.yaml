@@ -1,0 +1,49 @@
+# Root configuration of an Optuna hyperparameter sweep.
+#
+# This is the config the Hydra Optuna sweeper consumes. The in-process driver
+# used for verification reads the same `hydra.sweeper` node, so the two paths
+# cannot declare different objectives, spaces or trial counts. The protocol,
+# backend and family groups are shared unchanged with a single execution.
+defaults:
+  - protocol: default
+  - backend: local
+  - family: yolo_detection
+  - override hydra/sweeper: optuna
+  - _self_
+
+data_yaml: ???
+output_dir: ???
+dataset_name: polyx
+# Checkpoint resume inside each trial is independent of study resume: a study
+# always reuses its SQLite file when the same name and storage are supplied.
+resume: false
+
+hydra:
+  sweeper:
+    # The objective is the shared evaluator's with-class score: maximize it.
+    direction: maximize
+    study_name: polyx-optuna
+    # Computed from the work filesystem by the driver; a real multirun passes
+    # an explicit sqlite:/// URL as `hydra.sweeper.storage=...`.
+    storage: null
+    n_trials: 3
+    n_jobs: 1
+    max_failure_rate: 0.0
+    sampler:
+      # Same seed as the protocol: trials are reproducible and the split, seed
+      # and augmentation subset stay fixed across them.
+      seed: ${protocol.seed}
+    # Declared protocol-only search space. Split, seed, augmentation subset and
+    # evaluator are deliberately absent and cannot be suggested by a trial.
+    search_space:
+      protocol.learning_rate:
+        type: categorical
+        choices: [0.001, 0.01, 0.05]
+      protocol.momentum:
+        type: categorical
+        choices: [0.9, 0.937]
+      protocol.weight_decay:
+        type: categorical
+        choices: [0.0001, 0.0005]
+    # No pruner is configured on purpose. Hydra trials are separate processes,
+    # so Optuna cannot prune them; Lightning's early stopping stops each trial.

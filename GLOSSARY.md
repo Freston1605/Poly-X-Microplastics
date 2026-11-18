@@ -24,6 +24,39 @@ a benchmark. The resolved protocol is written verbatim into each training
 execution's artifacts. _Avoid_: hyperparameters (too narrow — it also fixes
 the split and the evaluator).
 
+## Study
+
+The persistent Optuna optimization problem: one named SQLite file on the work
+filesystem, one direction (maximize the with-class score), one seeded sampler
+and the declared protocol-only search space. A study outlives the job that
+created it; a later run with the same name and storage resumes it instead of
+starting a new one. The best trial of a study is saved with the experiment
+artifacts.
+
+## Trial
+
+One suggested configuration inside a study, executed as one normal training
+run. A trial changes only declared protocol hyperparameters; split, seed,
+augmentation subset and evaluator stay fixed. Trials are independent processes,
+so the study does not prune across them — Lightning's early stopping stops an
+individual trial.
+
+## Sweeper
+
+The Hydra plugin (`hydra-optuna-sweeper`) that turns the declared search space
+into trials, runs them one at a time and records the returned objective value
+in the study. The in-process driver behind `polyx-pipeline --sweep` reads the
+same sweeper config, so a small trial-count smoke run and a real multirun
+cannot declare different objectives or spaces.
+
+## Objective
+
+The single number a trial returns and Optuna optimizes. In this pipeline it is
+always the shared evaluator's **with-class score** on the real-domain
+validation split, never a family-specific metric, mAP-only figure or
+localisation score. Localisation is reported beside it, not optimized instead
+of it. Decided in ADR-0010.
+
 ## The triptych
 
 The three saved views of a detection run over one plate: the

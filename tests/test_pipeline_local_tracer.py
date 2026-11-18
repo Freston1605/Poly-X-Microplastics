@@ -169,8 +169,7 @@ def _install_fakes(
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
 
 
-@pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
+def build_tiny_dataset(root: Path) -> Path:
     """Two train and two val images with box labels, plus a data.yaml."""
     labels = {
         "train_a": "0 0.375 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n",
@@ -179,7 +178,7 @@ def tiny_dataset(tmp_path: Path) -> Path:
         "val_b": "2 0.375 0.75 0.25 0.25\n",
     }
     root = split_dataset(
-        tmp_path / "dataset",
+        root,
         {
             "train": {k: v for k, v in labels.items() if k.startswith("train")},
             "val": {k: v for k, v in labels.items() if k.startswith("val")},
@@ -198,6 +197,12 @@ def tiny_dataset(tmp_path: Path) -> Path:
             assert ok
             image.write_bytes(buffer.tobytes())
     return root / "data.yaml"
+
+
+@pytest.fixture
+def tiny_dataset(tmp_path: Path) -> Path:
+    """The shared tiny dataset, rooted in one test's temporary directory."""
+    return build_tiny_dataset(tmp_path / "dataset")
 
 
 def _read(path: Path) -> dict:

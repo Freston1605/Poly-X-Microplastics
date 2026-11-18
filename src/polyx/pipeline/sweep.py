@@ -1,0 +1,259 @@
+"""Optuna sweep over the shared training protocol.
+
+Hydra composes the sweep config (``conf/sweep.yaml``) and the Optuna sweeper
+plugin consumes the same ``hydra.sweeper`` node this module reads. The driver
+runs the trials in one process so the tiny-fixture smoke run is testable through
+the same headless command as a single execution; real multiruns use the plugin
+and its launcher. Both paths call :func:`run_execution`, so the objective is
+always the shared evaluator's with-class score and never a family-specific
+figure.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from copy import deepcopy
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Any
+
+import hydra_plugins.hydra_optuna_sweeper.config  # noqa: F401 - registers the config groups
+import optuna
+from hydra import compose, initialize_config_dir
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
+
+from polyx.pipeline.artifacts import ArtifactLayout, write_json, write_yaml
+from polyx.pipeline.config import CONF_DIR, ExecutionConfig, execution_config_from_raw
+from polyx.pipeline.execution import run_execution
+
+#: Protocol hyperparameters a trial may change. Split, seed, augmentation
+#: subset and the evaluator are outside this set and cannot be suggested.
+SEARCHABLE_PROTOCOL_FIELDS = frozenset(
+    {
+        "epochs",
+        "batch",
+        "image_size",
+        "optimizer",
+        "learning_rate",
+        "momentum",
+        "weight_decay",
+        "schedule",
+        "warmup_epochs",
+    }
+)
+
+
+@dataclass(frozen=True)
+class SweepConfig:
+    """The resolved sweep: one execution config plus the sweeper node."""
+
+    execution: ExecutionConfig
+    direction: str
+    study_name: str
+    storage: str
+    n_trials: int
+    n_jobs: int
+    sampler_target: str
+    sampler_seed: int
+    search_space: dict[str, dict[str, Any]]
+    pruner: str
+
+
+def _study_url(storage: Any, study_name: str, output_dir: Path) -> str:
+    """SQLite URL on the work filesystem, never a personal path."""
+    if storage:
+        return str(storage)
+    from polyx.hpc.layout import ClusterLayout
+
+    if os.environ.get("POLYX_HPC_WORK"):
+        path = ClusterLayout.from_env().study_path(study_name)
+    else:
+        path = output_dir / "studies" / f"{study_name}.db"
+    return f"sqlite:///{path}"
+
+
+def load_sweep_config(overrides: list[str] | None = None) -> SweepConfig:
+    """Compose ``sweep.yaml`` with Hydra and validate the declared space."""
+    with initialize_config_dir(config_dir=str(CONF_DIR), version_base="1.3"):
+        composed = compose(
+            config_name="sweep",
+            overrides=list(overrides or []),
+            return_hydra_config=True,
+        )
+    task = OmegaConf.to_container(composed, resolve=False)
+    assert isinstance(task, dict)
+    task.pop("hydra", None)
+    sweeper = OmegaConf.to_container(composed.hydra.sweeper, resolve=True)
+    assert isinstance(sweeper, dict)
+
+    execution = execution_config_from_raw(task)
+    space = sweeper.get("search_space") or {}
+    for key in space:
+        parts = key.split(".")
+        if len(parts) != 2 or parts[0] != "protocol" or parts[1] not in SEARCHABLE_PROTOCOL_FIELDS:
+            raise ValueError(f"search space may only declare protocol hyperparameters: {key}")
+
+    sampler = sweeper.get("sampler") or {}
+    return SweepConfig(
+        execution=execution,
+        direction=str(sweeper["direction"]),
+        study_name=str(sweeper["study_name"]),
+        storage=_study_url(
+            sweeper.get("storage"), str(sweeper["study_name"]), execution.output_dir
+        ),
+        n_trials=int(sweeper["n_trials"]),
+        n_jobs=int(sweeper["n_jobs"]),
+        sampler_target=str(sampler["_target_"]),
+        sampler_seed=int(sampler["seed"]),
+        search_space=dict(space),
+        pruner="none" if not sweeper.get("pruner") else str(sweeper["pruner"]),
+    )
+
+
+def _suggest(trial: optuna.trial.Trial, name: str, declaration: dict[str, Any]) -> Any:
+    """Suggest one declared value with Optuna's public trial API."""
+    kind = str(declaration["type"])
+    if kind == "categorical":
+        return trial.suggest_categorical(name, list(declaration["choices"]))
+    if kind in {"int", "float"}:
+        low, high = declaration["low"], declaration["high"]
+        log = bool(declaration.get("log", False))
+        step = declaration.get("step")
+        if kind == "int":
+            return trial.suggest_int(name, int(low), int(high), step=int(step or 1), log=log)
+        if step is not None:
+            return trial.suggest_float(name, float(low), float(high), step=float(step), log=log)
+        return trial.suggest_float(name, float(low), float(high), log=log)
+    raise ValueError(f"unsupported search-space declaration for {name}: {kind}")
+
+
+def _trial_config(
+    base: ExecutionConfig, params: dict[str, Any], output_dir: Path
+) -> ExecutionConfig:
+    """One trial changes only declared protocol values and its output folder."""
+    protocol = deepcopy(base.protocol)
+    for key, value in params.items():
+        setattr(protocol, key.split(".", 1)[1], value)
+    return replace(base, protocol=protocol, output_dir=output_dir, resume=False)
+
+
+def _sweep_config_view(config: SweepConfig) -> dict[str, Any]:
+    """Plain, YAML-serialisable record of the configuration that produced a study."""
+    return {
+        "direction": config.direction,
+        "study_name": config.study_name,
+        "storage": config.storage,
+        "n_trials": config.n_trials,
+        "n_jobs": config.n_jobs,
+        "sampler": {"target": config.sampler_target, "seed": config.sampler_seed},
+        "pruner": config.pruner,
+        "search_space": config.search_space,
+        "data_yaml": str(config.execution.data_yaml),
+        "family": config.execution.family.name,
+        "backend": config.execution.backend.name,
+        "fixed": {
+            "split": config.execution.protocol.split,
+            "seed": config.execution.protocol.seed,
+            "augmentation_subset": config.execution.protocol.augmentation_subset,
+            "evaluator": "polyx.pipeline.evaluation.SharedEvaluator",
+            "objective": "with_class_score",
+        },
+    }
+
+
+def run_sweep(config: SweepConfig) -> dict[str, Any]:
+    """Run the declared trials, reusing the SQLite study, and save the best."""
+    layout = ArtifactLayout(config.execution.output_dir)
+    layout.root.mkdir(parents=True, exist_ok=True)
+    database = Path(config.storage.removeprefix("sqlite:///"))
+    database.parent.mkdir(parents=True, exist_ok=True)
+    reused = database.is_file()
+
+    sampler = instantiate({"_target_": config.sampler_target, "seed": config.sampler_seed})
+    study = optuna.create_study(
+        study_name=config.study_name,
+        storage=config.storage,
+        direction=config.direction,
+        sampler=sampler,
+        # Hydra trials run as separate jobs: no Optuna pruning between them.
+        # Lightning's early stopping handles stopping inside each trial.
+        pruner=optuna.pruners.NopPruner(),
+        load_if_exists=True,
+    )
+    write_yaml(_sweep_config_view(config), layout.sweep_config)
+
+    start = len(study.trials)
+    for index in range(config.n_trials):
+        trial = study.ask()
+        suggestions = {
+            name: _suggest(trial, name, rule) for name, rule in config.search_space.items()
+        }
+        trial_dir = layout.root / "trials" / f"trial_{start + index:03d}"
+        try:
+            score = float(
+                run_execution(_trial_config(config.execution, suggestions, trial_dir))["selection"][
+                    "value"
+                ]
+            )
+        except Exception:
+            study.tell(trial, state=optuna.trial.TrialState.FAIL)
+            raise
+        study.tell(trial, score)
+
+    completed = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.COMPLETE]
+    if not completed:
+        raise RuntimeError("the study has no completed trial")
+    best = (
+        max(completed, key=lambda trial: trial.value)
+        if config.direction == "maximize"
+        else min(completed, key=lambda trial: trial.value)
+    )
+    best_metrics = layout.root / "trials" / f"trial_{best.number:03d}" / "metrics.json"
+    selection = (
+        _read_selection(best_metrics, best.value)
+        if best_metrics.is_file()
+        else {"metric": "with_class_score", "value": best.value}
+    )
+    artifact = {
+        "study_name": config.study_name,
+        "storage": config.storage,
+        "direction": config.direction,
+        "metric": "with_class_score",
+        "criterion": selection.get("criterion", ""),
+        "best_trial": best.number,
+        "best_value": float(best.value),
+        "best_params": dict(best.params),
+        "trials_run": config.n_trials,
+        "total_trials": len(study.trials),
+        "reused_study": reused,
+        "pruner": config.pruner,
+    }
+    write_json(artifact, layout.sweep_best)
+    return {
+        "output_dir": layout.root,
+        "selection": selection,
+        "study_name": config.study_name,
+        "storage": config.storage,
+        "trials_run": config.n_trials,
+        "total_trials": len(study.trials),
+        "reused_study": reused,
+        "best_params": dict(best.params),
+        "best_value": float(best.value),
+        "best_trial": best.number,
+        "metric": "with_class_score",
+    }
+
+
+def _read_selection(path: Path, fallback: float) -> dict[str, Any]:
+    """The shared evaluator's selection record from a trial's metrics file."""
+    data = _read_json(path)
+    selection = data.get("selection") if isinstance(data, dict) else None
+    if isinstance(selection, dict):
+        return selection
+    return {"metric": "with_class_score", "value": fallback}
+
+
+def _read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))

@@ -70,6 +70,16 @@ class ArtifactLayout:
     def best_checkpoint(self) -> Path:
         return self.checkpoints / "best.pt"
 
+    @property
+    def sweep_config(self) -> Path:
+        """Resolved sweeper configuration, including the declared space."""
+        return self.root / "sweep_config.yaml"
+
+    @property
+    def sweep_best(self) -> Path:
+        """Best configuration and with-class value of the whole study."""
+        return self.root / "sweep_best.json"
+
 
 def write_yaml(data: dict, path: Path) -> None:
     """Write a YAML artifact with stable key order."""
