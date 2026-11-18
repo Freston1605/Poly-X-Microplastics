@@ -271,6 +271,27 @@ def test_local_tracer_emits_every_artifact_and_names_each_criterion(
     assert provenance["dataset_audit"]["ok"] is True
 
 
+def test_one_epoch_execution_completes_without_early_stop(
+    tmp_path: Path, tiny_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A literal one-epoch execution finishes and writes one checkpoint."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "one_epoch"
+
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+    )
+
+    assert code == 0
+    state = _read(output / "training_state.json")
+    assert state["epochs_completed"] == 1
+    assert state["early_stopping"]["stopped_early"] is False
+    assert (output / "checkpoints" / "epoch_000.pt").is_file()
+    assert _read(output / "metrics.json")["selection"]["value"] == pytest.approx(1.0)
+
+
 def test_patience_is_honoured_and_protocol_defaults_are_stable(
     tmp_path: Path, tiny_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
