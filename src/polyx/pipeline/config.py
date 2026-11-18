@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
@@ -120,7 +120,7 @@ def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
     """Compose ``conf/`` with Hydra and validate the required overrides."""
     with initialize_config_dir(config_dir=str(CONF_DIR), version_base="1.3"):
         composed = compose(config_name="config", overrides=list(overrides or []))
-    raw: dict[str, Any] = OmegaConf.to_container(composed, resolve=True)  # type: ignore[assignment]
+    raw = cast("dict[str, Any]", OmegaConf.to_container(composed, resolve=True))
     if not raw.get("data_yaml") or not raw.get("output_dir"):
         raise ValueError("data_yaml and output_dir are required configuration overrides")
     backend_raw = raw.get("backend") or {}

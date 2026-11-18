@@ -118,12 +118,12 @@ class YoloDetectionAdapter(FamilyAdapter):
         class _ProtocolMonitor(Callback):  # type: ignore[misc,valid-type]
             """Bridges the Lightning loop to the engine's shared evaluation."""
 
-            def on_validation_epoch_end(self, trainer: Any, module: Any) -> None:
+            def on_validation_epoch_end(self, trainer: Any, pl_module: Any) -> None:
                 result = EpochResult(
                     epoch=int(getattr(trainer, "current_epoch", 0)),
-                    predictions=list(module.coco_predictions),
-                    adapter_figures=dict(module.adapter_figures),
-                    checkpoint=Path(module.checkpoint_path),
+                    predictions=list(pl_module.coco_predictions),
+                    adapter_figures=dict(pl_module.adapter_figures),
+                    checkpoint=Path(pl_module.checkpoint_path),
                 )
                 if on_epoch(result):
                     trainer.should_stop = True
