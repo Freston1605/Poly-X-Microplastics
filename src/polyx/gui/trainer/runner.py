@@ -151,13 +151,13 @@ class TrainerRunner(QThread):
             obs.event(
                 log,
                 "train.config",
-                modelo=mdl.name,
+                model=mdl.name,
                 dataset=str(ds.yaml_path),
                 epochs=p.epochs,
                 batch=p.batch,
                 imgsz=p.imgsz,
                 device=getattr(p, "device", None),
-                optimizador=getattr(p, "optimizer", None),
+                optimizer=getattr(p, "optimizer", None),
             )
 
             effective_device = self._diagnose_hardware(torch, p)
@@ -230,12 +230,12 @@ class TrainerRunner(QThread):
                     obs.event(
                         log,
                         "train.progress",
-                        epoca=ep,
+                        epoch=ep,
                         total=p.epochs,
                         map50=round(em.map50, 4),
                         precision=round(em.precision, 4),
                         recall=round(em.recall, 4),
-                        caja=round(em.box_loss, 4),
+                        box=round(em.box_loss, 4),
                     )
                     # Stop requested by the user: we cut at the epoch
                     # boundary (not midway) so that no half-written checkpoints are left.
@@ -421,7 +421,7 @@ class TrainerRunner(QThread):
                     log,
                     "train.aborted",
                     ms=int((__import__("time").perf_counter() - _t0) * 1000),
-                    familias_completadas=len(comparison),
+                    families_completed=len(comparison),
                 )
                 self.aborted.emit()
                 return
@@ -434,7 +434,7 @@ class TrainerRunner(QThread):
                 "train.complete",
                 ms=int((__import__("time").perf_counter() - _t0) * 1000),
                 weights=str(last_best),
-                familias=len(comparison),
+                families=len(comparison),
             )
             self.finished_ok.emit(last_best)
 
