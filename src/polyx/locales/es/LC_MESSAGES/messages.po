@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 13:50-0300\n"
+"POT-Creation-Date: 2026-11-18 13:57-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -84,12 +84,12 @@ msgstr "por debajo de esta confianza la partícula se informa como no asignable 
 msgid "run-order paper-quality HTML report (requires PySide6, [gui] extra)"
 msgstr "informe HTML de calidad de artículo en el orden del run (requiere PySide6, extra [gui])"
 
-#: src/polyx/cli/detect.py:305
+#: src/polyx/cli/detect.py:304
 #, python-format
 msgid "IMAGES: %(images)d  DETECTIONS: %(detections)d"
 msgstr "IMÁGENES: %(images)d  DETECCIONES: %(detections)d"
 
-#: src/polyx/cli/detect.py:308
+#: src/polyx/cli/detect.py:307
 #, python-format
 msgid "OUTPUT: %(run_dir)s"
 msgstr "SALIDA: %(run_dir)s"
@@ -106,62 +106,62 @@ msgstr ""
 msgid "--alias takes one value per model (%(count)d); got %(got)d"
 msgstr "--alias toma un valor por modelo (%(count)d); se recibieron %(got)d"
 
-#: src/polyx/cli/detect.py:224
+#: src/polyx/cli/detect.py:223
 #, python-format
 msgid "invalid tiling mode: %(value)s (choose auto, always or never)"
 msgstr "modo de mosaico inválido: %(value)s (elige auto, always o never)"
 
-#: src/polyx/cli/detect.py:280
+#: src/polyx/cli/detect.py:279
 msgid "Use --force to overwrite the canonical files."
 msgstr "Usa --force para sobrescribir los ficheros canónicos."
 
-#: src/polyx/cli/detect.py:282
+#: src/polyx/cli/detect.py:281
 msgid "Choose a folder path for --out."
 msgstr "Elige una ruta de carpeta para --out."
 
-#: src/polyx/cli/detect.py:295
+#: src/polyx/cli/detect.py:294
 #, python-format
 msgid "ABORTED: %(run_dir)s"
 msgstr "ABORTADO: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:310
+#: src/polyx/cli/detect.py:309
 #, python-format
 msgid "SKIPPED: %(count)d"
 msgstr "OMITIDAS: %(count)d"
 
-#: src/polyx/cli/detect.py:323 src/polyx/cli/detect.py:327
+#: src/polyx/cli/detect.py:322 src/polyx/cli/detect.py:326
 #, python-format
 msgid "COMPACT REPORT: %(path)s"
 msgstr "INFORME COMPACTO: %(path)s"
 
-#: src/polyx/cli/detect.py:267 src/polyx/cli/detect.py:287 src/polyx/cli/detect.py:291
+#: src/polyx/cli/detect.py:266 src/polyx/cli/detect.py:286 src/polyx/cli/detect.py:290
 #: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
 #: src/polyx/cli/report.py:78 src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
 msgstr "ERROR: %(error)s"
 
-#: src/polyx/cli/detect.py:273
+#: src/polyx/cli/detect.py:272
 #, python-format
 msgid "ERROR loading model: %(error)s"
 msgstr "ERROR al cargar el modelo: %(error)s"
 
-#: src/polyx/cli/detect.py:284
+#: src/polyx/cli/detect.py:283
 #, python-format
 msgid "ERROR: %(error)s. %(hint)s"
 msgstr "ERROR: %(error)s. %(hint)s"
 
-#: src/polyx/cli/detect.py:288
+#: src/polyx/cli/detect.py:287
 #, python-format
 msgid "PARTIAL RUN: %(run_dir)s"
 msgstr "EJECUCIÓN PARCIAL: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:325 src/polyx/cli/report.py:70
+#: src/polyx/cli/detect.py:324 src/polyx/cli/report.py:70
 #, python-format
 msgid "FULL REPORT: %(path)s"
 msgstr "INFORME COMPLETO: %(path)s"
 
-#: src/polyx/cli/detect.py:321
+#: src/polyx/cli/detect.py:320
 #, python-format
 msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
@@ -476,14 +476,14 @@ msgstr "<strong>%(quantity)s %(direction)s con la profundidad</strong>"
 msgid "No trend in %(quantity)s with depth is detected"
 msgstr "No se detecta tendencia en %(quantity)s con la profundidad"
 
-#: src/polyx/core/detect/tiling.py:247
+#: src/polyx/core/detect/tiling.py:237
 #, python-format
 msgid "%(width)d×%(height)d px → %(tiles)d tile of %(tile)d px, %(overlap)d%% overlap"
 msgid_plural "%(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px, %(overlap)d%% overlap"
 msgstr[0] "%(width)d×%(height)d px → %(tiles)d mosaico de %(tile)d px, %(overlap)d%% de solape"
 msgstr[1] "%(width)d×%(height)d px → %(tiles)d mosaicos de %(tile)d px, %(overlap)d%% de solape"
 
-#: src/polyx/core/detect/tiling.py:97
+#: src/polyx/core/detect/tiling.py:87
 #, python-format
 msgid "%(side)d px longest side → %(tiles)d tile of %(tile)d px, %(overlap)d%% overlap"
 msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(overlap)d%% overlap"
@@ -2094,8 +2094,8 @@ msgstr ""
 "No hay que marcar nada: el borde de la placa se encuentra solo. El radio se obtiene ajustando un"
 " círculo al anillo muestreado en 720 direcciones, con rechazo de atípicos; Hough solo aporta el "
 "centro aproximado porque su radio llega a errar un 12 %. En los recortes la placa no aparece, "
-"así que ahí hay que medir la escala a mano; los archivos antiguos de índice de calibración no se "
-"leen."
+"así que ahí hay que medir la escala a mano; los archivos antiguos de índice de calibración no se"
+" leen."
 
 #: src/polyx/gui/detector/pages/parameters.py:379
 msgid ""

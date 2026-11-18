@@ -769,9 +769,9 @@ One module owns the tiling decision and its sentence: `TilingMode`
 `policy_tiling` stays as the geometry primitive and is re-exported from
 `protocol.py` and `yolo.py` for old importers.
 
-The mode is English at every boundary, and `TilingMode.parse` is the only
-place a saved `"siempre"`/`"nunca"` is understood — it is normalised on load
-and never written again. `run.json` records the plan per image/model in
+The mode is English at every boundary: `TilingMode.parse` accepts only
+`auto`/`always`/`never` and does not translate a saved `"siempre"`/`"nunca"`.
+`run.json` records the plan per image/model in
 `tiling_plan`; the legacy `tiling` sentence stays so readers written before
 #125 keep working. The engine and the Parameters/Execute previews render the
 plan through `describe()`, which is translated at call time; no page formats

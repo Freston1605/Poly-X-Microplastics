@@ -212,11 +212,10 @@ def _resolve_calibration_mode(args) -> str:
 
 
 def _tiling_argument(value: str) -> TilingMode:
-    """Map the English flag to a mode, still accepting the deprecated spellings.
+    """Map the English flag to a mode; there are no legacy aliases.
 
-    ``siempre`` and ``nunca`` are hidden aliases: an old script keeps working,
-    but ``--help`` only advertises the English choices and the value that
-    leaves this function is already the mode the rest of the program uses.
+    ``--help`` advertises the same three choices this function validates, and
+    the value that leaves it is already the mode the rest of the program uses.
     """
     text = str(value).strip().lower()
     if text not in TILING_VALUES:

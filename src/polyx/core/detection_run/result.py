@@ -78,16 +78,16 @@ class RunParams:
     # `AUTO` tiles only photos whose longest side exceeds tiling_threshold_px,
     # infers each tile at native resolution and merges with global NMS. The
     # threshold is 2000 so the study crops (1630 px per side) fit in one piece
-    # and the full plates (~3260) get tiled. The mode is English; a legacy
-    # spelling saved by an older run is normalised when the params are read.
+    # and the full plates (~3260) get tiled. The only accepted modes are the
+    # English values; a legacy spelling is not translated on load.
     tiling: TilingMode = TilingMode.AUTO
     tiling_threshold_px: int = 2000
     tiling_tile: int = 0  # 0 = derive from min(threshold, imgsz)
     tiling_overlap: float = 0.25  # overlap between tiles; NMS removes the duplicate
 
     def __post_init__(self) -> None:
-        # Every way in -- a saved run, the CLI, a caller written before the
-        # English identifiers -- ends as the one enum.
+        # Every way in -- a saved run, the CLI, a plain English string -- ends
+        # as the one enum; no legacy spelling is translated here.
         self.tiling = TilingMode.parse(self.tiling)
 
 

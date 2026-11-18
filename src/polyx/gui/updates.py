@@ -75,7 +75,7 @@ class SearchUpdates(QObject):
         # Without a local marker there is no baseline. It happens in development
         # installs (git clone): there the notice is unnecessary, it is updated with git.
         if not local:
-            event(log, "update.skipped", reason="sin_version_instalada")
+            event(log, "update.skipped", reason="no_installed_version")
             return
         remote = version_remote()
         if not remote:
@@ -85,12 +85,12 @@ class SearchUpdates(QObject):
                 log,
                 "update.error",
                 level=logging.WARNING,
-                reason="sin_respuesta_remota",
+                reason="no_remote_response",
                 local=local,
             )
             return
         if remote != local:
-            event(log, "update.available", remoto=remote[:7], local=local)
+            event(log, "update.available", remote=remote[:7], local=local)
             self.there_is_a_new_version.emit(remote[:7])
         else:
             event(log, "update.ok", local=local)
