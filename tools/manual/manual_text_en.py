@@ -1098,8 +1098,10 @@ width and aspect ratio. Selecting a row shows <b>what was measured</b>:</p>
       model again. It always opens the original photograph and never the
       annotated PNG, which has the boxes painted on it.</li>
   <li><b>Drag and drop</b> an image or a model straight onto the canvas.</li>
-  <li><b>Export</b> the annotated image, <code>detecciones.csv</code> and
-      <code>resumen.json</code>.</li>
+  <li><b>Export</b> the annotated image, <code>detections.csv</code> and
+      <code>viewer_summary.json</code> into a
+      <code>viewer_&lt;image&gt;_&lt;timestamp&gt;/</code> folder. A run folder
+      (one containing <code>run.json</code>) is refused.</li>
 </ul>
 """,
     },

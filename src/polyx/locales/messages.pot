@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 12:30-0300\n"
+"POT-Creation-Date: 2026-11-18 12:50-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1497,7 +1497,7 @@ msgstr ""
 msgid "Drawing: %(width).0f×%(height).0f px"
 msgstr ""
 
-#: src/polyx/gui/detector/pages/gt_manual.py:749 src/polyx/gui/viewer/window.py:1445
+#: src/polyx/gui/detector/pages/gt_manual.py:749 src/polyx/gui/viewer/window.py:1460
 msgid "Error while saving"
 msgstr ""
 
@@ -2686,7 +2686,7 @@ msgstr ""
 msgid "● Folder loaded"
 msgstr ""
 
-#: src/polyx/gui/labeler/window.py:435 src/polyx/gui/viewer/window.py:1535
+#: src/polyx/gui/labeler/window.py:435 src/polyx/gui/viewer/window.py:1550
 msgid "● Model loaded"
 msgstr ""
 
@@ -5656,7 +5656,17 @@ msgstr ""
 msgid "No image is open."
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1441
+#: src/polyx/gui/viewer/window.py:1431
+msgid "Cannot export here"
+msgstr ""
+
+#: src/polyx/gui/viewer/window.py:1432
+msgid ""
+"This folder contains run.json, which marks a canonical run. Choose a different output folder so "
+"the prediction table is not overwritten."
+msgstr ""
+
+#: src/polyx/gui/viewer/window.py:1456
 msgid "Saved"
 msgstr ""
 
@@ -5741,19 +5751,19 @@ msgstr ""
 msgid "circle"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1438
+#: src/polyx/gui/viewer/window.py:1453
 #, python-format
 msgid "● Saved to %(folder)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1441
+#: src/polyx/gui/viewer/window.py:1456
 #, python-format
 msgid ""
 "Files saved to:\n"
 "%(folder)s"
 msgstr ""
 
-#: src/polyx/gui/viewer/window.py:1447
+#: src/polyx/gui/viewer/window.py:1462
 msgid "● Error while saving"
 msgstr ""
 
@@ -5801,7 +5811,7 @@ msgid_plural "● %(count)d detections (imgsz %(imgsz)d)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/gui/viewer/window.py:1538
+#: src/polyx/gui/viewer/window.py:1553
 #, python-format
 msgid "● Error: %(error)s"
 msgstr ""

@@ -609,7 +609,7 @@ class ResultsPage(DetectorPage):
     def _export_csv(self):
         """Exports all the detections to a CSV file."""
         path, _unused = QFileDialog.getSaveFileName(
-            self, _("Export CSV"), "detecciones.csv", _("CSV (*.csv)")
+            self, _("Export CSV"), "detections.csv", _("CSV (*.csv)")
         )
         if not path:
             return
