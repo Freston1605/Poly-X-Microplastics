@@ -97,7 +97,7 @@ def test_la_recta_de_feret_puede_salirse_y_se_declara_cuanto():
     img, d = _grumo_con_muesca()
     _, m = M.draw_measurement(img, d)
     assert m is not None and m.ok
-    assert m.method.startswith("Feret"), (
+    assert m.method == M.Method.FERET, (
         f"la figura tiene que medirse por Feret para probar esto, no por {m.method}"
     )
     assert m.feret_outside > 0.05, "en esta figura la cuerda cruza la muesca; deberia declararlo"

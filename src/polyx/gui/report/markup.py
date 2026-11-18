@@ -19,8 +19,8 @@ from polyx.core.i18n import N_, _, pgettext
 #: stored values stay as they are — they belong to the run schema — and only
 #: the label shown in the report is translated.
 _LENGTH_METHODS: dict[str, str] = {
-    "geodesico": N_("geodesic"),
-    "Feret maximo": N_("maximum Feret"),
+    "geodesic": N_("geodesic"),
+    "maximum_feret": N_("maximum Feret"),
 }
 
 

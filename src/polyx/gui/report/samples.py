@@ -86,8 +86,8 @@ def choose_records(shapes: list[tuple], max_records: int) -> list[tuple]:
     def size_2(par) -> float:
         return par[0].length_um or 0.0
 
-    fibers = sorted([t for t in shapes if t[0].morphotype == "fibra"], key=size_2, reverse=True)
-    others = sorted([t for t in shapes if t[0].morphotype != "fibra"], key=size_2, reverse=True)
+    fibers = sorted([t for t in shapes if t[0].morphotype == "fibre"], key=size_2, reverse=True)
+    others = sorted([t for t in shapes if t[0].morphotype != "fibre"], key=size_2, reverse=True)
 
     half = max(1, max_records // 2)
     chosen = fibers[:half]

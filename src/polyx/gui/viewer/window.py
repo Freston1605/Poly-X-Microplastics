@@ -1081,7 +1081,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         measure_detections(dets, bgr, um)
 
-        fib = sum(1 for d in dets if d.morphotype == "fibra")
+        fib = sum(1 for d in dets if d.morphotype == "fibre")
 
         sin = sum(1 for d in dets if d.morphotype is None)
 
