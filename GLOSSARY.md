@@ -160,6 +160,29 @@ truncation. Generated with `python tools/i18n/cli.py pseudo`, selected with
 `POLYX_LOCALE=qps_ploc`, gitignored and excluded from the wheel and the
 frozen application. It is not a shipped locale and not part of any gate.
 
+## Distribution integrity
+
+That a shipped Poly-X artifact is genuine, complete and untampered between
+the build that produced it and the user who installs it — across the PyPI
+distributions, the desktop bundles and the auto-updaters. It is not the
+input-parsing "security" described in `SECURITY.md`.
+_Avoid_: safety; security (when it refers to release artifacts)
+
+## Trust anchor
+
+The identity a user relies on to decide a Poly-X artifact is genuine: the
+build's own cryptographic identity recorded when the release is produced,
+not a secret key a maintainer keeps and must protect.
+_Avoid_: signing key (as the default anchor), root certificate
+
+## Release artifact
+
+A file produced by the release job and published as part of a versioned
+release: the wheel, the sdist, the model weights, an SBOM or a signed
+manifest. It is not the archive GitHub generates on demand for a branch or
+a tag, which the release job does not produce and therefore cannot attest.
+_Avoid_: source ZIP, download
+
 ## Retired: `tr()`
 
 The old translation function that looked up a Spanish sentence in
