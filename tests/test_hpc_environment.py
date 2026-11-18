@@ -303,6 +303,26 @@ def test_wheelhouse_plan_uses_cuda_index_and_no_index_install() -> None:
     assert any("--find-links" in " ".join(step) for step in plan.steps)
 
 
+def test_wheelhouse_plan_filters_torch_before_the_default_index_download(
+    tmp_path: Path,
+) -> None:
+    from tools.hpc import build_wheelhouse
+
+    plan = build_wheelhouse.make_plan("torch==2.7.1\nnumpy==1.26.4\n", tmp_path / "wheelhouse")
+    writes = [step[1] for step in plan.steps if step[0] == "write"]
+    assert writes[0] == str(plan.wheelhouse / "lock-requirements.txt")
+
+    filtered_at = next(
+        index
+        for index, step in enumerate(plan.steps)
+        if step[0] == "write" and step[1].endswith("lock-requirements.txt")
+    )
+    download_at = next(
+        index for index, step in enumerate(plan.steps) if "pip" in step and "-r" in step
+    )
+    assert filtered_at < download_at
+
+
 def test_dry_run_prints_the_offline_install_command(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

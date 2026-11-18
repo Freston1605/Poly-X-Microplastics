@@ -31,6 +31,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# The tool runs from a source checkout too, where the project is not installed.
+# Match the pattern used by the other tools: make ``src`` importable locally.
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 UV_VERSION = "0.13.7"
 PIP_VERSION = "26.3"
@@ -91,10 +95,10 @@ def make_plan(requirements_text: str, wheelhouse: Path) -> Plan:
         "pip",
         "download",
     )
-    # The lockfile already contains every transitive pin, so the default-index
-    # download does not need dependency resolution. The CUDA wheels are the
-    # exception: let pip resolve their CUDA runtime dependencies so the
-    # wheelhouse is complete for an offline install.
+    # The lockfile already contains every transitive pin, including the CUDA
+    # runtime libraries the cu126 wheels need. Both downloads are therefore
+    # dependency-free; resolving again would pull newer numpy/Pillow wheels
+    # that contradict the lock.
     index_args = ("--index-url", CUDA_INDEX)
     steps = (
         (
@@ -108,8 +112,9 @@ def make_plan(requirements_text: str, wheelhouse: Path) -> Plan:
             "-o",
             str(exported),
         ),
+        ("write", str(exported), "locked pins without default torch/torchvision"),
         (*pip, "--no-deps", "--dest", str(wheelhouse), "-r", str(exported)),
-        (*pip, *index_args, "--dest", str(wheelhouse), *cuda),
+        (*pip, "--no-deps", *index_args, "--dest", str(wheelhouse), *cuda),
         ("write", str(wheelhouse / "requirements.txt"), "locked pins + cu126 wheels"),
         ("write", str(wheelhouse / "SHA256SUMS"), "digest of every downloaded wheel"),
         (
@@ -202,10 +207,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     for step in plan.steps:
-        if step[0] == "write" and step[1] == str(plan.requirements_file):
-            _write_index(plan)
-        if step[0] == "write" and step[1] == str(plan.checksum_file):
-            _write_checksums(plan)
+        if step[0] == "write":
+            target = Path(step[1])
+            if target == plan.wheelhouse / "lock-requirements.txt":
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("\n".join(plan.default_requirements) + "\n", encoding="utf-8")
+                print("+ " + " ".join(step), flush=True)
+                continue
+            if target == plan.requirements_file:
+                _write_index(plan)
+            elif target == plan.checksum_file:
+                _write_checksums(plan)
+            print("+ " + " ".join(step), flush=True)
             continue
         code = _run(step)
         if code:
