@@ -1422,6 +1422,21 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         if not out_dir:
             return
 
+        # A folder with run.json is a canonical run. An export there risks
+        # overwriting its prediction table, so refuse before creating anything.
+
+        if (Path(out_dir) / "run.json").exists():
+            QMessageBox.warning(
+                self,
+                _("Cannot export here"),
+                _(
+                    "This folder contains run.json, which marks a canonical run. "
+                    "Choose a different output folder so the prediction table is not overwritten."
+                ),
+            )
+
+            return
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         save_dir = Path(out_dir) / f"viewer_{img.stem}_{ts}"

@@ -68,3 +68,27 @@ def test_export_uses_english_folder_file_and_json_names(qapp, tmp_path, monkeypa
     assert summary["by_class"] == {"PET": {"n": 1}}
     assert summary["um_per_px"] == 2.0
     assert not {"imagen", "n_detecciones", "por_clase"} & summary.keys()
+
+
+def test_export_refuses_a_canonical_run_folder(qapp, tmp_path, monkeypatch, selected_language):
+    """A folder with run.json is a canonical run: never write a viewer export there."""
+    selected_language("en")
+    image = write_image(tmp_path / "sample.png")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text('{"schema_version": 2}', encoding="utf-8")
+    original_csv = "model,image,size\n"
+    (run_dir / "detections.csv").write_text(original_csv, encoding="utf-8")
+
+    messages: list = []
+    _choose_folder(monkeypatch, run_dir, messages)
+
+    _window_with_image(image)._save()
+
+    warnings = [m for m in messages if m[0] == "warning"]
+    assert warnings, "the user is warned why the export was refused"
+    text = " ".join(str(part) for part in warnings[0][1])
+    assert "run.json" in text
+    assert "different output folder" in text
+    assert {p.name for p in run_dir.iterdir()} == {"run.json", "detections.csv"}
+    assert (run_dir / "detections.csv").read_text(encoding="utf-8") == original_csv
