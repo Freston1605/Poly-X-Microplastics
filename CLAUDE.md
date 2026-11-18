@@ -167,9 +167,10 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 > implementation. `polyx.gui.report_html` is a five-name compatibility shim
 > over that surface, and it is what the GUI page, the CLI and the audit tool
 > import. A new report section is one catalog entry in `registry.py` plus one
-> builder `(ctx) -> str` in `sections.py`, named for what it renders; section
-> ids stay stable Spanish keys because they are HTML anchors, not user-facing
-> strings.
+> builder `(ctx) -> str` in `sections.py`, named for what it renders. Section
+> ids and preset keys are stable **English** machine tokens (`summary`,
+> `methods`, …) and the id doubles as the HTML anchor; they are not
+> user-facing strings (spec #182, ADR-0005 superseded).
 
 ---
 
@@ -535,10 +536,12 @@ overrides; ADR-0001). The folder is the canonical run folder (ADR-0002):
   (`_annot`, `_pred`, `_gt`), `labels/{index:04d}_{stem}.txt` and `classes.txt`
 - `<data dir>/runs/detect_YYYYMMDD_HHMMSS/report.html` — Paper-quality report
 
-New runs never write `summary.json`, `metrics.json`, `resumen.json` or the
-old flat `images/` folder. Old GUI folders still open in the Viewer through
-their per-model `labels/*.txt`; old headless folders still load through the
-legacy reader. Neither is migrated or rewritten.
+New runs never write `summary.json`, `metrics.json` or the old `resumen.json`
+export. The Viewer now writes `viewer_summary.json` inside a
+`viewer_<image>_<ts>/` folder; an export into a folder containing `run.json` is
+refused so a canonical prediction table cannot be overwritten. Old GUI folders
+still open in the Viewer through their per-model `labels/*.txt`; old headless
+folders still load through the legacy reader. Neither is migrated or rewritten.
 
 **Headless CLI.** `polyx-detect` runs the same engine synchronously:
 
@@ -678,12 +681,13 @@ already retried at a smaller size, the status that stays on screen names the
 image, with sizes already converted to μm. Useful for reviewing the manual count
 over the full plate without going back to the Labeller.
 
-**Export** to `visor_<image>_<ts>/`: annotated PNG, `detecciones.csv`
+**Export** to `viewer_<image>_<ts>/`: `<image>_annotated.png`, `detections.csv`
 (one row per particle: `diam_px` is the box's equal-area diameter — a box
 descriptor; `diam_um`/`area_um2` are the measured values, with `size_source`
-declaring `mask` or `box`) and `resumen.json`. The headers and the
-`size_source` values are the canonical English tokens of ADR-0004
-(`VIEWER_COLUMNS`), not interface labels. The
+declaring `mask` or `box`) and `viewer_summary.json` (keys `image`,
+`n_detections`, `by_class`, plus the already-English `timestamp` and
+`um_per_px`). The headers and the `size_source` values are the canonical
+English tokens of ADR-0004 (`VIEWER_COLUMNS`), not interface labels. The
 labels on the canvas and in the PNG carry a **`≈`** when the µm size came
 from the box fallback, so an approximate number is never shown as a
 measured one.

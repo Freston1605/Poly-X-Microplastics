@@ -65,7 +65,7 @@ def render_annotated_frame(
 
 
 def csv_rows(dets: list[Detection], um_per_px: float | None) -> list[list[str]]:
-    """The rows of ``detecciones.csv``: measured sizes with declared origin.
+    """The rows of ``detections.csv``: measured sizes with declared origin.
 
     ``diam_um``/``area_um2`` are whatever the measurement layer wrote —
     mask-measured, or the box fallback when segmentation failed — and

@@ -179,6 +179,24 @@ def test_an_ambiguous_basename_leaves_the_export_scale_blank(qapp, tmp_path):
     assert row[_column(rows, "calibration_origin")] == ORIGIN_NONE
 
 
+def test_csv_download_defaults_to_the_canonical_filename(qapp, tmp_path, monkeypatch):
+    """The Results page suggests the same name as the run's detection table."""
+    from PySide6.QtWidgets import QFileDialog
+
+    calls: list = []
+
+    def fake_save(*args, **kwargs):
+        calls.append(args)
+        return "", ""
+
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", fake_save)
+
+    _page_for(_state_with_slot(tmp_path))._export_csv()
+
+    assert calls, "the save dialog was opened"
+    assert calls[0][2] == "detections.csv"
+
+
 def test_the_report_calibration_summary_agrees_with_the_page(qapp, tmp_path):
     """The run record and the page describe the same per-photo scales."""
     from polyx.core.detection_run.schema import build_run_payload

@@ -1430,9 +1430,24 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         if not out_dir:
             return
 
+        # A folder with run.json is a canonical run. An export there risks
+        # overwriting its prediction table, so refuse before creating anything.
+
+        if (Path(out_dir) / "run.json").exists():
+            QMessageBox.warning(
+                self,
+                _("Cannot export here"),
+                _(
+                    "This folder contains run.json, which marks a canonical run. "
+                    "Choose a different output folder so the prediction table is not overwritten."
+                ),
+            )
+
+            return
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        save_dir = Path(out_dir) / f"visor_{img.stem}_{ts}"
+        save_dir = Path(out_dir) / f"viewer_{img.stem}_{ts}"
 
         save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1471,7 +1486,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         annotated = render_annotated_frame(frame, self.state.detections, self.state.um_per_px)
 
-        out_path = save_dir / f"{img.stem}_anotada.png"
+        out_path = save_dir / f"{img.stem}_annotated.png"
 
         ok, buf = cv2.imencode(".png", annotated)
 
@@ -1482,7 +1497,7 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         import csv
 
-        out = save_dir / "detecciones.csv"
+        out = save_dir / "detections.csv"
 
         rows = csv_rows(self.state.detections, self.state.um_per_px)
 
@@ -1496,19 +1511,19 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         um = self.state.um_per_px
 
         summary = {
-            "imagen": img.name,
+            "image": img.name,
             "timestamp": datetime.now().isoformat(),
             "um_per_px": um if um > 0 else None,
-            "n_detecciones": len(self.state.detections),
-            "por_clase": {},
+            "n_detections": len(self.state.detections),
+            "by_class": {},
         }
 
         for det in self.state.detections:
-            entry = summary["por_clase"].setdefault(det.class_name, {"n": 0})
+            entry = summary["by_class"].setdefault(det.class_name, {"n": 0})
 
             entry["n"] += 1
 
-        out = save_dir / "resumen.json"
+        out = save_dir / "viewer_summary.json"
 
         out.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 

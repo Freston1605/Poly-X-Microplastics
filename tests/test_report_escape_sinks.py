@@ -339,7 +339,7 @@ def test_metodos_declara_el_alias_escapado_en_los_tres_sitios(rh, tmp_path):
     from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = _render_de("metodos", st, tmp_path)
+    html = _render_de("methods", st, tmp_path)
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -356,7 +356,7 @@ def test_forma_muestra_el_nombre_escapado_en_fichas_y_recuento(rh, tmp_path):
     from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = _render_de("forma", st, tmp_path)
+    html = _render_de("shape", st, tmp_path)
 
     assert NOMBRE_FOTO_HOSTIL not in html
     assert ALIAS_HOSTIL not in html, "la seccion de forma no nombra alias"
@@ -372,7 +372,7 @@ def test_forma_sufre_el_nombre_en_el_recuento_por_foto(rh, tmp_path):
     from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = _render_de("forma", st, tmp_path)
+    html = _render_de("shape", st, tmp_path)
     # El class_name literal 'PET' queda intacto. El markup crudo de la clase
     # no cruza: los valores sirven antes de llegar al html.
     assert "<td>PET</td>" in html
@@ -387,7 +387,7 @@ def test_fichas_escapan_la_clase_y_el_titulo_de_la_imagen(rh, tmp_path):
     for rs in st.results.values():
         for r in rs:
             r.predictions[0].class_name = CLASE_HOSTIL
-    html = _render_de("fichas", st, tmp_path)
+    html = _render_de("cards", st, tmp_path)
 
     assert CLASE_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -409,7 +409,7 @@ def test_resultados_no_suelta_texto_hostil_fotos_solamente(rh, tmp_path):
     for rs in st.results.values():
         for r in rs:
             r.predictions[0].class_name = CLASE_HOSTIL
-    html = _render_de("resultados", st, tmp_path)
+    html = _render_de("results", st, tmp_path)
 
     assert NOMBRE_FOTO_HOSTIL not in html
     assert ALIAS_HOSTIL not in html
@@ -435,7 +435,7 @@ def test_galeria_escapa_el_alias_y_el_nombre_de_la_imagen(rh, tmp_path):
             assert ok
             r.pred_path = r.image_path.parent / "pred.png"
             r.pred_path.write_bytes(buf.tobytes())
-    html = _render_de("galeria", st, tmp_path)
+    html = _render_de("gallery", st, tmp_path)
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -467,7 +467,7 @@ def test_errores_declara_la_matriz_y_la_nota_de_ausentes_escapados(rh, tmp_path)
             r.has_gt = True
     st.models[0].names = {0: "PET", 5: "<img src=x onerror=alert(3)>"}
 
-    html = _render_de("errores", st, tmp_path)
+    html = _render_de("errors", st, tmp_path)
 
     assert CLASE_HOSTIL not in html
     assert ALIAS_HOSTIL not in html
@@ -488,7 +488,7 @@ def test_comparacion_escapa_el_alias_en_el_veredicto_y_en_la_cabecera(rh, tmp_pa
             gt = deteccion_medida(foto_sintetica())
             r.gt = [gt]
             r.has_gt = True
-    html = _render_de("comparacion", st, tmp_path)
+    html = _render_de("comparison", st, tmp_path)
 
     assert ALIAS_HOSTIL not in html
     assert NOMBRE_FOTO_HOSTIL not in html
@@ -504,7 +504,7 @@ def test_comparacion_sin_gt_no_nombra_ganador_ni_alias(rh, tmp_path):
     from tests.report_fixtures import estado_hostil
 
     st = estado_hostil(directorio=tmp_path / "fotos")
-    html = _render_de("comparacion", st, tmp_path)
+    html = _render_de("comparison", st, tmp_path)
     # Sin GT el veredicto no se emite: la unica aparicion del alias es la
     # cabecera global (Models:), nunca un ganador:
     assert html.count(ALIAS_ESCAPADO) == 1, "sin GT el sink del veredicto nace muerto"
