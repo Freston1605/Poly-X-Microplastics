@@ -46,20 +46,20 @@ __all__ = ["_generate_report_impl", "generate_report"]
 # invariant ``set(SECTION_BUILDERS) == set(IDS_SECTIONS)`` is pinned by the
 # section tests.
 SECTION_BUILDERS: dict[str, Callable[[ReportContext], str]] = {
-    "resumen": build_summary,
-    "metodos": build_methods,
-    "calibracion": build_calibration,
-    "forma": build_shape,
-    "talla_carpetas": build_size_by_folder,
-    "profundidad": build_depth,
-    "fichas": build_records,
-    "resultados": build_results,
-    "modelos": build_models,
-    "errores": build_errors,
-    "comparacion": build_comparison,
-    "galeria": build_gallery,
-    "conteo": build_count,
-    "referencias": build_references,
+    "summary": build_summary,
+    "methods": build_methods,
+    "calibration": build_calibration,
+    "shape": build_shape,
+    "size_by_folder": build_size_by_folder,
+    "depth": build_depth,
+    "cards": build_records,
+    "results": build_results,
+    "models": build_models,
+    "errors": build_errors,
+    "comparison": build_comparison,
+    "gallery": build_gallery,
+    "counts": build_count,
+    "references": build_references,
 }
 
 
@@ -107,9 +107,9 @@ def _generate_report_impl(
     # The two old checkboxes still take precedence if passed as False, so as not to
     # change the meaning of calls that already existed.
     if not include_refs:
-        requested.discard("referencias")
+        requested.discard("references")
     if not include_gallery:
-        requested.discard("galeria")
+        requested.discard("gallery")
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -122,8 +122,8 @@ def _generate_report_impl(
     # and shape precomputes are paid for only by the sections that read them:
     # a summary-only report never runs the shape pass (US20).
     batch = compute_batch_metrics(run, only_images)
-    needs_lot = bool({"forma", "talla_carpetas", "profundidad", "fichas"} & requested)
-    needs_shape_bodies = bool({"forma", "talla_carpetas"} & requested)
+    needs_lot = bool({"shape", "size_by_folder", "depth", "cards"} & requested)
+    needs_shape_bodies = bool({"shape", "size_by_folder"} & requested)
     lot = (
         compute_lot_forms(run, batch)
         if needs_lot

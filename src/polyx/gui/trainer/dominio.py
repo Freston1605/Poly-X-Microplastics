@@ -127,7 +127,7 @@ def create_real_only_yaml(data_yaml: Path, destination_dir: Path) -> Path | None
         "val": "images/val",
         "names": cfg.get("names", {}),
     }
-    output = destination_dir / "dataset_solo_real.yaml"
+    output = destination_dir / "dataset_real_only.yaml"
     output.write_text(yaml.safe_dump(new, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return output
 
