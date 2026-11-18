@@ -498,7 +498,7 @@ def test_cli_index_scale_wins_in_the_report_over_the_unused_manual_value(tmp_pat
     assert calibration.origin == ORIGIN_INDEX
     assert calibration.um_por_px == pytest.approx(31.25)
     assert "um_per_px" not in calibration_payload(run.run_dir)["params"]
-    html = generate_report(run, tmp_path / "report.html", sections=["metodos"]).read_text(
+    html = generate_report(run, tmp_path / "report.html", sections=["methods"]).read_text(
         encoding="utf-8"
     )
     assert "31.2500" in html

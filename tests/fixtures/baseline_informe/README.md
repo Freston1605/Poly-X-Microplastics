@@ -31,6 +31,10 @@ said nothing about what broke.
 - **Ticket #73:** the `.sha256` files and the whole-file comparison were
   removed; the snapshots stay as the semantic reference for the per-section
   tests.
+- **Ticket #184:** recaptured after section ids became English machine tokens
+  (spec #182). The `<h2 id=...>` / `href='#...'` anchors now use the English
+  section ids; the legacy alias spellings (`abstract`, `calib`, `compare`,
+  `refs`) are gone.
 
 ## Language contract
 

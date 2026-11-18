@@ -1257,7 +1257,7 @@ def test_saved_report_is_never_rewritten_by_the_switch(qapp, tmp_path):
     run = _minimal_run(tmp_path)
     i18n.set_language("es")
     report = tmp_path / "informe_deteccion.html"
-    generate_report(run, report, sections=["resumen"])
+    generate_report(run, report, sections=["summary"])
     before = report.read_bytes()
 
     from polyx.gui.detector.window import DetectorWindow
@@ -1299,7 +1299,7 @@ def test_displayed_report_view_rerenders_in_the_new_language(qapp, tmp_path):
 
     # Rendering again after the switch produces the new language.
     after = tmp_path / "informe_en.html"
-    generate_report(run, after, sections=["resumen"])
+    generate_report(run, after, sections=["summary"])
     html = after.read_text(encoding="utf-8")
     assert "Summary" in html
     assert "Resumen" not in html

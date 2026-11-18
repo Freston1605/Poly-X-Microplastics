@@ -167,9 +167,10 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 > implementation. `polyx.gui.report_html` is a five-name compatibility shim
 > over that surface, and it is what the GUI page, the CLI and the audit tool
 > import. A new report section is one catalog entry in `registry.py` plus one
-> builder `(ctx) -> str` in `sections.py`, named for what it renders; section
-> ids stay stable Spanish keys because they are HTML anchors, not user-facing
-> strings.
+> builder `(ctx) -> str` in `sections.py`, named for what it renders. Section
+> ids and preset keys are stable **English** machine tokens (`summary`,
+> `methods`, …) and the id doubles as the HTML anchor; they are not
+> user-facing strings (spec #182, ADR-0005 superseded).
 
 ---
 

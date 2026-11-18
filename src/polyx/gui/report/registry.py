@@ -4,6 +4,9 @@
 document shell assembles cover, TOC and numbered sections; ``NUM`` is the
 placeholder replaced by the assembler so section builders need not know
 their final numbers.
+
+Section ids and preset keys are machine tokens: they stay English in every
+locale and double as the HTML anchors of the generated report (spec #182).
 """
 
 from __future__ import annotations
@@ -14,20 +17,20 @@ from polyx.core.i18n import N_, _, language
 from .markup import _esc, _report_css
 
 SECTIONS = [
-    ("resumen", N_("Summary")),
-    ("metodos", N_("Methods")),
-    ("calibracion", N_("Scale calibration")),
-    ("forma", N_("Particle shape and size")),
-    ("talla_carpetas", N_("Size by folder and by photo (comparison between sites)")),
-    ("profundidad", N_("Depth profile of the core")),
-    ("fichas", N_("Measured-particle cards (sample)")),
-    ("resultados", N_("Overall results")),
-    ("modelos", N_("Per-model summary")),
-    ("errores", N_("Error analysis")),
-    ("comparacion", N_("Model comparison")),
-    ("galeria", N_("Per-image gallery")),
-    ("conteo", N_("Counts by sample and polymer type")),
-    ("referencias", N_("References")),
+    ("summary", N_("Summary")),
+    ("methods", N_("Methods")),
+    ("calibration", N_("Scale calibration")),
+    ("shape", N_("Particle shape and size")),
+    ("size_by_folder", N_("Size by folder and by photo (comparison between sites)")),
+    ("depth", N_("Depth profile of the core")),
+    ("cards", N_("Measured-particle cards (sample)")),
+    ("results", N_("Overall results")),
+    ("models", N_("Per-model summary")),
+    ("errors", N_("Error analysis")),
+    ("comparison", N_("Model comparison")),
+    ("gallery", N_("Per-image gallery")),
+    ("counts", N_("Counts by sample and polymer type")),
+    ("references", N_("References")),
 ]
 
 IDS_SECTIONS = [s[0] for s in SECTIONS]
@@ -36,18 +39,18 @@ IDS_SECTIONS = [s[0] for s in SECTIONS]
 # was impossible, but that choosing ten checkboxes one by one is tedious and
 # nobody does it: with a preset the short report is one click away.
 PRESETS = {
-    "completo": IDS_SECTIONS,
-    "resumen": ["resumen", "calibracion", "forma", "conteo", "galeria"],
-    "metodologico": [
-        "resumen",
-        "metodos",
-        "calibracion",
-        "forma",
-        "fichas",
-        "modelos",
-        "errores",
-        "comparacion",
-        "referencias",
+    "complete": IDS_SECTIONS,
+    "summary": ["summary", "calibration", "shape", "counts", "gallery"],
+    "methodological": [
+        "summary",
+        "methods",
+        "calibration",
+        "shape",
+        "cards",
+        "models",
+        "errors",
+        "comparison",
+        "references",
     ],
 }
 
@@ -57,35 +60,21 @@ PRESETS = {
 NUM = "@@N@@"
 
 
-# Legacy anchor names, to avoid breaking links to reports already
-# distributed. A new section does NOT have to appear here: its own id already
-# serves as an anchor. This dictionary was a second list to keep in
-# sync with SECCIONES, and adding `profundidad` crashed with
-# KeyError -- exactly what SECCIONES avoids by being a single list.
-_ANCHORS = {
-    "resumen": "abstract",
-    "metodos": "methods",
-    "calibracion": "calib",
-    "resultados": "results",
-    "modelos": "models",
-    "errores": "errors",
-    "comparacion": "compare",
-    "galeria": "gallery",
-    "referencias": "refs",
-}
-
-
 def anchor(sid: str) -> str:
-    """Anchor name for a section id: legacy alias if any, the id itself otherwise."""
-    return _ANCHORS.get(sid, sid)
+    """Anchor name for a section id: the id itself.
+
+    There is no alias table any more: a link into a report names the same
+    English token as the section heading, on every machine (spec #182).
+    """
+    return sid
 
 
 def _document_html(alive, active, status_note: str = "") -> str:
     """Assemble the final document: cover header, TOC, numbered sections, footer.
 
-    ``vivas`` arrives as (id, translated title, body) tuples in SECCIONES
+    ``alive`` arrives as (id, translated title, body) tuples in SECTIONS
     order, already filtered to the requested sections that have content.
-    The enumeration (SECCIONES order, start=1), the ``<h2>`` titles and the
+    The enumeration (SECTIONS order, start=1), the ``<h2>`` titles and the
     ``{NUM}`` placeholder substitution all live here because this helper is
     the only place that knows the final order; moving or reordering them is
     byte-visible in the frozen render (MEM090).
