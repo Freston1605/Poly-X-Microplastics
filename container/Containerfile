@@ -12,6 +12,8 @@ ARG UV_IMAGE
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
+    UV_CACHE_DIR=/tmp/uv-cache \
+    PIP_NO_CACHE_DIR=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:/usr/local/bin:$PATH
 COPY --from=${UV_IMAGE} /uv /uvx /usr/local/bin/
@@ -26,7 +28,8 @@ WORKDIR /src
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 COPY tools ./tools
-RUN python tools/hpc/build_wheelhouse.py --wheelhouse /opt/wheelhouse
+RUN python tools/hpc/build_wheelhouse.py --wheelhouse /opt/wheelhouse \
+ && rm -rf /tmp/uv-cache /src/.venv /root/.cache
 
 FROM base AS runtime
 WORKDIR /app
@@ -36,7 +39,8 @@ COPY --from=wheelhouse /src/src ./src
 COPY --from=wheelhouse /src/tools ./tools
 RUN uv venv /opt/venv \
  && uv pip install --no-index --find-links /opt/wheelhouse -r /opt/wheelhouse/requirements.txt \
- && uv pip install --no-deps .
+ && uv pip install --no-deps . \
+ && rm -rf /tmp/uv-cache /root/.cache /opt/wheelhouse/*.whl
 
 # The environment check is a smoke job on the GPU node, not a build step:
 # there is no GPU in the builder, so running it here would always fail.

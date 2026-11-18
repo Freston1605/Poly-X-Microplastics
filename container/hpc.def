@@ -34,6 +34,7 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
       -r /opt/polyx/wheelhouse/requirements.txt
   cd /opt/polyx
   uv pip install --no-deps .
+  rm -rf /root/.cache/uv /root/.cache/pip
 
 %environment
   export VIRTUAL_ENV=/opt/venv
