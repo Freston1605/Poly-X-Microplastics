@@ -594,9 +594,13 @@ def summary_batch(calibrations) -> dict:
     Dispersion is the reported figure: if the photos do not share a scale, a
     size histogram pooled over all of them mixes units.
     """
+    # Warnings are stable codes plus structured parameters, never prose. The
+    # list is groupable and countable by ``code``. Collect it before the early
+    # return so a batch where every scale failed still reports why.
+    warning_dicts = [warning_to_dict(c.warning) for c in calibrations if c.warning]
     ums = [c.um_por_px for c in calibrations if c.valid]
     if not ums:
-        return {"n": 0, "origins": {}, "warnings": []}
+        return {"n": 0, "origins": {}, "warnings": warning_dicts}
     a = np.array(ums, dtype=float)
     origins: dict[str, int] = {}
     for c in calibrations:
@@ -613,7 +617,5 @@ def summary_batch(calibrations) -> dict:
         "median": float(np.median(a)),
         "variation": float(a.max() / a.min()) if a.min() > 0 else 0.0,
         "origins": origins,
-        # Warnings are stable codes plus structured parameters, never prose.
-        # The list is groupable and countable by ``code``.
-        "warnings": [warning_to_dict(c.warning) for c in calibrations if c.warning],
+        "warnings": warning_dicts,
     }

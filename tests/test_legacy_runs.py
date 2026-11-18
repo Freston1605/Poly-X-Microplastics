@@ -54,6 +54,66 @@ def test_compact_report_refuses_a_precanonical_folder(tmp_path, selected_languag
     assert not output.exists()
 
 
+def test_compact_report_refuses_a_v1_manifest(tmp_path, selected_language):
+    """A version-1 manifest names the old format and writes no report."""
+    selected_language("en")
+    import json
+
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "status": "completed", "images": ["plate.png"]}),
+        encoding="utf-8",
+    )
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="version 1 is the old run format"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_compact_report_refuses_a_malformed_manifest(tmp_path, selected_language):
+    """Unparseable JSON fails clearly instead of rendering an empty report."""
+    selected_language("en")
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text("{not json", encoding="utf-8")
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="invalid JSON"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_report_cli_refuses_v1_and_malformed_manifests(tmp_path, capsys, selected_language):
+    """`polyx-report` names the bad manifest and writes no report for either."""
+    selected_language("en")
+    from polyx.cli.report import main
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    output = tmp_path / "report.html"
+
+    for content, expected in (
+        ('{"schema_version": 1}', "version 1 is the old run format"),
+        ("{not json", "invalid JSON"),
+    ):
+        (run_dir / "run.json").write_text(content, encoding="utf-8")
+        code = main(["--run", str(run_dir), "--output", str(output)])
+
+        captured = capsys.readouterr()
+        assert code != 0
+        assert expected in captured.err
+        assert "docs/specs/run-artifact-vocabulary.md" in captured.err
+        assert not output.exists()
+
+
 def test_compact_report_still_reads_a_canonical_folder(tmp_path, selected_language):
     """The Qt-free report keeps its canonical seam after the fallback is cut."""
     selected_language("en")
@@ -217,6 +277,47 @@ def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_langua
         window.close()
 
     assert any(OLD_RUN_MESSAGE in text for text in warnings)
+    assert window.state.detections == []
+
+
+def test_viewer_refuses_a_v1_manifest_with_prediction_labels(
+    qapp, monkeypatch, selected_language, tmp_path
+):
+    """A v1 run.json with compatible labels is refused, not loaded."""
+    selected_language("en")
+    pytest.importorskip("PySide6")
+    import json
+
+    from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    run_dir = tmp_path / "detect_v1"
+    (run_dir / "alpha" / "labels").mkdir(parents=True)
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "models": [{"alias": "alpha"}]}),
+        encoding="utf-8",
+    )
+    (run_dir / "alpha" / "classes.txt").write_text("PET\n", encoding="utf-8")
+    (run_dir / "alpha" / "labels" / "0000_plate1.txt").write_text(
+        "0 0.5 0.5 0.2 0.2 0.9\n", encoding="utf-8"
+    )
+
+    warnings: list[str] = []
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(run_dir))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(str(a[2])) or None)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: pytest.fail("model chooser"))
+
+    window = ViewerWindow()
+    try:
+        window.state.images = [GUI_PHOTO]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
+
+    assert warnings
     assert window.state.detections == []
 
 
