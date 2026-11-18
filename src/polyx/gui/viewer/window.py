@@ -35,6 +35,7 @@ from polyx.core.annotate import find_run_labels
 from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
 from polyx.core.measure import calibration as calib
+from polyx.core.measure.warnings import warning_sentence
 from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
@@ -1162,7 +1163,11 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             img, m = None, None
 
         if img is None or m is None or not m.ok:
-            self.lbl_record.setText(_("This particle could not be separated from the background"))
+            message = _("This particle could not be separated from the background")
+            sentence = warning_sentence(det.warning_shape)
+            if sentence:
+                message = f"{message} — {sentence}"
+            self.lbl_record.setText(message)
 
             self.lbl_record_data.setText("")
 
@@ -1214,8 +1219,11 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             % {"aspect": m.aspect, "curvature": m.curvature},
         ]
 
-        if m.warning:
-            lines.append(_("warning: %(message)s") % {"message": m.warning})
+        # The stored warning on the detection and the one from the live drawing
+        # are the same kind of structured code; both become a sentence here.
+        warning = m.warning or getattr(det, "warning_shape", None)
+        if warning:
+            lines.append(_("warning: %(message)s") % {"message": warning_sentence(warning)})
 
         self.lbl_record_data.setText("\n".join(lines))
 

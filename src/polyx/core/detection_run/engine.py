@@ -31,6 +31,12 @@ from polyx.core.measure.calibration import (
     search_index,
 )
 from polyx.core.measure.shape import measure_detections
+from polyx.core.measure.warnings import (
+    IMAGE_NOT_IN_INDEX,
+    IMAGE_UNREADABLE,
+    MANUAL_SCALE_MISSING,
+    Warning,
+)
 from polyx.core.provenance import logger_for, provenance, sha256_file
 from polyx.core.quality.assignment import mark_assignables
 from polyx.core.quality.metrics import MatchResult, match_image
@@ -165,11 +171,11 @@ def _calibration_index(
     return {**searched, **explicit}
 
 
-def _missing_calibration_warning(calibration: Calibration, warning: str) -> Calibration:
-    """Attach a mode-specific warning when the resolver did not provide one."""
+def _missing_calibration_warning(calibration: Calibration, code: str) -> Calibration:
+    """Attach a mode-specific warning code when the resolver provided none."""
     if calibration.valid or calibration.warning:
         return calibration
-    return replace(calibration, warning=warning)
+    return replace(calibration, warning=Warning(code))
 
 
 def _resolve_calibration(
@@ -192,9 +198,7 @@ def _resolve_calibration(
             measure_plate=False,
         )
         if not calibration.valid and not calibration.warning:
-            return _missing_calibration_warning(
-                calibration, "manual calibration needs a positive um_per_px"
-            )
+            return _missing_calibration_warning(calibration, MANUAL_SCALE_MISSING)
         return calibration
 
     if mode == "index":
@@ -205,9 +209,7 @@ def _resolve_calibration(
             measure_plate=False,
         )
         if not calibration.valid and not calibration.warning:
-            return _missing_calibration_warning(
-                calibration, "image is not listed in the calibration index"
-            )
+            return _missing_calibration_warning(calibration, IMAGE_NOT_IN_INDEX)
         return calibration
 
     return resolver(
@@ -436,7 +438,7 @@ def run_detection(
                 result.calibrations[image_path] = Calibration(
                     origin=ORIGIN_NONE,
                     diameter_mm=config.calibration.diameter_plate_mm,
-                    warning="the image could not be read",
+                    warning=Warning(IMAGE_UNREADABLE),
                 )
                 writer.record_skip()
                 done += len(models)

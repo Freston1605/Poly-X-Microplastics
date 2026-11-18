@@ -61,7 +61,7 @@ def test_bootstrap_registra_evento(log_dir):
     assert rec["module"].endswith("app")
     assert rec["data"]["version"] == launcher.__version__
     assert rec["data"]["python"]  # rama de python, p.ej "3.12.4"
-    assert rec["data"]["sistema"]  # nombre_sistema(), no vacio
+    assert rec["data"]["system"]  # name_system(), not empty
 
 
 def test_bootstrap_no_revienta_sin_carpeta(tmp_path, monkeypatch):
@@ -95,9 +95,9 @@ def test_lanzar_modulo_registra_module_launch(log_dir, monkeypatch):
     )
     assert kwargs["cwd"] == str(Path(launcher.__file__).resolve().parents[3])
     recs = _leer_jsonl(log_dir, "app")
-    eventos = [r for r in recs if r["event"] == "module.launch"]
-    assert len(eventos) == 1
-    assert eventos[0]["data"] == {"modulo": "polyx.gui.detector"}
+    events = [r for r in recs if r["event"] == "module.launch"]
+    assert len(events) == 1
+    assert events[0]["data"] == {"module": "polyx.gui.detector"}
 
 
 def test_lanzar_modulo_inexistente_devuelve_false(
@@ -134,8 +134,8 @@ def test_lanzar_modulo_con_error_emite_y_no_revienta(log_dir, monkeypatch):
     # modulo Python lo llama la ventana; el error queda solo como evento.
     assert launcher._spawn_module("polyx.gui.detector") is False
     recs = _leer_jsonl(log_dir, "app")
-    errores = [r for r in recs if r["event"] == "module.launch.error"]
-    assert len(errores) == 1
-    assert errores[0]["level"] == "WARNING"
-    assert errores[0]["data"]["modulo"] == "polyx.gui.detector"
-    assert "no hay ejecutable" in errores[0]["data"]["error"]
+    errors = [r for r in recs if r["event"] == "module.launch.error"]
+    assert len(errors) == 1
+    assert errors[0]["level"] == "WARNING"
+    assert errors[0]["data"]["module"] == "polyx.gui.detector"
+    assert "no hay ejecutable" in errors[0]["data"]["error"]

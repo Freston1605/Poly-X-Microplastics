@@ -12,6 +12,7 @@ import numpy as np
 from polyx.core.detection_run import RunStatus, display_name
 from polyx.core.detection_run.operating_point import Criterion, Score
 from polyx.core.i18n import _, ngettext
+from polyx.core.measure.warnings import warning_sentence
 from polyx.core.quality.assignment import resume
 from polyx.core.quality.metrics import (
     confusion_matrix_from_matches,
@@ -1163,7 +1164,13 @@ def _section_calibration(run) -> str:
 {scale_notes}
 {_figure_calibration(run)}"""
             if res["warnings"]:
-                items = "".join(f"<li>{a}</li>" for a in res["warnings"][:12] if a)
+                # The artifact holds codes; the sentence is chosen here, at
+                # display time, so the document can be read in any language.
+                items = "".join(
+                    f"<li>{warning_sentence(warning)}</li>"
+                    for warning in res["warnings"][:12]
+                    if warning
+                )
                 if items:
                     calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
     return calib_html
@@ -1540,9 +1547,12 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                 # looking at it meant the `⚠` never appeared.
                 alerta = ""
                 if getattr(d, "review", False):
+                    sentence = warning_sentence(d.warning_shape) or _(
+                        "the mask ran outside the box and was clipped to it"
+                    )
                     alerta = (
                         f"<div style='font-size:8.5pt;color:{T.DOC.WARN};margin-top:3px'>"
-                        f"⚠ {d.warning_shape or _('the mask ran outside the box and was clipped to it')}</div>"
+                        f"⚠ {sentence}</div>"
                     )
                 cards += (
                     f"<div style='display:inline-block;vertical-align:top;margin:0 14px 18px 0;"

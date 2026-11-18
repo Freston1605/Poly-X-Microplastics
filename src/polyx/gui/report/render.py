@@ -197,10 +197,10 @@ def generate_report(
     with timer(
         logger_for("detector"),
         "report",
-        results_2=n_results,
+        n_results=n_results,
         output=str(output_path),
         sections=sorted(sections) if sections else None,
-        solo_images=(len(only_images) if only_images is not None else None),
+        images_only=(len(only_images) if only_images is not None else None),
     ):
         return _generate_report_impl(
             run,

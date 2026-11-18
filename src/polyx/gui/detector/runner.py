@@ -150,11 +150,11 @@ class DetectorRunner(QThread):
             _log,
             "run.finish",
             ms=ms,
-            placas=len(result.images),
-            imgsz_usados=sorted(
+            plates=len(result.images),
+            imgsz_used=sorted(
                 {int(value) for stats in execution.values() for value in stats.imgsz_used}
             ),
-            sin_forma=shapeless,
+            shapeless=shapeless,
         )
         worst = max(shapeless.items(), key=lambda item: item[1], default=())
         if worst and worst[1] > 0:
@@ -162,8 +162,8 @@ class DetectorRunner(QThread):
                 _log,
                 "run.shapeless_high",
                 level=logging.WARNING,
-                modelo=worst[0],
-                sin_forma=worst[1],
+                model=worst[0],
+                shapeless=worst[1],
             )
 
     def run(self):
@@ -177,14 +177,14 @@ class DetectorRunner(QThread):
             obs.event(
                 _log,
                 "run.config",
-                placas=len(state.images),
-                modelos=[s.alias for s in slots],
+                plates=len(state.images),
+                models=[s.alias for s in slots],
                 conf=params.conf,
                 iou=params.iou_nms,
                 imgsz=params.imgsz,
                 device=params.device,
-                medir_forma=params.measure_shape,
-                um_por_px=state.calibration.um_per_px,
+                measure_shape=params.measure_shape,
+                um_per_px=state.calibration.um_per_px,
             )
             if not slots:
                 self.failed.emit(_("No models loaded."))

@@ -8,6 +8,15 @@ from polyx.core.detect.protocol import compute_box_size_um, equal_area_diameter
 from . import morphology_constants as C
 from .geodesic import length_geodesic
 from .segmentation import _cutout, box_margin, feret_maximum, segment
+from .warnings import (
+    MASK_CLIPPED,
+    NO_CONTOUR,
+    NO_MASK,
+    OPENCV_ERROR,
+    PARTICLE_TOO_SMALL,
+    SEGMENTATION_FAILED,
+    Warning,
+)
 
 
 class Morphology:
@@ -47,7 +56,8 @@ class Morphology:
     # particle it is nonzero and it is not an error: Feret measures the separation of
     # two jaws, not a path through the inside.
     feret_outside: float = 0.0
-    warning: str = ""
+    # Stable machine code plus structured parameters; never translated prose.
+    warning: Warning | None = None
     # The measurement comes out, but it asks for a human look. It is flagged instead of discarded:
     # silently discarding loses real particles from the count, and giving the number
     # without warning puts sizes in the table that do not hold up.
@@ -86,12 +96,12 @@ def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     """Size and shape from the mask of a particle."""
     m = Morphology()
     if mask is None or not mask.any():
-        m.warning = "sin mascara"
+        m.warning = Warning(NO_MASK)
         return m
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not contours:
-        m.warning = "sin contorno"
+        m.warning = Warning(NO_CONTOUR)
         return m
     c = max(contours, key=cv2.contourArea)
 
@@ -107,7 +117,7 @@ def measure(mask: np.ndarray, um_por_px: float | None = None) -> Morphology:
     # perimeter, was also tried, and it is even worse: 26.6% median error.
     perim = float(cv2.arcLength(c, True))
     if area < 4 or perim <= 0:
-        m.warning = "particula demasiado pequena para medir su forma"
+        m.warning = Warning(PARTICLE_TOO_SMALL)
         return m
 
     (_, _), (rw, rh), _ = cv2.minAreaRect(c)
@@ -214,7 +224,7 @@ def measure_detection(
             mask = segment(bgr, det.x1, det.y1, det.x2, det.y2, margin, record=record)
             if mask is None:
                 m = Morphology()
-                m.warning = "no se pudo separar la particula del fondo"
+                m.warning = Warning(SEGMENTATION_FAILED)
                 return m
         else:
             H, W = bgr.shape[:2]
@@ -224,13 +234,13 @@ def measure_detection(
                 sub, ox, oy = _cutout(bgr, det.x1, det.y1, det.x2, det.y2, margin)
                 if sub is None:
                     m = Morphology()
-                    m.warning = "no se pudo separar la particula del fondo"
+                    m.warning = Warning(SEGMENTATION_FAILED)
                     return m
                 mask = mask[oy : oy + sub.shape[0], ox : ox + sub.shape[1]]
             mask = (mask > 0).astype(np.uint8) * 255 if mask.dtype != np.uint8 else mask
             if not mask.any():
                 m = Morphology()
-                m.warning = "no se pudo separar la particula del fondo"
+                m.warning = Warning(SEGMENTATION_FAILED)
                 return m
         m = measure(mask, um_por_px)
         diagonal = float(np.hypot(det.x2 - det.x1, det.y2 - det.y1))
@@ -245,15 +255,13 @@ def measure_detection(
         previous = float(record.get("largo_sin_recortar_px", 0.0) or 0.0)
         if m.ok and diagonal > 0 and previous > C.DRAIN_X_DIAGONAL * diagonal:
             m.review = True
-            m.warning = (m.warning + " | " if m.warning else "") + (
-                f"la mascara se salia {previous / diagonal:.1f}x la diagonal de su "
-                f"caja y se recorto a ella: puede ser una vecina pegada, y la "
-                f"talla se queda corta si la particula seguia de verdad"
-            )
+            # The excess factor is a number in a structured field, never a
+            # sentence interpolated at the point of measurement.
+            m.warning = Warning(MASK_CLIPPED, excess=previous / diagonal)
         return m
     except cv2.error as e:
         m = Morphology()
-        m.warning = f"error de OpenCV al segmentar: {e}"
+        m.warning = Warning(OPENCV_ERROR, cause=str(e))
         return m
 
 
@@ -283,7 +291,7 @@ def apply_to_detection(
     # this, a size inflated by two touching particles reached the document
     # as a clean number, indistinguishable from a good measurement.
     det.review = m.review
-    det.warning_shape = m.warning or None
+    det.warning_shape = m.warning
     if um_por_px and um_por_px > 0:
         det.area_um2 = m.area_um2
         det.length_um = m.length_um

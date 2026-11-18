@@ -35,9 +35,23 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from polyx.core.i18n import _
+
 # Canonical implementation lives in polyx.core.image_io; re-exported here
 # for backwards compatibility with callers that import from this module.
 from polyx.core.image_io import read_image
+
+from .warnings import (
+    DETOUR_HOUGH,
+    IMAGE_UNREADABLE,
+    NOMINAL_DIAMETER_INVALID,
+    PLATE_MEASURE_FAILED,
+    PLATE_NOT_FOUND,
+    RING_FIT_FAILED,
+    ZERO_ADJUSTED_RADIUS,
+    Warning,
+    warning_to_dict,
+)
 
 # Directions in which the ring edge is searched. 720 = one every half degree:
 # enough for the fit to survive reflections and partial occlusions.
@@ -97,25 +111,35 @@ class Calibration:
     # sizes are underestimated by an amount that depends on the shooting
     # distance. It is stored so it can be declared in the report.
     factor_parallax: float = 1.0
-    warning: str = ""
+    # Stable machine code plus structured parameters; never translated prose.
+    warning: Warning | None = None
 
     @property
     def valid(self) -> bool:
         return self.um_por_px > 0
 
     def description(self) -> str:
-        """Short phrase for the interface and the report."""
+        """Short gettext sentence for the interface and the report.
+
+        English is the source language and the message id; the translated
+        wording is chosen here at display time, never stored in an artifact.
+        """
         if not self.valid:
-            return "sin calibrar"
+            return _("not calibrated")
+        scale = f"{self.um_por_px:.4f}"
         if self.origin == ORIGIN_PLATE:
-            return (
-                f"{self.um_por_px:.4f} µm/px — placa de "
-                f"{self.diameter_mm:g} mm, r={self.radius_px:.0f} px "
-                f"({self.n_points} puntos de borde)"
-            )
+            return _(
+                "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px "
+                "(%(points)s edge points)"
+            ) % {
+                "scale": scale,
+                "diameter": f"{self.diameter_mm:g}",
+                "radius": f"{self.radius_px:.0f}",
+                "points": self.n_points,
+            }
         if self.origin == ORIGIN_INDEX:
-            return f"{self.um_por_px:.4f} µm/px — heredada del recorte"
-        return f"{self.um_por_px:.4f} µm/px — introducida a mano"
+            return _("%(scale)s µm/px — inherited from the crop") % {"scale": scale}
+        return _("%(scale)s µm/px — entered by hand") % {"scale": scale}
 
 
 # ── Interactive line and circle calibration ─────────────────────────────
@@ -353,7 +377,7 @@ def adjust_circle(pts: np.ndarray) -> tuple:
 
 def adjustment_robust(pts: np.ndarray, iterations: int = 3) -> tuple | None:
     """Fits and discards distant points; the ring has reflections and occlusions."""
-    for _ in range(iterations):
+    for _iteration in range(iterations):
         if len(pts) < 30:
             return None
         cx, cy, r = adjust_circle(pts)
@@ -425,14 +449,14 @@ def calibrate_from_plate(
     run must be able to continue with the rest.
     """
     if bgr is None or bgr.size == 0:
-        return Calibration(warning="imagen vacia o ilegible")
+        return Calibration(warning=Warning(IMAGE_UNREADABLE))
     if diameter_mm <= 0:
-        return Calibration(warning="diametro nominal invalido")
+        return Calibration(warning=Warning(NOMINAL_DIAMETER_INVALID))
 
     gris = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     seed = hough_approximate(bgr)
     if seed is None:
-        return Calibration(diameter_mm=diameter_mm, warning="no se encontro la placa en la foto")
+        return Calibration(diameter_mm=diameter_mm, warning=Warning(PLATE_NOT_FOUND))
     hx, hy, hr = seed
 
     pts = edge_points(gris, hx, hy, hr)
@@ -441,17 +465,17 @@ def calibrate_from_plate(
         # Hough as a last resort: it serves to avoid losing the photo, but its radius
         # is precisely what is unreliable, so a warning is recorded.
         cx, cy, r, n = hx, hy, hr, 0
-        warning = "el ajuste fino del anillo fallo; escala tomada de Hough (poco fiable)"
+        warning: Warning | None = Warning(RING_FIT_FAILED)
     else:
         cx, cy, r, n = fine
-        warning = ""
+        warning = None
 
     detour = 100.0 * (r - hr) / hr if hr > 0 else 0.0
-    if not warning and abs(detour) > 8:
-        warning = f"Hough erraba {detour:+.1f}% respecto del ajuste fino"
+    if warning is None and abs(detour) > 8:
+        warning = Warning(DETOUR_HOUGH, detour_pct=detour)
 
     if r <= 0:
-        return Calibration(diameter_mm=diameter_mm, warning="radio ajustado nulo")
+        return Calibration(diameter_mm=diameter_mm, warning=Warning(ZERO_ADJUSTED_RADIUS))
 
     um_aro = (diameter_mm * 1000.0) / (2 * r)
     um_base, factor = correct_parallax(um_aro, height_plate_mm, distance_camera_mm)
@@ -517,7 +541,7 @@ def search_index(image_path: str | Path, levels: int = 3) -> dict[str, float]:
     """
     folder = Path(image_path)
     folder = folder.parent if folder.is_file() else folder
-    for _ in range(max(1, levels)):
+    for _level in range(max(1, levels)):
         for name_2 in NAMES_INDEX:
             map_value = carry_index(folder / name_2)
             if map_value:
@@ -562,7 +586,7 @@ def resolver(
             bgr = read_image(image_path)
         if bgr is None:
             return Calibration(
-                origin=ORIGIN_NONE, diameter_mm=diameter_mm, warning="no se pudo leer la imagen"
+                origin=ORIGIN_NONE, diameter_mm=diameter_mm, warning=Warning(IMAGE_UNREADABLE)
             )
         cal = calibrate_from_plate(bgr, diameter_mm, height_plate_mm, distance_camera_mm)
         if cal.valid:
@@ -572,7 +596,10 @@ def resolver(
                 um_por_px=um_por_px_manual,
                 origin=ORIGIN_MANUAL,
                 diameter_mm=diameter_mm,
-                warning=f"no se pudo medir la placa ({cal.warning})",
+                warning=Warning(
+                    PLATE_MEASURE_FAILED,
+                    cause=cal.warning.code if cal.warning is not None else None,
+                ),
             )
         return cal
 
@@ -633,7 +660,7 @@ def summary_batch(calibrations) -> dict:
     """
     ums = [c.um_por_px for c in calibrations if c.valid]
     if not ums:
-        return {"n": 0, "origins": {}}
+        return {"n": 0, "origins": {}, "warnings": []}
     a = np.array(ums, dtype=float)
     origins: dict[str, int] = {}
     for c in calibrations:
@@ -650,5 +677,7 @@ def summary_batch(calibrations) -> dict:
         "median": float(np.median(a)),
         "variation": float(a.max() / a.min()) if a.min() > 0 else 0.0,
         "origins": origins,
-        "warnings": [c.warning for c in calibrations if c.warning],
+        # Warnings are stable codes plus structured parameters, never prose.
+        # The list is groupable and countable by ``code``.
+        "warnings": [warning_to_dict(c.warning) for c in calibrations if c.warning],
     }
