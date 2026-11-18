@@ -242,6 +242,65 @@ def test_report_shows_gettext_sentences_for_the_stored_codes(tmp_path, selected_
     assert "No se encontró la placa" not in html
 
 
+def _run_with_failed_calibrations(tmp_path: Path):
+    """A canonical batch where every calibration failed, with two codes."""
+    from polyx.core.detection_run import ModelInfo, RunParams, RunResult
+
+    photos = tmp_path / "photos"
+    first = photos / "no_plate.png"
+    second = photos / "not_indexed.png"
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        models=[ModelInfo(alias="m1", path=Path("fake.pt"))],
+        params=RunParams(),
+    )
+    run.images = [first, second]
+    run.results = {0: []}
+    run.calibrations[first] = cal.Calibration(warning=Warning(PLATE_NOT_FOUND))
+    run.calibrations[second] = cal.Calibration(warning=Warning(IMAGE_NOT_IN_INDEX))
+    return run
+
+
+def test_report_shows_calibration_warnings_when_every_scale_fails(tmp_path, selected_language):
+    """An all-failed batch still emits the section, with its reasons in prose."""
+    from polyx.gui.report.render import generate_report
+
+    selected_language("en")
+    run = _run_with_failed_calibrations(tmp_path)
+    assert not any(c.valid for c in run.calibrations.values())
+
+    html = generate_report(run, tmp_path / "report.html", sections=["calibration"]).read_text(
+        encoding="utf-8"
+    )
+    assert "<h2 id='calibration'>" in html
+    assert "The plate was not found in the photograph." in html
+    assert "The image is not listed in the calibration index." in html
+    assert "Issues during calibration:" in html
+    assert "No valid scales" in html
+    assert "sizes cannot be reported" in html
+    # Machine codes never leak into the document.
+    assert "plate_not_found" not in html
+    assert "image_not_in_index" not in html
+
+
+def test_report_without_calibrations_has_no_calibration_section(tmp_path, selected_language):
+    """No calibrations at all: no bare 'no valid scales' message and no section."""
+    from polyx.core.detection_run import ModelInfo, RunParams, RunResult
+    from polyx.gui.report.render import generate_report
+
+    selected_language("en")
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        models=[ModelInfo(alias="m1", path=Path("fake.pt"))],
+        params=RunParams(),
+    )
+    html = generate_report(run, tmp_path / "report.html", sections=["calibration"]).read_text(
+        encoding="utf-8"
+    )
+    assert "<h2 id='calibration'>" not in html
+    assert "No valid scales" not in html
+
+
 # ── Slice D.1: one formatter dispatch keeps every message verbatim ──────
 
 

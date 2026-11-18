@@ -1056,9 +1056,12 @@ def _section_calibration(run) -> str:
     """Body of the 'calibracion' section: scale provenance and per-photo calibration.
 
     Returns the HTML body WITHOUT its ``<h2>`` title. Empty when the run has
-    no effective calibrations, so the assembler drops the section like it does
-    today. The ``polyx.core.calibration`` import stays lazy inside this body:
-    it must not load at module import time (S01 laziness gate).
+    no calibrations (or none with a usable scale or a warning), so the assembler
+    drops the section like it does today. When every calibration failed, the
+    warning list and an explicit "no valid scales" message keep the section
+    alive instead of silently hiding the reasons. The ``polyx.core.calibration``
+    import stays lazy inside this body: it must not load at module import time
+    (S01 laziness gate).
     """
     # ── Scale calibration ──
     # The provenance is reported, not only the number: a size in µm without saying
@@ -1075,6 +1078,9 @@ def _section_calibration(run) -> str:
 
         res = summary_batch(list(cals.values()))
         if res["n"]:
+            # Numeric tables, provenance caveats and the figure need at least
+            # one usable scale. Warnings are handled below regardless of `n`,
+            # so a failed batch still says why it failed.
             label_2 = {
                 "plate": _("measured on this photograph's Petri dish"),
                 "index": _("inherited from the crop (calibration index)"),
@@ -1136,16 +1142,24 @@ def _section_calibration(run) -> str:
 {warning}
 {scale_notes}
 {_figure_calibration(run)}"""
-            if res["warnings"]:
-                # The artifact holds codes; the sentence is chosen here, at
-                # display time, so the document can be read in any language.
-                items = "".join(
-                    f"<li>{warning_sentence(warning)}</li>"
-                    for warning in res["warnings"][:12]
-                    if warning
-                )
-                if items:
-                    calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
+        elif res["warnings"]:
+            # Not one scale survived. The tables cannot be built, but the
+            # reasons still matter: say so explicitly so the section is not
+            # dropped as empty, then list the warnings below.
+            calib_html = _(
+                "<p><strong>No valid scales.</strong> Every calibration in this "
+                "batch failed, so sizes cannot be reported.</p>"
+            )
+        if res["warnings"]:
+            # The artifact holds codes; the sentence is chosen here, at
+            # display time, so the document can be read in any language.
+            items = "".join(
+                f"<li>{warning_sentence(warning)}</li>"
+                for warning in res["warnings"][:12]
+                if warning
+            )
+            if items:
+                calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
     return calib_html
 
 
