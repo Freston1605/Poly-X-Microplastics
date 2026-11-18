@@ -33,6 +33,7 @@ WORKDIR /app
 COPY --from=wheelhouse /opt/wheelhouse /opt/wheelhouse
 COPY --from=wheelhouse /src/pyproject.toml /src/uv.lock /src/README.md /src/LICENSE ./
 COPY --from=wheelhouse /src/src ./src
+COPY --from=wheelhouse /src/tools ./tools
 RUN uv venv /opt/venv \
  && uv pip install --no-index --find-links /opt/wheelhouse -r /opt/wheelhouse/requirements.txt \
  && uv pip install --no-deps .

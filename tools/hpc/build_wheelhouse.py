@@ -31,10 +31,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-# The tool runs from a source checkout too, where the project is not installed.
-# Match the pattern used by the other tools: make ``src`` importable locally.
-if str(ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(ROOT / "src"))
 
 UV_VERSION = "0.13.7"
 PIP_VERSION = "26.3"
@@ -165,7 +161,17 @@ def _write_index(plan: Plan) -> None:
 
 
 def _write_checksums(plan: Plan) -> None:
-    from polyx.hpc import hashing
+    # The wheelhouse stage has no installed dependencies yet: importing the
+    # ``polyx`` package would pull in cv2 through its scientific stack. Load
+    # the standalone hashing module by path instead, with no heavy imports.
+    import importlib.util
+
+    path = ROOT / "src" / "polyx" / "hpc" / "hashing.py"
+    spec = importlib.util.spec_from_file_location("polyx_hpc_hashing", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    hashing = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hashing)
 
     wheels = sorted(plan.wheelhouse.glob("*.whl"))
     if not wheels:
