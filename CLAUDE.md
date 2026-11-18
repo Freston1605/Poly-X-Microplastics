@@ -770,7 +770,8 @@ One module owns the tiling decision and its sentence: `TilingMode`
 `protocol.py` and `yolo.py` for old importers.
 
 The mode is English at every boundary: `TilingMode.parse` accepts only
-`auto`/`always`/`never` and does not translate a saved `"siempre"`/`"nunca"`.
+`auto`/`always`/`never` and rejects a saved `"siempre"`/`"nunca"` with an error
+naming the canonical values; an empty value keeps `AUTO`.
 `run.json` records the plan per image/model in
 `tiling_plan`; the legacy `tiling` sentence stays so readers written before
 #125 keep working. The engine and the Parameters/Execute previews render the
