@@ -132,3 +132,121 @@ def test_warnings_group_and_count_by_code():
 def test_no_prose_reaches_a_warning_object():
     warning = Warning(PLATE_NOT_FOUND)
     assert json.dumps(warning.to_dict()) == json.dumps({"code": PLATE_NOT_FOUND})
+
+
+# ── Slice D: the artifact stores codes, the report shows sentences ────────
+
+
+def _run_with_warnings(tmp_path: Path):
+    """A minimal canonical run carrying one calibration and one particle warning.
+
+    Built here with English identifiers rather than reusing the grandfathered
+    Spanish-named fixtures, which new test code must not introduce.
+    """
+    import cv2
+
+    from polyx.core.detect.protocol import Instance
+    from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
+    from polyx.core.measure.calibration import ORIGIN_PLATE, Calibration
+    from polyx.core.measure.shape import apply_to_detection
+
+    photos = tmp_path / "photos"
+    photos.mkdir(parents=True, exist_ok=True)
+    frame = np.full((260, 320, 3), 18, np.uint8)
+    cv2.circle(frame, (160, 130), 22, (60, 210, 240), -1)
+    image = photos / "plate.png"
+    ok, buffer = cv2.imencode(".png", frame)
+    assert ok
+    image.write_bytes(buffer.tobytes())
+
+    detection = Instance(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
+    detection.number = 1
+    apply_to_detection(detection, frame, 30.0)
+    detection.warning_shape = Warning(MASK_CLIPPED, excess=2.3)
+    detection.review = True
+
+    run = RunResult(
+        run_dir=tmp_path / "run",
+        models=[ModelInfo(alias="m1", path=Path("fake.pt"))],
+        params=RunParams(),
+    )
+    run.images = [image]
+    run.results = {
+        0: [
+            ImageResult(
+                image_path=image, model_idx=0, predictions=[detection], gt=[detection], has_gt=True
+            )
+        ]
+    }
+    run.calibrations[image] = Calibration(
+        um_por_px=30.0, origin=ORIGIN_PLATE, warning=Warning(PLATE_NOT_FOUND)
+    )
+    return run
+
+
+def test_run_json_stores_codes_and_structured_parameters(tmp_path):
+    from polyx.core.detection_run.schema import build_run_payload
+
+    payload = build_run_payload(_run_with_warnings(tmp_path))
+    blob = json.dumps(payload)
+    assert payload["calibrations"][0]["warning"] == {"code": PLATE_NOT_FOUND}
+    assert payload["calibration_summary"]["warnings"] == [{"code": PLATE_NOT_FOUND}]
+    gt_warning = payload["images"][0]["gt"][0]["warning_shape"]
+    assert gt_warning == {"code": MASK_CLIPPED, "excess": 2.3}
+    # No human sentence, in any language, is written to the artifact.
+    assert "not found in the photograph" not in blob
+    assert "No se encontró" not in blob
+    assert "clipped to the box" not in blob
+
+
+def test_report_shows_gettext_sentences_for_the_stored_codes(tmp_path, selected_language):
+    from polyx.gui.report.render import generate_report
+
+    selected_language("en")
+    report = generate_report(_run_with_warnings(tmp_path), tmp_path / "report.html")
+    html = report.read_text(encoding="utf-8")
+    assert "The plate was not found in the photograph." in html
+    assert "The mask extended 2.3 times its box diagonal" in html
+    # The machine code and the Spanish prose are absent from the document.
+    assert "plate_not_found" not in html
+    assert "No se encontró la placa" not in html
+
+
+# ── Slice E: the Viewer shows the same sentence at display time ───────────
+
+
+def test_viewer_shows_a_sentence_for_a_stored_warning(qapp, monkeypatch, selected_language):
+    """The particle panel turns a code into words, as the refusal dialog does."""
+    from PySide6.QtCore import Qt
+
+    import polyx.core.measure.drawing as drawing_module
+    from polyx.core.measure.shape import Morphology
+    from polyx.gui.viewer import window as window_module
+
+    selected_language("en")
+    fake = Morphology()
+    fake.ok = True
+    monkeypatch.setattr(
+        drawing_module, "draw_measurement", lambda *a, **k: (np.zeros((8, 8, 3), np.uint8), fake)
+    )
+    window = window_module.ViewerWindow()
+    try:
+        window._bgr_current = np.zeros((8, 8, 3), np.uint8)
+        det = _detection()
+        det.warning_shape = Warning(NO_MASK)
+        window.table.insertRow(0)
+        item = window.table.item(0, 0) or _qt_item()
+        item.setData(Qt.UserRole, det)
+        window.table.setItem(0, 0, item)
+        window.table.selectRow(0)
+        window._on_particle_chosen()
+        assert "No mask was produced for the particle." in window.lbl_record_data.text()
+        assert "no_mask" not in window.lbl_record_data.text()
+    finally:
+        window.close()
+
+
+def _qt_item():
+    from PySide6.QtWidgets import QTableWidgetItem
+
+    return QTableWidgetItem()
