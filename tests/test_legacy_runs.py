@@ -54,6 +54,66 @@ def test_compact_report_refuses_a_precanonical_folder(tmp_path, selected_languag
     assert not output.exists()
 
 
+def test_compact_report_refuses_a_v1_manifest(tmp_path, selected_language):
+    """A version-1 manifest names the old format and writes no report."""
+    selected_language("en")
+    import json
+
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "status": "completed", "images": ["plate.png"]}),
+        encoding="utf-8",
+    )
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="version 1 is the old run format"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_compact_report_refuses_a_malformed_manifest(tmp_path, selected_language):
+    """Unparseable JSON fails clearly instead of rendering an empty report."""
+    selected_language("en")
+    from polyx.core.report_simple import generate
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "run.json").write_text("{not json", encoding="utf-8")
+    output = tmp_path / "report.html"
+
+    with pytest.raises(ValueError, match="invalid JSON"):
+        generate(run_dir, output)
+
+    assert not output.exists()
+
+
+def test_report_cli_refuses_v1_and_malformed_manifests(tmp_path, capsys, selected_language):
+    """`polyx-report` names the bad manifest and writes no report for either."""
+    selected_language("en")
+    from polyx.cli.report import main
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    output = tmp_path / "report.html"
+
+    for content, expected in (
+        ('{"schema_version": 1}', "version 1 is the old run format"),
+        ("{not json", "invalid JSON"),
+    ):
+        (run_dir / "run.json").write_text(content, encoding="utf-8")
+        code = main(["--run", str(run_dir), "--output", str(output)])
+
+        captured = capsys.readouterr()
+        assert code != 0
+        assert expected in captured.err
+        assert "docs/specs/run-artifact-vocabulary.md" in captured.err
+        assert not output.exists()
+
+
 def test_compact_report_still_reads_a_canonical_folder(tmp_path, selected_language):
     """The Qt-free report keeps its canonical seam after the fallback is cut."""
     selected_language("en")

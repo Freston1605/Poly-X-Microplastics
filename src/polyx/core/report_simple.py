@@ -13,7 +13,11 @@ import html
 from pathlib import Path
 
 from polyx.core.detection_run.identity import display_name
-from polyx.core.detection_run.schema import is_canonical_run, read_csv_rows, read_json_object
+from polyx.core.detection_run.schema import (
+    is_canonical_run,
+    read_csv_rows,
+    validate_manifest_version,
+)
 from polyx.core.i18n import _, language, ngettext
 
 
@@ -53,7 +57,7 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     if not is_canonical_run(run_dir):
         raise LegacyRunError(run_dir)
 
-    canonical = read_json_object(run_dir / "run.json")
+    canonical = validate_manifest_version(run_dir)
     images, detected, metrics = _canonical_totals(canonical)
     rows = read_csv_rows(run_dir / "detections.csv")
     detections = len(rows) if rows else detected

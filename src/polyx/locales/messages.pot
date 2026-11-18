@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 14:36-0300\n"
+"POT-Creation-Date: 2026-11-18 15:09-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -361,56 +361,56 @@ msgstr ""
 msgid "AMD GPU #%(index)s (ROCm)"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:87
+#: src/polyx/core/report_simple.py:91
 #, python-format
 msgid "%(count)d skipped image"
 msgid_plural "%(count)d skipped images"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/core/report_simple.py:109
+#: src/polyx/core/report_simple.py:113
 #, python-format
 msgid "... %(count)d more row omitted"
 msgid_plural "... %(count)d more rows omitted"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/core/report_simple.py:29
+#: src/polyx/core/report_simple.py:33
 #, python-format
 msgid ""
 "Cannot open %(path)s: this is an old run (summary.json + centroids.csv). Old runs need an older "
 "version of Poly-X; see docs/specs/run-artifact-vocabulary.md."
 msgstr ""
 
-#: src/polyx/core/report_simple.py:64 src/polyx/core/report_simple.py:69
+#: src/polyx/core/report_simple.py:68 src/polyx/core/report_simple.py:73
 msgid "Poly-X run report"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:70
+#: src/polyx/core/report_simple.py:74
 msgid "Run dir:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:72
+#: src/polyx/core/report_simple.py:76
 msgid "Status:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:73
+#: src/polyx/core/report_simple.py:77
 msgid "Schema:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:91
+#: src/polyx/core/report_simple.py:95
 msgid "Images:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:91
+#: src/polyx/core/report_simple.py:95
 msgid "Detections:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:83 src/polyx/gui/report/registry.py:107
+#: src/polyx/core/report_simple.py:87 src/polyx/gui/report/registry.py:107
 msgid "Models:"
 msgstr ""
 
-#: src/polyx/core/report_simple.py:98 src/polyx/gui/detector/pages/compare.py:40
+#: src/polyx/core/report_simple.py:102 src/polyx/gui/detector/pages/compare.py:40
 #: src/polyx/gui/detector/pages/results.py:77 src/polyx/gui/report/figures.py:213
 #: src/polyx/gui/report/sections.py:347
 msgid "Detections"
