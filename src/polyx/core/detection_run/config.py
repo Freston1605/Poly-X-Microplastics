@@ -16,7 +16,7 @@ from polyx.core.detect.protocol import DetectionSource
 from .identity import resolve_identity
 from .result import RunParams
 
-CALIBRATION_MODES = ("auto", "manual", "index", "none")
+CALIBRATION_MODES = ("auto", "manual", "none")
 
 
 @dataclass
@@ -48,11 +48,10 @@ class ModelSpec:
 class CalibrationPolicy:
     """How each photo gets its micrometres-per-pixel scale.
 
-    ``auto`` looks the image up in an explicit index CSV when one is given,
-    then in the index files searched from the image root, then measures the
-    plate on the photo itself, and finally falls back to ``um_per_px``.
-    ``manual`` uses only ``um_per_px``, ``index`` only the CSV and ``none``
-    leaves the image uncalibrated, so no micrometre size is invented.
+    ``auto`` measures the plate on the photo itself and finally falls back to
+    ``um_per_px``. ``manual`` uses only ``um_per_px`` and ``none`` leaves the
+    image uncalibrated, so no micrometre size is invented. Pre-canonical index
+    CSVs are no longer read; old runs need an older version of Poly-X.
 
     ``measure_plate`` only gates the plate step of ``auto``: the explicit
     modes never measure it.
@@ -60,7 +59,6 @@ class CalibrationPolicy:
 
     mode: str = "auto"
     um_per_px: float = 0.0
-    index_path: Path | None = None
     measure_plate: bool = True
     diameter_plate_mm: float = 100.0
     height_plate_mm: float = 0.0

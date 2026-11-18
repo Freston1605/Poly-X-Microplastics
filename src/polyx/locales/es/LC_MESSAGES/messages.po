@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 13:29-0300\n"
+"POT-Creation-Date: 2026-11-18 13:40-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -14,158 +14,154 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: src/polyx/cli/detect.py:73
+#: src/polyx/cli/detect.py:71
 msgid "Batch-detect microplastics (headless)"
 msgstr "Detección por lotes de microplásticos (sin interfaz)"
 
-#: src/polyx/cli/detect.py:79
+#: src/polyx/cli/detect.py:77
 msgid "weights path; repeat once per model (aliases default to the file stem)"
 msgstr "ruta de los pesos; repite una vez por modelo (el alias por defecto es el nombre del fichero)"
 
-#: src/polyx/cli/detect.py:86
+#: src/polyx/cli/detect.py:84
 msgid "run subfolder for a model; repeat once per model (default: the weights stem)"
 msgstr ""
 "subcarpeta de la corrida para un modelo; repite una vez por modelo (por defecto, el nombre del "
 "fichero de pesos)"
 
-#: src/polyx/cli/detect.py:93
+#: src/polyx/cli/detect.py:91
 msgid "detector type; repeat once per model, or give one value for all (default: yolo)"
 msgstr "tipo de detector; repite una vez por modelo, o da un valor para todos (por defecto: yolo)"
 
-#: src/polyx/cli/detect.py:96
+#: src/polyx/cli/detect.py:94
 msgid "exact run folder to write"
 msgstr "carpeta del run exacta donde escribir"
 
-#: src/polyx/cli/detect.py:97
+#: src/polyx/cli/detect.py:95
 msgid "overwrite a non-empty run folder"
 msgstr "sobrescribe una carpeta de run no vacía"
 
-#: src/polyx/cli/detect.py:104 src/polyx/cli/eval.py:27 src/polyx/cli/train.py:27
+#: src/polyx/cli/detect.py:102 src/polyx/cli/eval.py:27 src/polyx/cli/train.py:27
 msgid "'cpu', a CUDA index, or empty = auto-select (default: auto)"
 msgstr "'cpu', un índice CUDA, o vacío = selección automática (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:111
+#: src/polyx/cli/detect.py:109
 msgid "per-photo calibration policy (default: auto)"
 msgstr "política de calibración por foto (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:117
+#: src/polyx/cli/detect.py:115
 msgid "manual µm/px; used alone it selects --calibrate manual"
 msgstr "µm/px manual; usado solo selecciona --calibrate manual"
 
-#: src/polyx/cli/detect.py:123
-msgid "explicit index CSV mapping image names to µm/px"
-msgstr "CSV de índice explícito que asigna nombres de imagen a µm/px"
-
-#: src/polyx/cli/detect.py:132
+#: src/polyx/cli/detect.py:124
 msgid "tiling policy: auto by photo size, always, or never (default: auto)"
 msgstr "política de mosaico: auto por tamaño de foto, always o never (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:138
+#: src/polyx/cli/detect.py:130
 msgid "longest side above which --tiling auto splits the photo (default: 2000)"
 msgstr "lado mayor a partir del cual --tiling auto divide la foto (por defecto: 2000)"
 
-#: src/polyx/cli/detect.py:144
+#: src/polyx/cli/detect.py:136
 msgid "tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)"
 msgstr "lado del mosaico en px; 0 lo deriva de min(threshold, imgsz) (por defecto: 0)"
 
-#: src/polyx/cli/detect.py:150
+#: src/polyx/cli/detect.py:142
 msgid "overlap between tiles, 0..0.9 (default: 0.25)"
 msgstr "solape entre mosaicos, 0..0.9 (por defecto: 0.25)"
 
-#: src/polyx/cli/detect.py:152
+#: src/polyx/cli/detect.py:144
 msgid "drop particles below it"
 msgstr "descarta las partículas por debajo"
 
-#: src/polyx/cli/detect.py:153
+#: src/polyx/cli/detect.py:145
 msgid "drop particles above it"
 msgstr "descarta las partículas por encima"
 
-#: src/polyx/cli/detect.py:158
+#: src/polyx/cli/detect.py:150
 msgid "below this confidence the particle is reported as unassignable (default: 0)"
 msgstr "por debajo de esta confianza la partícula se informa como no asignable (por defecto: 0)"
 
-#: src/polyx/cli/detect.py:163
+#: src/polyx/cli/detect.py:155
 msgid "run-order paper-quality HTML report (requires PySide6, [gui] extra)"
 msgstr "informe HTML de calidad de artículo en el orden del run (requiere PySide6, extra [gui])"
 
-#: src/polyx/cli/detect.py:314
+#: src/polyx/cli/detect.py:305
 #, python-format
 msgid "IMAGES: %(images)d  DETECTIONS: %(detections)d"
 msgstr "IMÁGENES: %(images)d  DETECCIONES: %(detections)d"
 
-#: src/polyx/cli/detect.py:317
+#: src/polyx/cli/detect.py:308
 #, python-format
 msgid "OUTPUT: %(run_dir)s"
 msgstr "SALIDA: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:177
+#: src/polyx/cli/detect.py:169
 #, python-format
 msgid "--model-type takes one value for all models or one per model (%(count)d); got %(got)d"
 msgstr ""
 "--model-type toma un valor para todos los modelos o uno por modelo (%(count)d); se recibieron "
 "%(got)d"
 
-#: src/polyx/cli/detect.py:193
+#: src/polyx/cli/detect.py:185
 #, python-format
 msgid "--alias takes one value per model (%(count)d); got %(got)d"
 msgstr "--alias toma un valor por modelo (%(count)d); se recibieron %(got)d"
 
-#: src/polyx/cli/detect.py:232
+#: src/polyx/cli/detect.py:224
 #, python-format
 msgid "invalid tiling mode: %(value)s (choose auto, always or never)"
 msgstr "modo de mosaico inválido: %(value)s (elige auto, always o never)"
 
-#: src/polyx/cli/detect.py:289
+#: src/polyx/cli/detect.py:280
 msgid "Use --force to overwrite the canonical files."
 msgstr "Usa --force para sobrescribir los ficheros canónicos."
 
-#: src/polyx/cli/detect.py:291
+#: src/polyx/cli/detect.py:282
 msgid "Choose a folder path for --out."
 msgstr "Elige una ruta de carpeta para --out."
 
-#: src/polyx/cli/detect.py:304
+#: src/polyx/cli/detect.py:295
 #, python-format
 msgid "ABORTED: %(run_dir)s"
 msgstr "ABORTADO: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:319
+#: src/polyx/cli/detect.py:310
 #, python-format
 msgid "SKIPPED: %(count)d"
 msgstr "OMITIDAS: %(count)d"
 
-#: src/polyx/cli/detect.py:332 src/polyx/cli/detect.py:336
+#: src/polyx/cli/detect.py:323 src/polyx/cli/detect.py:327
 #, python-format
 msgid "COMPACT REPORT: %(path)s"
 msgstr "INFORME COMPACTO: %(path)s"
 
-#: src/polyx/cli/detect.py:276 src/polyx/cli/detect.py:296 src/polyx/cli/detect.py:300
+#: src/polyx/cli/detect.py:267 src/polyx/cli/detect.py:287 src/polyx/cli/detect.py:291
 #: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
 #: src/polyx/cli/report.py:78 src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
 msgstr "ERROR: %(error)s"
 
-#: src/polyx/cli/detect.py:282
+#: src/polyx/cli/detect.py:273
 #, python-format
 msgid "ERROR loading model: %(error)s"
 msgstr "ERROR al cargar el modelo: %(error)s"
 
-#: src/polyx/cli/detect.py:293
+#: src/polyx/cli/detect.py:284
 #, python-format
 msgid "ERROR: %(error)s. %(hint)s"
 msgstr "ERROR: %(error)s. %(hint)s"
 
-#: src/polyx/cli/detect.py:297
+#: src/polyx/cli/detect.py:288
 #, python-format
 msgid "PARTIAL RUN: %(run_dir)s"
 msgstr "EJECUCIÓN PARCIAL: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:334 src/polyx/cli/report.py:70
+#: src/polyx/cli/detect.py:325 src/polyx/cli/report.py:70
 #, python-format
 msgid "FULL REPORT: %(path)s"
 msgstr "INFORME COMPLETO: %(path)s"
 
-#: src/polyx/cli/detect.py:330
+#: src/polyx/cli/detect.py:321
 #, python-format
 msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
@@ -390,8 +386,9 @@ msgid ""
 "Cannot open %(path)s: this is an old run (summary.json + centroids.csv). Old runs need an older "
 "version of Poly-X; see docs/specs/run-artifact-vocabulary.md."
 msgstr ""
-"No se pudo abrir %(path)s: es una ejecución antigua (summary.json + centroids.csv). Las ejecuciones "
-"antiguas requieren una versión anterior de Poly-X; consulte docs/specs/run-artifact-vocabulary.md."
+"No se pudo abrir %(path)s: es una ejecución antigua (summary.json + centroids.csv). Las "
+"ejecuciones antiguas requieren una versión anterior de Poly-X; consulte docs/specs/run-artifact-"
+"vocabulary.md."
 
 #: src/polyx/core/report_simple.py:64 src/polyx/core/report_simple.py:69
 msgid "Poly-X run report"
@@ -493,17 +490,17 @@ msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(ove
 msgstr[0] "%(side)d px de lado mayor → %(tiles)d mosaico de %(tile)d px, %(overlap)d%% de solape"
 msgstr[1] "%(side)d px de lado mayor → %(tiles)d mosaicos de %(tile)d px, %(overlap)d%% de solape"
 
-#: src/polyx/core/detection_run/engine.py:65
+#: src/polyx/core/detection_run/engine.py:62
 #, python-format
 msgid "output directory is not empty: %(path)s"
 msgstr "el directorio de salida no está vacío: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:75
+#: src/polyx/core/detection_run/engine.py:72
 #, python-format
 msgid "output path is not a directory: %(path)s"
 msgstr "la ruta de salida no es un directorio: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:84
+#: src/polyx/core/detection_run/engine.py:81
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
 
@@ -522,21 +519,21 @@ msgstr "localización"
 msgid "with class"
 msgstr "con clase"
 
-#: src/polyx/core/measure/calibration.py:128
+#: src/polyx/core/measure/calibration.py:127
 msgid "not calibrated"
 msgstr "sin calibrar"
 
-#: src/polyx/core/measure/calibration.py:142
+#: src/polyx/core/measure/calibration.py:141
 #, python-format
 msgid "%(scale)s µm/px — entered by hand"
 msgstr "%(scale)s µm/px — introducida a mano"
 
-#: src/polyx/core/measure/calibration.py:131
+#: src/polyx/core/measure/calibration.py:130
 #, python-format
 msgid "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px (%(points)s edge points)"
 msgstr "%(scale)s µm/px — placa de %(diameter)s mm, r=%(radius)s px (%(points)s puntos de borde)"
 
-#: src/polyx/core/measure/calibration.py:141
+#: src/polyx/core/measure/calibration.py:140
 #, python-format
 msgid "%(scale)s µm/px — inherited from the crop"
 msgstr "%(scale)s µm/px — heredada del recorte"
@@ -6533,4 +6530,7 @@ msgstr "● Error: %(error)s"
 
 #~ msgid "<th>Model</th>"
 #~ msgstr "<th>Modelo</th>"
+
+#~ msgid "explicit index CSV mapping image names to µm/px"
+#~ msgstr "CSV de índice explícito que asigna nombres de imagen a µm/px"
 

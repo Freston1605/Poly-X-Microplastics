@@ -3,9 +3,7 @@
 from .calibration import (
     Calibration,
     calibrate_from_plate,
-    carry_index,
     resolver,
-    search_index,
     summary_batch,
 )
 from .drawing import (
@@ -76,7 +74,6 @@ __all__ = [
     "apply_to_detection",
     "box_margin",
     "calibrate_from_plate",
-    "carry_index",
     "draw_measurement",
     "extremes_feret",
     "feret_maximum",
@@ -86,7 +83,6 @@ __all__ = [
     "measure_detections",
     "path_geodesic",
     "resolver",
-    "search_index",
     "segment",
     "separate_glued",
     "summary_batch",

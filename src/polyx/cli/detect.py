@@ -5,10 +5,10 @@ folder to the exact ``--out`` path. ``--model`` and ``--model-type`` are
 repeatable: one type applies to every model, one per model must match, and no
 type means YOLO. A non-empty ``--out`` is refused unless ``--force`` is given.
 
-Calibration defaults to ``auto``: an explicit ``--index-calibration`` CSV,
-then the index files searched from the image root, then the plate measured on
-each photo, then ``--um-per-px``. ``--um-per-px`` alone selects ``manual``;
-``--calibrate none`` refuses every scale.
+Calibration defaults to ``auto``: the plate measured on each photo, then
+``--um-per-px``. ``--um-per-px`` alone selects ``manual``; ``--calibrate none``
+refuses every scale. Pre-canonical index CSVs are not read; an old run needs
+an older version of Poly-X.
 
 Usage:
     polyx-detect --model best.pt --images ./photos --out ./run
@@ -16,8 +16,6 @@ Usage:
         --images ./photos --out ./run
     polyx-detect --model best.pt --alias baseline --images ./photos --out ./run
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
-    polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
-        --index-calibration ./indice.csv
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate none
     polyx-detect --model best.pt --images ./photos --out ./run --tiling auto \\
         --tiling-tile 1024 --size-min-um 10 --conf-assignment 0.5
@@ -115,12 +113,6 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help=_("manual µm/px; used alone it selects --calibrate manual"),
-    )
-    parser.add_argument(
-        "--index-calibration",
-        default=None,
-        metavar="CSV",
-        help=_("explicit index CSV mapping image names to µm/px"),
     )
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
@@ -253,7 +245,6 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     calibration = CalibrationPolicy(
         mode=_resolve_calibration_mode(args),
         um_per_px=args.um_per_px,
-        index_path=Path(args.index_calibration) if args.index_calibration else None,
     )
     return RunConfig(
         images=find_images(Path(args.images)),

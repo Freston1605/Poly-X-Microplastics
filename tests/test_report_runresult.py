@@ -222,9 +222,11 @@ def test_report_page_refuses_when_there_is_no_run(qapp, monkeypatch):
     assert page._check_results() is False
 
 
-def test_the_transitional_adapter_is_gone_and_the_legacy_loader_is_qt_free():
-    """New runs never rebuild GUI state; old headless folders use core."""
-    from polyx.core.detection_run import load_legacy_run
+def test_the_transitional_adapter_and_the_legacy_loader_are_gone():
+    """New runs never rebuild GUI state; pre-canonical folders are not read."""
+    import polyx.core as core
+    import polyx.core.detection_run as detection_run
 
-    assert callable(load_legacy_run)
-    assert load_legacy_run.__module__ == "polyx.core.detection_run.legacy_reader"
+    assert not hasattr(core, "build_state_from_run")
+    assert not hasattr(detection_run, "load_legacy_run")
+    assert callable(detection_run.load_run)

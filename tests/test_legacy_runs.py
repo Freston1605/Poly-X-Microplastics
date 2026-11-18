@@ -126,6 +126,51 @@ def test_report_cli_no_longer_accepts_the_images_flag(capsys):
     assert "--images" in capsys.readouterr().err
 
 
+# ── Calibration index CSV reader is gone ───────────────────────────────
+
+
+def test_the_calibration_index_csv_reader_is_removed():
+    """No CSV reader, index policy field or index mode survives the cut."""
+    import inspect
+
+    from polyx.core.detection_run import CALIBRATION_MODES, CalibrationPolicy
+    from polyx.core.measure import __all__ as measure_exports
+    from polyx.core.measure import calibration as cal
+
+    for name in ("carry_index", "NAMES_INDEX", "search_index"):
+        assert not hasattr(cal, name)
+        assert name not in measure_exports
+
+    assert "index" not in inspect.signature(cal.resolver).parameters
+    assert not hasattr(CalibrationPolicy(), "index_path")
+    assert "index" not in CALIBRATION_MODES
+
+
+def test_cli_detect_refuses_the_index_calibration_flag(tmp_path, capsys):
+    """`--index-calibration` belonged only to the deleted CSV reader."""
+    from polyx.cli.detect import main
+
+    index = tmp_path / "indice.csv"
+    index.write_text("recorte,um_per_px\nplate1.png,31.0\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        main(
+            [
+                "--model",
+                "model.pt",
+                "--images",
+                str(HEADLESS_PHOTOS),
+                "--out",
+                str(tmp_path / "run"),
+                "--index-calibration",
+                str(index),
+            ]
+        )
+
+    assert exc.value.code == 2
+    assert "--index-calibration" in capsys.readouterr().err
+
+
 # ── Canonical folders still work ───────────────────────────────────────
 
 

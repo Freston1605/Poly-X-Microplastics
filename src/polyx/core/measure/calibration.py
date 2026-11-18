@@ -27,7 +27,6 @@ failure for degenerate input instead of inventing a scale.
 
 from __future__ import annotations
 
-import csv
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -496,65 +495,8 @@ def calibrate_from_plate(
     )
 
 
-def carry_index(path_csv: str | Path) -> dict[str, float]:
-    """Reads a CSV mapping image name to its already-calibrated um/px.
-
-    Meant for the crops: the full plate does not appear in a crop, so its
-    scale cannot be re-measured on it and must be inherited from the photo the
-    crop came from. ``cortar_placas.py`` leaves that mapping in
-    ``indice.csv``, and ``detectar_placa.py`` leaves the one for full plates
-    in ``calibracion_placas.csv``.
-
-    Both headers are accepted because they are the two files the pipeline
-    produces; it returns ``{}`` if the file does not exist or lacks the
-    column.
-    """
-    path_2 = Path(path_csv)
-    if not path_2.is_file():
-        return {}
-    map_value: dict[str, float] = {}
-    try:
-        with path_2.open(newline="", encoding="utf-8") as fh:
-            for row in csv.DictReader(fh):
-                name_2 = row.get("recorte") or row.get("placa") or ""
-                try:
-                    um = float(row.get("um_por_px", "") or 0)
-                except ValueError:
-                    continue
-                if name_2 and um > 0:
-                    map_value[name_2] = um
-    except (OSError, csv.Error):
-        return {}
-    return map_value
-
-
-NAMES_INDEX = ("indice.csv", "calibracion_placas.csv")
-
-
-def search_index(image_path: str | Path, levels: int = 3) -> dict[str, float]:
-    """Finds a calibration CSV next to the images, walking some levels up.
-
-    It is searched for instead of required because the paper pipeline writes
-    the CSV into the crops folder or the one above it, and having to point at
-    it by hand is exactly the step that gets forgotten; forgetting it raises
-    no error, it produces a report with the wrong scale.
-    """
-    folder = Path(image_path)
-    folder = folder.parent if folder.is_file() else folder
-    for _level in range(max(1, levels)):
-        for name_2 in NAMES_INDEX:
-            map_value = carry_index(folder / name_2)
-            if map_value:
-                return map_value
-        if folder.parent == folder:
-            break
-        folder = folder.parent
-    return {}
-
-
 def resolver(
     image_path: str | Path,
-    index: dict[str, float] | None = None,
     um_por_px_manual: float = 0.0,
     diameter_mm: float = DIAMETER_PLATE_MM,
     measure_plate: bool = False,
@@ -564,23 +506,17 @@ def resolver(
 ) -> Calibration:
     """Scale of an image, in order of reliability.
 
-    1. ``indice`` -- already calibrated against the plate, per photo. It is
-       what the crops have and costs nothing.
-    2. measure the plate on the photo itself, if requested and visible.
-    3. the value typed in Parametros, which applies a single value to the
+    1. measure the plate on the photo itself, if requested and visible.
+    2. the value typed in Parameters, which applies a single value to the
        whole batch.
 
     Order matters: the manual value comes last because it is unique for the
     whole batch, and in this material the true scale varies up to 1.5x between
-    photos.
+    photos. Pre-canonical index CSVs are no longer read.
 
     ``bgr`` avoids re-reading from disk when the caller already has the image
     decoded, which is the runner's case: 12 MP per photo.
     """
-    name_2 = Path(image_path).name
-    if index and name_2 in index:
-        return Calibration(um_por_px=index[name_2], origin=ORIGIN_INDEX, diameter_mm=diameter_mm)
-
     if measure_plate:
         if bgr is None:
             bgr = read_image(image_path)
