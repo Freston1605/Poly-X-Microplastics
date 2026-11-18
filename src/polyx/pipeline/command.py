@@ -6,7 +6,8 @@ Usage:
 
 Overrides are Hydra-style ``key=value`` strings. ``--sweep`` runs the small
 Optuna driver over the same config, evaluator and artifact layout; the real
-campaign uses the Hydra sweeper plugin through ``polyx-sweep --multirun``.
+campaign uses the Hydra sweeper plugin through
+``python -m polyx.pipeline.sweep_app --multirun``.
 """
 
 from __future__ import annotations

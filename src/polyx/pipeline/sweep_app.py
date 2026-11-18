@@ -1,6 +1,6 @@
 """Hydra objective for the real Optuna sweeper multirun.
 
-``polyx-sweep --multirun`` hands each suggested configuration to this function
+``python -m polyx.pipeline.sweep_app --multirun`` hands each configuration here
 and records the returned number as the study value. It is the shared evaluator's
 with-class score from :func:`run_execution`, the same number the one-process
 driver returns through ``polyx-pipeline --sweep``.

@@ -32,7 +32,7 @@ SQLite file on work, and no cross-process pruning is attempted.**
 `search_space` containing only protocol hyperparameters (learning rate,
 momentum, weight decay). Split, seed, augmentation subset and evaluator are
 absent from that space and cannot vary between trials. Both the real multirun
-(`polyx-sweep --multirun`) and the in-process smoke driver
+(`python -m polyx.pipeline.sweep_app --multirun`) and the in-process smoke driver
 (`polyx-pipeline --sweep`) read the same sweeper node and call the same
 `run_execution`; the objective function returns
 `selection["value"]` from the shared evaluator, never an adapter's own metric.
