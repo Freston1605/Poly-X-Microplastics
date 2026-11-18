@@ -104,6 +104,18 @@ it would silently come out zero.
 _Avoid_: "calibration failed" (does not say what happened to the scale),
 0 µm/px as a refusal
 
+## Per-image calibration index
+
+The canonical English CSV `calibration_index.csv`, with the headers
+`image,um_per_px`, that supplies one µm/px scale per image basename. It is the
+safe source for crops where the Petri dish is not visible: a single batch-wide
+manual scale would mis-size photos shot at different distances. The file is
+named explicitly, never searched for; a missing row is a warning
+(`image_not_in_index`) and never a silent fallback. The legacy Spanish files
+and headers are refused by name.
+_Avoid_: calibration index CSV (ambiguous: could mean a legacy file),
+batch-wide fallback for crops
+
 ## Warning code
 
 A stable English token recorded in an artifact when a measurement cannot be completed as requested. It names what happened; the sentence a person reads is chosen at display time, and numeric details travel as separate structured values.
@@ -127,9 +139,11 @@ The folder a detection run owns, written by the canonical engine:
 image records) plus `detections.csv` (predictions only) and one folder per
 model alias with the triptych PNGs, `labels/*.txt` and `classes.txt`. Read it
 with `load_run`; do not add a second schema. Pre-canonical folders
-(`summary.json` + `centroids.csv`, old GUI per-model labels and calibration
-index CSVs) are legacy inputs: new code does not read them, and the CLI and
-Viewer report that an old run needs an older version of Poly-X.
+(`summary.json` + `centroids.csv`, old GUI per-model labels and legacy
+calibration index CSVs) are legacy inputs: new code does not read them, and the
+CLI and Viewer report that an old run needs an older version of Poly-X. The
+canonical per-image index is a distinct, English-only file; see
+[Per-image calibration index](#per-image-calibration-index).
 
 ## Machine-readable artifact
 

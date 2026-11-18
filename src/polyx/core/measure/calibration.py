@@ -27,6 +27,7 @@ failure for degenerate input instead of inventing a scale.
 
 from __future__ import annotations
 
+import csv
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +93,14 @@ ORIGIN_PLATE = "plate"  # fitted on the ring of this same photo
 ORIGIN_INDEX = "index"  # inherited from the crop via the calibration index
 ORIGIN_MANUAL = "manual"  # typed by hand in Parameters
 ORIGIN_NONE = "none"  # not calibrated; sizes cannot be reported
+
+# Canonical per-image calibration index. It is an English machine contract
+# (ADR-0004): the file is named and asked for explicitly, never searched for,
+# and the legacy Spanish files and headers are refused rather than parsed.
+CALIBRATION_INDEX_NAME = "calibration_index.csv"
+CALIBRATION_INDEX_HEADER = ("image", "um_per_px")
+LEGACY_INDEX_NAMES = ("indice.csv", "calibracion_placas.csv")
+LEGACY_INDEX_HEADERS = ("recorte", "placa", "um_por_px")
 
 
 @dataclass
@@ -493,6 +502,94 @@ def calibrate_from_plate(
         factor_parallax=factor,
         warning=warning,
     )
+
+
+class CalibrationIndexError(ValueError):
+    """The file is not the canonical English per-image calibration index."""
+
+
+def read_calibration_index(path: str | Path) -> dict[str, float]:
+    """Read ``image,um_per_px`` from the one file the caller points at.
+
+    The index is the per-image scale source for crops whose dish is not
+    visible: a single batch-wide fallback cannot scale photos that were shot
+    at different distances. The reader is deliberately strict -- the legacy
+    Spanish filenames and headers are refused with an actionable error that
+    names the canonical format, and duplicate or invalid rows are never
+    silently skipped. It only reads the given path: it never searches the
+    filesystem and never rewrites or deletes the user's file.
+
+    Values are keyed by image basename, which is what the run looks up. A
+    relative path in the ``image`` column is reduced to its basename too.
+    """
+    path = Path(path)
+    canonical = _("use 'calibration_index.csv' with the headers image,um_per_px")
+    if path.name in LEGACY_INDEX_NAMES:
+        raise CalibrationIndexError(
+            _("'%(name)s' is a legacy calibration index and is not read; %(canonical)s")
+            % {"name": path.name, "canonical": canonical}
+        )
+    if not path.is_file():
+        raise CalibrationIndexError(_("calibration index not found: %(path)s") % {"path": path})
+
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = csv.reader(handle)
+        try:
+            raw_header = next(rows)
+        except StopIteration:
+            raise CalibrationIndexError(
+                _("'%(name)s' is empty; %(canonical)s")
+                % {"name": path.name, "canonical": canonical}
+            ) from None
+        header = [field.lstrip("\ufeff").strip() for field in raw_header]
+        if tuple(header) != CALIBRATION_INDEX_HEADER:
+            legacy = next((field for field in header if field in LEGACY_INDEX_HEADERS), None)
+            if legacy is not None:
+                raise CalibrationIndexError(
+                    _("legacy header '%(header)s' in '%(name)s' is not read; %(canonical)s")
+                    % {"header": legacy, "name": path.name, "canonical": canonical}
+                )
+            raise CalibrationIndexError(
+                _(
+                    "'%(name)s' must carry the headers image,um_per_px; got %(header)s; %(canonical)s"
+                )
+                % {"name": path.name, "header": ",".join(header), "canonical": canonical}
+            )
+
+        invalid_value = _("invalid um/px for '%(image)s' in '%(name)s': expected a positive number")
+        mapping: dict[str, float] = {}
+        for line_number, row in enumerate(rows, start=2):
+            if not row or all(not cell.strip() for cell in row):
+                continue
+            if len(row) != 2:
+                raise CalibrationIndexError(
+                    _("row %(line)d in '%(name)s' must have two columns: image,um_per_px")
+                    % {"line": line_number, "name": path.name}
+                )
+            image = row[0].strip()
+            if not image:
+                raise CalibrationIndexError(
+                    _("row %(line)d in '%(name)s' has a blank image name; %(canonical)s")
+                    % {"line": line_number, "name": path.name, "canonical": canonical}
+                )
+            try:
+                value = float(row[1].strip())
+            except ValueError:
+                raise CalibrationIndexError(
+                    invalid_value % {"image": image, "name": path.name}
+                ) from None
+            if not math.isfinite(value) or value <= 0:
+                raise CalibrationIndexError(invalid_value % {"image": image, "name": path.name})
+            basename = Path(image.replace("\\", "/")).name
+            if basename in mapping:
+                raise CalibrationIndexError(
+                    _(
+                        "duplicate image '%(image)s' in '%(name)s'; each image needs one um_per_px value"
+                    )
+                    % {"image": image, "name": path.name}
+                )
+            mapping[basename] = value
+    return mapping
 
 
 def resolver(

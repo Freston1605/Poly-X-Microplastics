@@ -7,8 +7,10 @@ type means YOLO. A non-empty ``--out`` is refused unless ``--force`` is given.
 
 Calibration defaults to ``auto``: the plate measured on each photo, then
 ``--um-per-px``. ``--um-per-px`` alone selects ``manual``; ``--calibrate none``
-refuses every scale. Pre-canonical index CSVs are not read; an old run needs
-an older version of Poly-X.
+refuses every scale. ``--calibration-index`` (or ``--calibrate index`` with it)
+selects the canonical English ``image,um_per_px`` per-image index, the safe
+source for crops whose dish is not visible. The legacy Spanish index CSVs are
+not read; an old run needs an older version of Poly-X.
 
 Usage:
     polyx-detect --model best.pt --images ./photos --out ./run
@@ -16,6 +18,8 @@ Usage:
         --images ./photos --out ./run
     polyx-detect --model best.pt --alias baseline --images ./photos --out ./run
     polyx-detect --model best.pt --images ./photos --out ./run --gt-folder ./labels
+    polyx-detect --model best.pt --images ./photos --out ./run --calibrate index \\
+        --calibration-index ./calibration_index.csv
     polyx-detect --model best.pt --images ./photos --out ./run --calibrate none
     polyx-detect --model best.pt --images ./photos --out ./run --tiling auto \\
         --tiling-tile 1024 --size-min-um 10 --conf-assignment 0.5
@@ -114,6 +118,15 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help=_("manual µm/px; used alone it selects --calibrate manual"),
     )
+    parser.add_argument(
+        "--calibration-index",
+        default=None,
+        metavar="PATH",
+        help=_(
+            "English per-image index CSV (headers image,um_per_px); used alone it selects "
+            "--calibrate index"
+        ),
+    )
     parser.add_argument("--gt-folder", default=None)
     parser.add_argument("--no-measure-shape", action="store_true")
     parser.add_argument(
@@ -206,6 +219,8 @@ def _resolve_calibration_mode(args) -> str:
     """Resolve the mode: an explicit ``--calibrate`` wins over the implication."""
     if getattr(args, "calibrate_given", False):
         return str(args.calibrate)
+    if args.calibration_index:
+        return "index"
     if args.um_per_px > 0:
         return "manual"
     return str(args.calibrate)
@@ -244,6 +259,7 @@ def _build_config(args, specs: list[ModelSpec]) -> RunConfig:
     calibration = CalibrationPolicy(
         mode=_resolve_calibration_mode(args),
         um_per_px=args.um_per_px,
+        index_path=Path(args.calibration_index) if args.calibration_index else None,
     )
     return RunConfig(
         images=find_images(Path(args.images)),

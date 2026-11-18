@@ -257,6 +257,16 @@ directions** and a circle is fitted by least squares with outlier rejection.
 Hough's radius is not used, because it can be off by 12 % and that error would go
 straight into every size.
 
+For crops where the dish is not visible, the plate cannot be measured. Supply
+an English per-image index instead: `calibration_index.csv` with the headers
+`image,um_per_px`, keyed by image basename. Run with
+`polyx-detect --calibrate index --calibration-index calibration_index.csv` (the
+flag alone also selects index mode); each photo then uses **its own** scale. A
+photo with no row is reported with `image_not_in_index` and stays uncalibrated
+rather than silently inheriting a batch-wide value. Legacy Spanish index files
+are rejected by name or header with an error naming the canonical format; they
+are never searched for, rewritten or deleted.
+
 > **Which edge the 100 mm are, and which way it can be wrong.** The rim has a wall
 > about **2 mm** thick — measured on this study's photographs: the inner edge falls
 > at 0.960 of the fitted radius and the outer edge at 1.000. The nominal diameter

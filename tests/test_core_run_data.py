@@ -105,6 +105,7 @@ def test_calibration_policy_owns_the_calibration_defaults():
     policy = CalibrationPolicy()
     assert policy.mode == "auto"
     assert policy.um_per_px == 0.0
+    assert policy.index_path is None
     assert policy.measure_plate is True
     assert policy.diameter_plate_mm == 100.0
     assert policy.height_plate_mm == 0.0

@@ -17,6 +17,7 @@ from polyx.core.measure import calibration as cal
 from polyx.core.measure import shape
 from polyx.core.measure.warnings import (
     DETOUR_HOUGH,
+    IMAGE_NOT_IN_INDEX,
     IMAGE_UNREADABLE,
     MASK_CLIPPED,
     NO_CONTOUR,
@@ -89,13 +90,14 @@ def test_all_warning_codes_are_english_tokens():
         assert " " not in code and "ñ" not in code and "á" not in code
 
 
-def test_image_not_in_index_code_is_gone():
-    """#190 removed the index reader, so this code has no producer left."""
+def test_image_not_in_index_code_is_restored_with_its_producer():
+    """The per-image index brings the warning back as a real producer's code."""
     from polyx.core.measure import warnings as warning_module
 
-    assert "image_not_in_index" not in WARNING_CODES
-    assert not hasattr(warning_module, "IMAGE_NOT_IN_INDEX")
-    assert "IMAGE_NOT_IN_INDEX" not in warning_module.__all__
+    assert IMAGE_NOT_IN_INDEX == "image_not_in_index"
+    assert IMAGE_NOT_IN_INDEX in WARNING_CODES
+    assert hasattr(warning_module, "IMAGE_NOT_IN_INDEX")
+    assert "IMAGE_NOT_IN_INDEX" in warning_module.__all__
 
 
 # ── Slice B: shape warnings are codes ──
