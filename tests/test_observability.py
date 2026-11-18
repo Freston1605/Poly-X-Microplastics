@@ -399,7 +399,7 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
     data = start["data"]
     assert data["n_results"] == 1
     assert data["images_only"] is None
-    assert data["sections"] == ["resumen"]
+    assert data["sections"] == ["summary"]
     assert "output" in data
     assert not ({"results_2", "solo_images"} & set(data))
     assert {"ts", "level", "module", "pid", "thread", "event", "data"} <= set(start)
