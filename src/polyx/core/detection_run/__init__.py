@@ -36,6 +36,7 @@ from .schema import (
     detection_row,
     is_canonical_run,
     load_run,
+    validate_manifest_version,
 )
 
 __all__ = [
@@ -69,4 +70,5 @@ __all__ = [
     "resolve_identity",
     "run_detection",
     "sanitize_alias",
+    "validate_manifest_version",
 ]

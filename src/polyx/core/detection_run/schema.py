@@ -372,8 +372,10 @@ def is_canonical_run(run_dir: Path) -> bool:
 def read_json_object(path: Path) -> dict:
     """Read a JSON object, returning ``{}`` for a missing or malformed file.
 
-    Both the canonical reader and the compact/legacy report paths need the same
-    forgiving read; keeping one helper stops their error handling drifting.
+    Kept for genuinely forgiving reads where an absent or broken file means
+    "nothing to show" (for example the Viewer's optional label listing). It is
+    deliberately *not* the gate a reader uses before acting on ``run.json``:
+    see :func:`validate_manifest_version` for that.
     """
     if not path.is_file():
         return {}
@@ -382,6 +384,44 @@ def read_json_object(path: Path) -> dict:
     except (OSError, json.JSONDecodeError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def validate_manifest_version(run_dir: Path) -> dict:
+    """Return the parsed ``run.json``, refusing old or unreadable manifests.
+
+    :func:`is_canonical_run` only checks that the manifest is a file. Every
+    reader that acts on its contents must call this first so a version-1 run
+    or a malformed document can never be rendered as a modern report or opened
+    in the Viewer. The actionable error is the one :func:`load_run` has always
+    used, so all three readers reject the same artifacts for the same reason.
+    """
+    run_json = Path(run_dir) / "run.json"
+    if not run_json.is_file():
+        raise FileNotFoundError(f"not a canonical run folder: {run_json}")
+    try:
+        data = json.loads(run_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            f"cannot read run manifest {run_json}: invalid JSON ({exc}); "
+            "see docs/specs/run-artifact-vocabulary.md"
+        ) from exc
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"cannot read run manifest {run_json}: expected a JSON object; "
+            "see docs/specs/run-artifact-vocabulary.md"
+        )
+    version = data.get("schema_version")
+    if version != SCHEMA_VERSION:
+        detail = (
+            "version 1 is the old run format and is not supported"
+            if version == 1
+            else f"expected schema version {SCHEMA_VERSION}"
+        )
+        raise ValueError(
+            f"unsupported run schema version {version!r}: {detail}; "
+            "see docs/specs/run-artifact-vocabulary.md"
+        )
+    return data
 
 
 def read_csv_rows(path: Path) -> list[dict]:
@@ -637,21 +677,7 @@ def _match_from_record(
 def load_run(run_dir: Path) -> RunResult:
     """Reconstruct a :class:`RunResult` from a canonical folder, without Qt."""
     run_dir = Path(run_dir)
-    run_json = run_dir / "run.json"
-    if not run_json.is_file():
-        raise FileNotFoundError(f"not a canonical run folder: {run_json}")
-    data = json.loads(run_json.read_text(encoding="utf-8"))
-    version = data.get("schema_version")
-    if version != SCHEMA_VERSION:
-        detail = (
-            "version 1 is the old run format and is not supported"
-            if version == 1
-            else f"expected schema version {SCHEMA_VERSION}"
-        )
-        raise ValueError(
-            f"unsupported run schema version {version!r}: {detail}; "
-            "see docs/specs/run-artifact-vocabulary.md"
-        )
+    data = validate_manifest_version(run_dir)
 
     models = [_model_from_payload(entry) for entry in data.get("models") or []]
     params = params_from_dict(data.get("params"))
@@ -772,4 +798,5 @@ __all__ = [
     "tiling_plan_from_dict",
     "tiling_plan_to_dict",
     "utcnow",
+    "validate_manifest_version",
 ]

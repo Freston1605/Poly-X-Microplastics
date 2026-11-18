@@ -84,6 +84,24 @@ def test_nested_cause_travels_as_a_code(monkeypatch):
     assert result.warning.cause == PLATE_NOT_FOUND
 
 
+def test_summary_batch_keeps_warnings_when_no_scale_is_valid():
+    """Every calibration failed: the empty summary still carries warning codes."""
+    failed = [
+        cal.Calibration(warning=Warning(IMAGE_UNREADABLE)),
+        cal.Calibration(warning=Warning(PLATE_NOT_FOUND, cause=RING_FIT_FAILED)),
+    ]
+    assert not any(c.valid for c in failed)
+
+    summary = cal.summary_batch(failed)
+
+    assert summary["n"] == 0
+    assert summary["origins"] == {}
+    assert summary["warnings"] == [
+        {"code": IMAGE_UNREADABLE},
+        {"code": PLATE_NOT_FOUND, "cause": RING_FIT_FAILED},
+    ]
+
+
 def test_all_warning_codes_are_english_tokens():
     for code in WARNING_CODES:
         assert code.isascii() and code.islower(), code
