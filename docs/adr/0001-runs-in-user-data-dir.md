@@ -1,6 +1,6 @@
 # ADR-0001: Runs live in the per-user data directory, not the repo
 
-- **Status:** Accepted
+- **Status:** Superseded by [English-only run artifact vocabulary](../specs/run-artifact-vocabulary.md) (spec #182, ticket #190). The per-user data **location** rule below still holds; its read-boundary consequence ("existing installs tolerate both layouts") does not: new code does not open pre-canonical run folders and old runs require an older Poly-X version. ADR-0004 stays in force. This is the canonical numbered ADR-0001; the older short-form record is [0001-run-data-location.md](0001-run-data-location.md), superseded for the same reason.
 - **Date:** 2026-11-05
 - **Landed in:** #26
 
@@ -47,6 +47,9 @@ OS-specific lives outside `polyx/core/platform.py`.
 - **Existing installs tolerate both layouts**: tooling that reads runs looks
   in the data dir first and falls back to the legacy `runs/` and `runs_train/`
   folders in the project root, which are treated as read-only legacy.
+  **Superseded by spec #182:** the fallback was a pre-canonical read boundary.
+  Those folders are still left untouched, but new code does not open runs in
+  them; an older Poly-X version is required.
 - **Documentation must say where runs live** — CLAUDE.md, the manual and the
   install scripts were updated to match (the manual documents all three
   platforms and `POLYX_HOME`).

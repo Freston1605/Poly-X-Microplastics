@@ -370,7 +370,7 @@ class ParametersPage(DetectorPage):
         l3.addWidget(
             _hint(
                 _(
-                    "Nothing has to be marked: the dish rim is found automatically. The radius comes from fitting a circle to the rim sampled along 720 directions, with outlier rejection; the Hough transform only supplies the approximate centre, because its radius can be off by as much as 12 %. In crops the dish is not visible, so there the scale is inherited from the calibration index left behind when the crop was made."
+                    "Nothing has to be marked: the dish rim is found automatically. The radius comes from fitting a circle to the rim sampled along 720 directions, with outlier rejection; the Hough transform only supplies the approximate centre, because its radius can be off by as much as 12 %. In crops the dish is not visible, so measure the scale by hand; old calibration index files are not read."
                 )
             )
         )

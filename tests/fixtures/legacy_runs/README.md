@@ -9,5 +9,7 @@ Small, frozen folders written by the two pre-canonical consumers:
   one folder per model with `labels/{index:04d}_{stem}.txt` and
   `classes.txt`. `gui/photos/` holds the original photograph.
 
-They are text-first on purpose: the tests pin the readers, and the images are
-only there so the Viewer and the full report have a real file to open.
+They are text-first on purpose: the tests pin the **rejection** paths, and the
+images are only there so a caller has a real file to point at. No reader opens
+these folders any more; they stay on disk untouched and require an older
+Poly-X version.
