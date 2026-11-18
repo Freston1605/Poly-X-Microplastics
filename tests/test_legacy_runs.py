@@ -280,6 +280,47 @@ def test_viewer_refuses_an_old_gui_run_folder(qapp, monkeypatch, selected_langua
     assert window.state.detections == []
 
 
+def test_viewer_refuses_a_v1_manifest_with_prediction_labels(
+    qapp, monkeypatch, selected_language, tmp_path
+):
+    """A v1 run.json with compatible labels is refused, not loaded."""
+    selected_language("en")
+    pytest.importorskip("PySide6")
+    import json
+
+    from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+
+    from polyx.gui.viewer.window import ViewerWindow
+
+    run_dir = tmp_path / "detect_v1"
+    (run_dir / "alpha" / "labels").mkdir(parents=True)
+    (run_dir / "run.json").write_text(
+        json.dumps({"schema_version": 1, "models": [{"alias": "alpha"}]}),
+        encoding="utf-8",
+    )
+    (run_dir / "alpha" / "classes.txt").write_text("PET\n", encoding="utf-8")
+    (run_dir / "alpha" / "labels" / "0000_plate1.txt").write_text(
+        "0 0.5 0.5 0.2 0.2 0.9\n", encoding="utf-8"
+    )
+
+    warnings: list[str] = []
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(run_dir))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(str(a[2])) or None)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a, **k: pytest.fail("model chooser"))
+
+    window = ViewerWindow()
+    try:
+        window.state.images = [GUI_PHOTO]
+        window.state.current_idx = 0
+        window._run_load()
+    finally:
+        window.close()
+
+    assert warnings
+    assert window.state.detections == []
+
+
 # ── Canonical folders still work ───────────────────────────────────────
 
 

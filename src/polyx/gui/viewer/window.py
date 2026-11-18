@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from polyx.core import platform
 from polyx.core.annotate import parse_run_label_name
 from polyx.core.detect.tiling import TilingDecision, TilingMode
-from polyx.core.detection_run import is_canonical_run
+from polyx.core.detection_run import is_canonical_run, validate_manifest_version
 from polyx.core.detection_run.schema import read_json_object
 from polyx.core.i18n import _, ngettext
 from polyx.core.measure import calibration as calib
@@ -892,7 +892,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         root_2 = Path(folder_2)
 
-        if not is_canonical_run(root_2):
+        # is_canonical_run only sees that run.json is a file. The shared v2 gate
+        # also refuses a v1 manifest or unparseable JSON before any model alias
+        # is read, so compatible-looking labels cannot reopen an old run.
+        try:
+            validate_manifest_version(root_2)
+        except (ValueError, OSError):
             QMessageBox.warning(
                 self,
                 _("Old run"),
