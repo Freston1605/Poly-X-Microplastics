@@ -235,9 +235,6 @@ class RunResult:
     finished_at: datetime | None = None
     execution: dict[int, ModelExecution] = field(default_factory=dict)
     metrics: dict[int, dict[str, int]] = field(default_factory=dict)
-    # True for a result rebuilt from a pre-canonical headless folder: those
-    # folders stored per-image counts but not the GT boxes.
-    legacy: bool = False
 
     def __post_init__(self) -> None:
         # Callers written before the enum may still pass the plain JSON string.

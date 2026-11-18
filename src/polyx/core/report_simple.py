@@ -1,10 +1,10 @@
-"""Minimal self-contained HTML report for headless Poly-X runs (no Qt).
+"""Minimal self-contained HTML report for canonical headless runs (no Qt).
 
 Not the full paper-quality report (that lives in gui/report/ and needs Qt
-state). This produces a compact, dependency-free summary. It reads the
-canonical ``run.json`` + ``detections.csv`` first, and falls back to the old
-headless ``summary.json`` + ``centroids.csv`` so pre-canonical runs stay
-readable without migration.
+state). This produces a compact, dependency-free summary from ``run.json`` and
+``detections.csv``. A pre-canonical folder (``summary.json`` +
+``centroids.csv``) is refused: old runs stay on disk and need an older version
+of Poly-X.
 """
 
 from __future__ import annotations
@@ -15,6 +15,24 @@ from pathlib import Path
 from polyx.core.detection_run.identity import display_name
 from polyx.core.detection_run.schema import read_csv_rows, read_json_object
 from polyx.core.i18n import _, language, ngettext
+
+
+class LegacyRunError(ValueError):
+    """A pre-canonical run folder that this version cannot open.
+
+    No reader is provided for old artifacts: the files are left untouched and
+    the user is told to use an older Poly-X version instead.
+    """
+
+    def __init__(self, run_dir: Path) -> None:
+        super().__init__(
+            _(
+                "Cannot open %(path)s: this is an old run (summary.json + "
+                "centroids.csv). Old runs need an older version of Poly-X; "
+                "see docs/specs/run-artifact-vocabulary.md."
+            )
+            % {"path": run_dir}
+        )
 
 
 def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
@@ -30,24 +48,15 @@ def _canonical_totals(canonical: dict) -> tuple[int, int, dict[str, int]]:
 
 
 def generate(run_dir: Path, output: Path | None = None) -> Path:
+    """Render a canonical run folder, or refuse a pre-canonical one."""
     run_dir = Path(run_dir)
-    canonical = read_json_object(run_dir / "run.json")
-    rows: list[dict] = []
-    summary: dict = {}
-    metrics: dict = {}
-    images: object = "?"
-    detections: object = "?"
+    if not (run_dir / "run.json").is_file():
+        raise LegacyRunError(run_dir)
 
-    if canonical:
-        images, detected, metrics = _canonical_totals(canonical)
-        rows = read_csv_rows(run_dir / "detections.csv")
-        detections = len(rows) if rows else detected
-    else:
-        summary = read_json_object(run_dir / "summary.json")
-        rows = read_csv_rows(run_dir / "centroids.csv")
-        images = summary.get("images", "?")
-        detections = summary.get("detections", len(rows))
-        metrics = summary.get("metrics") or {}
+    canonical = read_json_object(run_dir / "run.json")
+    images, detected, metrics = _canonical_totals(canonical)
+    rows = read_csv_rows(run_dir / "detections.csv")
+    detections = len(rows) if rows else detected
 
     out = output or (run_dir / "report.html")
     parts = [
@@ -59,29 +68,26 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     ]
     parts.append(f"<h1>{_('Poly-X run report')}</h1>")
     parts.append(f"<p><b>{_('Run dir:')}</b> {html.escape(str(run_dir))}</p>")
-    if canonical:
-        parts.append(
-            f"<p><b>{_('Status:')}</b> {html.escape(str(canonical.get('status') or '?'))}"
-            f" &nbsp; <b>{_('Schema:')}</b> "
-            f"{html.escape(str(canonical.get('schema_version', '?')))}</p>"
-        )
-        # The canonical document is read raw, so a folder written before
-        # ``alias_generated`` existed defaults to a chosen alias (verbatim).
-        aliases = [
-            display_name(
-                str(model.get("alias", "")), bool(model.get("alias_generated", False)), index
-            )
-            for index, model in enumerate(canonical.get("models") or [])
-        ]
-        if aliases:
-            parts.append(f"<p><b>{_('Models:')}</b> {html.escape(', '.join(aliases))}</p>")
-        skipped = canonical.get("skipped_images") or []
-        if skipped:
-            skipped_count = len(skipped)
-            label = ngettext(
-                "%(count)d skipped image", "%(count)d skipped images", skipped_count
-            ) % {"count": skipped_count}
-            parts.append(f"<p><b>{label}</b></p>")
+    parts.append(
+        f"<p><b>{_('Status:')}</b> {html.escape(str(canonical.get('status') or '?'))}"
+        f" &nbsp; <b>{_('Schema:')}</b> "
+        f"{html.escape(str(canonical.get('schema_version', '?')))}</p>"
+    )
+    # The canonical document is read raw, so a folder written before
+    # ``alias_generated`` existed defaults to a chosen alias (verbatim).
+    aliases = [
+        display_name(str(model.get("alias", "")), bool(model.get("alias_generated", False)), index)
+        for index, model in enumerate(canonical.get("models") or [])
+    ]
+    if aliases:
+        parts.append(f"<p><b>{_('Models:')}</b> {html.escape(', '.join(aliases))}</p>")
+    skipped = canonical.get("skipped_images") or []
+    if skipped:
+        skipped_count = len(skipped)
+        label = ngettext("%(count)d skipped image", "%(count)d skipped images", skipped_count) % {
+            "count": skipped_count
+        }
+        parts.append(f"<p><b>{label}</b></p>")
     parts.append(f"<p>{_('Images:')} {images} &nbsp; {_('Detections:')} {detections}</p>")
     if metrics:
         parts.append(
@@ -93,9 +99,9 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
         + "".join(f"<th>{html.escape(k)}</th>" for k in (rows[0].keys() if rows else []))
         + "</tr>"
     )
-    for r in rows[:500]:
+    for row in rows[:500]:
         parts.append(  # noqa: PERF401
-            "<tr>" + "".join(f"<td>{html.escape(str(v))}</td>" for v in r.values()) + "</tr>"
+            "<tr>" + "".join(f"<td>{html.escape(str(v))}</td>" for v in row.values()) + "</tr>"
         )
     parts.append("</table>")
     if len(rows) > 500:
@@ -109,4 +115,4 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     return out
 
 
-__all__ = ["generate"]
+__all__ = ["LegacyRunError", "generate"]
