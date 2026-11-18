@@ -60,19 +60,19 @@ def versions() -> dict[str, str]:
         "ultralytics": _version_de("ultralytics"),
         "opencv": _version_de("cv2"),
         "numpy": _version_de("numpy"),
-        "so": f"{platform.system()} {platform.release()}",
+        "os": f"{platform.system()} {platform.release()}",
     }
 
 
-def commit_git(root: Path | None = None) -> dict[str, str]:
+def commit_git(root: Path | None = None) -> dict[str, object]:
     """Current commit of the repository and whether the tree had uncommitted
     changes.
 
-        ``sucio`` matters as much as the hash: a run made on modified,
+        ``dirty`` matters as much as the hash: a run made on modified,
         uncommitted code is not reproducible even with the commit recorded.
     """
     root = Path(root) if root is not None else ROOT
-    output = {"commit": "", "sucio": ""}
+    output: dict[str, object] = {"commit": "", "dirty": False}
 
     def _git(*args: str) -> str | None:
         try:
@@ -93,12 +93,12 @@ def commit_git(root: Path | None = None) -> dict[str, str]:
         return output
     output["commit"] = commit
     state = _git("status", "--porcelain")
-    output["sucio"] = "si" if state else "no"
+    output["dirty"] = bool(state)
     return output
 
 
 def provenance(root: Path | None = None) -> dict[str, object]:
     """Complete block to dump into the summary of a run."""
-    data: dict[str, object] = {"versiones": versions()}
+    data: dict[str, object] = {"versions": versions()}
     data.update(commit_git(root))
     return data

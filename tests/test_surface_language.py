@@ -27,7 +27,7 @@ def _canonical_run(tmp_path: Path) -> Path:
         json.dumps(
             {
                 "status": "completed",
-                "schema_version": 1,
+                "schema_version": 2,
                 "images": [{"path": "plate1.png"}],
                 "models": [{"alias": "m1"}],
                 "metrics": {

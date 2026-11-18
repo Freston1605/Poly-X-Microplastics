@@ -22,7 +22,7 @@ from polyx.core.quality.metrics import MatchResult, match_image
 
 from .result import ImageResult, ModelExecution, ModelInfo, RunParams, RunResult, RunStatus
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Order is the published contract: the Viewer export and the compact report
 # read it positionally only through the header, but users diff the header.
@@ -155,12 +155,21 @@ def calibration_to_dict(calibration: Calibration) -> dict:
     # When the plate was measured, ``Calibration.valid`` tests a numpy float
     # and yields ``numpy.bool_``, which is not JSON serialisable.
     data["valid"] = bool(calibration.valid)
+    # The artifact uses the English machine token; the Python field keeps its
+    # historic name so existing callers of Calibration are unaffected.
+    data["um_per_px"] = data.pop("um_por_px")
     return data
 
 
 def calibration_from_dict(data: dict | None) -> Calibration:
     known = {field.name for field in fields(Calibration)}
-    return Calibration(**{key: value for key, value in (data or {}).items() if key in known})
+    values = {}
+    for key, value in (data or {}).items():
+        if key == "um_per_px":
+            values["um_por_px"] = value
+        elif key in known:
+            values[key] = value
+    return Calibration(**values)
 
 
 def detection_to_dict(det: Instance) -> dict:
@@ -607,7 +616,15 @@ def load_run(run_dir: Path) -> RunResult:
     data = json.loads(run_json.read_text(encoding="utf-8"))
     version = data.get("schema_version")
     if version != SCHEMA_VERSION:
-        raise ValueError(f"unsupported run schema version: {version!r}")
+        detail = (
+            "version 1 is the old run format and is not supported"
+            if version == 1
+            else f"expected schema version {SCHEMA_VERSION}"
+        )
+        raise ValueError(
+            f"unsupported run schema version {version!r}: {detail}; "
+            "see docs/specs/run-artifact-vocabulary.md"
+        )
 
     models = [_model_from_payload(entry) for entry in data.get("models") or []]
     params = params_from_dict(data.get("params"))

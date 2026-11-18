@@ -351,12 +351,12 @@ def test_run_json_records_every_calibration_and_its_summary(tmp_path):
     assert entries["second.png"]["valid"] is True
     assert entries["second.png"]["warning"]
     for entry in entries.values():
-        assert {"origin", "valid", "warning", "um_por_px"} <= set(entry)
+        assert {"origin", "valid", "warning", "um_per_px"} <= set(entry)
 
     summary = payload["calibration_summary"]
     assert summary["n"] == 2
-    assert summary["origenes"] == {ORIGIN_INDEX: 1, ORIGIN_MANUAL: 1}
-    assert len(summary["avisos"]) == 1
+    assert summary["origins"] == {ORIGIN_INDEX: 1, ORIGIN_MANUAL: 1}
+    assert len(summary["warnings"]) == 1
 
     loaded = load_run(result.run_dir)
     assert loaded.calibrations[first].origin == ORIGIN_INDEX

@@ -75,10 +75,10 @@ BIAS_MAXIMUM_WALL_PCT = 4.2
 
 # Where the scale came from, from most to least reliable. It goes into the report: a measurement without
 # its provenance is not verifiable.
-ORIGIN_PLATE = "placa"  # fitted on the ring of this same photo
-ORIGIN_INDEX = "indice"  # inherited from the crop via `indice.csv`
-ORIGIN_MANUAL = "manual"  # typed by hand in `Parametros`
-ORIGIN_NONE = "ninguna"  # not calibrated; sizes cannot be reported
+ORIGIN_PLATE = "plate"  # fitted on the ring of this same photo
+ORIGIN_INDEX = "index"  # inherited from the crop via the calibration index
+ORIGIN_MANUAL = "manual"  # typed by hand in Parameters
+ORIGIN_NONE = "none"  # not calibrated; sizes cannot be reported
 
 
 @dataclass
@@ -633,7 +633,7 @@ def summary_batch(calibrations) -> dict:
     """
     ums = [c.um_por_px for c in calibrations if c.valid]
     if not ums:
-        return {"n": 0, "origenes": {}}
+        return {"n": 0, "origins": {}}
     a = np.array(ums, dtype=float)
     origins: dict[str, int] = {}
     for c in calibrations:
@@ -643,12 +643,12 @@ def summary_batch(calibrations) -> dict:
         "n": len(ums),
         "min": float(a.min()),
         "max": float(a.max()),
-        "media": float(a.mean()),
+        "mean": float(a.mean()),
         # ddof=1 (sample standard deviation): with n photos the estimate is of the
         # spread of the population of photos, not merely a description of these n.
         "std": float(a.std(ddof=1)) if len(a) > 1 else 0.0,
-        "mediana": float(np.median(a)),
-        "variacion": float(a.max() / a.min()) if a.min() > 0 else 0.0,
-        "origenes": origins,
-        "avisos": [c.warning for c in calibrations if c.warning],
+        "median": float(np.median(a)),
+        "variation": float(a.max() / a.min()) if a.min() > 0 else 0.0,
+        "origins": origins,
+        "warnings": [c.warning for c in calibrations if c.warning],
     }
