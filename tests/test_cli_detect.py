@@ -488,13 +488,10 @@ def test_existing_flags_keep_their_meaning(tmp_path, monkeypatch):
         ("auto", TilingMode.AUTO),
         ("always", TilingMode.ALWAYS),
         ("never", TilingMode.NEVER),
-        # Hidden deprecated aliases: an old script keeps working.
-        ("siempre", TilingMode.ALWAYS),
-        ("nunca", TilingMode.NEVER),
     ],
 )
-def test_cli_accepts_english_and_legacy_flags(tmp_path, monkeypatch, choice, expected):
-    """The flag maps directly to the mode; the Spanish spellings still parse."""
+def test_cli_accepts_english_flags(tmp_path, monkeypatch, choice, expected):
+    """The flag maps directly to the English mode."""
     weights = weights_file(tmp_path, "best")
     detector = FakeDetector()
     install_factory(monkeypatch, detector)
@@ -515,6 +512,32 @@ def test_cli_accepts_english_and_legacy_flags(tmp_path, monkeypatch, choice, exp
     assert code == 0
     assert load_run(tmp_path / "run").params.tiling is expected
     assert detector.call_kwargs[0]["tiling"] is expected
+
+
+@pytest.mark.parametrize("choice", ["siempre", "nunca"])
+def test_cli_rejects_legacy_tiling_flags(tmp_path, monkeypatch, capsys, choice):
+    """Deprecated Spanish aliases are gone; argparse names the English modes."""
+    weights = weights_file(tmp_path, "best")
+    install_factory(monkeypatch, FakeDetector())
+
+    with pytest.raises(SystemExit):
+        cli_detect.main(
+            [
+                "--model",
+                str(weights),
+                "--images",
+                str(image_folder(tmp_path, count=1)),
+                "--out",
+                str(tmp_path / "run"),
+                "--tiling",
+                choice,
+            ]
+        )
+
+    error = capsys.readouterr().err
+    assert choice in error
+    assert "auto" in error and "always" in error and "never" in error
+    assert not (tmp_path / "run").exists()
 
 
 def test_without_a_manual_scale_the_run_is_uncalibrated(tmp_path, monkeypatch):

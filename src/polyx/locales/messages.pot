@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 12:50-0300\n"
+"POT-Creation-Date: 2026-11-18 13:20-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -89,12 +89,12 @@ msgstr ""
 msgid "run-order paper-quality HTML report (requires PySide6, [gui] extra)"
 msgstr ""
 
-#: src/polyx/cli/detect.py:314
+#: src/polyx/cli/detect.py:313
 #, python-format
 msgid "IMAGES: %(images)d  DETECTIONS: %(detections)d"
 msgstr ""
 
-#: src/polyx/cli/detect.py:317
+#: src/polyx/cli/detect.py:316
 #, python-format
 msgid "OUTPUT: %(run_dir)s"
 msgstr ""
@@ -109,62 +109,62 @@ msgstr ""
 msgid "--alias takes one value per model (%(count)d); got %(got)d"
 msgstr ""
 
-#: src/polyx/cli/detect.py:232
+#: src/polyx/cli/detect.py:231
 #, python-format
 msgid "invalid tiling mode: %(value)s (choose auto, always or never)"
 msgstr ""
 
-#: src/polyx/cli/detect.py:289
+#: src/polyx/cli/detect.py:288
 msgid "Use --force to overwrite the canonical files."
 msgstr ""
 
-#: src/polyx/cli/detect.py:291
+#: src/polyx/cli/detect.py:290
 msgid "Choose a folder path for --out."
 msgstr ""
 
-#: src/polyx/cli/detect.py:304
+#: src/polyx/cli/detect.py:303
 #, python-format
 msgid "ABORTED: %(run_dir)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:319
+#: src/polyx/cli/detect.py:318
 #, python-format
 msgid "SKIPPED: %(count)d"
 msgstr ""
 
-#: src/polyx/cli/detect.py:332 src/polyx/cli/detect.py:336 src/polyx/cli/report.py:72
+#: src/polyx/cli/detect.py:331 src/polyx/cli/detect.py:335 src/polyx/cli/report.py:72
 #, python-format
 msgid "COMPACT REPORT: %(path)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:276 src/polyx/cli/detect.py:296 src/polyx/cli/detect.py:300
+#: src/polyx/cli/detect.py:275 src/polyx/cli/detect.py:295 src/polyx/cli/detect.py:299
 #: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:80
 #: src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:282
+#: src/polyx/cli/detect.py:281
 #, python-format
 msgid "ERROR loading model: %(error)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:293
+#: src/polyx/cli/detect.py:292
 #, python-format
 msgid "ERROR: %(error)s. %(hint)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:297
+#: src/polyx/cli/detect.py:296
 #, python-format
 msgid "PARTIAL RUN: %(run_dir)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:334 src/polyx/cli/report.py:74
+#: src/polyx/cli/detect.py:333 src/polyx/cli/report.py:74
 #, python-format
 msgid "FULL REPORT: %(path)s"
 msgstr ""
 
-#: src/polyx/cli/detect.py:330 src/polyx/cli/report.py:70
+#: src/polyx/cli/detect.py:329 src/polyx/cli/report.py:70
 #, python-format
 msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr ""
@@ -462,14 +462,14 @@ msgstr ""
 msgid "No trend in %(quantity)s with depth is detected"
 msgstr ""
 
-#: src/polyx/core/detect/tiling.py:247
+#: src/polyx/core/detect/tiling.py:237
 #, python-format
 msgid "%(width)d×%(height)d px → %(tiles)d tile of %(tile)d px, %(overlap)d%% overlap"
 msgid_plural "%(width)d×%(height)d px → %(tiles)d tiles of %(tile)d px, %(overlap)d%% overlap"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/polyx/core/detect/tiling.py:97
+#: src/polyx/core/detect/tiling.py:87
 #, python-format
 msgid "%(side)d px longest side → %(tiles)d tile of %(tile)d px, %(overlap)d%% overlap"
 msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(overlap)d%% overlap"

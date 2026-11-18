@@ -129,7 +129,7 @@ def params_to_dict(params: RunParams) -> dict:
 
     ``TilingMode`` is a ``str``, so ``asdict`` plus ``json`` already wrote a
     string. Converting explicitly keeps that true for a caller that assigned a
-    legacy value after construction.
+    plain string after construction.
     """
     data = asdict(params)
     data["tiling"] = TilingMode.parse(data.get("tiling")).value
@@ -139,9 +139,9 @@ def params_to_dict(params: RunParams) -> dict:
 def params_from_dict(data: dict | None) -> RunParams:
     """Rebuild ``RunParams`` from JSON, ignoring unknown/missing fields.
 
-    A legacy ``"siempre"``/``"nunca"`` is mapped to its English mode; an
-    unknown mode falls back to ``AUTO`` with a warning, because a run that
-    cannot be re-read is worse than one that tiled differently.
+    Only the English modes are read. An unknown value — including a legacy
+    spelling — falls back to ``AUTO`` with a warning; it is never translated to
+    a different English mode.
     """
     known = {field.name for field in fields(RunParams)}
     values = {key: value for key, value in (data or {}).items() if key in known}

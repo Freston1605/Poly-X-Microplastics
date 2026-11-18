@@ -297,7 +297,7 @@ def test_non_tiling_detectors_delegate_predict_auto_to_predict(monkeypatch, tmp_
         iou=0.55,
         imgsz=1024,
         device="cpu",
-        tiling="siempre",
+        tiling="always",
         threshold_px=100,
         tile=512,
         overlap=0.1,
@@ -334,7 +334,7 @@ def test_yolo_predict_auto_uses_predict_when_tiling_is_disabled(monkeypatch, tmp
         iou=0.55,
         imgsz=1024,
         device="cpu",
-        tiling="nunca",
+        tiling="never",
         record=record,
     )
 
@@ -354,21 +354,21 @@ def test_yolo_predict_auto_uses_predict_when_tiling_is_disabled(monkeypatch, tmp
 # ── Tiling parameters and the recorded plan ────────────────────────────
 
 
-def test_params_round_trip_english_and_legacy():
-    """Old runs load their Spanish mode; new dumps always carry the English one."""
+def test_params_round_trip_english():
+    """Boundary modes are English; a legacy spelling is not translated any more."""
     from polyx.core.detect.tiling import TilingMode
     from polyx.core.detection_run.schema import params_from_dict, params_to_dict
 
-    assert params_from_dict({"tiling": "siempre"}).tiling is TilingMode.ALWAYS
-    assert params_from_dict({"tiling": "nunca"}).tiling is TilingMode.NEVER
     assert params_from_dict({"tiling": "always"}).tiling is TilingMode.ALWAYS
+    assert params_from_dict({"tiling": "never"}).tiling is TilingMode.NEVER
     assert params_from_dict({}).tiling is TilingMode.AUTO
     # An unknown value is not a reason to refuse a folder; it falls back to auto.
     assert params_from_dict({"tiling": "sideways"}).tiling is TilingMode.AUTO
+    assert params_from_dict({"tiling": "siempre"}).tiling is TilingMode.AUTO
 
-    legacy_in_memory = RunParams(tiling="nunca")
-    assert legacy_in_memory.tiling is TilingMode.NEVER
-    dumped = params_to_dict(legacy_in_memory)
+    params = RunParams(tiling="never")
+    assert params.tiling is TilingMode.NEVER
+    dumped = params_to_dict(params)
     assert dumped["tiling"] == "never"
     assert '"tiling": "never"' in json.dumps(dumped)
 

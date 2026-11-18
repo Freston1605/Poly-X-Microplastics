@@ -152,7 +152,7 @@ def test_tiling_policy_from_run_params_is_passed_and_recorded(tmp_path):
     detector = TilingDetector(tiled=True)
     params = RunParams(
         measure_shape=False,
-        tiling="siempre",
+        tiling="always",
         tiling_threshold_px=1234,
         tiling_tile=64,
         tiling_overlap=0.5,

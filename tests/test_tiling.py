@@ -103,17 +103,40 @@ def test_policy_tiling_is_re_exported_for_existing_importers():
         ("always", TilingMode.ALWAYS),
         ("never", TilingMode.NEVER),
         (TilingMode.ALWAYS, TilingMode.ALWAYS),
-        # Deprecated values a saved run or an old script still carries.
-        ("siempre", TilingMode.ALWAYS),
-        ("nunca", TilingMode.NEVER),
         (" ALWAYS ", TilingMode.ALWAYS),
         ("", TilingMode.AUTO),
         (None, TilingMode.AUTO),
         ("sideways", TilingMode.AUTO),
     ],
 )
-def test_tiling_mode_normalises_legacy_values(raw, expected):
+def test_tiling_mode_normalises_boundary_values(raw, expected):
     assert TilingMode.parse(raw) is expected
+
+
+def test_legacy_tiling_spellings_are_not_modes():
+    """`siempre`/`nunca` are gone: the published values are English-only and
+    the old words are no longer translated into ALWAYS/NEVER."""
+    from polyx.core.detect.tiling import TILING_VALUES
+
+    assert TILING_VALUES == ("auto", "always", "never")
+    assert TilingMode.parse("siempre") is TilingMode.AUTO
+    assert TilingMode.parse("nunca") is TilingMode.AUTO
+
+
+def test_unknown_mode_warning_names_the_canonical_values(monkeypatch):
+    """An invalid boundary value is rejected with a message naming the modes."""
+    from polyx.core.detect import tiling as tiling_module
+
+    warnings: list[str] = []
+
+    class _Logger:
+        def warning(self, message: str, *args: object) -> None:
+            warnings.append(message % args if args else message)
+
+    monkeypatch.setattr(tiling_module, "logger_for", lambda module: _Logger())
+    assert tiling_module.TilingMode.parse("siempre") is TilingMode.AUTO
+    assert warnings
+    assert all(word in warnings[0] for word in ("auto", "always", "never"))
 
 
 def test_never_forces_single_pass():
@@ -180,7 +203,7 @@ def test_the_decision_is_rebuilt_from_the_backend_record():
     record = {"width": 4096, "height": 3072, "tiled": True, "plan": plan}
     decision = TilingDecision.from_record(record, TilingMode.AUTO)
     assert decision == TilingDecision(mode=TilingMode.AUTO, width=4096, height=3072, plan=plan)
-    empty = TilingDecision.from_record({}, "nunca")
+    empty = TilingDecision.from_record({}, "never")
     assert empty == TilingDecision(mode=TilingMode.NEVER, width=0, height=0, plan=None)
 
 
