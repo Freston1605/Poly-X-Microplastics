@@ -1,0 +1,49 @@
+Bootstrap: docker
+From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87edb4c75654820ca4832ee8cb15
+
+%help
+  Portable V100 environment for the Poly-X headless training pipeline.
+
+  The base is pinned by the amd64 manifest digest. The locked environment and
+  the CUDA 12.6 framework wheels (torch==2.7.1+cu126, the build that still
+  compiles sm_70 for V100 with driver 560) are installed from an offline
+  wheelhouse: compute nodes need no internet access.
+
+  Build on a login node, after creating the wheelhouse:
+    python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
+    apptainer build polyx-v100.sif container/hpc.def
+  Run with GPU access:
+    apptainer exec --nv polyx-v100.sif python -m polyx.hpc.check_env
+  Apptainer is not installed in the local development environment; this
+  definition is built on the cluster, never claimed as built locally.
+
+%files
+  wheelhouse /opt/polyx/wheelhouse
+  pyproject.toml /opt/polyx/pyproject.toml
+  uv.lock /opt/polyx/uv.lock
+  README.md /opt/polyx/README.md
+  LICENSE /opt/polyx/LICENSE
+  src /opt/polyx/src
+  tools /opt/polyx/tools
+
+%post
+  set -e
+  python -m pip install --no-cache-dir uv==0.13.7
+  uv venv /opt/venv
+  uv pip install --no-index --find-links /opt/polyx/wheelhouse \
+      -r /opt/polyx/wheelhouse/requirements.txt
+  cd /opt/polyx
+  uv pip install --no-deps .
+  rm -rf /root/.cache/uv /root/.cache/pip
+
+%environment
+  export VIRTUAL_ENV=/opt/venv
+  export PATH=/opt/venv/bin:$PATH
+  export PYTHONDONTWRITEBYTECODE=1
+
+%runscript
+  exec python -m polyx.hpc.check_env "$@"
+
+%labels
+  PolyX.Environment V100-cu126-offline
+  PolyX.Lockfile uv-0.13.7
