@@ -117,11 +117,8 @@ def _build_protocol(raw: dict) -> Protocol:
     )
 
 
-def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
-    """Compose ``conf/`` with Hydra and validate the required overrides."""
-    with initialize_config_dir(config_dir=str(CONF_DIR), version_base="1.3"):
-        composed = compose(config_name="config", overrides=list(overrides or []))
-    raw = cast("dict[str, Any]", OmegaConf.to_container(composed, resolve=True))
+def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
+    """Validate a resolved config tree into the object the engine consumes."""
     if not raw.get("data_yaml") or not raw.get("output_dir"):
         raise ValueError("data_yaml and output_dir are required configuration overrides")
     backend_raw = raw.get("backend") or {}
@@ -143,6 +140,14 @@ def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
         dataset_name=str(raw.get("dataset_name", "polyx")),
         resume=bool(raw.get("resume", False)),
     )
+
+
+def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
+    """Compose ``conf/`` with Hydra and validate the required overrides."""
+    with initialize_config_dir(config_dir=str(CONF_DIR), version_base="1.3"):
+        composed = compose(config_name="config", overrides=list(overrides or []))
+    raw = cast("dict[str, Any]", OmegaConf.to_container(composed, resolve=True))
+    return execution_config_from_raw(raw)
 
 
 def config_to_dict(config: ExecutionConfig) -> dict[str, Any]:
