@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 20:23-0300\n"
+"POT-Creation-Date: 2026-11-18 12:30-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -407,7 +407,7 @@ msgstr "Estado:"
 msgid "Schema:"
 msgstr "Esquema:"
 
-#: src/polyx/core/report_simple.py:77 src/polyx/gui/report/registry.py:118
+#: src/polyx/core/report_simple.py:77 src/polyx/gui/report/registry.py:107
 msgid "Models:"
 msgstr "Modelos:"
 
@@ -1231,7 +1231,7 @@ msgstr ""
 "Si cargaste más de un modelo, aquí ves tabla resumen con todas las métricas lado a lado y "
 "cuántas detecciones hizo cada uno por imagen."
 
-#: src/polyx/gui/detector/pages/compare.py:34 src/polyx/gui/report/registry.py:25
+#: src/polyx/gui/detector/pages/compare.py:34 src/polyx/gui/report/registry.py:28
 msgid "Per-model summary"
 msgstr "Resumen por modelo"
 
@@ -2115,8 +2115,8 @@ msgstr "Primera imagen %(width)d×%(height)d px → un solo pase a imgsz %(imgsz
 msgid "First image %(width)d×%(height)d px → single pass: below the %(threshold)d px threshold."
 msgstr "Primera imagen %(width)d×%(height)d px → un solo pase: no llega al umbral de %(threshold)d px."
 
-#: src/polyx/gui/detector/pages/report.py:35 src/polyx/gui/report/registry.py:110
-#: src/polyx/gui/report/registry.py:115
+#: src/polyx/gui/detector/pages/report.py:35 src/polyx/gui/report/registry.py:99
+#: src/polyx/gui/report/registry.py:104
 msgid "Detection report"
 msgstr "Informe de detección"
 
@@ -2203,14 +2203,13 @@ msgstr "Guardar las fotos con las etiquetas"
 #: src/polyx/gui/detector/pages/report.py:119
 msgid ""
 "Saves every analysed photo with its boxes drawn on, at its original resolution. You pick a "
-"folder and a subfolder is created inside it for each option you tick "
-"(<code>conteo_manual</code>, <code>deteccion_modelo</code>, <code>ambas_superpuestas</code>), so"
-" they do not get mixed up. It honours the <b>scope</b> chosen above: if you ticked specific "
-"photos, only those are saved."
+"folder and a subfolder is created inside it for each option you tick (<code>manual_count</code>,"
+" <code>model_detection</code>, <code>both_overlay</code>), so they do not get mixed up. It "
+"honours the <b>scope</b> chosen above: if you ticked specific photos, only those are saved."
 msgstr ""
 "Guarda cada foto analizada con sus cajas dibujadas, en su resolución original. Eliges una "
-"carpeta y dentro se crea una subcarpeta por cada opción que marques (<code>conteo_manual</code>,"
-" <code>deteccion_modelo</code>, <code>ambas_superpuestas</code>), así no se mezclan. Respeta el "
+"carpeta y dentro se crea una subcarpeta por cada opción que marques (<code>manual_count</code>, "
+"<code>model_detection</code>, <code>both_overlay</code>), así no se mezclan. Respeta el "
 "<b>alcance</b> elegido arriba: si marcaste fotos concretas, solo se guardan esas."
 
 #: src/polyx/gui/detector/pages/report.py:127
@@ -3162,79 +3161,79 @@ msgstr "Se reporta la mayor de las dos primeras"
 msgid ", here by <strong>%(method)s</strong>"
 msgstr ", en este caso por <strong>%(method)s</strong>"
 
-#: src/polyx/gui/report/registry.py:17 src/polyx/gui/trainer/window.py:35
+#: src/polyx/gui/report/registry.py:20 src/polyx/gui/trainer/window.py:35
 msgid "Summary"
 msgstr "Informe"
 
-#: src/polyx/gui/report/registry.py:18
+#: src/polyx/gui/report/registry.py:21
 msgid "Methods"
 msgstr "Métodos"
 
-#: src/polyx/gui/report/registry.py:19
+#: src/polyx/gui/report/registry.py:22
 msgid "Scale calibration"
 msgstr "Calibración de escala"
 
-#: src/polyx/gui/report/registry.py:20
+#: src/polyx/gui/report/registry.py:23
 msgid "Particle shape and size"
 msgstr "Forma y talla de las partículas"
 
-#: src/polyx/gui/report/registry.py:21
+#: src/polyx/gui/report/registry.py:24
 msgid "Size by folder and by photo (comparison between sites)"
 msgstr "Talla por carpeta y por foto (comparación entre sitios)"
 
-#: src/polyx/gui/report/registry.py:22
+#: src/polyx/gui/report/registry.py:25
 msgid "Depth profile of the core"
 msgstr "Perfil en profundidad del testigo"
 
-#: src/polyx/gui/report/registry.py:23
+#: src/polyx/gui/report/registry.py:26
 msgid "Measured-particle cards (sample)"
 msgstr "Ficha de partículas medidas (muestra)"
 
-#: src/polyx/gui/report/registry.py:24
+#: src/polyx/gui/report/registry.py:27
 msgid "Overall results"
 msgstr "Resultados generales"
 
-#: src/polyx/gui/report/registry.py:26
+#: src/polyx/gui/report/registry.py:29
 msgid "Error analysis"
 msgstr "Análisis de errores"
 
-#: src/polyx/gui/report/registry.py:27
+#: src/polyx/gui/report/registry.py:30
 msgid "Model comparison"
 msgstr "Comparación entre modelos"
 
-#: src/polyx/gui/report/registry.py:28
+#: src/polyx/gui/report/registry.py:31
 msgid "Per-image gallery"
 msgstr "Galería por imagen"
 
-#: src/polyx/gui/report/registry.py:29
+#: src/polyx/gui/report/registry.py:32
 msgid "Counts by sample and polymer type"
 msgstr "Conteo por muestra y tipo de plástico"
 
-#: src/polyx/gui/report/registry.py:30 src/polyx/gui/trainer/pages/summary.py:150
+#: src/polyx/gui/report/registry.py:33 src/polyx/gui/trainer/pages/summary.py:150
 msgid "References"
 msgstr "Referencias bibliográficas"
 
-#: src/polyx/gui/report/registry.py:116
+#: src/polyx/gui/report/registry.py:105
 msgid "Microplastics detection report"
 msgstr "Informe de detección de microplásticos"
 
-#: src/polyx/gui/report/registry.py:116
+#: src/polyx/gui/report/registry.py:105
 msgid "by Nile Red fluorescence"
 msgstr "por fluorescencia Nile Red"
 
-#: src/polyx/gui/report/registry.py:117
+#: src/polyx/gui/report/registry.py:106
 msgid "Author:"
 msgstr "Autor:"
 
-#: src/polyx/gui/report/registry.py:122
+#: src/polyx/gui/report/registry.py:111
 msgid "Contents"
 msgstr "Índice"
 
-#: src/polyx/gui/report/registry.py:128
+#: src/polyx/gui/report/registry.py:117
 msgid "Generated by Poly-X"
 msgstr "Generado por Poly-X"
 
-#: src/polyx/gui/report/registry.py:129
+#: src/polyx/gui/report/registry.py:118
 msgid "Microplastics detection suite by Nile Red fluorescence (254 nm) and AI (YOLO v8/v11)."
 msgstr "Suite de detección de microplásticos por fluorescencia Nile Red (254 nm) e IA (YOLO v8/v11)."
 
