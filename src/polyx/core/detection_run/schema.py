@@ -266,15 +266,22 @@ def _int(value: object) -> int | None:
 
 
 def _bool(value: object, *, default: bool = True) -> bool:
-    """Read a persisted boolean, keeping ``default`` when the cell is empty.
+    """Read a persisted boolean; ``true`` and ``false`` are the only spellings.
 
-    Runs written before abstention existed have no ``assignable`` column; those
-    detections were all assignable, so the missing value must not turn into a
-    silent abstention.
+    An empty cell keeps ``default``: runs written before abstention existed
+    have no ``assignable`` column, and those detections were all assignable.
+    Every other spelling — including the old ``1``, ``yes``, ``y``, ``si`` and
+    ``sí`` — is rejected with an error naming the canonical format, so a stale
+    artifact fails clearly instead of being silently translated.
     """
     if value is None or value == "":
         return default
-    return str(value).strip().lower() in ("1", "true", "yes", "y", "si", "sí")
+    text = str(value).strip().lower()
+    if text == "true":
+        return True
+    if text == "false":
+        return False
+    raise ValueError(f"invalid boolean cell {value!r}: expected 'true' or 'false'")
 
 
 def detection_row(

@@ -437,3 +437,63 @@ def test_run_json_records_tiling_plan_and_loads_old_string(tmp_path):
     loaded = load_run(folder).results[0][0]
     assert loaded.tiling_plan == plan
     assert loaded.tiling == sentence
+
+
+# ── Boolean cells: one canonical spelling ───────────────────────────────
+
+
+@pytest.mark.parametrize("cell", ["true", "false", True, False])
+def test_canonical_boolean_cells_load(cell, tmp_path):
+    """`true`/`false` — and their JSON boolean forms — are the cells we read."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1", "alias_generated": cell}],
+        "images": [],
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_run(folder)
+    assert loaded.models[0].alias_generated is (cell is True or cell == "true")
+
+
+@pytest.mark.parametrize("cell", ["1", "yes", "y", "si", "sí"])
+def test_legacy_boolean_cells_are_rejected(cell, tmp_path):
+    """A legacy truthy cell fails with an error naming `true`/`false`."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1", "alias_generated": cell}],
+        "images": [],
+    }
+    (folder / "run.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"true.*false"):
+        load_run(folder)
+
+
+def test_legacy_boolean_cell_in_detections_csv_is_rejected(tmp_path):
+    """The CSV `assignable` cell obeys the same one-spelling rule."""
+    from polyx.core.detection_run import load_run
+
+    folder = tmp_path / "run"
+    folder.mkdir()
+    payload = {
+        "schema_version": 2,
+        "models": [{"alias": "model_1"}],
+        "images": [{"index": 0, "path": "photo.png", "models": [{"model": 0}]}],
+    }
+    (folder / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    (folder / "detections.csv").write_text(
+        "model,image,class,conf,assignable\nmodel_1,photo.png,PET,0.9,si\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"true.*false"):
+        load_run(folder)
