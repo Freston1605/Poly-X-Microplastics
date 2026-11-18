@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 12:38-0300\n"
+"POT-Creation-Date: 2026-11-18 12:48-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -483,17 +483,17 @@ msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(ove
 msgstr[0] "%(side)d px de lado mayor → %(tiles)d mosaico de %(tile)d px, %(overlap)d%% de solape"
 msgstr[1] "%(side)d px de lado mayor → %(tiles)d mosaicos de %(tile)d px, %(overlap)d%% de solape"
 
-#: src/polyx/core/detection_run/engine.py:64
+#: src/polyx/core/detection_run/engine.py:65
 #, python-format
 msgid "output directory is not empty: %(path)s"
 msgstr "el directorio de salida no está vacío: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:74
+#: src/polyx/core/detection_run/engine.py:75
 #, python-format
 msgid "output path is not a directory: %(path)s"
 msgstr "la ruta de salida no es un directorio: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:83
+#: src/polyx/core/detection_run/engine.py:84
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
 

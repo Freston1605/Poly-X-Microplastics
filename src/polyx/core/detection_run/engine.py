@@ -33,6 +33,7 @@ from polyx.core.measure.calibration import (
 from polyx.core.measure.shape import measure_detections
 from polyx.core.measure.warnings import (
     IMAGE_NOT_IN_INDEX,
+    IMAGE_UNREADABLE,
     MANUAL_SCALE_MISSING,
     Warning,
 )
@@ -437,7 +438,7 @@ def run_detection(
                 result.calibrations[image_path] = Calibration(
                     origin=ORIGIN_NONE,
                     diameter_mm=config.calibration.diameter_plate_mm,
-                    warning="the image could not be read",
+                    warning=Warning(IMAGE_UNREADABLE),
                 )
                 writer.record_skip()
                 done += len(models)
