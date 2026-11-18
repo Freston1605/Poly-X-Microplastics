@@ -49,6 +49,11 @@ _Avoid_: detector backend.
 A mask producer that needs prompts — boxes or points — and does not detect on its own. A segmenter is not a detector adapter.
 _Avoid_: detector (for a prompt-driven masker).
 
+## Two-stage detector
+
+A detector adapter composed from a detector adapter and a segmenter: boxes found by the first become prompts for the second, which supplies the masks. It is one adapter at the detection seam, not a separate kind of detector.
+_Avoid_: segmentation pipeline.
+
 ## RunResult
 
 The Qt-free record of a detection run (`polyx/core/detection_run/result.py`):
