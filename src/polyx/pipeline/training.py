@@ -55,6 +55,15 @@ class EarlyStoppingState:
             self.stopped_early = True
         return StopDecision(improved=improved, stop=stop)
 
+    def load_state(self, state: dict) -> None:
+        """Restore bookkeeping from a progress snapshot of an earlier run."""
+        self.best_score = state.get("best_score")
+        self.best_epoch = int(state["best_epoch"])
+        checkpoint = state.get("best_checkpoint")
+        self.best_checkpoint = Path(checkpoint) if checkpoint else None
+        self.non_improving = int(state.get("non_improving", 0))
+        self.stopped_early = bool(state.get("stopped_early", False))
+
     def restore(self, destination: Path) -> Path:
         """Copy the best epoch's weights to the canonical checkpoint path."""
         if self.best_checkpoint is None or not self.restore_best:

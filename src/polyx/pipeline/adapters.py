@@ -19,6 +19,7 @@ from polyx.core.evaluation import _metrics_from_results
 from polyx.pipeline.coco import coco_predictions_from_results
 from polyx.pipeline.config import ExecutionConfig, Family
 from polyx.pipeline.dataset import class_names, read_data_yaml, split_images
+from polyx.pipeline.resume import ResumeState
 
 EpochCallback = Callable[["EpochResult"], bool]
 
@@ -55,6 +56,7 @@ class FamilyAdapter:
         config: ExecutionConfig,
         run_dir: Path,
         on_epoch: EpochCallback,
+        resume: ResumeState | None = None,
     ) -> FitResult:
         raise NotImplementedError
 
@@ -69,6 +71,7 @@ class YoloDetectionAdapter(FamilyAdapter):
         config: ExecutionConfig,
         run_dir: Path,
         on_epoch: EpochCallback,
+        resume: ResumeState | None = None,
     ) -> FitResult:
         from lightning import Callback, LightningModule, Trainer, seed_everything
         from ultralytics import YOLO
@@ -76,7 +79,11 @@ class YoloDetectionAdapter(FamilyAdapter):
         protocol = config.protocol
         device = config.backend.device
         seed_everything(protocol.seed, workers=True)
-        model = YOLO(config.family.weights)
+        resumed_checkpoint = resume.last_checkpoint if resume is not None else None
+        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
+            model = YOLO(str(resumed_checkpoint))
+        else:
+            model = YOLO(config.family.weights)
         checkpoint_dir = Path(run_dir) / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
@@ -145,7 +152,10 @@ class YoloDetectionAdapter(FamilyAdapter):
             deterministic=True,
             default_root_dir=str(run_dir),
         )
-        trainer.fit(_YoloLightningModule())
+        fit_kwargs: dict[str, Any] = {}
+        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
+            fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
+        trainer.fit(_YoloLightningModule(), **fit_kwargs)
         return FitResult(
             precision=precision,
             epochs_completed=int(trainer.current_epoch),

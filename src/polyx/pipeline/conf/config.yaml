@@ -14,3 +14,5 @@ defaults:
 data_yaml: ???
 output_dir: ???
 dataset_name: polyx
+# Continue an interrupted execution from the last checkpoint in output_dir.
+resume: false

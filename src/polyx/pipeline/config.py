@@ -87,6 +87,7 @@ class ExecutionConfig:
     backend: Backend
     family: Family
     dataset_name: str = "polyx"
+    resume: bool = False
 
 
 def _build_protocol(raw: dict) -> Protocol:
@@ -140,6 +141,7 @@ def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
             task=str(family_raw.get("task", "detect")),
         ),
         dataset_name=str(raw.get("dataset_name", "polyx")),
+        resume=bool(raw.get("resume", False)),
     )
 
 

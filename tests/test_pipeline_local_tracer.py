@@ -111,6 +111,8 @@ class _FakeLightningModule:
 class _FakeTrainer:
     """Runs epochs, invokes the module hook and the registered callback."""
 
+    interrupt_after: int | None = None
+
     def __init__(self, **kwargs: object) -> None:
         self.kwargs = kwargs
         self.max_epochs = int(kwargs.get("max_epochs", 1))
@@ -119,8 +121,15 @@ class _FakeTrainer:
         self.should_stop = False
         self.current_epoch = 0
 
-    def fit(self, module: object) -> None:
-        for epoch in range(self.max_epochs):
+    def fit(self, module: object, ckpt_path: object = None) -> None:
+        # A resumed fit starts at the epoch after the last saved checkpoint,
+        # exactly as Lightning does when it is given ``ckpt_path``.
+        start_epoch = 0
+        if ckpt_path is not None:
+            stem = Path(ckpt_path).stem
+            start_epoch = int(stem.rsplit("_", 1)[-1]) + 1
+        self.current_epoch = start_epoch
+        for completed, epoch in enumerate(range(start_epoch, self.max_epochs), start=1):
             self.current_epoch = epoch
             module._epoch = epoch
             module.on_validation_epoch_end()
@@ -129,16 +138,26 @@ class _FakeTrainer:
             self.current_epoch = epoch + 1
             if self.should_stop:
                 break
+            if self.interrupt_after is not None and completed >= self.interrupt_after:
+                # A time limit or preemption: the per-epoch checkpoint and the
+                # progress snapshot are already on disk, the final state is not.
+                raise RuntimeError("simulated preemption after the epoch checkpoint")
 
 
 class _FakeCallback:
     pass
 
 
-def _install_fakes(monkeypatch: pytest.MonkeyPatch, prediction_sets: list[list[dict]]) -> None:
+def _install_fakes(
+    monkeypatch: pytest.MonkeyPatch,
+    prediction_sets: list[list[dict]],
+    *,
+    interrupt_after: int | None = None,
+) -> None:
     """Put minimal Lightning and Ultralytics doubles in ``sys.modules``."""
     _FakeYOLO.prediction_sets = list(prediction_sets)
     _FakeYOLO.instances = []
+    _FakeTrainer.interrupt_after = interrupt_after
     lightning = types.ModuleType("lightning")
     lightning.LightningModule = _FakeLightningModule
     lightning.Callback = _FakeCallback
@@ -326,3 +345,117 @@ def test_patience_is_honoured_and_protocol_defaults_are_stable(
     assert protocol["weight_decay"] == pytest.approx(0.0005)
     assert protocol["schedule"] == "cosine"
     assert protocol["warmup_epochs"] == 5
+
+
+def test_interrupted_execution_resumes_from_the_last_checkpoint(
+    tmp_path: Path, tiny_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A preemption leaves checkpoints and progress; a resumed run continues.
+
+    The whole proof is read from the output directory: the number of epochs the
+    second run reports, the checkpoint it names as the resume point and the
+    fact that the first run's best weights survived unchanged.
+    """
+    output = tmp_path / "executions" / "resumable"
+    _install_fakes(
+        monkeypatch,
+        [_boxes_prediction(), _boxes_prediction()],
+        interrupt_after=2,
+    )
+
+    first = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=6",
+        "protocol.early_stopping.patience=99",
+    )
+
+    assert first == 1  # the simulated preemption is reported as a failure
+    progress = _read(output / "progress.json")
+    assert progress["epochs_completed"] == 2
+    assert progress["best_epoch"] == 0
+    assert (output / "checkpoints" / "epoch_001.pt").is_file()
+    assert not (output / "training_state.json").exists()
+    first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
+    first_last = (output / "checkpoints" / "epoch_001.pt").read_bytes()
+
+    _install_fakes(
+        monkeypatch,
+        [_boxes_prediction(), _boxes_prediction(), _boxes_prediction(), _boxes_prediction()],
+    )
+    second = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=6",
+        "protocol.early_stopping.patience=99",
+        "resume=true",
+    )
+
+    assert second == 0
+    state = _read(output / "training_state.json")
+    assert state["epochs_completed"] == 6
+    assert state["early_stopping"]["best_epoch"] == 0
+    assert state["resumed_from_epoch"] == 2
+    assert state["resumed_from"] == str(output / "checkpoints" / "epoch_001.pt")
+    assert (output / "checkpoints" / "epoch_000.pt").read_bytes() == first_best
+    assert (output / "checkpoints" / "epoch_001.pt").read_bytes() == first_last
+    assert (output / "checkpoints" / "epoch_005.pt").is_file()
+    assert (output / "checkpoints" / "best.pt").read_bytes() == first_best
+    assert "resume from epoch=2" in (output / "logs" / "training.log").read_text(encoding="utf-8")
+
+
+def test_resume_without_progress_fails_loudly(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A resume request without a progress snapshot must not restart silently."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "never-started"
+
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+        "resume=true",
+    )
+
+    assert code == 1
+    assert "no progress" in capsys.readouterr().err
+    assert not (output / "training_state.json").exists()
+
+
+def test_resume_with_a_different_protocol_is_refused(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The protocol that produced a checkpoint is part of the resume contract."""
+    output = tmp_path / "executions" / "protocol-drift"
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()], interrupt_after=2)
+    assert (
+        _command(
+            f"data_yaml={tiny_dataset}",
+            f"output_dir={output}",
+            "protocol.epochs=6",
+            "protocol.early_stopping.patience=99",
+        )
+        == 1
+    )
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    capsys.readouterr()
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=6",
+        "protocol.batch=16",
+        "protocol.early_stopping.patience=99",
+        "resume=true",
+    )
+
+    assert code == 1
+    assert "protocol changed" in capsys.readouterr().err
+    assert not (output / "training_state.json").exists()
