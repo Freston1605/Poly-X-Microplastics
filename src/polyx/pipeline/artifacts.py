@@ -42,6 +42,11 @@ class ArtifactLayout:
         return self.root / "training_state.json"
 
     @property
+    def progress(self) -> Path:
+        """Per-epoch snapshot used to resume an interrupted execution."""
+        return self.root / "progress.json"
+
+    @property
     def metrics(self) -> Path:
         return self.root / "metrics.json"
 
@@ -122,6 +127,7 @@ def artifact_manifest(layout: ArtifactLayout) -> dict[str, Any]:
         "resolved_protocol": str(layout.resolved_protocol),
         "provenance": str(layout.provenance),
         "training_state": str(layout.training_state),
+        "progress": str(layout.progress),
         "metrics": str(layout.metrics),
         "report": str(layout.report),
         "training_log": str(layout.training_log),

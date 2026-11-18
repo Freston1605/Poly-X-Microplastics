@@ -4,10 +4,11 @@ This document describes the environment for the headless training pipeline on
 the OCÉANO cluster and on any other machine with an NVIDIA V100. It covers the
 pinned container, the offline wheelhouse, hash verification, the pre-flight
 check and the fallback for clusters without a container runtime. The workflow
-that uses this environment (partition requests, quality of service, checkpoints
-and sync-back) belongs to the HPC workflow documentation; this page is only
-about making the stack runnable and trustworthy. The decision and its rationale
-are recorded in [ADR-0008](adr/0008-v100-environment.md).
+that uses this environment — partition requests, quality of service,
+checkpoints and sync-back — is described in
+[hpc-submission.md](hpc-submission.md); this page is only about making the
+stack runnable and trustworthy. The decision and its rationale are recorded in
+[ADR-0008](adr/0008-v100-environment.md).
 
 ## Why the framework is pinned
 
@@ -184,6 +185,7 @@ local file or in the job submission environment.
 Before the first submission, confirm with the administrators: container
 runtime availability, GPU request syntax, login-node internet access, account
 category and quotas, data-origin declaration requirements, sponsor letter, and
-whether the long quality-of-service tier needs approval. A publication must
-carry the required HPC acknowledgement; only the publication itself is emailed
-to the cluster contacts.
+whether the long quality-of-service tier needs approval. The full checklist,
+the exact acknowledgement wording and the rule that only the resulting paper
+is emailed to the cluster contacts are in
+[hpc-submission.md](hpc-submission.md).

@@ -1,0 +1,6 @@
+# SLURM backend: the same command composes this instead of `backend=local`.
+# The following transfer runs inside one allocation, not as array jobs. One GPU
+# per execution is requested by the submission script; the device name here only
+# tells the adapter to use the GPU accelerator.
+name: slurm
+device: cuda
