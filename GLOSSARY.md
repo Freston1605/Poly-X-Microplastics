@@ -101,6 +101,11 @@ it would silently come out zero.
 _Avoid_: "calibration failed" (does not say what happened to the scale),
 0 µm/px as a refusal
 
+## Warning code
+
+A stable English token recorded in an artifact when a measurement cannot be completed as requested. It names what happened; the sentence a person reads is chosen at display time, and numeric details travel as separate structured values.
+_Avoid_: warning message, error text
+
 ## Model alias and display name
 
 Two values for the same model. The **alias** is the stable, filesystem-safe
@@ -120,7 +125,32 @@ image records) plus `detections.csv` (predictions only) and one folder per
 model alias with the triptych PNGs, `labels/*.txt` and `classes.txt`. Read it
 with `load_run`; do not add a second schema. Pre-canonical folders
 (`summary.json` + `centroids.csv`, or the old GUI per-model labels) are legacy
-inputs, readable without migration.
+inputs; new code does not read them.
+
+## Machine-readable artifact
+
+A file whose content carries a token that a program reads or writes across a disk boundary. This is the unit the vocabulary spec covers: neither pixels nor translated prose are artifacts in this sense, and neither is state that never reaches a file. Every machine-readable artifact belongs to one of four classes.
+_Avoid_: output, file, report (as umbrella terms)
+
+## Canonical run artifact
+
+A machine-readable artifact written by a detection run into the folder it owns: its manifest, prediction table, per-model labels and report identifiers.
+_Avoid_: run output
+
+## Cross-cutting log
+
+A structured record of events written by several modules to one shared contract, not owned by a single detection run.
+_Avoid_: debug log, console output
+
+## Tool output
+
+A machine-readable artifact written by a supporting tool — training, evaluation, export or preference storage — outside a detection run's folder.
+_Avoid_: run artifact
+
+## Legacy input
+
+A machine-readable artifact from a pre-canonical format. New code neither reads nor writes it.
+_Avoid_: legacy run (when the file, not the run, is meant)
 
 ## Report section
 
