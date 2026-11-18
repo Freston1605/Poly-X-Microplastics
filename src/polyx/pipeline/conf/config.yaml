@@ -1,0 +1,16 @@
+# Root configuration of one headless training execution.
+#
+# Later tickets add Optuna and SLURM composition by overriding `backend` and
+# `sweeper`; the protocol section itself never changes shape. `data_yaml` and
+# `output_dir` are required overrides so an execution can never silently use a
+# developer's local paths.
+
+defaults:
+  - protocol: default
+  - backend: local
+  - family: yolo_detection
+  - _self_
+
+data_yaml: ???
+output_dir: ???
+dataset_name: polyx

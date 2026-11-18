@@ -4,6 +4,26 @@ The project's domain language. Terms here are the ones code, docs and
 conversation should use; when a term is missing or fuzzy, sharpen it here
 first instead of letting a second meaning into the code.
 
+## Run
+
+One execution of a pipeline. The word is generic and is always qualified by
+the pipeline that ran: **detection run** (the canonical engine over a set of
+images), **training run** (one config-driven execution of the headless
+pipeline), **evaluation run** or **validation run**. Some shipped identifiers
+(`RunResult`, `run.json`, `load_run`) keep the unqualified name for historical
+reasons; they are documented legacy, not a second meaning of the term. A
+**training execution** is the concrete folder of artifacts one run produced.
+
+## Protocol
+
+The framework-neutral part of a training configuration: split, seed, epochs,
+batch, image size, optimizer, learning rate, momentum, weight decay, schedule,
+warmup, augmentation subset, AMP and early stopping. Every family adapter
+consumes the resolved protocol unchanged, so the model is the only variable in
+a benchmark. The resolved protocol is written verbatim into each training
+execution's artifacts. _Avoid_: hyperparameters (too narrow — it also fixes
+the split and the evaluator).
+
 ## The triptych
 
 The three saved views of a detection run over one plate: the

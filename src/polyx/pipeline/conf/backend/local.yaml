@@ -1,0 +1,3 @@
+# Local backend: one process, no scheduler and no cluster values.
+name: local
+device: cpu

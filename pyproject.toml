@@ -37,6 +37,12 @@ dependencies = [
   "matplotlib==3.9.2",
   "PyYAML==6.0.2",
   "psutil==6.0.0",
+  # Headless multi-family pipeline: Hydra composes the framework-neutral
+  # protocol and Lightning is the single training loop shared by every adapter.
+  # Hydra is explicit rather than a transitive dependency of the sweeper, and
+  # both are pinned so the lockfile stays a reproducible scientific stack.
+  "hydra-core==1.3.2",
+  "lightning==2.5.2",
   # Pins are deliberately strict for a reproducible scientific stack:
   # ultralytics 8.3.x requires numpy<2, and each patch wheel is unit-tested
   # in CI. Loosen only with a test run across the matrix.
@@ -76,6 +82,7 @@ legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
 [project.scripts]
 polyx = "polyx.cli.main:main"
+polyx-pipeline = "polyx.pipeline.command:main"
 polyx-gui = "polyx.gui.__main__:main"
 polyx-download-models = "polyx.cli.download_models:main"
 polyx-train = "polyx.cli.train:main"
