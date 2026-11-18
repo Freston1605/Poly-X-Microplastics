@@ -1116,8 +1116,10 @@ ancho y aspecto. Al seleccionar una fila se ve <b>sobre que se midió</b>:</p>
       cajas pintadas encima.</li>
   <li><b>Arrastrar y soltar</b> una imagen o un modelo directamente sobre el
       lienzo.</li>
-  <li><b>Exportar</b> la imagen anotada, <code>detecciones.csv</code> y
-      <code>resumen.json</code>.</li>
+  <li><b>Exportar</b> la imagen anotada, <code>detections.csv</code> y
+      <code>viewer_summary.json</code> en una carpeta
+      <code>viewer_&lt;image&gt;_&lt;timestamp&gt;/</code>. Una carpeta de
+      ejecución (que contenga <code>run.json</code>) se rechaza.</li>
 </ul>
 """,
     },

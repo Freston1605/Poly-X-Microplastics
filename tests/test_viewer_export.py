@@ -1,6 +1,6 @@
 """Tests for the Viewer's exported sizes — the measured particle.
 
-``detecciones.csv`` used to fabricate every size from the box sides
+``detections.csv`` used to fabricate every size from the box sides
 (√(w·h), scaled) even when the particle had been measured over its mask.
 The exported row now reads the measured fields and declares their origin
 (``size_source``: ``mask`` | ``box``, the canonical tokens of ADR-0004).

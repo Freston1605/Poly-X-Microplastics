@@ -23,6 +23,16 @@ def make_dataset(root: Path, images: dict[str, str | None]) -> Path:
     return root / "data.yaml"
 
 
+def test_real_only_yaml_uses_the_canonical_english_filename(tmp_path: Path):
+    yaml_path = make_dataset(tmp_path / "dataset", {f"{REAL}a": None})
+
+    output = create_real_only_yaml(yaml_path, tmp_path / "out")
+
+    assert output is not None
+    assert output.name == "dataset_real_only.yaml"
+    assert output.exists()
+
+
 def test_split_layout_label_is_linked_into_the_real_subset(tmp_path: Path):
     """``images/val/...`` resolves to ``labels/val/...`` through the codec."""
     yaml_path = make_dataset(
