@@ -1195,7 +1195,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
 
     if shapes:
         with_size = [(d, path_2) for d, path_2 in shapes if d.length_um]
-        fibers = sum(1 for d, _unused in shapes if d.morphotype == "fibra")
+        fibers = sum(1 for d, _unused in shapes if d.morphotype == "fibre")
         curves = sum(1 for d, _unused in shapes if d.curvature and d.curvature >= 1.15)
         pc_f = 100.0 * fibers / len(shapes)
 
@@ -1305,7 +1305,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
                 if not v:
                     continue
                 nf = sum(
-                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibra"
+                    1 for d, _r in with_size if d.class_name == cls and d.morphotype == "fibre"
                 )
                 rows_cls += (
                     f"<tr><td>{cls}</td><td>{len(v)}</td>"
@@ -1349,7 +1349,7 @@ def _section_shape(run, shapes, n_en_el_aro, n_formless):
         rows_img = ""
         for name_2 in sorted(por_img):
             ds = por_img[name_2]
-            nf = sum(1 for d in ds if d.morphotype == "fibra")
+            nf = sum(1 for d in ds if d.morphotype == "fibre")
             lengths_i = [d.length_um for d in ds if d.length_um]
             rows_img += (
                 f"<tr><td style='font-size:9pt'>{_esc(name_2)}</td><td>{len(ds)}</td>"
@@ -1475,7 +1475,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
         from polyx.core.measure.drawing import draw_measurement
 
         chosen = choose_records(shapes, max_records)
-        n_fibers_sample = sum(1 for d, _unused in chosen if d.morphotype == "fibra")
+        n_fibers_sample = sum(1 for d, _unused in chosen if d.morphotype == "fibre")
         por_img_f: dict[str, list] = {}
         for d, path_2 in chosen:
             por_img_f.setdefault(str(path_2), []).append(d)
@@ -1528,7 +1528,7 @@ def _section_records(run, shapes: list[tuple], max_records: int = 12) -> str:
                         _("%(pct)s %% of the line outside the outline")
                         % {"pct": f"{100 * m.feret_outside:.0f}"}
                     )
-                color = "#1f6b5e" if d.morphotype == "fibra" else "#656d76"
+                color = "#1f6b5e" if d.morphotype == "fibre" else "#656d76"
                 label_morph = _morphotype(d.morphotype, lowercase=True)
                 # The warning is SHOWN. Before, it was computed and thrown away: a size
                 # inflated by several particles in contact reached the report

@@ -23,16 +23,16 @@ __all__ = [
 class Morphotype(StrEnum):
     """Morphotype of a particle, stored as a string for report compatibility."""
 
-    FIBER = "fibra"
-    FRAGMENT = "fragmento"
-    INDETERMINATE = "indeterminado"
+    FIBER = "fibre"
+    FRAGMENT = "fragment"
+    INDETERMINATE = "indeterminate"
 
 
 class Method(StrEnum):
     """How the reported length was obtained."""
 
-    GEODESIC = "geodesico"
-    FERET = "Feret maximo"
+    GEODESIC = "geodesic"
+    FERET = "maximum_feret"
 
 
 ASPECT_FIBER = 3.0

@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 from .geodesic import path_geodesic
+from .morphology_constants import Method
 from .segmentation import box_margin, segment
 from .shape import extremes_feret, measure
 
@@ -69,7 +70,7 @@ def draw_measurement(bgr: np.ndarray, det, zoom: int = 4):
         cont, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         cv2.drawContours(vis, cont, -1, (0, 220, 0), 1)
         if m.ok:
-            if m.method.startswith("geodesico"):
+            if m.method == Method.GEODESIC:
                 cam = path_geodesic(mask)
                 for k in range(1, len(cam)):
                     cv2.line(vis, cam[k - 1], cam[k], (255, 80, 255), 1)
