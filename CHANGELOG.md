@@ -14,6 +14,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- **English-only run artifacts; legacy readers removed** (ADR-0004; supersedes ADR-0001, ADR-0002 and ADR-0005). All machine tokens in `run.json`, `detections.csv`, logs, Viewer exports and report ids are now English: `sucio` → `dirty`, `placa` → `plate`, `visor_` → `viewer_`, `resumen` → `summary`. New files carry `schema_version: 2`; `load_run` rejects version 1 and pre-canonical folders (`summary.json` + `centroids.csv`) are no longer read. Old runs and archived reports stay on disk but cannot be opened by this version. Scripts must switch to the English tokens; there is no compatibility option. The full replacement list is in `docs/specs/run-artifact-vocabulary.md`.
 - Tiling has one owner: `polyx.core.detect.tiling` holds the decision
   (`decide_tiling`), the typed plan and the one sentence each image's plan is
   phrased with. The mode is English at every boundary (`auto`/`always`/`never`);

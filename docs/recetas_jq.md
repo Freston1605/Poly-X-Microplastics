@@ -1,8 +1,7 @@
 # Operator Runbook: Batch Monitoring & `jq` Recipes for Poly-X Observability
 
-Poly-X emits structured JSONL logs under `~/.polyx/logs/` (or `POLYX_LOG_DIR`) across three core modules:
-- `detector.jsonl`: Plate inference, segmentation, and feature extraction events.
-- `reporte.jsonl`: PDF/HTML report generation and spatial distribution statistics.
+Poly-X emits structured JSONL logs under `~/.polyx/logs/` (or `POLYX_LOG_DIR`), one file per module name:
+- `detector.jsonl`: Plate inference, segmentation, feature extraction, and PDF/HTML report-generation (`report.*`) events.
 - `trainer.jsonl`: YOLO model training and validation cycles.
 
 Every log record follows a strict JSON envelope containing timestamp (`ts`), log level (`level`), module (`module`), process ID (`pid`), thread name (`thread`), event name (`event`), optional execution run identifier (`run_id`), duration in milliseconds (`ms`), and optional structured payload (`data`).
@@ -32,7 +31,7 @@ jq -c 'select(.level == "ERROR" or .level == "WARNING") | {ts, module, level, ev
 ```
 
 ### D. Cross-Module Correlation by `run_id`
-To correlate detector, reporte, and trainer activities for a single run:
+To correlate detector, report-generation, and trainer activities for a single run:
 ```bash
 jq -s 'flatten | map(select(.run_id == "batch-2026-10-16-001"))' ~/.polyx/logs/*.jsonl
 ```
