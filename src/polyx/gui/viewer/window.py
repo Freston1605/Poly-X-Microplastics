@@ -30,9 +30,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from polyx.core import platform
 from polyx.core.annotate import find_run_labels
 from polyx.core.detect.tiling import TilingDecision, TilingMode
 from polyx.core.i18n import _, ngettext
+from polyx.core.measure import calibration as calib
 from polyx.core.paths import IMAGE_EXTS, RUNS_DIR
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
@@ -40,19 +42,44 @@ from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 from .canvas import ViewerCanvas
 from .export import csv_rows, render_annotated_frame
-from .state import ViewerState
+from .state import (
+    CALIB_MODE_CIRCLE,
+    CALIB_MODE_LINE,
+    FAILURE_NOT_ENOUGH_POINTS,
+    ViewerState,
+)
+
+#: The refusal tokens this window has copy for: every geometric failure the
+#: calibration core can name, plus the collection-level "not enough points".
+#: The test suite iterates it, so a new core refusal fails the gate until it
+#: gets a sentence instead of the generic fallback.
+CALIB_FAILURE_CODES = (*calib.FAILURE_CODES, FAILURE_NOT_ENOUGH_POINTS)
 
 
-def _there_are_gpu() -> bool:
-    """CUDA available. Queried lazily: importing torch is slow."""
+def calib_failure_text(failure: str) -> str:
+    """Why a finished drawing yielded no scale, in the user's words.
 
-    try:
-        import torch
-
-        return bool(torch.cuda.is_available())
-
-    except Exception:  # noqa: BLE001
-        return False
+    The core names the failure; the sentence the user reads is chosen here,
+    one per reason. The fallback exists because a token added later must not
+    silence the dialog, but every current one has its own sentence.
+    """
+    messages = {
+        calib.FAILURE_ZERO_LENGTH: _(
+            "The two points are the same, so they span no line. Click two different points."
+        ),
+        calib.FAILURE_COINCIDENT_POINTS: _(
+            "Two of the three points are the same, so they define no circle. "
+            "Click three different points."
+        ),
+        calib.FAILURE_COLLINEAR_POINTS: _(
+            "The three points lie on a straight line, so they define no circle. "
+            "Click three points along the edge of the object."
+        ),
+        calib.FAILURE_NON_POSITIVE_REAL_SIZE: _("The real size must be greater than zero."),
+        calib.FAILURE_NON_FINITE: _("The points or the real size are not valid numbers."),
+        FAILURE_NOT_ENOUGH_POINTS: _("Not enough points have been clicked for this calibration."),
+    }
+    return messages.get(failure, _("These points do not define a calibration."))
 
 
 class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
@@ -411,9 +438,9 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         self.btn_circ.setCheckable(True)
 
-        self.btn_line.clicked.connect(lambda: self._start_calib("linea"))
+        self.btn_line.clicked.connect(lambda: self._start_calib(CALIB_MODE_LINE))
 
-        self.btn_circ.clicked.connect(lambda: self._start_calib("circulo"))
+        self.btn_circ.clicked.connect(lambda: self._start_calib(CALIB_MODE_CIRCLE))
 
         row_calib.addWidget(self.btn_line)
 
@@ -671,6 +698,29 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, _("Error loading the model"), str(e))
 
+    def _resolve_device(self) -> str:
+        """Inference device: CPU when the checkbox is off, else the platform's best.
+
+        The Viewer does not decide what hardware exists: ``device_available``
+        answers CUDA/ROCm → MPS → CPU, the same answer the Detector and the
+        Trainer get.
+        """
+        if not self.chk_gpu.isChecked():
+            return platform.DEVICE_CPU
+        return platform.device_available()
+
+    def _ran_fallback(self) -> bool:
+        """Whether the model's out-of-memory ladder reduced the size it ran at.
+
+        The ladder belongs to ``YoloModel``, which reports it after the run; a
+        model that does not expose the flag is simply not a fallback run.
+        """
+        return bool(getattr(self.state.model, "last_fallback", False))
+
+    def _used_imgsz(self, requested: int) -> int:
+        """The size inference actually ran at, when the model reports it."""
+        return int(getattr(self.state.model, "last_imgsz", 0) or requested)
+
     def _detect(self):
 
         if not self.state.model:
@@ -687,12 +737,12 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         imgsz = int(round(self.spin_imgsz.value() / 32)) * 32  # multiple of stride  # noqa: RUF046
 
-        device = "0" if (self.chk_gpu.isChecked() and _there_are_gpu()) else "cpu"
+        device = self._resolve_device()
 
         try:
             self._set_status(
                 _("● Detecting (imgsz %(imgsz)d, %(device)s)…")
-                % {"imgsz": imgsz, "device": device},
+                % {"imgsz": imgsz, "device": platform.description_device(device)},
                 T.ACCENT,
             )
 
@@ -731,6 +781,26 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
                     )
                     % {"count": len(dets), "imgsz": imgsz, "plan": decision.describe()},
                     T.OK,
+                )
+
+            elif self._ran_fallback():
+                # The status was written before the run with the requested size;
+                # the model reduced it on its own ladder, so the line that stays
+                # on screen names what actually ran and the device that ran it.
+                self._set_status(
+                    ngettext(
+                        "● %(count)d detection at imgsz %(imgsz)d (%(device)s)"
+                        " — reduced after running out of memory",
+                        "● %(count)d detections at imgsz %(imgsz)d (%(device)s)"
+                        " — reduced after running out of memory",
+                        len(dets),
+                    )
+                    % {
+                        "count": len(dets),
+                        "imgsz": self._used_imgsz(imgsz),
+                        "device": platform.description_device(device),
+                    },
+                    T.WARN,
                 )
 
             else:
@@ -1185,15 +1255,15 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         self.state.start_calib(mode)
 
-        self.btn_line.setChecked(mode == "linea")
+        self.btn_line.setChecked(mode == CALIB_MODE_LINE)
 
-        self.btn_circ.setChecked(mode == "circulo")
+        self.btn_circ.setChecked(mode == CALIB_MODE_CIRCLE)
 
         self.lbl_calib_hint.setVisible(True)
 
         self.btn_cancel_calib.setVisible(True)
 
-        if mode == "linea":
+        if mode == CALIB_MODE_LINE:
             self.lbl_calib_hint.setText(_("Click 2 points on\na known reference."))
 
         else:
@@ -1214,72 +1284,90 @@ class ViewerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
             self.btn_cancel_calib.setVisible(False)
 
+            return
+
         mode = self.state.calib_mode
 
-        needed = 2 if mode == "linea" else 3
+        needed = 2 if mode == CALIB_MODE_LINE else 3
 
-        self.lbl_calib_hint.setText(
-            ngettext(
-                "Click %(count)d more point.",
-                "Click %(count)d more points.",
-                needed - len(pts),
+        remaining = needed - len(pts)
+
+        if remaining > 0:
+            self.lbl_calib_hint.setText(
+                ngettext(
+                    "Click %(count)d more point.",
+                    "Click %(count)d more points.",
+                    remaining,
+                )
+                % {"count": remaining}
             )
-            % {"count": needed - len(pts)}
-            if pts
-            else self.lbl_calib_hint.text()
-        )
+
+        else:
+            # A complete drawing is kept after a refusal, so the hint must stop
+            # asking for points it already has ("Click 0 more points").
+            self.lbl_calib_hint.setText(_("Enter the real size to finish."))
 
     def _on_calib_ready(self):
         """Enough points collected → ask the user for the real size.
 
         The positional arguments are mandatory: PySide6 does not accept
         ``min`` nor ``max`` as keywords in ``getDouble`` and it raised
-        AttributeError, which left the calibration unusable.
+        AttributeError, which left the calibration unusable. Both modes ask
+        the same question and finish the same way; only the words, the default
+        and the finishing method change.
         """
 
-        mode = self.state.calib_mode
+        if self.state.calib_mode == CALIB_MODE_LINE:
+            title = _("Calibration — Line")
 
-        if mode == "linea":
-            val, ok = QInputDialog.getDouble(
-                self,
-                _("Calibration — Line"),
-                _("Real length of the marked line (μm):"),
-                1000.0,
-                0.001,
-                1_000_000.0,
-                3,
-            )
+            question = _("Real length of the marked line (μm):")
 
-            if ok and val > 0:
-                self.state.finish_calib_line(val)
+            initial, maximum = 1000.0, 1_000_000.0
 
-            else:
-                self.state.cancel_calib()
+            finish = self.state.finish_calib_line
 
-        elif mode == "circulo":
+        elif self.state.calib_mode == CALIB_MODE_CIRCLE:
             # 100 mm by default: it is the diameter of the Petri dishes in the study
 
-            val, ok = QInputDialog.getDouble(
-                self,
-                _("Calibration — Circle"),
-                _("Real diameter of the circular object (μm):\n100 mm Petri dish → 100000"),
-                100_000.0,
-                0.001,
-                10_000_000.0,
-                3,
-            )
+            title = _("Calibration — Circle")
 
-            if ok and val > 0:
-                self.state.finish_calib_circle(val)
+            question = _("Real diameter of the circular object (μm):\n100 mm Petri dish → 100000")
 
-            else:
-                self.state.cancel_calib()
+            initial, maximum = 100_000.0, 10_000_000.0
+
+            finish = self.state.finish_calib_circle
+
+        else:
+            return
+
+        value, ok = QInputDialog.getDouble(self, title, question, initial, 0.001, maximum, 3)
+
+        if not ok:
+            self.state.cancel_calib()
+
+            return
+
+        failure = finish(value)
+
+        if failure:
+            self._report_calib_failure(failure)
+
+    def _report_calib_failure(self, failure: str):
+        """Explains a refused calibration; nothing was applied.
+
+        The scale already in force stays, and so does the drawing: the user
+        sees the points that were refused and can finish from them with a
+        different real size, or start the mode again to throw them away.
+        Cancelling here would discard the drawing for them.
+        """
+        QMessageBox.warning(self, _("Calibration not applied"), calib_failure_text(failure))
+        self._set_status(_("● Calibration not applied"), T.WARN)
 
     def _on_calib_changed(self, um_per_px: float, mode_name: str):
 
         mode_label = {
-            "línea": _("line"),
-            "círculo": _("circle"),
+            CALIB_MODE_LINE: _("line"),
+            CALIB_MODE_CIRCLE: _("circle"),
         }.get(mode_name, mode_name)
         self.lbl_calib_result.setText(
             _("%(value).4f μm/px  (%(mode)s)") % {"value": um_per_px, "mode": mode_label}

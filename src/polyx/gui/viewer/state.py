@@ -2,13 +2,30 @@
 
 from __future__ import annotations
 
-import math
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QPointF, Signal
 
 from polyx.core.detect.yolo import Detection
+from polyx.core.measure.calibration import (
+    CircleCalibration,
+    LineCalibration,
+    circle_calibration,
+    line_calibration,
+)
 from polyx.core.paths import IMAGE_EXTS
+
+# Named refusal that belongs to the collection, not to the geometry: the core
+# names every degenerate drawing, and this one says there is no drawing yet.
+FAILURE_NOT_ENOUGH_POINTS = "not_enough_points"
+
+# Calibration mode tokens. They are machine values -- they travel on
+# ``calib_changed`` and the canvas reads them -- so they stay English; the
+# words the user reads are chosen with ``_()`` where they are displayed.
+CALIB_MODE_NONE = "none"
+CALIB_MODE_LINE = "line"
+CALIB_MODE_CIRCLE = "circle"
 
 
 class ViewerState(QObject):
@@ -24,7 +41,7 @@ class ViewerState(QObject):
         self.images: list[Path] = []
         self.current_idx: int = -1
         self.um_per_px: float = 0.0
-        self.calib_mode: str = "none"  # "none" | "linea" | "circulo"
+        self.calib_mode: str = CALIB_MODE_NONE  # CALIB_MODE_NONE | _LINE | _CIRCLE
         self._calib_pts: list[QPointF] = []
         self.detections: list[Detection] = []
         self.model = None  # YoloModel, loaded on demand
@@ -69,13 +86,13 @@ class ViewerState(QObject):
 
     # ── Calibration ──────────────────────────────────────────
     def start_calib(self, mode: str):
-        """Starts the calibration mode ('linea' or 'circulo')."""
+        """Starts the calibration mode (``"line"`` or ``"circle"``)."""
         self.calib_mode = mode
         self._calib_pts = []
         self.calib_pts_changed.emit([])
 
     def cancel_calib(self):
-        self.calib_mode = "none"
+        self.calib_mode = CALIB_MODE_NONE
         self._calib_pts = []
         self.calib_pts_changed.emit([])
 
@@ -83,7 +100,7 @@ class ViewerState(QObject):
         """Adds a calibration point. Emits calib_ready when there are enough."""
         self._calib_pts.append(pt)
         self.calib_pts_changed.emit(list(self._calib_pts))
-        needed = 2 if self.calib_mode == "linea" else 3
+        needed = 2 if self.calib_mode == CALIB_MODE_LINE else 3
         if len(self._calib_pts) >= needed:
             self.calib_ready.emit()
 
@@ -91,61 +108,53 @@ class ViewerState(QObject):
     def calib_pts(self) -> list[QPointF]:
         return list(self._calib_pts)
 
-    def finish_calib_line(self, real_um: float):
-        """Computes μm/px from the 2 line points and the entered real size."""
-        if len(self._calib_pts) < 2 or real_um <= 0:
-            return
-        p1, p2 = self._calib_pts[0], self._calib_pts[1]
-        px_dist = math.hypot(p2.x() - p1.x(), p2.y() - p1.y())
-        if px_dist == 0:
-            return
-        um_per_px = real_um / px_dist
-        self._apply_calib(um_per_px, "línea")
+    def finish_calib_line(self, real_um: float) -> str | None:
+        """Applies a line calibration; returns ``None`` or the named failure.
 
-    def finish_calib_circle(self, real_diam_um: float):
-        """Computes μm/px from the 3 circle points and the real diameter."""
-        if len(self._calib_pts) < 3 or real_diam_um <= 0:
-            return
-        radius_px = _circumscribed_radius(self._calib_pts)
-        if radius_px <= 0:
-            return
-        diam_px = 2 * radius_px
-        um_per_px = real_diam_um / diam_px
-        self._apply_calib(um_per_px, "círculo")
+        The geometry is the calibration core's: this method only hands it the
+        clicked points. A refused drawing emits nothing and keeps whatever
+        scale the Viewer already had.
+        """
+        return self._finish(2, lambda p1, p2: line_calibration(p1, p2, real_um), CALIB_MODE_LINE)
+
+    def finish_calib_circle(self, real_diam_um: float) -> str | None:
+        """Applies a circle calibration; returns ``None`` or the named failure.
+
+        Same contract as :meth:`finish_calib_line`: the circumscribed circle
+        and the µm/px come from the core, and a refusal leaves the scale alone.
+        """
+        return self._finish(
+            3,
+            lambda p1, p2, p3: circle_calibration(p1, p2, p3, real_diam_um),
+            CALIB_MODE_CIRCLE,
+        )
+
+    def _finish(
+        self,
+        needed: int,
+        compute: Callable[..., LineCalibration | CircleCalibration],
+        mode: str,
+    ) -> str | None:
+        """Applies the scale ``compute`` derives from the first ``needed`` points.
+
+        Both modes end the same way: too few points is a named refusal, the
+        core decides whether the drawing supports a scale, and only a scale
+        that exists replaces the current one. ``None`` is the success signal,
+        so nothing here reports success with a sentinel string.
+        """
+        if len(self._calib_pts) < needed:
+            return FAILURE_NOT_ENOUGH_POINTS
+        points = [(pt.x(), pt.y()) for pt in self._calib_pts[:needed]]
+        result = compute(*points)
+        if result.failure is not None:
+            return result.failure
+        assert result.um_per_px is not None  # no failure means there is a scale
+        self._apply_calib(result.um_per_px, mode)
+        return None
 
     def _apply_calib(self, um_per_px: float, mode_name: str):
         self.um_per_px = um_per_px
-        self.calib_mode = "none"
+        self.calib_mode = CALIB_MODE_NONE
         self._calib_pts = []
         self.calib_pts_changed.emit([])
         self.calib_changed.emit(um_per_px, mode_name)
-
-
-def _circumscribed_radius(pts: list[QPointF]) -> float:
-    """Radius of the circle circumscribed to 3 points (analytic formula)."""
-    x1, y1 = pts[0].x(), pts[0].y()
-    x2, y2 = pts[1].x(), pts[1].y()
-    x3, y3 = pts[2].x(), pts[2].y()
-    ax, ay = x2 - x1, y2 - y1
-    bx, by = x3 - x1, y3 - y1
-    D = 2 * (ax * by - ay * bx)
-    if abs(D) < 1e-10:
-        return 0.0
-    ux = (by * (ax * ax + ay * ay) - ay * (bx * bx + by * by)) / D
-    uy = (ax * (bx * bx + by * by) - bx * (ax * ax + ay * ay)) / D
-    return math.hypot(ux, uy)
-
-
-def _circumscribed_center(pts: list[QPointF]) -> QPointF:
-    """Center of the circle circumscribed to 3 points."""
-    x1, y1 = pts[0].x(), pts[0].y()
-    x2, y2 = pts[1].x(), pts[1].y()
-    x3, y3 = pts[2].x(), pts[2].y()
-    ax, ay = x2 - x1, y2 - y1
-    bx, by = x3 - x1, y3 - y1
-    D = 2 * (ax * by - ay * bx)
-    if abs(D) < 1e-10:
-        return QPointF(x1, y1)
-    ux = (by * (ax * ax + ay * ay) - ay * (bx * bx + by * by)) / D
-    uy = (ax * (bx * bx + by * by) - bx * (ax * ax + ay * ay)) / D
-    return QPointF(x1 + ux, y1 + uy)

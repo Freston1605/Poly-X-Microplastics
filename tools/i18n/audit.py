@@ -109,19 +109,13 @@ _PLURAL_PARENTHETICAL = re.compile(r"\((?:s|es)\)", re.IGNORECASE)
 
 #: Out-of-scope and non-prose literals, matched exactly against the string.
 #: Each entry is ``(path, literal)`` and says why that string is not
-#: interface copy. Log messages are permanently out of scope, the calibration
-#: tokens are data that the viewer translates at the display site, and ``sí``
-#: is a truthy value the schema accepts. This list is deliberately exhaustive:
+#: interface copy. Log messages are permanently out of scope and ``sí`` is a
+#: truthy value the schema accepts. This list is deliberately exhaustive:
 #: a directory skip would also hide the leaks this check exists to find.
 _SPANISH_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {
         # The schema accepts Spanish truthy values when reading old files.
         ("src/polyx/core/detection_run/schema.py", "sí"),
-        # Calibration-origin tokens, translated by the viewer when displayed.
-        ("src/polyx/gui/viewer/state.py", "línea"),
-        ("src/polyx/gui/viewer/state.py", "círculo"),
-        ("src/polyx/gui/viewer/window.py", "línea"),
-        ("src/polyx/gui/viewer/window.py", "círculo"),
         # Trainer status stream: log messages are permanently out of scope.
         (
             "src/polyx/gui/trainer/runner.py",
