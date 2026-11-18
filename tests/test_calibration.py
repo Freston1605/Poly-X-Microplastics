@@ -107,73 +107,24 @@ def test_el_paralaje_viene_desactivado():
     assert cal.um_por_px == pytest.approx(esperado, rel=0.03)
 
 
-# ── Índice de calibración ──────────────────────────────────────────────
-def test_lee_el_indice_de_recortes(tmp_path):
-    """En un recorte la placa no aparece, así que su escala solo puede
-    heredarse de la foto de la que salió."""
-    csv = tmp_path / "indice.csv"
-    csv.write_text(
-        "recorte,origen,escala,um_por_px\n"
-        "a__f0c0.jpg,a.jpg,1.05,31.2815\n"
-        "a__f0c1.jpg,a.jpg,1.05,31.2815\n",
-        encoding="utf-8",
-    )
-    mapa = C.carry_index(csv)
-    assert mapa["a__f0c0.jpg"] == pytest.approx(31.2815)
-
-
-def test_lee_tambien_el_indice_de_placas(tmp_path):
-    csv = tmp_path / "calibracion_placas.csv"
-    csv.write_text("placa,testigo,um_por_px\n1.1.jpg,T1,32.8647\n", encoding="utf-8")
-    assert C.carry_index(csv)["1.1.jpg"] == pytest.approx(32.8647)
-
-
-def test_un_indice_que_no_existe_no_revienta(tmp_path):
-    assert C.carry_index(tmp_path / "no_existe.csv") == {}
-
-
-def test_busca_el_indice_subiendo_carpetas(tmp_path):
-    """Se busca en vez de exigir la ruta porque señalarlo a mano es el paso que
-    se olvida, y olvidarlo no da error: da tallas con la escala equivocada."""
-    hondo = tmp_path / "recortes" / "testigo"
-    hondo.mkdir(parents=True)
-    (tmp_path / "recortes" / "indice.csv").write_text(
-        "recorte,um_por_px\nx.jpg,31.5\n", encoding="utf-8"
-    )
-    assert C.search_index(hondo / "x.jpg")["x.jpg"] == pytest.approx(31.5)
-
-
 # ── Orden de preferencia ───────────────────────────────────────────────
-def test_el_indice_manda_sobre_todo(tmp_path):
-    img, _ = _foto_de_placa()
-    foto = tmp_path / "1.1.jpg"
-    cv2.imwrite(str(foto), img)
-    cal = C.resolver(
-        foto, index={"1.1.jpg": 31.0}, um_por_px_manual=99.0, measure_plate=True, bgr=img
-    )
-    assert cal.origin == C.ORIGIN_INDEX
-    assert cal.um_por_px == pytest.approx(31.0)
-
-
 def test_medir_la_placa_manda_sobre_el_valor_manual(tmp_path):
     """El valor manual es uno solo para todo el lote, y en este material la
     escala real varía 1.59× entre fotos."""
     img, esperado = _foto_de_placa()
-    cal = C.resolver(
-        tmp_path / "x.jpg", index={}, um_por_px_manual=99.0, measure_plate=True, bgr=img
-    )
+    cal = C.resolver(tmp_path / "x.jpg", um_por_px_manual=99.0, measure_plate=True, bgr=img)
     assert cal.origin == C.ORIGIN_PLATE
     assert cal.um_por_px == pytest.approx(esperado, rel=0.03)
 
 
 def test_el_manual_es_el_ultimo_recurso(tmp_path):
-    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=31.85, measure_plate=False)
+    cal = C.resolver(tmp_path / "x.jpg", um_por_px_manual=31.85, measure_plate=False)
     assert cal.origin == C.ORIGIN_MANUAL
     assert cal.um_por_px == pytest.approx(31.85)
 
 
 def test_sin_nada_queda_sin_calibrar(tmp_path):
-    cal = C.resolver(tmp_path / "x.jpg", index={}, um_por_px_manual=0.0, measure_plate=False)
+    cal = C.resolver(tmp_path / "x.jpg", um_por_px_manual=0.0, measure_plate=False)
     assert not cal.valid
     assert cal.origin == C.ORIGIN_NONE
 

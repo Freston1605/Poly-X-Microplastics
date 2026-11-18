@@ -537,11 +537,13 @@ overrides; ADR-0001). The folder is the canonical run folder (ADR-0002):
 - `<data dir>/runs/detect_YYYYMMDD_HHMMSS/report.html` — Paper-quality report
 
 New runs never write `summary.json`, `metrics.json` or the old `resumen.json`
-export. The Viewer now writes `viewer_summary.json` inside a
+export. The Viewer writes `viewer_summary.json` inside a
 `viewer_<image>_<ts>/` folder; an export into a folder containing `run.json` is
-refused so a canonical prediction table cannot be overwritten. Old GUI folders
-still open in the Viewer through their per-model `labels/*.txt`; old headless
-folders still load through the legacy reader. Neither is migrated or rewritten.
+refused so a canonical prediction table cannot be overwritten. Pre-canonical
+folders (old GUI per-model labels, old headless `summary.json` +
+`centroids.csv`, calibration index CSVs) stay on disk untouched but are not
+read: the CLI and the Viewer report that old runs need an older Poly-X version.
+No file is migrated or rewritten.
 
 **Headless CLI.** `polyx-detect` runs the same engine synchronously:
 
@@ -550,7 +552,7 @@ polyx-detect --model best.pt --images ./photos --out ./run
 polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
     --images ./photos --out ./run --force
 polyx-detect --model best.pt --images ./photos --out ./run \
-    --calibrate auto --index-calibration ./indice.csv --gt-folder ./labels
+    --calibrate auto --gt-folder ./labels
 ```
 
 - `--model` and `--model-type` repeat: aliases default to the weights stem,
@@ -560,8 +562,9 @@ polyx-detect --model best.pt --images ./photos --out ./run \
   translated, and unsafe characters are replaced (`a/b` → `a_b`).
 - `--out` is the exact run folder. A non-empty folder is refused unless
   `--force` is given.
-- `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
-  alone implies `manual`, and `--index-calibration` supplies the explicit CSV.
+- `--calibrate {auto,manual,none}` defaults to `auto`; `--um-per-px` alone
+  implies `manual`. The pre-canonical index CSV option is gone: those files are
+  not read by new code.
 - Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
   `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
   `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
@@ -569,11 +572,12 @@ polyx-detect --model best.pt --images ./photos --out ./run \
 - `--full-report` renders the paper-quality report from the engine's
   `RunResult`; without it the run gets the compact HTML report.
 
-`polyx-report --run DIR [--output FILE] [--full-report] [--images DIR]`
-regenerates a report. It uses `load_run` for a canonical folder and
-`load_legacy_run` for an old `summary.json`/`centroids.csv` folder
-(`--images` supplies the original photographs); without `--full-report` it
-writes the compact report.
+`polyx-report --run DIR [--output FILE] [--full-report]` regenerates a report.
+Both modes require a canonical folder: a pre-canonical `summary.json` +
+`centroids.csv` folder is refused with a pointer to an older Poly-X version,
+and `--full-report` never falls back to the compact report on that error.
+Without `--full-report` it writes the compact report from `run.json` and
+`detections.csv`.
 
 ### 🎯 Trainer (Module 3)
 **Purpose:** Train YOLO v8/v11 models from scratch or fine-tune.
@@ -817,8 +821,8 @@ was which reads `match` instead of matching again with a rule of its own
 (box IoU on a mask-matched run shows errors the run never counted).
 
 ### `RunResult` (src/polyx/core/detection_run/result.py)
-The Qt-free record of one run. `load_run` rebuilds it from a canonical
-folder; `load_legacy_run` rebuilds what an old headless folder recorded.
+The Qt-free record of one run. `load_run` rebuilds it from a canonical folder;
+pre-canonical folders are not read.
 ```python
 run_dir: Path
 images: List[Path]
@@ -833,7 +837,6 @@ started_at, finished_at: Optional[datetime]
 execution: Dict[int, ModelExecution] # per-model images/detections/tiling/imgsz
 metrics: Dict[int, Dict[str, int]]   # per-model tp/fp/fn/miscls/totals
 match_use_mask_iou: bool             # property: any image matched by mask IoU
-legacy: bool                         # rebuilt from a pre-canonical folder
 ```
 
 ### `Score` and `Criterion` (src/polyx/core/detection_run/operating_point.py)
@@ -889,15 +892,16 @@ run_detection()  (core, Qt-free: decode, calibrate, GT, predict,
 RunResult  (dense active-model indices, partial on abort/failure)
     ├→ DetectorRunner: map indices onto model_slots → Qt signals
     ├→ generate_report(RunResult) (GUI report page and polyx-detect --full-report)
-    ├→ polyx-report: load_run (canonical) or load_legacy_run (old headless)
+    ├→ polyx-report: load_run (canonical); pre-canonical folders are refused
     └→ <user data dir>/runs/detect_YYYYMMDD_HHMMSS/
          run.json · detections.csv · <alias>/PNGs + labels + classes.txt
 ```
 
-Legacy inputs are read, never rewritten: the Viewer opens old GUI folders
-through their per-model `labels/*.txt`, `load_legacy_run` rebuilds a
-`RunResult` from old `summary.json` + `centroids.csv`, and the compact report
-keeps that same old fallback. New runs are the canonical folder only.
+Legacy inputs are never rewritten, but they are not read either: the Viewer
+requires a canonical `run.json`, `load_legacy_run` is gone, and the compact
+report reads only `run.json` + `detections.csv`. Old GUI folders, old headless
+folders and calibration index CSVs stay on disk and require an older Poly-X
+version.
 
 ### Trainer
 ```
@@ -993,9 +997,8 @@ policy. The effective per-photo scale lives in `RunResult.calibrations` and
 `run.json.calibrations` / `calibration_summary`; `run.json.params` never
 claims a scale.
 ```python
-mode: str = "auto"              # "auto" | "manual" | "index" | "none"
+mode: str = "auto"              # "auto" | "manual" | "none" (no index CSV)
 um_per_px: float = 0.0          # manual fallback / manual-only value
-index_path: Path | None = None  # explicit index CSV (auto merges it with the searched one)
 measure_plate: bool = True      # auto only: measure the Petri dish per photo
 diameter_plate_mm: float = 100.0
 height_plate_mm: float = 0.0    # parallax correction, 0 = off

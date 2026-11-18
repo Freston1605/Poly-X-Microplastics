@@ -75,9 +75,9 @@ class DetectorRunner(QThread):
     def _build_config(self, state: DetectorState, slots, output_dir: Path) -> RunConfig:
         """Translate the GUI state into the engine's run configuration.
 
-        The GUI has always resolved scales per photo: an explicit index CSV,
-        else the known index files, else the plate, else the manual value.
-        That is exactly the engine's ``auto`` policy.
+        The GUI resolves scales per photo: the plate on the photo, else the
+        manual value. That is exactly the engine's ``auto`` policy;
+        pre-canonical index CSVs are not read.
         """
         params = state.params
         models: list[ModelSpec] = []

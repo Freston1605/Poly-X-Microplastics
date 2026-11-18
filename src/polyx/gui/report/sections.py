@@ -364,33 +364,6 @@ def _section_errors(run, results_2, any_gt: bool) -> str:
         return ""
     active = run.models
     rs = results_2.get(0, [])
-    if run.legacy:
-        # Old headless folders kept per-image TP/FP/FN counts but not the GT
-        # boxes. Rebuilding the confusion matrix from the predictions alone
-        # would turn every legacy detection into a false positive, so report
-        # the counts the old run actually recorded instead.
-        rows_legacy = ""
-        for index, model in enumerate(active):
-            counts = run.metrics.get(index, {})
-            if not counts:
-                model_rows = rs if index == 0 else []
-                counts = {
-                    "tp": sum(row.tp for row in model_rows),
-                    "fp": sum(row.fp for row in model_rows),
-                    "fn": sum(row.fn for row in model_rows),
-                    "miscls": sum(row.miscls for row in model_rows),
-                }
-            rows_legacy += (
-                f"<tr><td>{_esc(_model_label(model, index))}</td>"
-                f"<td class='r'>{int(counts.get('tp', 0))}</td>"
-                f"<td class='r'>{int(counts.get('fp', 0))}</td>"
-                f"<td class='r'>{int(counts.get('fn', 0))}</td>"
-                f"<td class='r'>{int(counts.get('miscls', 0))}</td></tr>"
-            )
-        return f"""
-        <p>{_("This report comes from a folder written before the canonical format. That folder stored per-image counts but not the ground-truth boxes, so the confusion matrix and per-class metrics cannot be rebuilt. These are the counts the run did record:")}</p>
-        <table class='data'><tr>{_("<th>Model</th>")}<th>TP</th><th>FP</th><th>FN</th><th>MISCLS</th></tr>{rows_legacy}</table>
-        """
 
     gts_only = [r.gt for r in rs if r.has_gt]
     preds_only = [r.predictions for r in rs if r.has_gt]

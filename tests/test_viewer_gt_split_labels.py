@@ -8,6 +8,7 @@ photo. These tests pin the two consumers to the codec's folder contract.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,9 @@ def test_viewer_run_load_reads_classes_from_the_model_folder(qapp, tmp_path, mon
     model = run / "alpha"
     labels = model / "labels"
     labels.mkdir(parents=True)
+    (run / "run.json").write_text(
+        json.dumps({"schema_version": 2, "models": [{"alias": "alpha"}]}), encoding="utf-8"
+    )
     (model / "classes.txt").write_text("HDPE\nPS\n", encoding="utf-8")
     (labels / "0000_plate.txt").write_text(
         "0 0.5 0.5 0.2 0.2\n1 0.25 0.25 0.1 0.1\n", encoding="utf-8"

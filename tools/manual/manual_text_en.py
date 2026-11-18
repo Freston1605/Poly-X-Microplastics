@@ -1634,9 +1634,11 @@ uninstaller does not reach.</p>
   </tbody>
 </table>
 </div>
-<p>Runs from before this format still open without migration: old Detector
-folders keep their per-model <code>labels/</code>, and the compact report
-reads <code>summary.json</code> + <code>centroids.csv</code>.</p>
+<p>Runs from before this format are left exactly where they are, but this
+version does not open them: old Detector folders with per-model
+<code>labels/</code>, old headless folders with <code>summary.json</code> +
+<code>centroids.csv</code>, and old calibration index CSVs all need an older
+Poly-X version. Nothing is migrated, rewritten or deleted.</p>
 
 <h3>Headless commands (CLI)</h3>
 <p>The detector also runs without opening the interface and writes exactly
@@ -1645,14 +1647,14 @@ the same canonical folder:</p>
 <span class="p">polyx-detect</span> --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
     --images ./photos --out ./run --force
 <span class="p">polyx-detect</span> --model best.pt --images ./photos --out ./run \
-    --calibrate auto --index-calibration ./index.csv --gt-folder ./labels</code></pre>
+    --calibrate auto --gt-folder ./labels</code></pre>
 <div class="tabla-env">
 <table>
   <thead><tr><th>Option</th><th>Effect</th></tr></thead>
   <tbody>
     <tr><td><code>--model</code>, <code>--model-type</code></td><td>repeat once per model; the alias comes from the file stem. One type applies to all models; with no type, <code>yolo</code> is used.</td></tr>
     <tr><td><code>--out</code>, <code>--force</code></td><td>the exact run folder. A non-empty folder is refused unless <code>--force</code> is given.</td></tr>
-    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code> and <code>--index-calibration</code> supplies the explicit CSV.</td></tr>
+    <tr><td><code>--calibrate {auto,manual,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code>. Pre-canonical index CSVs are not read.</td></tr>
     <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>thresholds and inference.</td></tr>
     <tr><td><code>--gt-folder</code>, <code>--no-measure-shape</code></td><td>ground truth and shape measurement.</td></tr>
     <tr><td><code>--tiling</code>, <code>--tiling-threshold-px</code>, <code>--tiling-tile</code>, <code>--tiling-overlap</code></td><td>tiling of large photographs.</td></tr>
@@ -1662,12 +1664,13 @@ the same canonical folder:</p>
 </table>
 </div>
 <p>To regenerate an existing report:
-<code>polyx-report --run ./run [--output report.html] [--full-report] [--images ./photos]</code>.
-A canonical folder is read with <code>load_run</code>; an old headless folder
-(<code>summary.json</code> + <code>centroids.csv</code>) with
-<code>load_legacy_run</code>, and <code>--images</code> tells it where the
-original photographs are. Without <code>--full-report</code> the compact
-report is written.</p>
+<code>polyx-report --run ./run [--output report.html] [--full-report]</code>.
+Both modes require a canonical folder (<code>run.json</code> +
+<code>detections.csv</code>). A pre-canonical folder is refused with a message
+saying that old runs need an older version of Poly-X; <code>--full-report</code>
+never falls back to the compact report on that error. Without
+<code>--full-report</code> the compact report is written from the canonical
+folder.</p>
 
 <div class="aviso">
   <span class="et">The differences between systems live in a single file</span>

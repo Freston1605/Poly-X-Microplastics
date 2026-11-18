@@ -26,13 +26,10 @@ from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.calibration import (
     ORIGIN_NONE,
     Calibration,
-    carry_index,
     resolver,
-    search_index,
 )
 from polyx.core.measure.shape import measure_detections
 from polyx.core.measure.warnings import (
-    IMAGE_NOT_IN_INDEX,
     IMAGE_UNREADABLE,
     MANUAL_SCALE_MISSING,
     Warning,
@@ -146,31 +143,6 @@ def _validated_calibration_mode(policy: CalibrationPolicy) -> str:
     return mode
 
 
-def _calibration_index(
-    policy: CalibrationPolicy,
-    mode: str,
-    images: list[Path],
-) -> dict[str, float]:
-    """Load the filename-to-scale map once for the whole run.
-
-    ``index`` uses the explicit CSV when given, otherwise searches the known
-    index names from the image root. ``auto`` merges both: the explicit values
-    win for the images they list, and the searched index still covers the
-    images the explicit file lacks before the plate/manual fallback. That is
-    the run-level half of the agreed order; the per-image half (index, then
-    plate, then manual) lives in ``resolver``.
-    """
-    if mode not in ("auto", "index"):
-        return {}
-    searched = search_index(images[0]) if images else {}
-    if policy.index_path is None:
-        return searched
-    explicit = carry_index(policy.index_path)
-    if mode == "index":
-        return explicit
-    return {**searched, **explicit}
-
-
 def _missing_calibration_warning(calibration: Calibration, code: str) -> Calibration:
     """Attach a mode-specific warning code when the resolver provided none."""
     if calibration.valid or calibration.warning:
@@ -183,7 +155,6 @@ def _resolve_calibration(
     bgr: np.ndarray,
     policy: CalibrationPolicy,
     mode: str,
-    index: dict[str, float],
 ) -> Calibration:
     """Scale of one photo, following the mode's documented source order."""
     diameter_mm = policy.diameter_plate_mm
@@ -201,20 +172,8 @@ def _resolve_calibration(
             return _missing_calibration_warning(calibration, MANUAL_SCALE_MISSING)
         return calibration
 
-    if mode == "index":
-        calibration = resolver(
-            image_path,
-            index=index,
-            diameter_mm=diameter_mm,
-            measure_plate=False,
-        )
-        if not calibration.valid and not calibration.warning:
-            return _missing_calibration_warning(calibration, IMAGE_NOT_IN_INDEX)
-        return calibration
-
     return resolver(
         image_path,
-        index=index,
         um_por_px_manual=policy.um_per_px,
         diameter_mm=diameter_mm,
         measure_plate=policy.measure_plate,
@@ -359,7 +318,6 @@ def run_detection(
     mode = _validated_calibration_mode(config.calibration)
 
     images = [Path(path) for path in config.images]
-    index = _calibration_index(config.calibration, mode, images)
     output_dir = Path(config.output_dir)
 
     try:
@@ -447,7 +405,7 @@ def run_detection(
                 continue
 
             height, width = bgr.shape[:2]
-            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode, index)
+            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode)
             result.calibrations[image_path] = calibration
             um_per_px = calibration.um_por_px if calibration.valid else None
 
