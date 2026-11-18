@@ -163,7 +163,11 @@ keyed by image basename and passed explicitly as
 `--calibrate index --calibration-index PATH`. It supplies one µm/px per photo,
 so crops without a visible dish keep their own scale instead of sharing a
 batch-wide fallback; an image with no row is recorded with
-`image_not_in_index` and no scale. The strict reader
+`image_not_in_index` and no scale. Because the basename is the lookup key, an
+index-calibrated batch must give every image a unique basename: the engine
+(`core.detection_run.engine._reject_duplicate_image_names`) refuses two
+same-named images in different folders before inference rather than letting one
+row silently scale both. The strict reader
 (`core.measure.calibration.read_calibration_index`) rejects the legacy names
 and headers with an error that names the canonical format, rejects duplicates
 and invalid values, and neither searches for nor rewrites the user's file.

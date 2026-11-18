@@ -502,6 +502,13 @@ msgstr ""
 msgid "detection run failed"
 msgstr ""
 
+#: src/polyx/core/detection_run/engine.py:181
+#, python-format
+msgid ""
+"index calibration (--calibration-index) needs unique image basenames: %(first)s and %(second)s "
+"both have the basename %(name)s; give each image a unique name for index calibration"
+msgstr ""
+
 #: src/polyx/core/detection_run/identity.py:124 src/polyx/gui/detector/pages/execute.py:213
 #: src/polyx/gui/detector/pages/execute.py:214 src/polyx/gui/detector/pages/execute.py:215
 #: src/polyx/gui/detector/pages/models.py:48

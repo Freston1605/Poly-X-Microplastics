@@ -295,6 +295,64 @@ def test_index_mode_without_a_path_fails_clearly_and_writes_nothing(tmp_path):
     assert not out.exists()
 
 
+def test_same_basename_paths_collapse_to_one_index_key(tmp_path):
+    """The collision the guard prevents, shown at the reader seam.
+
+    The reader keys by basename and the engine looks up ``image_path.name``,
+    so two photos in different folders with the same name resolve to the
+    single ``sample.png`` row -- one scale silently applied to both.
+    """
+    index = write_index(tmp_path / CANONICAL_NAME, ["sample.png,5.0"])
+    mapping = read_calibration_index(index)
+
+    site_a = tmp_path / "site_A" / "sample.png"
+    site_b = tmp_path / "site_B" / "sample.png"
+    assert site_a.name == site_b.name == "sample.png"
+    assert mapping[site_a.name] == mapping[site_b.name] == 5.0
+
+
+def test_duplicate_image_basenames_are_refused_in_index_mode(tmp_path, selected_language):
+    selected_language("en")
+    site_a = write_plain(tmp_path / "site_A" / "sample.png")
+    site_b = write_plain(tmp_path / "site_B" / "sample.png")
+    index = write_index(tmp_path / CANONICAL_NAME, ["sample.png,5.0"])
+    out = tmp_path / "run"
+
+    with pytest.raises(ValueError, match=r"sample\.png") as excinfo:
+        run_detection(
+            make_config(
+                [site_a, site_b],
+                out,
+                CalibrationPolicy(mode="index", index_path=index),
+            )
+        )
+
+    message = str(excinfo.value)
+    assert "--calibration-index" in message
+    assert "unique" in message.lower()
+    assert str(site_a) in message
+    assert str(site_b) in message
+    # The refusal is before inference and before the output folder is created.
+    assert not out.exists()
+    assert not any(tmp_path.rglob("run.json"))
+
+
+def test_duplicate_image_basenames_are_allowed_in_manual_mode(tmp_path):
+    """The refusal is index-only: other modes may reuse a basename."""
+    site_a = write_plain(tmp_path / "site_A" / "sample.png")
+    site_b = write_plain(tmp_path / "site_B" / "sample.png")
+
+    result = run_detection(
+        make_config(
+            [site_a, site_b],
+            tmp_path / "run",
+            CalibrationPolicy(mode="manual", um_per_px=2.0),
+        )
+    )
+
+    assert len(result.results[0]) == 2
+
+
 # ── Warning-code seam ────────────────────────────────────────────────────
 
 

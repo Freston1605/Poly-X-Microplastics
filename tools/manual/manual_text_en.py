@@ -1673,7 +1673,10 @@ file is read only from the path you pass: it is never searched for, and a row
 is matched to a photo by basename. Two photos in the same batch can therefore
 carry different scales. If a photo is missing from the index it is recorded
 with the warning <code>image_not_in_index</code> and no micrometre sizes; no
-batch-wide value is substituted. A legacy filename such as
+batch-wide value is substituted. Because the basename is the lookup key, every
+photo in an index-calibrated batch must have a unique basename: two images with
+the same name in different folders are refused before any inference, since one
+row would otherwise give both the same scale. A legacy filename such as
 <code>indice.csv</code> or a Spanish header such as <code>recorte</code> is
 rejected with a message naming the canonical file and headers, and the file is
 left untouched.</p>

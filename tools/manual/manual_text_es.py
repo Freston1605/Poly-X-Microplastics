@@ -1693,8 +1693,11 @@ El archivo se lee solo desde la ruta indicada: nunca se busca, y cada fila se
 empareja con una foto por su nombre de archivo. Dos fotos de la misma corrida
 pueden tener escalas distintas. Si una foto no figura en el índice se registra
 con la advertencia <code>image_not_in_index</code> y sin tallas en micrómetros;
-no se sustituye por un valor común a todo el lote. Un nombre antiguo como
-<code>indice.csv</code> o una cabecera en español como <code>recorte</code> se
+no se sustituye por un valor común a todo el lote. Como la clave es el nombre de
+archivo, cada foto de una corrida con índice debe tener un nombre único: dos
+imágenes con el mismo nombre en carpetas distintas se rechazan antes de cualquier
+inferencia, porque una sola fila daría la misma escala a ambas. Un nombre antiguo
+como <code>indice.csv</code> o una cabecera en español como <code>recorte</code> se
 rechazan con un mensaje que nombra el archivo y las cabeceras canónicas, y el
 archivo queda intacto.</p>
 <p>Para regenerar un informe ya existente:
