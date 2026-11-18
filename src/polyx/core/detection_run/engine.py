@@ -24,12 +24,15 @@ from polyx.core.i18n import _
 from polyx.core.image_io import read_image
 from polyx.core.labels import find_label_file, read_label_file
 from polyx.core.measure.calibration import (
+    ORIGIN_INDEX,
     ORIGIN_NONE,
     Calibration,
+    read_calibration_index,
     resolver,
 )
 from polyx.core.measure.shape import measure_detections
 from polyx.core.measure.warnings import (
+    IMAGE_NOT_IN_INDEX,
     IMAGE_UNREADABLE,
     MANUAL_SCALE_MISSING,
     Warning,
@@ -143,6 +146,23 @@ def _validated_calibration_mode(policy: CalibrationPolicy) -> str:
     return mode
 
 
+def _load_calibration_index(policy: CalibrationPolicy, mode: str) -> dict[str, float]:
+    """Load the per-image map once, before the run touches its output folder.
+
+    Only ``index`` mode consults the file, and only at the path the caller
+    named: there is no search and no legacy alias. A bad or absent file fails
+    here with the reader's actionable message instead of silently scaling a
+    crop with a value that belongs to a different photo.
+    """
+    if mode != "index":
+        return {}
+    if policy.index_path is None:
+        raise ValueError(
+            _("index calibration needs a calibration index CSV (--calibration-index PATH)")
+        )
+    return read_calibration_index(policy.index_path)
+
+
 def _missing_calibration_warning(calibration: Calibration, code: str) -> Calibration:
     """Attach a mode-specific warning code when the resolver provided none."""
     if calibration.valid or calibration.warning:
@@ -155,11 +175,24 @@ def _resolve_calibration(
     bgr: np.ndarray,
     policy: CalibrationPolicy,
     mode: str,
+    index: dict[str, float],
 ) -> Calibration:
     """Scale of one photo, following the mode's documented source order."""
     diameter_mm = policy.diameter_plate_mm
     if mode == "none":
         return Calibration(origin=ORIGIN_NONE, diameter_mm=diameter_mm)
+
+    if mode == "index":
+        um_per_px = index.get(image_path.name)
+        if um_per_px is None:
+            # Never fall back to a batch-wide scale here: a crop whose name is
+            # absent from the index has no known scale for THIS photo.
+            return Calibration(
+                origin=ORIGIN_NONE,
+                diameter_mm=diameter_mm,
+                warning=Warning(IMAGE_NOT_IN_INDEX),
+            )
+        return Calibration(um_por_px=um_per_px, origin=ORIGIN_INDEX, diameter_mm=diameter_mm)
 
     if mode == "manual":
         calibration = resolver(
@@ -316,6 +349,9 @@ def run_detection(
     if not config.models:
         raise ValueError("a detection run needs at least one model")
     mode = _validated_calibration_mode(config.calibration)
+    # A missing or malformed index is a usage error: fail before creating the
+    # run folder, so no partial run is left behind for a file we never read.
+    index = _load_calibration_index(config.calibration, mode)
 
     images = [Path(path) for path in config.images]
     output_dir = Path(config.output_dir)
@@ -405,7 +441,7 @@ def run_detection(
                 continue
 
             height, width = bgr.shape[:2]
-            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode)
+            calibration = _resolve_calibration(image_path, bgr, config.calibration, mode, index)
             result.calibrations[image_path] = calibration
             um_per_px = calibration.um_por_px if calibration.valid else None
 

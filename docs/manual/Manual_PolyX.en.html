@@ -1880,8 +1880,9 @@ uninstaller does not reach.</p>
 <p>Runs from before this format are left exactly where they are, but this
 version does not open them: old Detector folders with per-model
 <code>labels/</code>, old headless folders with <code>summary.json</code> +
-<code>centroids.csv</code>, and old calibration index CSVs all need an older
-Poly-X version. Nothing is migrated, rewritten or deleted.</p>
+<code>centroids.csv</code>, and legacy calibration index CSVs all need an older
+Poly-X version. Nothing is migrated, rewritten or deleted. The canonical
+per-image index is a distinct English-only file, described below.</p>
 
 <h3>Headless commands (CLI)</h3>
 <p>The detector also runs without opening the interface and writes exactly
@@ -1890,14 +1891,17 @@ the same canonical folder:</p>
 <span class="p">polyx-detect</span> --model det.pt --model seg.pt --model-type yolo --model-type yolo-seg \
     --images ./photos --out ./run --force
 <span class="p">polyx-detect</span> --model best.pt --images ./photos --out ./run \
-    --calibrate auto --gt-folder ./labels</code></pre>
+    --calibrate auto --gt-folder ./labels
+<span class="p">polyx-detect</span> --model best.pt --images ./photos --out ./run \
+    --calibrate index --calibration-index ./calibration_index.csv</code></pre>
 <div class="tabla-env">
 <table>
   <thead><tr><th>Option</th><th>Effect</th></tr></thead>
   <tbody>
     <tr><td><code>--model</code>, <code>--model-type</code></td><td>repeat once per model; the alias comes from the file stem. One type applies to all models; with no type, <code>yolo</code> is used.</td></tr>
     <tr><td><code>--out</code>, <code>--force</code></td><td>the exact run folder. A non-empty folder is refused unless <code>--force</code> is given.</td></tr>
-    <tr><td><code>--calibrate {auto,manual,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code>. Pre-canonical index CSVs are not read.</td></tr>
+    <tr><td><code>--calibrate {auto,manual,index,none}</code></td><td>per-photo calibration; defaults to <code>auto</code>. <code>--um-per-px</code> alone implies <code>manual</code>; <code>--calibration-index PATH</code> alone implies <code>index</code>. Legacy index CSVs are not read.</td></tr>
+    <tr><td><code>--calibration-index PATH</code></td><td>the English <code>calibration_index.csv</code> with headers <code>image,um_per_px</code>, keyed by image basename. One scale per photo, for crops without a visible dish. Legacy names and Spanish headers are rejected.</td></tr>
     <tr><td><code>--conf</code>, <code>--iou</code>, <code>--imgsz</code>, <code>--device</code></td><td>thresholds and inference.</td></tr>
     <tr><td><code>--gt-folder</code>, <code>--no-measure-shape</code></td><td>ground truth and shape measurement.</td></tr>
     <tr><td><code>--tiling</code>, <code>--tiling-threshold-px</code>, <code>--tiling-tile</code>, <code>--tiling-overlap</code></td><td>tiling of large photographs.</td></tr>
@@ -1906,6 +1910,16 @@ the same canonical folder:</p>
   </tbody>
 </table>
 </div>
+<p><b>Index format.</b> <code>calibration_index.csv</code> has exactly two
+columns, <code>image,um_per_px</code>, with a positive number on every row. The
+file is read only from the path you pass: it is never searched for, and a row
+is matched to a photo by basename. Two photos in the same batch can therefore
+carry different scales. If a photo is missing from the index it is recorded
+with the warning <code>image_not_in_index</code> and no micrometre sizes; no
+batch-wide value is substituted. A legacy filename such as
+<code>indice.csv</code> or a Spanish header such as <code>recorte</code> is
+rejected with a message naming the canonical file and headers, and the file is
+left untouched.</p>
 <p>To regenerate an existing report:
 <code>polyx-report --run ./run [--output report.html] [--full-report]</code>.
 Both modes require a canonical folder (<code>run.json</code> +

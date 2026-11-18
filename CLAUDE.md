@@ -541,9 +541,11 @@ export. The Viewer writes `viewer_summary.json` inside a
 `viewer_<image>_<ts>/` folder; an export into a folder containing `run.json` is
 refused so a canonical prediction table cannot be overwritten. Pre-canonical
 folders (old GUI per-model labels, old headless `summary.json` +
-`centroids.csv`, calibration index CSVs) stay on disk untouched but are not
-read: the CLI and the Viewer report that old runs need an older Poly-X version.
-No file is migrated or rewritten.
+`centroids.csv`, legacy calibration index CSVs) stay on disk untouched but are
+not read: the CLI and the Viewer report that old runs need an older Poly-X
+version. The canonical per-image calibration index (`calibration_index.csv`,
+headers `image,um_per_px`) is a distinct English-only file. No file is migrated
+or rewritten.
 
 **Headless CLI.** `polyx-detect` runs the same engine synchronously:
 
@@ -553,6 +555,8 @@ polyx-detect --model det.pt --model seg.pt --model-type yolo --model-type yolo-s
     --images ./photos --out ./run --force
 polyx-detect --model best.pt --images ./photos --out ./run \
     --calibrate auto --gt-folder ./labels
+polyx-detect --model best.pt --images ./photos --out ./run \
+    --calibrate index --calibration-index ./calibration_index.csv
 ```
 
 - `--model` and `--model-type` repeat: aliases default to the weights stem,
@@ -562,9 +566,12 @@ polyx-detect --model best.pt --images ./photos --out ./run \
   translated, and unsafe characters are replaced (`a/b` → `a_b`).
 - `--out` is the exact run folder. A non-empty folder is refused unless
   `--force` is given.
-- `--calibrate {auto,manual,none}` defaults to `auto`; `--um-per-px` alone
-  implies `manual`. The pre-canonical index CSV option is gone: those files are
-  not read by new code.
+- `--calibrate {auto,manual,index,none}` defaults to `auto`; `--um-per-px`
+  alone implies `manual`, and `--calibration-index PATH` alone implies
+  `index`. The index must be the canonical English `calibration_index.csv`
+  with headers `image,um_per_px`; it is keyed by image basename and never
+  searched for. Legacy index files and Spanish headers are rejected with an
+  error naming the canonical format.
 - Detection flags: `--conf`, `--iou`, `--imgsz`, `--device`, `--gt-folder`,
   `--no-measure-shape`, `--tiling`, `--tiling-threshold-px`,
   `--tiling-tile`, `--tiling-overlap`, `--size-min-um`, `--size-max-um`,
@@ -901,8 +908,8 @@ RunResult  (dense active-model indices, partial on abort/failure)
 Legacy inputs are never rewritten, but they are not read either: the Viewer
 requires a canonical `run.json`, `load_legacy_run` is gone, and the compact
 report reads only `run.json` + `detections.csv`. Old GUI folders, old headless
-folders and calibration index CSVs stay on disk and require an older Poly-X
-version.
+folders and legacy calibration index CSVs stay on disk and require an older
+Poly-X version; the canonical per-image index is English-only and explicit.
 
 ### Trainer
 ```
@@ -998,13 +1005,22 @@ policy. The effective per-photo scale lives in `RunResult.calibrations` and
 `run.json.calibrations` / `calibration_summary`; `run.json.params` never
 claims a scale.
 ```python
-mode: str = "auto"              # "auto" | "manual" | "none" (no index CSV)
+mode: str = "auto"              # "auto" | "manual" | "index" | "none"
 um_per_px: float = 0.0          # manual fallback / manual-only value
+index_path: Path | None = None  # explicit canonical English index file, index mode
 measure_plate: bool = True      # auto only: measure the Petri dish per photo
 diameter_plate_mm: float = 100.0
 height_plate_mm: float = 0.0    # parallax correction, 0 = off
 distance_camera_mm: float = 0.0
 ```
+
+`index` mode reads `calibration_index.csv` once per run through
+`core.measure.calibration.read_calibration_index` and looks up `image_path.name`.
+A row found becomes `Calibration(origin=ORIGIN_INDEX)` for that photo alone;
+an image absent from the index carries `IMAGE_NOT_IN_INDEX` and no scale, never
+the batch-wide manual value. The reader refuses legacy filenames and Spanish
+headers by name, rejects duplicates and non-positive or non-finite values, and
+never searches the filesystem or rewrites the file it was given.
 
 ### Abstention: detecting ≠ identifying
 

@@ -188,11 +188,11 @@ def test_report_cli_no_longer_accepts_the_images_flag(capsys):
     assert "--images" in capsys.readouterr().err
 
 
-# ── Calibration index CSV reader is gone ───────────────────────────────
+# ── Legacy calibration readers stay gone; the canonical one is distinct ──
 
 
-def test_the_calibration_index_csv_reader_is_removed():
-    """No CSV reader, index policy field or index mode survives the cut."""
+def test_legacy_calibration_readers_are_gone_and_the_canonical_reader_is_distinct():
+    """The legacy names never return; the English index is a different seam."""
     import inspect
 
     from polyx.core.detection_run import CALIBRATION_MODES, CalibrationPolicy
@@ -204,8 +204,10 @@ def test_the_calibration_index_csv_reader_is_removed():
         assert name not in measure_exports
 
     assert "index" not in inspect.signature(cal.resolver).parameters
-    assert not hasattr(CalibrationPolicy(), "index_path")
-    assert "index" not in CALIBRATION_MODES
+    assert callable(cal.read_calibration_index)
+    assert "read_calibration_index" in measure_exports
+    assert hasattr(CalibrationPolicy(), "index_path")
+    assert "index" in CALIBRATION_MODES
 
 
 def test_cli_detect_refuses_the_index_calibration_flag(tmp_path, capsys):

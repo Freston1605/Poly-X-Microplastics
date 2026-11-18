@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 15:11-0300\n"
+"POT-Creation-Date: 2026-11-18 15:26-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -14,154 +14,160 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: src/polyx/cli/detect.py:71
+#: src/polyx/cli/detect.py:75
 msgid "Batch-detect microplastics (headless)"
 msgstr "Detección por lotes de microplásticos (sin interfaz)"
 
-#: src/polyx/cli/detect.py:77
+#: src/polyx/cli/detect.py:81
 msgid "weights path; repeat once per model (aliases default to the file stem)"
 msgstr "ruta de los pesos; repite una vez por modelo (el alias por defecto es el nombre del fichero)"
 
-#: src/polyx/cli/detect.py:84
+#: src/polyx/cli/detect.py:88
 msgid "run subfolder for a model; repeat once per model (default: the weights stem)"
 msgstr ""
 "subcarpeta de la corrida para un modelo; repite una vez por modelo (por defecto, el nombre del "
 "fichero de pesos)"
 
-#: src/polyx/cli/detect.py:91
+#: src/polyx/cli/detect.py:95
 msgid "detector type; repeat once per model, or give one value for all (default: yolo)"
 msgstr "tipo de detector; repite una vez por modelo, o da un valor para todos (por defecto: yolo)"
 
-#: src/polyx/cli/detect.py:94
+#: src/polyx/cli/detect.py:98
 msgid "exact run folder to write"
 msgstr "carpeta del run exacta donde escribir"
 
-#: src/polyx/cli/detect.py:95
+#: src/polyx/cli/detect.py:99
 msgid "overwrite a non-empty run folder"
 msgstr "sobrescribe una carpeta de run no vacía"
 
-#: src/polyx/cli/detect.py:102 src/polyx/cli/eval.py:27 src/polyx/cli/train.py:27
+#: src/polyx/cli/detect.py:106 src/polyx/cli/eval.py:27 src/polyx/cli/train.py:27
 msgid "'cpu', a CUDA index, or empty = auto-select (default: auto)"
 msgstr "'cpu', un índice CUDA, o vacío = selección automática (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:109
+#: src/polyx/cli/detect.py:113
 msgid "per-photo calibration policy (default: auto)"
 msgstr "política de calibración por foto (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:115
+#: src/polyx/cli/detect.py:119
 msgid "manual µm/px; used alone it selects --calibrate manual"
 msgstr "µm/px manual; usado solo selecciona --calibrate manual"
 
-#: src/polyx/cli/detect.py:124
+#: src/polyx/cli/detect.py:125
+msgid "English per-image index CSV (headers image,um_per_px); used alone it selects --calibrate index"
+msgstr ""
+"CSV de índice por imagen en inglés (cabeceras image,um_per_px); usado solo selecciona "
+"--calibrate index"
+
+#: src/polyx/cli/detect.py:137
 msgid "tiling policy: auto by photo size, always, or never (default: auto)"
 msgstr "política de mosaico: auto por tamaño de foto, always o never (por defecto: auto)"
 
-#: src/polyx/cli/detect.py:130
+#: src/polyx/cli/detect.py:143
 msgid "longest side above which --tiling auto splits the photo (default: 2000)"
 msgstr "lado mayor a partir del cual --tiling auto divide la foto (por defecto: 2000)"
 
-#: src/polyx/cli/detect.py:136
+#: src/polyx/cli/detect.py:149
 msgid "tile side in px; 0 derives it from min(threshold, imgsz) (default: 0)"
 msgstr "lado del mosaico en px; 0 lo deriva de min(threshold, imgsz) (por defecto: 0)"
 
-#: src/polyx/cli/detect.py:142
+#: src/polyx/cli/detect.py:155
 msgid "overlap between tiles, 0..0.9 (default: 0.25)"
 msgstr "solape entre mosaicos, 0..0.9 (por defecto: 0.25)"
 
-#: src/polyx/cli/detect.py:144
+#: src/polyx/cli/detect.py:157
 msgid "drop particles below it"
 msgstr "descarta las partículas por debajo"
 
-#: src/polyx/cli/detect.py:145
+#: src/polyx/cli/detect.py:158
 msgid "drop particles above it"
 msgstr "descarta las partículas por encima"
 
-#: src/polyx/cli/detect.py:150
+#: src/polyx/cli/detect.py:163
 msgid "below this confidence the particle is reported as unassignable (default: 0)"
 msgstr "por debajo de esta confianza la partícula se informa como no asignable (por defecto: 0)"
 
-#: src/polyx/cli/detect.py:155
+#: src/polyx/cli/detect.py:168
 msgid "run-order paper-quality HTML report (requires PySide6, [gui] extra)"
 msgstr "informe HTML de calidad de artículo en el orden del run (requiere PySide6, extra [gui])"
 
-#: src/polyx/cli/detect.py:304
+#: src/polyx/cli/detect.py:320
 #, python-format
 msgid "IMAGES: %(images)d  DETECTIONS: %(detections)d"
 msgstr "IMÁGENES: %(images)d  DETECCIONES: %(detections)d"
 
-#: src/polyx/cli/detect.py:307
+#: src/polyx/cli/detect.py:323
 #, python-format
 msgid "OUTPUT: %(run_dir)s"
 msgstr "SALIDA: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:169
+#: src/polyx/cli/detect.py:182
 #, python-format
 msgid "--model-type takes one value for all models or one per model (%(count)d); got %(got)d"
 msgstr ""
 "--model-type toma un valor para todos los modelos o uno por modelo (%(count)d); se recibieron "
 "%(got)d"
 
-#: src/polyx/cli/detect.py:185
+#: src/polyx/cli/detect.py:198
 #, python-format
 msgid "--alias takes one value per model (%(count)d); got %(got)d"
 msgstr "--alias toma un valor por modelo (%(count)d); se recibieron %(got)d"
 
-#: src/polyx/cli/detect.py:223
+#: src/polyx/cli/detect.py:238
 #, python-format
 msgid "invalid tiling mode: %(value)s (choose auto, always or never)"
 msgstr "modo de mosaico inválido: %(value)s (elige auto, always o never)"
 
-#: src/polyx/cli/detect.py:279
+#: src/polyx/cli/detect.py:295
 msgid "Use --force to overwrite the canonical files."
 msgstr "Usa --force para sobrescribir los ficheros canónicos."
 
-#: src/polyx/cli/detect.py:281
+#: src/polyx/cli/detect.py:297
 msgid "Choose a folder path for --out."
 msgstr "Elige una ruta de carpeta para --out."
 
-#: src/polyx/cli/detect.py:294
+#: src/polyx/cli/detect.py:310
 #, python-format
 msgid "ABORTED: %(run_dir)s"
 msgstr "ABORTADO: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:309
+#: src/polyx/cli/detect.py:325
 #, python-format
 msgid "SKIPPED: %(count)d"
 msgstr "OMITIDAS: %(count)d"
 
-#: src/polyx/cli/detect.py:322 src/polyx/cli/detect.py:326
+#: src/polyx/cli/detect.py:338 src/polyx/cli/detect.py:342
 #, python-format
 msgid "COMPACT REPORT: %(path)s"
 msgstr "INFORME COMPACTO: %(path)s"
 
-#: src/polyx/cli/detect.py:266 src/polyx/cli/detect.py:286 src/polyx/cli/detect.py:290
+#: src/polyx/cli/detect.py:282 src/polyx/cli/detect.py:302 src/polyx/cli/detect.py:306
 #: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
 #: src/polyx/cli/report.py:78 src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
 msgstr "ERROR: %(error)s"
 
-#: src/polyx/cli/detect.py:272
+#: src/polyx/cli/detect.py:288
 #, python-format
 msgid "ERROR loading model: %(error)s"
 msgstr "ERROR al cargar el modelo: %(error)s"
 
-#: src/polyx/cli/detect.py:283
+#: src/polyx/cli/detect.py:299
 #, python-format
 msgid "ERROR: %(error)s. %(hint)s"
 msgstr "ERROR: %(error)s. %(hint)s"
 
-#: src/polyx/cli/detect.py:287
+#: src/polyx/cli/detect.py:303
 #, python-format
 msgid "PARTIAL RUN: %(run_dir)s"
 msgstr "EJECUCIÓN PARCIAL: %(run_dir)s"
 
-#: src/polyx/cli/detect.py:324 src/polyx/cli/report.py:70
+#: src/polyx/cli/detect.py:340 src/polyx/cli/report.py:70
 #, python-format
 msgid "FULL REPORT: %(path)s"
 msgstr "INFORME COMPLETO: %(path)s"
 
-#: src/polyx/cli/detect.py:320
+#: src/polyx/cli/detect.py:336
 #, python-format
 msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
@@ -490,17 +496,21 @@ msgid_plural "%(side)d px longest side → %(tiles)d tiles of %(tile)d px, %(ove
 msgstr[0] "%(side)d px de lado mayor → %(tiles)d mosaico de %(tile)d px, %(overlap)d%% de solape"
 msgstr[1] "%(side)d px de lado mayor → %(tiles)d mosaicos de %(tile)d px, %(overlap)d%% de solape"
 
-#: src/polyx/core/detection_run/engine.py:62
+#: src/polyx/core/detection_run/engine.py:161
+msgid "index calibration needs a calibration index CSV (--calibration-index PATH)"
+msgstr "la calibración por índice necesita un CSV de índice de calibración (--calibration-index PATH)"
+
+#: src/polyx/core/detection_run/engine.py:65
 #, python-format
 msgid "output directory is not empty: %(path)s"
 msgstr "el directorio de salida no está vacío: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:72
+#: src/polyx/core/detection_run/engine.py:75
 #, python-format
 msgid "output path is not a directory: %(path)s"
 msgstr "la ruta de salida no es un directorio: %(path)s"
 
-#: src/polyx/core/detection_run/engine.py:81
+#: src/polyx/core/detection_run/engine.py:84
 msgid "detection run failed"
 msgstr "Falló la ejecución de detección"
 
@@ -519,76 +529,129 @@ msgstr "localización"
 msgid "with class"
 msgstr "con clase"
 
-#: src/polyx/core/measure/calibration.py:127
+#: src/polyx/core/measure/calibration.py:526
+msgid "use 'calibration_index.csv' with the headers image,um_per_px"
+msgstr "usa 'calibration_index.csv' con las cabeceras image,um_per_px"
+
+#: src/polyx/core/measure/calibration.py:559
+#, python-format
+msgid "invalid um/px for '%(image)s' in '%(name)s': expected a positive number"
+msgstr "valor µm/px inválido para '%(image)s' en '%(name)s': se esperaba un número positivo"
+
+#: src/polyx/core/measure/calibration.py:136
 msgid "not calibrated"
 msgstr "sin calibrar"
 
-#: src/polyx/core/measure/calibration.py:141
+#: src/polyx/core/measure/calibration.py:150
 #, python-format
 msgid "%(scale)s µm/px — entered by hand"
 msgstr "%(scale)s µm/px — introducida a mano"
 
-#: src/polyx/core/measure/calibration.py:130
+#: src/polyx/core/measure/calibration.py:139
 #, python-format
 msgid "%(scale)s µm/px — plate of %(diameter)s mm, r=%(radius)s px (%(points)s edge points)"
 msgstr "%(scale)s µm/px — placa de %(diameter)s mm, r=%(radius)s px (%(points)s puntos de borde)"
 
-#: src/polyx/core/measure/calibration.py:140
+#: src/polyx/core/measure/calibration.py:149
 #, python-format
 msgid "%(scale)s µm/px — inherited from the crop"
 msgstr "%(scale)s µm/px — heredada del recorte"
 
-#: src/polyx/core/measure/warnings.py:149
+#: src/polyx/core/measure/calibration.py:529
+#, python-format
+msgid "'%(name)s' is a legacy calibration index and is not read; %(canonical)s"
+msgstr "'%(name)s' es un índice de calibración antiguo y no se lee; %(canonical)s"
+
+#: src/polyx/core/measure/calibration.py:533
+#, python-format
+msgid "calibration index not found: %(path)s"
+msgstr "índice de calibración no encontrado: %(path)s"
+
+#: src/polyx/core/measure/calibration.py:553
+#, python-format
+msgid "'%(name)s' must carry the headers image,um_per_px; got %(header)s; %(canonical)s"
+msgstr "'%(name)s' debe tener las cabeceras image,um_per_px; se encontró %(header)s; %(canonical)s"
+
+#: src/polyx/core/measure/calibration.py:541
+#, python-format
+msgid "'%(name)s' is empty; %(canonical)s"
+msgstr "'%(name)s' está vacío; %(canonical)s"
+
+#: src/polyx/core/measure/calibration.py:549
+#, python-format
+msgid "legacy header '%(header)s' in '%(name)s' is not read; %(canonical)s"
+msgstr "la cabecera antigua '%(header)s' en '%(name)s' no se lee; %(canonical)s"
+
+#: src/polyx/core/measure/calibration.py:566
+#, python-format
+msgid "row %(line)d in '%(name)s' must have two columns: image,um_per_px"
+msgstr "la fila %(line)d de '%(name)s' debe tener dos columnas: image,um_per_px"
+
+#: src/polyx/core/measure/calibration.py:572
+#, python-format
+msgid "row %(line)d in '%(name)s' has a blank image name; %(canonical)s"
+msgstr "la fila %(line)d de '%(name)s' tiene el nombre de imagen vacío; %(canonical)s"
+
+#: src/polyx/core/measure/calibration.py:586
+#, python-format
+msgid "duplicate image '%(image)s' in '%(name)s'; each image needs one um_per_px value"
+msgstr "imagen duplicada '%(image)s' en '%(name)s'; cada imagen necesita un valor um_per_px"
+
+#: src/polyx/core/measure/warnings.py:151
 msgid "The image could not be read or is empty."
 msgstr "No se pudo leer la imagen o está vacía."
 
-#: src/polyx/core/measure/warnings.py:150
+#: src/polyx/core/measure/warnings.py:152
 msgid "The nominal plate diameter must be greater than zero."
 msgstr "El diámetro nominal de la placa debe ser mayor que cero."
 
-#: src/polyx/core/measure/warnings.py:151
+#: src/polyx/core/measure/warnings.py:153
 msgid "The plate was not found in the photograph."
 msgstr "No se encontró la placa en la fotografía."
 
-#: src/polyx/core/measure/warnings.py:152
+#: src/polyx/core/measure/warnings.py:154
 msgid "The fine ring fit failed; the scale was taken from Hough and is unreliable."
 msgstr "El ajuste fino del anillo falló; la escala se tomó de Hough y no es fiable."
 
-#: src/polyx/core/measure/warnings.py:155
+#: src/polyx/core/measure/warnings.py:157
 msgid "The adjusted radius is zero."
 msgstr "El radio ajustado es cero."
 
-#: src/polyx/core/measure/warnings.py:156
+#: src/polyx/core/measure/warnings.py:158
 #, python-format
 msgid "Hough differed from the fine fit by %(detour_pct)s%%."
 msgstr "Hough difirió del ajuste fino en %(detour_pct)s%%."
 
-#: src/polyx/core/measure/warnings.py:157
+#: src/polyx/core/measure/warnings.py:159
 #, python-format
 msgid "The plate could not be measured: %(cause)s."
 msgstr "No se pudo medir la placa: %(cause)s."
 
-#: src/polyx/core/measure/warnings.py:158
+#: src/polyx/core/measure/warnings.py:160
 msgid "The manual calibration needs a positive micrometres-per-pixel value."
 msgstr "La calibración manual necesita un valor de micrómetros por píxel positivo."
 
-#: src/polyx/core/measure/warnings.py:161
+#: src/polyx/core/measure/warnings.py:163
+msgid "The image is not listed in the calibration index."
+msgstr "La imagen no figura en el índice de calibración."
+
+#: src/polyx/core/measure/warnings.py:164
 msgid "No mask was produced for the particle."
 msgstr "No se generó ninguna máscara para la partícula."
 
-#: src/polyx/core/measure/warnings.py:162
+#: src/polyx/core/measure/warnings.py:165
 msgid "No contour was found in the particle mask."
 msgstr "No se encontró ningún contorno en la máscara de la partícula."
 
-#: src/polyx/core/measure/warnings.py:163
+#: src/polyx/core/measure/warnings.py:166
 msgid "The particle is too small to measure its shape."
 msgstr "La partícula es demasiado pequeña para medir su forma."
 
-#: src/polyx/core/measure/warnings.py:164
+#: src/polyx/core/measure/warnings.py:167
 msgid "The particle could not be separated from the background."
 msgstr "No se pudo separar la partícula del fondo."
 
-#: src/polyx/core/measure/warnings.py:165
+#: src/polyx/core/measure/warnings.py:168
 #, python-format
 msgid ""
 "The mask extended %(excess)s times its box diagonal and was clipped to the box; it may be a "
@@ -597,12 +660,12 @@ msgstr ""
 "La máscara se salió %(excess)s veces la diagonal de su caja y se recortó a ella; puede ser una "
 "vecina pegada, y la talla se queda corta."
 
-#: src/polyx/core/measure/warnings.py:169
+#: src/polyx/core/measure/warnings.py:172
 #, python-format
 msgid "OpenCV failed while segmenting: %(cause)s"
 msgstr "OpenCV falló al segmentar: %(cause)s"
 
-#: src/polyx/core/measure/warnings.py:173
+#: src/polyx/core/measure/warnings.py:176
 msgid "An unrecognised warning was recorded."
 msgstr "Se registró una advertencia no reconocida."
 

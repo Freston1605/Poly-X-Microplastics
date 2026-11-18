@@ -2,7 +2,9 @@
 
 from .calibration import (
     Calibration,
+    CalibrationIndexError,
     calibrate_from_plate,
+    read_calibration_index,
     resolver,
     summary_batch,
 )
@@ -61,6 +63,7 @@ __all__ = [
     "THINNESS_FOR_GEODESIC",
     "THRESHOLD_CORE",
     "Calibration",
+    "CalibrationIndexError",
     "Method",
     "Morphology",
     "Morphotype",
@@ -82,6 +85,7 @@ __all__ = [
     "measure_detection",
     "measure_detections",
     "path_geodesic",
+    "read_calibration_index",
     "resolver",
     "segment",
     "separate_glued",

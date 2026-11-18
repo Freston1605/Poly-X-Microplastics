@@ -95,7 +95,7 @@ Old tokens are not read by new code. Each table has four columns: old token, can
 | `origenes` | `origins` | `core.measure.calibration.summary_batch` | — |
 | `placa` | `plate` | `core.measure.calibration` origin constants | origin values are compared as literals in the report |
 | `por_clase` | `by_class` | `gui.viewer.window` export summary | — |
-| `recorte` header | `plate` origin | `core.measure.calibration.carry_index` | removed as an input header; see legacy inputs |
+| `recorte` header | `image` header (canonical index) | `core.measure.calibration.read_calibration_index` | legacy header rejected; see legacy inputs |
 | `resumen` | `summary` | `gui.report.registry.SECTIONS` | section id, preset key and anchor |
 | `sucio` | boolean `dirty` | `core.provenance.commit_git` | `true`/`false`, not `si`/`no` |
 | `um_por_px` | `um_per_px` | `core.measure.calibration.Calibration` | matches the CSV and JSONL spelling |
@@ -148,8 +148,8 @@ Old tokens are not read by new code. Each table has four columns: old token, can
 | Old token | Canonical token | Write site | Note |
 |---|---|---|---|
 | `centroids.csv` | removed — not read by new code | `core.detection_run.legacy_reader` | pre-canonical run |
-| `indice.csv`, `calibracion_placas.csv` | removed — not read by new code | external lab scripts | scripts must use the canonical English index format |
-| `recorte`, `placa` CSV headers | removed — not read by new code | `core.measure.calibration.carry_index` | — |
+| `indice.csv`, `calibracion_placas.csv` | rejected by filename | external lab scripts | use `calibration_index.csv` instead; the reader never searches for a file |
+| `recorte`, `placa`, `um_por_px` CSV headers | rejected by header | external lab scripts | use the canonical headers `image,um_per_px` |
 | `si`, `sí` boolean cells | removed — not read by new code | `core.detection_run.schema._bool` | only `true`/`false` remain |
 | `siempre`, `nunca` | removed — not read by new code | `core.detect.tiling.TilingMode.parse` | CLI hidden aliases removed |
 | `summary.json` | removed — not read by new code | `core.detection_run.legacy_reader`, `core.report_simple` | — |
@@ -157,13 +157,24 @@ Old tokens are not read by new code. Each table has four columns: old token, can
 | legacy report anchors `abstract`, `methods`, `calib`, `results`, `models`, `errors`, `compare`, `gallery`, `refs` | removed — not emitted by new code | `gui.report.registry.anchor` | new reports use the English section ids as anchors |
 | old GUI per-model `labels/*.txt` | removed — not read by new code | `core.annotate` legacy path | — |
 
+**Canonical per-image index.** The one accepted index is the English file
+`calibration_index.csv` with the headers `image,um_per_px` (positive numbers),
+keyed by image basename and passed explicitly as
+`--calibrate index --calibration-index PATH`. It supplies one µm/px per photo,
+so crops without a visible dish keep their own scale instead of sharing a
+batch-wide fallback; an image with no row is recorded with
+`image_not_in_index` and no scale. The strict reader
+(`core.measure.calibration.read_calibration_index`) rejects the legacy names
+and headers with an error that names the canonical format, rejects duplicates
+and invalid values, and neither searches for nor rewrites the user's file.
+
 #### Externally owned tokens — catalogue only
 
 Ultralytics writes trainer `results.csv` headers and evaluation `metrics.json` keys such as `mAP50`, `mAP50-95`, `per_class`, `precision`, `recall` and `AP50`. These are outside our control. They stay as they are and get no replacement recommendation.
 
 ### Warning codes
 
-Persisted warnings become stable English codes with structured parameters. Proposed codes: `image_unreadable`, `nominal_diameter_invalid`, `plate_not_found`, `ring_fit_failed`, `zero_adjusted_radius`, `plate_measure_failed`, and the matching shape-warning codes. Numbers and nested causes move to fields such as `detour_pct` and `cause`; no interpolated sentence is stored. The sentence a person reads is an English gettext message chosen at display time. The existing refusal-code pattern in calibration is the precedent.
+Persisted warnings become stable English codes with structured parameters. Proposed codes: `image_unreadable`, `nominal_diameter_invalid`, `plate_not_found`, `ring_fit_failed`, `zero_adjusted_radius`, `plate_measure_failed`, `image_not_in_index` (a photo absent from the per-image index), and the matching shape-warning codes. Numbers and nested causes move to fields such as `detour_pct` and `cause`; no interpolated sentence is stored. The sentence a person reads is an English gettext message chosen at display time. The existing refusal-code pattern in calibration is the precedent.
 
 ### Hard cut
 
