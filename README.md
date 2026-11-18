@@ -202,7 +202,8 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
   the model again. It always opens the original photo and never the annotated
   PNG, which has the boxes painted onto it
 - **Drag and drop** an image or a `.pt` model straight onto the canvas
-- Exports: annotated image + `detecciones.csv` + `resumen.json`
+- Exports: annotated image + `detections.csv` + `viewer_summary.json` in a
+  `viewer_<image>_<timestamp>/` folder (never into a run folder)
 
 ---
 
