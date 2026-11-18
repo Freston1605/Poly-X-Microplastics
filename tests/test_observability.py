@@ -385,6 +385,21 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
 
     log_file = tmp_path / "_polyx_logs" / "detector.jsonl"
     assert log_file.is_file()
-    eventos = [r["event"] for r in _leer_jsonl(tmp_path / "_polyx_logs", "detector")]
-    assert "report.start" in eventos
-    assert "report.finish" in eventos
+    records = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    events = [r["event"] for r in records]
+    assert "report.start" in events
+    assert "report.finish" in events
+
+    # The report timer payload uses English data keys and keeps the envelope.
+    start = next(r for r in records if r["event"] == "report.start")
+    data = start["data"]
+    assert data["n_results"] == 1
+    assert data["images_only"] is None
+    assert data["sections"] == ["summary"]
+    assert "output" in data
+    assert not ({"results_2", "solo_images"} & set(data))
+    assert {"ts", "level", "module", "pid", "thread", "event", "data"} <= set(start)

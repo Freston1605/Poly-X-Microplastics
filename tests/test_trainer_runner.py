@@ -203,7 +203,7 @@ def _correr(st: TrainerState, tmp_path: Path) -> _Recolector:
     return recolector
 
 
-def _eventos(tmp_path: Path) -> list[dict]:
+def _events(tmp_path: Path) -> list[dict]:
     """Los registros JSON de trainer.jsonl (lista vacia si no existe)."""
     ruta = tmp_path / "_polyx_logs" / "trainer.jsonl"
     if not ruta.exists():
@@ -217,8 +217,8 @@ class TestCicloDeVidaFeliz:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz")
         _correr(st, tmp_path)
 
-        eventos = _eventos(tmp_path)
-        assert [e["event"] for e in eventos] == [
+        events = _events(tmp_path)
+        assert [e["event"] for e in events] == [
             "train.config",
             "train.progress",
             "train.progress",
@@ -226,7 +226,7 @@ class TestCicloDeVidaFeliz:
             "train.complete",
         ]
         # Ingles core schema: ts/level/module/event/run_id en TODAS las lineas.
-        for e in eventos:
+        for e in events:
             assert isinstance(e["ts"], str) and e["ts"].endswith("Z")
             assert e["level"] == "INFO"
             assert e["module"] == "polyx.trainer"
@@ -240,24 +240,28 @@ class TestCicloDeVidaFeliz:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz2")
         _correr(st, tmp_path)
 
-        config = _eventos(tmp_path)[0]
+        config = _events(tmp_path)[0]
         assert config["event"] == "train.config"
-        assert config["data"]["modelo"] == "yolov8m"
+        assert config["data"]["model"] == "yolov8m"
         assert config["data"]["epochs"] == 3
         assert config["data"]["batch"] == 8
         assert config["data"]["imgsz"] == 1280
+        # Payload keys are English; event names stay English verb.object.
+        assert "optimizer" in config["data"]
+        legacy = {"modelo", "optimizador", "epoca", "caja", "familias"}
+        assert not (legacy & set(config["data"]))
 
     def test_progress_una_por_epoca_con_senales(self, qapp, tmp_path, deps_falsos):
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz3")
         recolector = _correr(st, tmp_path)
 
-        eventos = _eventos(tmp_path)
-        progreso = [e["data"] for e in eventos if e["event"] == "train.progress"]
-        assert [p["epoca"] for p in progreso] == [1, 2, 3]
-        assert all(p["total"] == 3 for p in progreso)
-        assert all({"precision", "recall", "caja"} <= set(p) for p in progreso)
+        events = _events(tmp_path)
+        progress = [e["data"] for e in events if e["event"] == "train.progress"]
+        assert [p["epoch"] for p in progress] == [1, 2, 3]
+        assert all(p["total"] == 3 for p in progress)
+        assert all({"precision", "recall", "box"} <= set(p) for p in progress)
         # Las metricas suben epoca a epoca (el doble las hace crecientes).
-        assert progreso[-1]["map50"] > progreso[0]["map50"]
+        assert progress[-1]["map50"] > progress[0]["map50"]
 
         # Las senales de Qt llegaron a la misma corrida, en el mismo orden.
         assert recolector.progreso == [(1, 3), (2, 3), (3, 3)]
@@ -272,15 +276,15 @@ class TestCicloDeVidaFeliz:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz4")
         recolector = _correr(st, tmp_path)
 
-        eventos = _eventos(tmp_path)
-        completa = next(e for e in eventos if e["event"] == "train.complete")
-        peso = completa["data"]["weights"]
-        esperado = tmp_path / "runs_train" / "feliz4" / "weights" / "best.pt"
-        assert peso == str(esperado)
-        assert esperado.exists()  # el doble escribio donde el runner busca
-        assert completa["data"]["familias"] == 1
-        assert isinstance(completa["ms"], int)
-        assert recolector.finales == [peso]
+        events = _events(tmp_path)
+        complete = next(e for e in events if e["event"] == "train.complete")
+        weight = complete["data"]["weights"]
+        expected = tmp_path / "runs_train" / "feliz4" / "weights" / "best.pt"
+        assert weight == str(expected)
+        assert expected.exists()  # the fake model wrote where the runner looks
+        assert complete["data"]["families"] == 1
+        assert isinstance(complete["ms"], int)
+        assert recolector.finales == [weight]
 
     def test_mejor_epoca_queda_en_el_estado(self, qapp, tmp_path, deps_falsos):
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="feliz5")
@@ -319,8 +323,8 @@ class TestAborto:
         runner.log_line.connect(recolector.lineas.append)
         runner.run()
 
-        eventos = _eventos(tmp_path)
-        assert [e["event"] for e in eventos] == [
+        events = _events(tmp_path)
+        assert [e["event"] for e in events] == [
             "train.config",
             "train.progress",  # epoca 1 completa: ahi llego la solicitud
             "train.aborted",  # y ahi mismo se honro: epocas 2 y 3 no corren
@@ -333,10 +337,10 @@ class TestAborto:
         assert st._abort is False, "la bandera quedo consumida exacta vez, no clavada"
         assert any("Solicitud de detención" in l for l in recolector.lineas)  # noqa: E741
 
-        abortado = next(e for e in eventos if e["event"] == "train.aborted")
-        assert abortado["data"]["familias_completadas"] == 1
-        assert isinstance(abortado["ms"], int)
-        assert abortado["run_id"] == "yolov8m.pt"
+        aborted = next(e for e in events if e["event"] == "train.aborted")
+        assert aborted["data"]["families_completed"] == 1
+        assert isinstance(aborted["ms"], int)
+        assert aborted["run_id"] == "yolov8m.pt"
 
     def test_keyboard_interrupt_emite_train_aborted_sin_completar(
         self, qapp, tmp_path, deps_falsos
@@ -348,13 +352,13 @@ class TestAborto:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="teclado")
         recolector = _correr(st, tmp_path)
 
-        eventos = _eventos(tmp_path)
-        assert [e["event"] for e in eventos] == ["train.config", "train.aborted"]
+        events = _events(tmp_path)
+        assert [e["event"] for e in events] == ["train.config", "train.aborted"]
         assert recolector.abortados == 1
         assert recolector.finales == []
         assert recolector.fallos == []
         # El aborto por interrupcion no trae ms ni familias_completadas.
-        assert "ms" not in eventos[-1]
+        assert "ms" not in events[-1]
 
 
 # ── Errores: cada fallo tiene su evento y su senal ───────────────────
@@ -367,9 +371,9 @@ class TestErrores:
         st = _estado(_dataset_minimo(tmp_path / "dataset"), epochs=3, run_name="error")
         recolector = _correr(st, tmp_path)
 
-        eventos = _eventos(tmp_path)
-        assert [e["event"] for e in eventos] == ["train.config", "train.error"]
-        error = eventos[-1]
+        events = _events(tmp_path)
+        assert [e["event"] for e in events] == ["train.config", "train.error"]
+        error = events[-1]
         assert error["level"] == "ERROR"
         assert error["module"] == "polyx.trainer"
         assert error["run_id"] == "yolov8m.pt"
@@ -391,7 +395,7 @@ class TestErrores:
 
         assert len(recolector.fallos) == 1
         assert "Ultralytics" in recolector.fallos[0]
-        assert _eventos(tmp_path) == [], "sin ultralytics no se escribio ni train.config"
+        assert _events(tmp_path) == [], "sin ultralytics no se escribio ni train.config"
         assert not (tmp_path / "_polyx_logs" / "trainer.jsonl").exists()
 
     def test_sin_data_yaml_falla_sin_escribir_eventos(self, qapp, tmp_path, deps_falsos):
@@ -400,7 +404,7 @@ class TestErrores:
 
         assert len(recolector.fallos) == 1
         assert "data.yaml" in recolector.fallos[0]
-        assert _eventos(tmp_path) == []
+        assert _events(tmp_path) == []
 
 
 # ── Comparación de familias: v8 + v11 en la misma corrida ────────────
@@ -420,8 +424,8 @@ class TestComparacionDeFamilias:
         assert recolector.progreso == [(1, 2), (2, 2), (1, 2), (2, 2)]
         assert [m.epoch for m in recolector.metricas] == [1, 2, 1, 2]
 
-        eventos = _eventos(tmp_path)
-        assert [e["event"] for e in eventos] == [
+        events = _events(tmp_path)
+        assert [e["event"] for e in events] == [
             "train.config",
             "train.progress",
             "train.progress",
@@ -429,11 +433,11 @@ class TestComparacionDeFamilias:
             "train.progress",
             "train.complete",
         ]
-        completa = next(e for e in eventos if e["event"] == "train.complete")
-        esperado = tmp_path / "runs_train" / "corrida_v11" / "weights" / "best.pt"
-        assert completa["data"]["weights"] == str(esperado)  # la ultima familia manda
-        assert completa["data"]["familias"] == 2
-        assert recolector.finales == [str(esperado)]
-        assert esperado.exists()
+        complete = next(e for e in events if e["event"] == "train.complete")
+        expected = tmp_path / "runs_train" / "corrida_v11" / "weights" / "best.pt"
+        assert complete["data"]["weights"] == str(expected)  # the last family wins
+        assert complete["data"]["families"] == 2
+        assert recolector.finales == [str(expected)]
+        assert expected.exists()
         assert (tmp_path / "runs_train" / "corrida_v8" / "weights" / "best.pt").exists()
         assert any("COMPARACION DE ARQUITECTURAS" in l for l in recolector.lineas)  # noqa: E741
