@@ -21,11 +21,11 @@ from polyx.core import stats
 
 @pytest.fixture(autouse=True)
 def _en_español():
-    """Fija el idioma para las pruebas que miran el TEXTO de la frase.
+    """Fix the language for the tests that assert the TEXT of a sentence.
 
-    Sin esto la prueba depende de lo que el usuario tenga guardado en
-    ~/.polyx_idioma.json, y falla en una maquina configurada en ingles sin que
-    haya nada roto. Ya paso.
+    Without this the test depends on what the user saved in
+    ~/.polyx_preferences.json and fails on a machine configured in English
+    for no real reason. It already happened once.
     """
     import importlib
     import os
