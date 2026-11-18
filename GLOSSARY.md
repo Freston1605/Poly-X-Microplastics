@@ -39,6 +39,16 @@ predicts, measures, matches, draws and persists; its output is a `RunResult`
 and a canonical run folder. There is no second "headless" or "GUI" detection
 engine: the GUI runs this one on a thread and the CLI runs it synchronously.
 
+## Detector adapter
+
+The role an implementation plays at the detection seam: it turns one photo and the run's prediction settings into the detections the run records. A model type names the weights; the thing the run calls is the adapter.
+_Avoid_: detector backend.
+
+## Segmenter
+
+A mask producer that needs prompts — boxes or points — and does not detect on its own. A segmenter is not a detector adapter.
+_Avoid_: detector (for a prompt-driven masker).
+
 ## RunResult
 
 The Qt-free record of a detection run (`polyx/core/detection_run/result.py`):
