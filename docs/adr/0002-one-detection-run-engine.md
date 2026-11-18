@@ -32,7 +32,7 @@ The run folder is canonical and self-describing:
 
 ```text
 <run>/
-  run.json               # schema_version 1: status, params, models,
+  run.json               # schema_version 2: status, params, models,
                          #   calibrations, metrics, images, skipped/error
   detections.csv         # predictions, one row per detection
   <alias>/

@@ -185,8 +185,8 @@ def test_el_resumen_declara_la_dispersion():
     cals = [C.Calibration(31.3, C.ORIGIN_PLATE), C.Calibration(49.7, C.ORIGIN_PLATE)]
     r = C.summary_batch(cals)
     assert r["n"] == 2
-    assert r["variacion"] == pytest.approx(49.7 / 31.3, rel=1e-9)
-    assert r["origenes"] == {C.ORIGIN_PLATE: 2}
+    assert r["variation"] == pytest.approx(49.7 / 31.3, rel=1e-9)
+    assert r["origins"] == {C.ORIGIN_PLATE: 2}
 
 
 def test_el_resumen_ignora_las_no_validas():

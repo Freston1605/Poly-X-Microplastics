@@ -1102,20 +1102,20 @@ def _section_calibration(run) -> str:
         res = summary_batch(list(cals.values()))
         if res["n"]:
             label_2 = {
-                "placa": _("measured on this photograph's Petri dish"),
-                "indice": _("inherited from the crop (calibration index)"),
+                "plate": _("measured on this photograph's Petri dish"),
+                "index": _("inherited from the crop (calibration index)"),
                 "manual": _("entered by hand in Parameters"),
             }
             rows_2 = "".join(
                 f"<tr><td>{label_2.get(o, o)}</td>"
                 f"<td>{ngettext('%(count)s image', '%(count)s images', k) % {'count': k}}</td></tr>"
-                for o, k in sorted(res["origenes"].items())
+                for o, k in sorted(res["origins"].items())
             )
             warning = ""
-            if res["variacion"] > 1.05:
+            if res["variation"] > 1.05:
                 warning = _(
                     "<p><strong>The scale is not shared by the whole batch:</strong> it varies %(var)s× between the nearest and the farthest photograph. That is why each image is converted with its own factor; using a single one for all of them would give sizes off by as much as %(pct)s%%.</p>"
-                ) % {"var": f"{res['variacion']:.2f}", "pct": f"{100 * (res['variacion'] - 1):.0f}"}
+                ) % {"var": f"{res['variation']:.2f}", "pct": f"{100 * (res['variation'] - 1):.0f}"}
             _mic_calib = _average_ic95(
                 [c.um_por_px for c in cals.values() if getattr(c, "valid", False)]
             )
@@ -1130,7 +1130,7 @@ def _section_calibration(run) -> str:
             # calibrated by hand must not claim the scale was fitted to the
             # dish ring, and an index run must not claim it was measured here.
             scale_notes = ""
-            if "placa" in res["origenes"]:
+            if "plate" in res["origins"]:
                 scale_notes += _(
                     "<p>The length reference is the nominal outer diameter of the Petri dish. The radius in pixels comes from a least-squares circle fitted to the sampled ring edge in 720 directions, with outlier rejection; the Hough transform only supplies the approximate centre, because its radius can be off by 12&nbsp;% and that error would enter every reported size in full.</p>"
                 )
@@ -1142,11 +1142,11 @@ def _section_calibration(run) -> str:
                     % {"pared": THICKNESS_WALL_MM, "sesgo": BIAS_MAXIMUM_WALL_PCT}
                     + "</p>"
                 )
-            if "manual" in res["origenes"]:
+            if "manual" in res["origins"]:
                 scale_notes += _(
                     "<p>The scale was entered by hand in Parameters. It is not traced to a length standard, so any variation in shooting distance between photographs goes uncorrected.</p>"
                 )
-            if "indice" in res["origenes"]:
+            if "index" in res["origins"]:
                 scale_notes += _(
                     "<p>The scale is inherited from the calibration index, which associates it with each crop or plate. It is a declared value, not one measured on the photograph.</p>"
                 )
@@ -1155,15 +1155,15 @@ def _section_calibration(run) -> str:
 <table class='data'>
 <tr>{_("<th>µm per pixel</th><th>Value</th>")}</tr>
 <tr>{_("<td>minimum</td>")}<td>{res["min"]:.4f}</td></tr>
-<tr>{_("<td>median</td>")}<td>{res["mediana"]:.4f}</td></tr>
+<tr>{_("<td>median</td>")}<td>{res["median"]:.4f}</td></tr>
 <tr>{_("<td>maximum</td>")}<td>{res["max"]:.4f}</td></tr>
 {_row_average}
 </table>
 {warning}
 {scale_notes}
 {_figure_calibration(run)}"""
-            if res["avisos"]:
-                items = "".join(f"<li>{a}</li>" for a in res["avisos"][:12] if a)
+            if res["warnings"]:
+                items = "".join(f"<li>{a}</li>" for a in res["warnings"][:12] if a)
                 if items:
                     calib_html += f"<p>{_('Issues during calibration:')}</p><ul>{items}</ul>"
     return calib_html

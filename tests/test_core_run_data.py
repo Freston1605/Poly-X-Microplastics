@@ -410,7 +410,7 @@ def test_run_json_records_tiling_plan_and_loads_old_string(tmp_path):
     folder = tmp_path / "old_run"
     folder.mkdir()
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "models": [{"alias": "model_1"}],
         "images": [
             {

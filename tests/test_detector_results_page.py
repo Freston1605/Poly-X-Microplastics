@@ -195,7 +195,7 @@ def test_the_report_calibration_summary_agrees_with_the_page(qapp, tmp_path):
 
     assert page_scales == pytest.approx([2.0, 3.0])
     assert summary["n"] == len(page_scales) == 2
-    assert summary["origenes"] == {ORIGIN_MANUAL: 2}
+    assert summary["origins"] == {ORIGIN_MANUAL: 2}
 
 
 class _FakeSignal:
