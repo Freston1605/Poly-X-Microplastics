@@ -18,7 +18,7 @@ PNG_URI = re.compile(r"data:image/png;base64,[A-Za-z0-9+/=]+")
 
 # The three sections that expose a batch total, an aggregate figure and a
 # per-image table respectively.
-REPORT_SECTIONS = ["resumen", "resultados", "conteo"]
+REPORT_SECTIONS = ["summary", "results", "counts"]
 
 
 def _particle(conf: float, diameter_um: float) -> Instance:

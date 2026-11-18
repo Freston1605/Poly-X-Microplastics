@@ -381,7 +381,7 @@ def test_generate_report_escribe_en_log_dir_aislado(tmp_path):
     )
 
     output = tmp_path / "out.html"
-    report_html.generate_report(st, output, sections=["resumen"])
+    report_html.generate_report(st, output, sections=["summary"])
 
     log_file = tmp_path / "_polyx_logs" / "detector.jsonl"
     assert log_file.is_file()

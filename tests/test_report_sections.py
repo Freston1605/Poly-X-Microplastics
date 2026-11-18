@@ -271,7 +271,7 @@ def test_calibration_body_is_empty_without_calibrations(tmp_path):
     import polyx.gui.report.sections as sections
 
     assert sections.build_calibration(_benign_context(tmp_path)) == ""
-    assert "<h2 id='calib'>" not in BASELINE_TXT
+    assert "<h2 id='calibration'>" not in BASELINE_TXT
 
 
 def test_count_body_uses_the_numbering_placeholder(tmp_path):
@@ -290,7 +290,7 @@ def test_depth_body_is_empty_without_a_depth_stretch(tmp_path):
     import polyx.gui.report.sections as sections
 
     assert sections.build_depth(_benign_context(tmp_path)) == ""
-    assert "<h2 id='profundidad'>" not in BASELINE_TXT
+    assert "<h2 id='depth'>" not in BASELINE_TXT
 
 
 def test_shape_and_folder_bodies_come_from_the_shared_precompute(tmp_path):
@@ -400,12 +400,12 @@ def test_the_assembler_builds_only_the_requested_sections(tmp_path, monkeypatch)
             recording(section_id, render.SECTION_BUILDERS[section_id]),
         )
 
-    render._generate_report_impl(state, tmp_path / "summary.html", sections=["resumen"])
-    assert called == ["resumen"]
+    render._generate_report_impl(state, tmp_path / "summary.html", sections=["summary"])
+    assert called == ["summary"]
 
     called.clear()
-    render._generate_report_impl(state, tmp_path / "errors.html", sections=["errores"])
-    assert called == ["errores"]
+    render._generate_report_impl(state, tmp_path / "errors.html", sections=["errors"])
+    assert called == ["errors"]
     html = (tmp_path / "errors.html").read_text(encoding="utf-8")
     assert "<h2 id='errors'>" not in html
 
@@ -430,15 +430,15 @@ def test_the_assembler_precomputes_only_what_the_sections_need(tmp_path, monkeyp
     monkeypatch.setattr(render, "compute_shape_bodies", recording_bodies)
 
     state = _benign_state(tmp_path)
-    render._generate_report_impl(state, tmp_path / "summary.html", sections=["resumen"])
+    render._generate_report_impl(state, tmp_path / "summary.html", sections=["summary"])
     assert calls == []
 
     calls.clear()
-    render._generate_report_impl(state, tmp_path / "depth.html", sections=["profundidad"])
+    render._generate_report_impl(state, tmp_path / "depth.html", sections=["depth"])
     assert calls == ["lot"]
 
     calls.clear()
-    render._generate_report_impl(state, tmp_path / "shape.html", sections=["forma"])
+    render._generate_report_impl(state, tmp_path / "shape.html", sections=["shape"])
     assert calls == ["lot", "bodies"]
 
 
@@ -447,19 +447,19 @@ def test_include_refs_false_drops_the_references_section(tmp_path):
     from polyx.gui.report_html import generate_report
 
     state = _benign_state(tmp_path)
-    included = generate_report(state, tmp_path / "refs.html", sections=["referencias"]).read_text(
+    included = generate_report(state, tmp_path / "refs.html", sections=["references"]).read_text(
         encoding="utf-8"
     )
-    assert "<h2 id='refs'>" in included
+    assert "<h2 id='references'>" in included
     assert "doi.org/10.1371" in included
 
     excluded = generate_report(
         state,
         tmp_path / "no-refs.html",
-        sections=["referencias"],
+        sections=["references"],
         include_refs=False,
     ).read_text(encoding="utf-8")
-    assert "<h2 id='refs'>" not in excluded
+    assert "<h2 id='references'>" not in excluded
     assert "doi.org/10.1371" not in excluded
 
 
@@ -479,7 +479,7 @@ def test_include_gallery_false_drops_the_gallery_section(tmp_path):
         for row in rows:
             row.pred_path = pred_path
 
-    included = generate_report(state, tmp_path / "gallery.html", sections=["galeria"]).read_text(
+    included = generate_report(state, tmp_path / "gallery.html", sections=["gallery"]).read_text(
         encoding="utf-8"
     )
     assert "<h2 id='gallery'>" in included
@@ -488,7 +488,7 @@ def test_include_gallery_false_drops_the_gallery_section(tmp_path):
     excluded = generate_report(
         state,
         tmp_path / "no-gallery.html",
-        sections=["galeria"],
+        sections=["gallery"],
         include_gallery=False,
     ).read_text(encoding="utf-8")
     assert "<h2 id='gallery'>" not in excluded

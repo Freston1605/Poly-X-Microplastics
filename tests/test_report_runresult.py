@@ -67,7 +67,7 @@ def test_generate_report_accepts_a_run_result(tmp_path):
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path)
-    output = generate_report(run, tmp_path / "report.html", sections=["resumen", "metodos"])
+    output = generate_report(run, tmp_path / "report.html", sections=["summary", "methods"])
 
     html = output.read_text(encoding="utf-8")
     assert "best" in html
@@ -79,7 +79,7 @@ def test_manual_calibration_report_does_not_claim_the_dish_was_measured(tmp_path
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path)
-    html = generate_report(run, tmp_path / "report.html", sections=["calibracion"]).read_text(
+    html = generate_report(run, tmp_path / "report.html", sections=["calibration"]).read_text(
         encoding="utf-8"
     )
 
@@ -93,7 +93,7 @@ def test_completed_and_aborted_runs_are_reportable(tmp_path, status):
     from polyx.gui.report_html import generate_report
 
     run = make_run(tmp_path, status=status)
-    assert generate_report(run, tmp_path / "report.html", sections=["resumen"]).is_file()
+    assert generate_report(run, tmp_path / "report.html", sections=["summary"]).is_file()
 
 
 def test_failed_runs_are_reportable_but_visibly_marked_as_partial(tmp_path):
@@ -102,7 +102,7 @@ def test_failed_runs_are_reportable_but_visibly_marked_as_partial(tmp_path):
 
     run = make_run(tmp_path, status=RunStatus.FAILED)
     run.error = "RuntimeError: inference exploded"
-    output = generate_report(run, tmp_path / "report.html", sections=["resumen"])
+    output = generate_report(run, tmp_path / "report.html", sections=["summary"])
 
     html = output.read_text(encoding="utf-8")
     assert "failed" in html
@@ -147,9 +147,9 @@ def test_assignable_round_trips_through_detections_csv_and_the_report(tmp_path):
             calibration=CalibrationPolicy(mode="none"),
         )
     )
-    live = generate_report(run, tmp_path / "live.html", sections=["metodos"]).read_text("utf-8")
+    live = generate_report(run, tmp_path / "live.html", sections=["methods"]).read_text("utf-8")
     loaded = load_run(run.run_dir)
-    rebuilt = generate_report(loaded, tmp_path / "loaded.html", sections=["metodos"]).read_text(
+    rebuilt = generate_report(loaded, tmp_path / "loaded.html", sections=["methods"]).read_text(
         "utf-8"
     )
 
