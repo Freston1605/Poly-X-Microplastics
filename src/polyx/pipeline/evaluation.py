@@ -10,8 +10,9 @@ score; localisation is reported next to it, never instead of it.
 A segmentation family adds a second currency: overlap is measured as mask IoU
 between rasterized polygons, and the criterion names that explicitly. A
 detection family keeps box IoU. Overlap is only computed between a prediction
-and a ground-truth instance of the same image, so identical geometry in another
-image is a false positive rather than a match.
+and a ground-truth instance of the same image and the same category, so
+identical geometry in another image or under another polymer is a false
+positive rather than a match.
 """
 
 from __future__ import annotations
@@ -137,9 +138,17 @@ def _map(
 
 
 def _best_iou(predictions: list[dict], truth: dict, task: str) -> float:
+    """Best overlap found for one truth, from a prediction of the same class.
+
+    The figure is class-aware: geometry is only an overlap when the predicted
+    polymer is the truth's polymer, the same rule the selection score uses.
+    """
+    category = int(truth.get("category_id", -1))
     best = 0.0
     for prediction in predictions:
         if not _same_image(prediction, truth):
+            continue
+        if int(prediction.get("category_id", -2)) != category:
             continue
         best = max(best, _overlap(prediction, truth, task))
     return best

@@ -566,6 +566,34 @@ def test_masks_are_matched_within_the_same_image(
     assert metrics["selection"]["value"] == pytest.approx((1.0 + 0.5 + 1.0) / 3)
 
 
+def test_mask_iou_is_class_aware_like_its_criterion_says(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An identical mask with the wrong polymer is not an overlap.
+
+    ``_best_iou`` ignored ``category_id``, so a perfect PP prediction against
+    a PET ground truth scored ``mask_iou = 1.0`` while the with-class selection
+    correctly scored zero, contradicting the figure's own class-aware
+    criterion.
+    """
+    store = _imported_store(tmp_path)
+    wrong_class = [
+        [{**detection, "class_id": (detection["class_id"] + 1) % len(NAMES)} for detection in image]
+        for image in _perfect_validation()
+    ]
+
+    code, output = _train_segmentation(tmp_path, store, monkeypatch, [wrong_class])
+
+    assert code == 0
+    metrics = _read(output / "metrics.json")
+    assert metrics["selection"]["value"] == pytest.approx(0.0)
+    assert metrics["figures"]["localisation_score"]["value"] == pytest.approx(1.0)
+    assert metrics["figures"]["mask_iou"]["value"] == pytest.approx(0.0)
+    assert "class-aware" in metrics["figures"]["mask_iou"]["criterion"]
+    for name, class_figures in metrics["per_class"].items():
+        assert class_figures["mask_iou"]["value"] == pytest.approx(0.0), name
+
+
 def test_segmentation_family_requires_the_coco_mask_dataset(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
