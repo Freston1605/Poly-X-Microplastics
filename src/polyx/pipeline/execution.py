@@ -113,6 +113,9 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             {
                 "epoch_completed": result.epoch,
                 "last_checkpoint": str(result.checkpoint),
+                "resume_checkpoint": (
+                    str(result.resume_checkpoint) if result.resume_checkpoint else None
+                ),
                 "best_checkpoint": (
                     str(stopping.best_checkpoint) if stopping.best_checkpoint else None
                 ),

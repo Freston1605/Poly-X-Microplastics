@@ -94,19 +94,25 @@ invents a pass. That is the honest local result, not the cluster smoke test.
 
 Each epoch writes a per-epoch checkpoint under `checkpoints/` on work and
 refreshes `progress.json` with the completed epoch count, the last checkpoint,
-the early-stopping bookkeeping and the resolved protocol. If a job is
-preempted or hits its time limit, resubmit with `resume=true`:
+the early-stopping bookkeeping and the resolved protocol. The progress snapshot
+also names the real Lightning checkpoint at
+`checkpoints/lightning/last.ckpt`, which is what makes a resumed execution
+continue the optimizer, scheduler and epoch loop rather than restart it. If a
+job is preempted or hits its time limit, resubmit with `resume=true`:
 
 ```sh
 python -m polyx.pipeline.command data_yaml=... output_dir=WORK_RUN \
   backend=slurm protocol.epochs=150 resume=true
 ```
 
-The engine refuses to resume without a progress snapshot and refuses to resume
-a different protocol, so a changed methodology can never be mixed into an
-interrupted execution. `tests/test_pipeline_local_tracer.py` proves, through the
-command seam, that an interrupted execution continues from its last checkpoint
-and keeps the earlier best weights.
+The engine refuses to resume without a progress snapshot, refuses to resume a
+different protocol, and refuses a snapshot with no Lightning checkpoint, so a
+changed methodology (or a restart) can never be mixed into an interrupted
+execution. `tests/test_pipeline_local_tracer.py` proves, through the command
+seam, that an interrupted execution continues from its last checkpoint and
+keeps the earlier best weights. The real Lightning loop is proven by
+`tests/test_pipeline_resume_lightning.py`, which interrupts a YOLO and a Mask
+R-CNN run after one epoch and resumes both from a real Lightning checkpoint.
 
 ## Small-artifact sync-back
 

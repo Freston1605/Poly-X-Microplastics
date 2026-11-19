@@ -70,7 +70,8 @@ metrics.json           # named figures, per-class figures, selection criterion
 report.md              # human-readable summary, criteria included
 logs/training.log      # plain-text execution log
 checkpoints/best.pt    # best weights, selected by the with-class score
-checkpoints/epoch_NNN.pt # one checkpoint per epoch
+checkpoints/epoch_NNN.pt # one family-native export per epoch
+checkpoints/lightning/last.ckpt # real Lightning checkpoint: weights, optimizer, scheduler, epoch
 ```
 
 `provenance.json` always names the dataset source (`yolo_boxes` or
@@ -197,8 +198,8 @@ The two segmentation families are proven interchangeable, and the model is the
 only variable:
 
 - `test_both_segmentation_families_resolve_the_same_protocol` asserts that
-  `resolved_protocol.yaml` is byte-identical across a YOLO-seg run and a
-  Mask R-CNN run over the same dataset;
+  `resolved_protocol.yaml` parses to the same mapping across a YOLO-seg run and
+  a Mask R-CNN run over the same dataset (YAML equality, not byte equality);
 - `test_the_shared_evaluator_scores_both_segmentation_families_identically`
   asserts the same figure names, criteria and operating-point scores from
   identical prediction geometry;
@@ -226,6 +227,16 @@ detector's own loss dictionary summed into one Lightning loss, and the same
 optimizer and schedule. Its per-epoch checkpoints hold the model state dict and
 the validation hook polygonizes the predicted masks into the COCO currency the
 shared evaluator already consumes.
+
+At the end of every epoch each adapter writes two kinds of checkpoint. The
+family-native export (`epoch_NNN.pt`, and `best.pt` restored from it) keeps its
+historical shape for compatibility. `checkpoints/lightning/last.ckpt` is a real
+Lightning checkpoint written by `Trainer.save_checkpoint`: it carries the
+weights, optimizer, scheduler and epoch progress, and it is the file a resumed
+execution hands to `Trainer.fit(ckpt_path=...)`. An Ultralytics `.pt` is not a
+Lightning checkpoint and is never used for resume. If a progress snapshot has
+no Lightning checkpoint (one written before this behaviour existed), the
+execution refuses to resume instead of silently restarting the epoch loop.
 
 On a machine without a GPU, set `protocol.amp.enabled=false`: FP16 AMP is a GPU
 request recorded in the protocol, and Lightning cannot run FP16 mixed precision

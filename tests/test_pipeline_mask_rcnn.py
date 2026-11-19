@@ -49,6 +49,8 @@ class _FakeDetector:
     prediction_sets: list[list[list[dict]]] = []
     instances: list[object] = []
     seen_targets: list[list[dict]] = []
+    inference_calls = 0
+    fail_on_inference: int | None = None
 
     @classmethod
     def build(cls) -> object:
@@ -58,6 +60,7 @@ class _FakeDetector:
             def __init__(self) -> None:
                 super().__init__()
                 self.scale = torch.nn.Parameter(torch.ones(1))
+                self.first_scale: float | None = None
                 # The adapter sizes the pretrained heads for the dataset's
                 # classes. A real torchvision model exposes these attributes.
                 self.roi_heads = types.SimpleNamespace(
@@ -72,6 +75,8 @@ class _FakeDetector:
 
             def forward(self, images: list, targets: list | None = None) -> object:
                 if targets is not None:
+                    if self.first_scale is None:
+                        self.first_scale = float(self.scale)
                     _FakeDetector.seen_targets.append(
                         [
                             {
@@ -92,6 +97,10 @@ class _FakeDetector:
                         "loss_objectness": total,
                         "loss_rpn_box_reg": total,
                     }
+                _FakeDetector.inference_calls += 1
+                if _FakeDetector.fail_on_inference == _FakeDetector.inference_calls:
+                    # A preemption after the previous epoch's checkpoint.
+                    raise RuntimeError("simulated preemption during inference")
                 return [
                     _outputs(detections, image)
                     for detections, image in zip(
@@ -140,7 +149,14 @@ class _FakeTrainer:
         self.current_epoch = 0
 
     def fit(self, module: object, ckpt_path: object = None) -> None:
-        for completed, epoch in enumerate(range(self.max_epochs), start=1):
+        module.trainer = self
+        start_epoch = 0
+        if ckpt_path is not None:
+            start_epoch = int(Path(ckpt_path).read_text(encoding="utf-8").split(":")[-1]) + 1
+        self.current_epoch = start_epoch
+        for completed, epoch in enumerate(
+            range(start_epoch, self.max_epochs), start=start_epoch + 1
+        ):
             self.current_epoch = epoch
             module._epoch = epoch
             for index, batch in enumerate(module.val_dataloader()):
@@ -153,6 +169,12 @@ class _FakeTrainer:
                 break
             if self.interrupt_after is not None and completed >= self.interrupt_after:
                 raise RuntimeError("simulated preemption after the epoch checkpoint")
+
+    def save_checkpoint(self, path: object) -> None:
+        """Stand-in for Lightning's checkpoint writer; names the epoch it holds."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"lightning-checkpoint:{self.current_epoch}", encoding="utf-8")
 
 
 class _FakeCallback:
@@ -170,6 +192,8 @@ def _install_fakes(
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.factory_calls = []
+    _FakeDetector.inference_calls = 0
+    _FakeDetector.fail_on_inference = None
     _FakeTrainer.interrupt_after = interrupt_after
     lightning = types.ModuleType("lightning")
     lightning.LightningModule = _FakeLightningModule
@@ -486,6 +510,7 @@ def test_a_preempted_mask_rcnn_run_resumes_from_the_last_checkpoint(
     assert progress["epochs_completed"] == 1
     resumed_from = progress["last_checkpoint"]
     assert Path(resumed_from).is_file()
+    assert Path(progress["resume_checkpoint"]).is_file()
     first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
     assert not (output / "training_state.json").exists()
 

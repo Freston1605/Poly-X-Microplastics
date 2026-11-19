@@ -53,12 +53,19 @@ EpochCallback = Callable[["EpochResult"], bool]
 
 @dataclass
 class EpochResult:
-    """What one validation epoch hands back to the shared training engine."""
+    """What one validation epoch hands back to the shared training engine.
+
+    ``checkpoint`` is the family-native export kept for compatibility and for
+    best-weight restoration; ``resume_checkpoint`` is the real Lightning
+    checkpoint holding the weights, optimizer, scheduler and epoch progress a
+    later invocation needs to continue this execution.
+    """
 
     epoch: int
     predictions: list[dict]
     adapter_figures: dict
     checkpoint: Path
+    resume_checkpoint: Path | None = None
 
 
 @dataclass
@@ -130,6 +137,27 @@ def _augmentation_report(protocol: Protocol, supported: frozenset[str]) -> dict[
         "skipped": [name for name in declared if name not in supported],
         "family_specific": False,
     }
+
+
+def _lightning_resume_path(resume: ResumeState | None) -> Path | None:
+    """The real Lightning checkpoint a resumed fit must restore from.
+
+    A progress snapshot created before Lightning checkpoints existed has no
+    such path; resuming it with restored weights only would silently restart
+    the epoch loop, so the execution fails loudly instead.
+    """
+    if resume is None:
+        return None
+    checkpoint = resume.resume_checkpoint
+    if checkpoint is None:
+        raise RuntimeError(
+            "the progress snapshot has no Lightning checkpoint; resume cannot "
+            "continue the optimizer and epoch state"
+        )
+    path = Path(checkpoint)
+    if not path.is_file():
+        raise RuntimeError(f"the Lightning checkpoint named by the snapshot is missing: {path}")
+    return path
 
 
 def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
@@ -558,17 +586,21 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
         protocol = config.protocol
         device = config.backend.device
         seed_everything(protocol.seed, workers=True)
-        resumed_checkpoint = resume.last_checkpoint if resume is not None else None
-        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
-            model = YOLO(str(resumed_checkpoint))
-        else:
-            model = YOLO(config.family.weights)
+        resumed_checkpoint = _lightning_resume_path(resume)
+        # Always start from the family's declared pretrained weights and let
+        # Lightning restore the execution's own checkpoint. An Ultralytics .pt
+        # is not a Lightning checkpoint, so handing it to ``Trainer.fit`` would
+        # fail looking for Lightning's bookkeeping.
+        model = YOLO(config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
         # dataset decides the class count, so the Ultralytics network is rebuilt
         # from its yaml and the pretrained weights are transferred into it.
         model.model = _rebuild_network(model.model, config.family.task, len(dataset.class_names))
         checkpoint_dir = Path(run_dir) / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        resume_dir = checkpoint_dir / "lightning"
+        resume_dir.mkdir(parents=True, exist_ok=True)
+        lightning_checkpoint = resume_dir / "last.ckpt"
         predict = self._predictions
 
         class _YoloLightningModule(LightningModule):  # type: ignore[misc,valid-type]
@@ -697,6 +729,14 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 epoch = int(getattr(self, "current_epoch", 0))
                 self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
                 model.save(str(self.checkpoint_path))
+                # A real Lightning checkpoint carries the weights, optimizer,
+                # scheduler and epoch progress; the family-native export above
+                # stays for compatibility and best-weight restoration.
+                resume_checkpoint: Path | None = None
+                current_trainer = getattr(self, "trainer", None)
+                if current_trainer is not None:
+                    current_trainer.save_checkpoint(str(lightning_checkpoint))
+                    resume_checkpoint = lightning_checkpoint
                 # The engine scores this epoch and decides whether to stop.
                 # Lightning calls callbacks before the module hook, so the
                 # decision is made here and the callback only forwards the flag
@@ -706,16 +746,16 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     predictions=list(self.coco_predictions),
                     adapter_figures=dict(self.adapter_figures),
                     checkpoint=Path(self.checkpoint_path),
+                    resume_checkpoint=resume_checkpoint,
                 )
                 if on_epoch(result):
                     self.stop_requested = True
-                    trainer = getattr(self, "trainer", None)
-                    if trainer is not None:
-                        trainer.should_stop = True
+                    if current_trainer is not None:
+                        current_trainer.should_stop = True
 
         trainer, precision = _build_trainer(config, run_dir)
         fit_kwargs: dict[str, Any] = {}
-        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
+        if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
         trainer.fit(_YoloLightningModule(), **fit_kwargs)
         return FitResult(
@@ -788,14 +828,16 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
         model = _torchvision_detector(
             config.family.weights, len(dataset.class_names), protocol.image_size
         )
-        resumed_checkpoint = resume.last_checkpoint if resume is not None else None
-        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
-            saved = torch.load(resumed_checkpoint, map_location="cpu", weights_only=True)
-            state = saved.get("state_dict", saved) if isinstance(saved, dict) else saved
-            model.load_state_dict(state)
+        # The checkpoint's weights, optimizer, scheduler and epoch progress are
+        # restored by Lightning from its own checkpoint; a pre-fix snapshot has
+        # none, and the helper refuses it instead of restarting the loop.
+        resumed_checkpoint = _lightning_resume_path(resume)
 
         checkpoint_dir = Path(run_dir) / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        resume_dir = checkpoint_dir / "lightning"
+        resume_dir.mkdir(parents=True, exist_ok=True)
+        lightning_checkpoint = resume_dir / "last.ckpt"
         store = Path(dataset.source_path)
 
         class _MaskRcnnLightningModule(LightningModule):  # type: ignore[misc,valid-type]
@@ -873,28 +915,33 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                     {"state_dict": self.net.state_dict(), "epoch": epoch},
                     self.checkpoint_path,
                 )
+                # The family-native export above keeps its historical shape;
+                # resume uses a real Lightning checkpoint so the optimizer,
+                # scheduler and epoch loop continue instead of restarting.
+                resume_checkpoint: Path | None = None
+                current_trainer = getattr(self, "trainer", None)
+                if current_trainer is not None:
+                    current_trainer.save_checkpoint(str(lightning_checkpoint))
+                    resume_checkpoint = lightning_checkpoint
                 result = EpochResult(
                     epoch=epoch,
                     predictions=list(self.coco_predictions),
                     adapter_figures={},
                     checkpoint=Path(self.checkpoint_path),
+                    resume_checkpoint=resume_checkpoint,
                 )
                 self.coco_predictions = []
                 # The engine scores this epoch and decides whether to stop.
                 if on_epoch(result):
                     self.stop_requested = True
-                    trainer = getattr(self, "trainer", None)
-                    if trainer is not None:
-                        trainer.should_stop = True
+                    if current_trainer is not None:
+                        current_trainer.should_stop = True
 
         trainer, precision = _build_trainer(config, run_dir)
-        # The per-epoch checkpoint holds the model state dict, not a Lightning
-        # checkpoint; its weights were restored above. Handing that file to
-        # ``Trainer.fit(ckpt_path=...)`` would make Lightning fail looking for
-        # its own bookkeeping, so the loop restarts with restored weights and
-        # the engine's progress snapshot keeps selection and early stopping
-        # continuous.
-        trainer.fit(_MaskRcnnLightningModule())
+        fit_kwargs: dict[str, Any] = {}
+        if resumed_checkpoint is not None:
+            fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
+        trainer.fit(_MaskRcnnLightningModule(), **fit_kwargs)
         return FitResult(
             precision=precision,
             epochs_completed=int(trainer.current_epoch),
