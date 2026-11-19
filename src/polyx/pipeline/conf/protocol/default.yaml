@@ -20,7 +20,8 @@ augmentation_subset:
 # execution refuses them so the model stays the only variable.
 exploratory_augmentation: []
 benchmark: true
-# Magnitudes every family applies identically (Ultralytics reference values).
+# Magnitudes every family applies identically, with Ultralytics' RandomHSV and
+# RandomFlip arithmetic. They are protocol values, not a family's defaults.
 hsv_h: 0.015
 hsv_s: 0.4
 hsv_v: 0.4

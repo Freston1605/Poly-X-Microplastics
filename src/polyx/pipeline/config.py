@@ -89,9 +89,10 @@ class Protocol:
     augmentation_subset: list[str] = field(default_factory=lambda: ["hsv", "flip_lr"])
     exploratory_augmentation: list[str] = field(default_factory=list)
     benchmark: bool = True
-    # Magnitudes both families apply identically. The HSV defaults are the
-    # Ultralytics reference values, so the torchvision sibling reproduces
-    # them instead of choosing its own.
+    # Magnitudes both families apply identically. The arithmetic is
+    # Ultralytics' ``RandomHSV``/``RandomFlip``, so the torchvision sibling
+    # reproduces it instead of choosing its own; the numbers are the
+    # protocol's own values, not either family's defaults.
     hsv_h: float = 0.015
     hsv_s: float = 0.4
     hsv_v: float = 0.4
