@@ -786,9 +786,9 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     current_trainer.save_checkpoint(str(lightning_checkpoint))
                     resume_checkpoint = lightning_checkpoint
                 # The engine scores this epoch and decides whether to stop.
-                # Lightning calls callbacks before the module hook, so the
-                # decision is made here and the callback only forwards the flag
-                # to loop implementations that do not expose ``self.trainer``.
+                # Setting ``trainer.should_stop`` ends the loop after this
+                # epoch; the registered callback is the same decision for the
+                # validation-driven sibling adapter.
                 result = EpochResult(
                     epoch=epoch,
                     predictions=list(self.coco_predictions),
