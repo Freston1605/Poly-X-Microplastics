@@ -89,6 +89,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   every section has one uniform builder. Rendered reports are byte-identical.
 - `ruff-pre-commit` bumped to `v0.17.2` to match the locked ruff version.
 
+### Security
+- `hydra-core` 1.3.2 → 1.3.8 and `lightning` 2.5.2 → 2.6.6, clearing the
+  advisories that failed `dependency-review` (GHSA-2cp2-2r3c-7p7r and
+  GHSA-c3wx-c55w-pxjq for Hydra; GHSA-qqmf-gpg7-g8gw, PYSEC-2026-3624 and
+  PYSEC-2026-3972 for Lightning). `hydra-optuna-sweeper` 1.3.0 still requires
+  `hydra-core>=1.1.0.dev7` and `optuna<3.0.0`, so the Optuna 2.10.1 pin is
+  unchanged.
+
 ## [2.0.0] - 2026-10-26
 
 ### Added
