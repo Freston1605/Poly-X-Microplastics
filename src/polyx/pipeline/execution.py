@@ -144,6 +144,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         "framework": fit.framework,
         "weights": fit.weights,
         "epochs_completed": fit.epochs_completed,
+        "augmentation": fit.augmentation,
         "early_stopping": stopping.to_dict(fit.epochs_completed),
         "best_checkpoint": str(best_artifact),
     }
