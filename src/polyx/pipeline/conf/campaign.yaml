@@ -11,8 +11,10 @@ defaults:
   - family: yolo_detection
   - _self_
 
-# Required: the directory that holds one execution per family.
-campaign_root: ""
+# Required: the directory that holds one execution per family. Declared as a
+# mandatory value so Hydra refuses the multirun during composition, before it
+# can create a `hydra/` directory or `multirun.yaml` in the working directory.
+campaign_root: ???
 # Both training sources may be supplied together, because a detection family
 # consumes the YOLO box dataset and a segmentation family consumes the canonical
 # COCO mask dataset. The family's task decides which one it uses.

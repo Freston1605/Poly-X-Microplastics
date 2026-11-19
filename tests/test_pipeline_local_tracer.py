@@ -416,6 +416,28 @@ def test_interrupted_execution_resumes_from_the_last_checkpoint(
     assert "resume from epoch=2" in (output / "logs" / "training.log").read_text(encoding="utf-8")
 
 
+def test_restore_best_false_is_refused_instead_of_crashing_after_training(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The unsupported flag is validated before the first epoch, not after."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "no-restore"
+
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+        "protocol.early_stopping.restore_best=false",
+    )
+
+    assert code == 1
+    assert "restore_best" in capsys.readouterr().err
+    assert not (output / "training_state.json").exists()
+
+
 def test_resume_without_progress_fails_loudly(
     tmp_path: Path,
     tiny_dataset: Path,

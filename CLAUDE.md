@@ -711,6 +711,57 @@ measured one.
 
 ---
 
+## 🧪 Headless training pipeline (src/polyx/pipeline/)
+
+The pipeline is the headless sibling of the Trainer, not a replacement for it.
+One command is the seam: `polyx-pipeline` (`src/polyx/pipeline/command.py`)
+composes `conf/` with Hydra, validates it into `ExecutionConfig` and either runs
+one execution, imports a COCO mask export or runs an Optuna sweep. The GUI
+Trainer and its native training wrapper are untouched by this path.
+
+- One PyTorch Lightning loop (`adapters.py`) trains every family. The
+  Ultralytics adapters reuse the YOLO neural module and dataloader; Mask R-CNN
+  is the sibling torchvision adapter under the same contract.
+- `protocol` in `conf/protocol/default.yaml` is framework-neutral and consumed
+  unchanged: split, seed, epochs, batch, image size, optimizer, LR, momentum,
+  weight decay, schedule, warmup, the benchmark augmentation subset, AMP and
+  early stopping.
+- `evaluation.py` is the only scorer. It consumes COCO predictions and names
+  the criterion on every figure; selection is the with-class score and
+  localisation is reported beside it. `mask_iou` is class-aware.
+- `execution.py` owns audit, provenance, early stopping, best-weight
+  restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
+  `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
+  `report.md`, `logs/`, `checkpoints/`). `best.pt` is the kept checkpoint.
+- `resume.py` reads the per-epoch progress snapshot; the best epoch's metrics
+  travel with it, and the Lightning checkpoint continues weights, optimizer,
+  scheduler and epoch state. A different protocol is refused.
+- COCO instance JSON is the canonical mask format (`coco.py`,
+  `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
+  ground truth; the benchmark reference is human COCO annotations only.
+- `sweep.py` is the in-process driver over the same `hydra.sweeper` node;
+  `sweep_app.py` is the real Optuna multirun and `sweep_best.py` writes
+  `sweep_best.json` after it. The study is SQLite on the work filesystem.
+- `weights.py` resolves `family.weights` to a staged file and verifies its
+  SHA-256 against the manifest before a framework sees it; absent or unverified
+  pins fail closed.
+- `campaign_app.py` is the multi-family multirun; `family.run_name` names the
+  per-execution directory, so two detection variants can share one root.
+
+## 🖥 HPC glue (src/polyx/hpc/)
+
+Small, cluster-facing helpers with no framework imports: `layout.py` resolves
+work/scratch/user-data from `POLYX_HPC_*` (never committed paths),
+`hashing.py` reads sha256sum manifests, `weights.py` fetches and verifies them,
+`stage_weights.py` is the pre-job staging step, `environment.py` and
+`check_env.py` prove the pinned V100 stack, and `sync_back.py` copies only the
+agreed small artifacts back to the work filesystem. The job scripts in
+`cluster/` and the definitions in `container/` are documented in
+`docs/hpc.md`, `docs/hpc-environment.md` and `docs/hpc-submission.md`; the
+cluster smoke job and campaign remain pending until OCÉANO access exists.
+
+---
+
 ## 🔑 Key classes
 
 ### `Detection` (src/polyx/core/detect/yolo.py)

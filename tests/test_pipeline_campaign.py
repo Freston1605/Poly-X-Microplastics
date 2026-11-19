@@ -213,6 +213,34 @@ def test_resuming_a_campaign_skips_finished_families_and_starts_the_missing_ones
     assert set(sync_campaign(root, tmp_path / "local")) == set(FAMILIES)
 
 
+def test_two_detection_variants_coexist_in_one_campaign(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """v8 and v11 detection differ by run_name, not only by weights."""
+    data_yaml = build_tiny_dataset(tmp_path / "detection")
+    store = _imported_store(tmp_path)
+    root = tmp_path / "campaign"
+    _install_framework_doubles(monkeypatch)
+
+    _run_campaign(
+        monkeypatch,
+        root,
+        data_yaml,
+        store,
+        tmp_path / "scratch",
+        families=("yolo_detection", "yolo_detection_v11"),
+    )
+
+    v8 = _read(root / "yolo_detection" / "training_state.json")
+    v11 = _read(root / "yolo_detection_v11" / "training_state.json")
+    # Both jobs use the same adapter; only the run name and weights change.
+    assert v8["family"]["name"] == v11["family"]["name"] == "yolo_detection"
+    assert v8["weights"] != v11["weights"]
+    assert v11["weights"] == "yolo11n.pt"
+    assert (root / "hydra" / "yolo_detection_v11").is_dir()
+    assert (root / "yolo_detection_v11" / "metrics.json").is_file()
+
+
 def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -223,6 +251,7 @@ def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
 
     from polyx.pipeline import campaign_app
 
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -232,10 +261,13 @@ def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
             f"data_yaml={data_yaml}",
             f"coco_dataset={store}",
             f"family={','.join(FAMILIES)}",
-            f"hydra.sweep.dir={tmp_path / 'nowhere'}",
             "protocol.epochs=1",
         ],
     )
     with pytest.raises(SystemExit):
         campaign_app.campaign()
     assert "campaign_root" in capsys.readouterr().err.lower()
+    # Hydra never wrote anything into the working directory.
+    assert not (tmp_path / "hydra").exists()
+    assert not (tmp_path / "multirun.yaml").exists()
+    assert not (tmp_path / "outputs").exists()

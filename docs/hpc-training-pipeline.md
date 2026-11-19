@@ -28,6 +28,14 @@ selection metric and the criterion it was computed under, then the
 localisation figure and its criterion beside it. A non-zero exit status means
 the execution failed; the printed error names the reason.
 
+Those terminal lines are **machine tokens** (`OUTPUT:`, `CHECKPOINT:`,
+`SELECTION:`, `CRITERION:`, `STUDY:`, `BEST_VALUE:` and the like), parsed by
+job scripts and logs exactly as they are printed. They are deliberately not
+wrapped in `_()`: they are not interface copy and a translated key could not be
+consumed by a script. The artifact text (`report.md`, figure criteria, state
+keys) is English by the project's source-language rule, and human-facing GUI
+copy keeps going through the translation catalog.
+
 ## Running a campaign
 
 A campaign is one Hydra multirun whose jobs are the model families. Each job

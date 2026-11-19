@@ -1,0 +1,9 @@
+# YOLO v11 detection variant of the same adapter. `name` selects the adapter,
+# `run_name` names the campaign directory, so v8 and v11 detection can sit in
+# one campaign without overwriting each other's artifacts. Stage the weights
+# and pin their digest like any other family weight.
+name: yolo_detection
+run_name: yolo_detection_v11
+framework: ultralytics
+weights: yolo11n.pt
+task: detect

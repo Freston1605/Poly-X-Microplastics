@@ -13,7 +13,7 @@
 ### From PyPI (headless engines + CLIs)
 
 ```bash
-pip install polyx-microplastics            # core + CLIs: polyx-train, polyx-detect, polyx-eval, polyx-report
+pip install polyx-microplastics            # core + CLIs: polyx-train, polyx-detect, polyx-eval, polyx-report, polyx-pipeline
 pip install polyx-microplastics[gui]       # + the Qt GUI (Launcher, Detector, Trainer, Labeller, Viewer)
 polyx-download-models                      # fetch the default .pt weights into the user data dir
 ```
@@ -57,6 +57,7 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
 | 3 | 🎯 **Trainer** | ✅ Working | YOLO v8/v11 training with live curves |
 | 4 | 🏷 **Labeller** | ✅ Working | Interactive YOLO annotation with automatic pre-labelling |
 | 5 | 📐 **Viewer** | ✅ Working | Single-image inspection, calibration and particle-by-particle review |
+| 6 | 🧪 **Pipeline** | ✅ Working | Headless family-agnostic training: `polyx-pipeline` (execution, COCO import, Optuna sweep) |
 
 ---
 

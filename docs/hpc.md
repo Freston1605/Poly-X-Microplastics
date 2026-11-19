@@ -39,9 +39,14 @@ The three first-wave families and the source each consumes:
 
 | Family | Framework | Dataset source |
 | --- | --- | --- |
-| `yolo_detection` | Ultralytics YOLO detection | `data_yaml` (YOLO box labels) |
+| `yolo_detection` | Ultralytics YOLO detection (v8-n) | `data_yaml` (YOLO box labels) |
+| `yolo_detection_v11` | Ultralytics YOLO detection (v11-n) | `data_yaml` (YOLO box labels) |
 | `yolo_segmentation` | Ultralytics YOLO-seg | `coco_dataset` (canonical COCO masks) |
 | `mask_rcnn` | torchvision | `coco_dataset` (canonical COCO masks) |
+
+The two detection entries share the `yolo_detection` adapter and differ only in
+`run_name` and the staged weights; select either or both in the `family=`
+multirun list.
 
 A campaign job carries both sources; the family's task decides which one it
 uses. A single-execution invocation still refuses the wrong source for the
@@ -155,6 +160,30 @@ series and the Lightning checkpoint stay on the cluster. The small artifacts
 have a 1 MB cap; the kept checkpoint has its own larger cap. An oversized
 artifact is an error, never a truncated copy. `polyx.hpc.sync_back` implements
 this allow-list; `--campaign` iterates the family directories.
+
+### From the login node to your machine
+
+`sync_back` stops at the cluster's work filesystem: the job writes
+`<work>/results/local/<campaign>/`, which survives quotas and a preemption but
+is still on OCÉANO. The final transfer is a manual step from your own machine,
+run **outside** the cluster session:
+
+```sh
+rsync -av <login-node>:<work>/results/local/<campaign>/ ./results/<campaign>/
+```
+
+Only the same small-artifact tree described above moves; datasets, environments
+and the per-epoch checkpoint series never leave the cluster. The account and
+host come from your SSH configuration, not from a committed file.
+
+## Container-first jobs
+
+If `POLYX_CONTAINER` is set, `cluster/smoke_job.sh` and
+`cluster/campaign_job.sh` run every Python command through
+`apptainer exec --nv "$POLYX_CONTAINER"`. The definition is built from the
+pinned base in `container/` with the locked environment inside; see
+[the environment page](hpc-environment.md). Without it, the job assumes a
+pre-activated conda plus uv environment on the node — the documented fallback.
 
 ## Verification status
 
