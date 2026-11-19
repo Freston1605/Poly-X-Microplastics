@@ -14,7 +14,6 @@ from typing import Any
 
 from polyx.core.paths import ROOT
 from polyx.core.provenance import commit_git
-from polyx.core.quality.dataset_audit import audit_dataset
 from polyx.pipeline.adapters import EpochResult, build_adapter
 from polyx.pipeline.artifacts import (
     ArtifactLayout,
@@ -24,7 +23,6 @@ from polyx.pipeline.artifacts import (
     write_yaml,
 )
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_dict
-from polyx.pipeline.dataset import coco_ground_truth, dataset_hashes
 from polyx.pipeline.evaluation import SharedEvaluator
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.training import EarlyStoppingState
@@ -53,13 +51,24 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             f"checkpoint={resume_state.last_checkpoint}",
         )
 
-    audit = audit_dataset(config.data_yaml)
+    adapter = build_adapter(config.family)
+    prepared = adapter.prepare(config)
+    audit = prepared.audit
     if not audit.ok:
         problems = [f"{finding.title}: {finding.detail}" for finding in audit.findings]
         raise RuntimeError("dataset audit failed: " + "; ".join(problems))
+    if prepared.conversion is not None:
+        append_log(
+            layout.training_log,
+            "dataset=coco_instances "
+            f"conversion={prepared.conversion['root']} "
+            f"cache_key={prepared.conversion['cache_key']} "
+            f"cached={str(prepared.conversion['cached']).lower()}",
+        )
 
-    ground_truth = coco_ground_truth(config.data_yaml, config.protocol.split)
-    evaluator = SharedEvaluator(ground_truth, config.protocol.split)
+    evaluator = SharedEvaluator(
+        prepared.ground_truth, config.protocol.split, task=config.family.task
+    )
     stopping = EarlyStoppingState(asdict(config.protocol.early_stopping))
     if resume_state is not None:
         stopping.load_state(
@@ -114,7 +123,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         return decision.stop
 
     adapter = build_adapter(config.family)
-    fit = adapter.fit(config, layout.root, on_epoch, resume=resume_state)
+    fit = adapter.fit(config, layout.root, prepared, on_epoch, resume=resume_state)
 
     if stopping.best_checkpoint is None and first_checkpoint is not None:
         stopping.update(0.0, 0, first_checkpoint)
@@ -148,11 +157,17 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
 
     provenance: dict[str, Any] = {
         "git": commit_git(ROOT),
-        "dataset_hashes": dataset_hashes(config.data_yaml),
+        "dataset_hashes": prepared.hashes,
         "dataset_audit": asdict(audit),
-        "data_yaml": str(config.data_yaml),
+        "data_yaml": str(config.data_yaml) if config.data_yaml is not None else "",
+        "dataset_source": {
+            "kind": prepared.source_kind,
+            "path": str(prepared.source_path),
+        },
         "dataset_name": config.dataset_name,
     }
+    if prepared.conversion is not None:
+        provenance["conversion"] = prepared.conversion
     write_json(provenance, layout.provenance)
     write_report(layout.report, final_metrics, training_state, config_to_dict(config))
     append_log(

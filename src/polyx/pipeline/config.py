@@ -9,6 +9,8 @@ byte-for-byte as the adapter consumed it.
 
 from __future__ import annotations
 
+import os
+import tempfile
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -20,6 +22,22 @@ from omegaconf import OmegaConf
 from polyx.core.paths import SEGMENTATION_DATASETS_DIR
 
 CONF_DIR = Path(__file__).resolve().parent / "conf"
+
+#: The two tasks an adapter can execute. Detection consumes YOLO box labels;
+#: segmentation consumes the canonical COCO mask dataset.
+_TASKS = ("detect", "segment")
+
+
+def default_scratch_dir() -> Path:
+    """Scratch root for ephemeral per-family conversion intermediates.
+
+    ``POLYX_HPC_SCRATCH`` is where the cluster exposes scratch; without it the
+    system temporary directory is used for local debugging. Nothing written
+    there is an artifact: a missing cache is simply rebuilt.
+    """
+    override = os.environ.get("POLYX_HPC_SCRATCH")
+    base = Path(override).expanduser() if override else Path(tempfile.gettempdir())
+    return (base / "polyx" / "pipeline").resolve()
 
 
 @dataclass
@@ -83,12 +101,13 @@ class Family:
 class ExecutionConfig:
     """A fully resolved training execution or a COCO dataset import.
 
-    When ``coco_import`` is set the command imports and audits a CVAT COCO
-    export as the canonical segmentation training dataset; ``data_yaml`` is
-    then unused. Otherwise the fields describe one headless training execution.
+    Exactly one dataset source is set. ``data_yaml`` declares a YOLO box
+    dataset for a detection family; ``coco_dataset`` points at a versioned COCO
+    mask tool output for a segmentation family; ``coco_import`` imports and
+    audits a CVAT export as the canonical segmentation training dataset.
     """
 
-    data_yaml: Path
+    data_yaml: Path | None
     output_dir: Path
     protocol: Protocol
     backend: Backend
@@ -96,7 +115,9 @@ class ExecutionConfig:
     dataset_name: str = "polyx"
     resume: bool = False
     coco_import: Path | None = None
+    coco_dataset: Path | None = None
     dataset_root: Path = SEGMENTATION_DATASETS_DIR
+    scratch_dir: Path = field(default_factory=default_scratch_dir)
 
 
 def _build_protocol(raw: dict) -> Protocol:
@@ -133,15 +154,33 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
         raise ValueError("output_dir is a required configuration override")
     data_yaml = str(raw.get("data_yaml") or "")
     coco_import = str(raw.get("coco_import") or "")
-    if data_yaml and coco_import:
-        raise ValueError("set exactly one of data_yaml or coco_import")
-    if not data_yaml and not coco_import:
-        raise ValueError("data_yaml or coco_import is a required configuration override")
+    coco_dataset = str(raw.get("coco_dataset") or "")
+    sources = [bool(data_yaml), bool(coco_import), bool(coco_dataset)]
+    if sum(sources) > 1:
+        raise ValueError("set exactly one of data_yaml, coco_import or coco_dataset")
+    if not any(sources):
+        raise ValueError(
+            "data_yaml (a box dataset), coco_dataset (a COCO mask dataset) or "
+            "coco_import is a required configuration override"
+        )
     backend_raw = raw.get("backend") or {}
     family_raw = raw.get("family") or {}
+    task = str(family_raw.get("task", "detect"))
+    if task not in _TASKS:
+        raise ValueError(f"unknown family task: {task}")
+    if coco_dataset and task != "segment":
+        raise ValueError(
+            "a COCO mask dataset requires a segmentation family; set "
+            "family=yolo_segmentation instead of a detection family"
+        )
+    if data_yaml and task != "detect":
+        raise ValueError(
+            "a segmentation family needs a COCO mask dataset; set coco_dataset instead of data_yaml"
+        )
     dataset_root = str(raw.get("dataset_root") or "")
+    scratch_dir = str(raw.get("scratch_dir") or "")
     return ExecutionConfig(
-        data_yaml=Path(data_yaml).expanduser().resolve() if data_yaml else Path(),
+        data_yaml=Path(data_yaml).expanduser().resolve() if data_yaml else None,
         output_dir=Path(output_dir).expanduser().resolve(),
         protocol=_build_protocol(raw.get("protocol") or {}),
         backend=Backend(
@@ -152,13 +191,17 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
             name=str(family_raw.get("name", "yolo_detection")),
             framework=str(family_raw.get("framework", "ultralytics")),
             weights=str(family_raw.get("weights", "yolov8n.pt")),
-            task=str(family_raw.get("task", "detect")),
+            task=task,
         ),
         dataset_name=str(raw.get("dataset_name", "polyx")),
         resume=bool(raw.get("resume", False)),
         coco_import=Path(coco_import).expanduser().resolve() if coco_import else None,
+        coco_dataset=Path(coco_dataset).expanduser().resolve() if coco_dataset else None,
         dataset_root=(
             Path(dataset_root).expanduser().resolve() if dataset_root else SEGMENTATION_DATASETS_DIR
+        ),
+        scratch_dir=(
+            Path(scratch_dir).expanduser().resolve() if scratch_dir else default_scratch_dir()
         ),
     )
 
@@ -174,10 +217,12 @@ def load_config(overrides: Sequence[str] | None = None) -> ExecutionConfig:
 def config_to_dict(config: ExecutionConfig) -> dict[str, Any]:
     """Plain, YAML-serialisable view of the resolved execution."""
     data: dict[str, Any] = asdict(config)
-    data["data_yaml"] = str(config.data_yaml)
+    data["data_yaml"] = str(config.data_yaml) if config.data_yaml else ""
     data["output_dir"] = str(config.output_dir)
     data["coco_import"] = str(config.coco_import) if config.coco_import else ""
+    data["coco_dataset"] = str(config.coco_dataset) if config.coco_dataset else ""
     data["dataset_root"] = str(config.dataset_root)
+    data["scratch_dir"] = str(config.scratch_dir)
     return data
 
 

@@ -18,7 +18,14 @@ dataset_name: polyx
 # When set, the command imports, audits and stores a CVAT COCO export as the
 # canonical segmentation training dataset instead of running an execution.
 coco_import: ""
+# Versioned COCO mask tool output a segmentation family trains from. The COCO
+# polygons are converted to the family's format at job time; the intermediate
+# goes to `scratch_dir` and is never an artifact or a second canonical format.
+coco_dataset: ""
 # Versioned tool outputs land here; empty resolves to the user data dir.
 dataset_root: ""
+# Ephemeral conversion cache; empty resolves to POLYX_HPC_SCRATCH or the system
+# temporary directory.
+scratch_dir: ""
 # Continue an interrupted execution from the last checkpoint in output_dir.
 resume: false

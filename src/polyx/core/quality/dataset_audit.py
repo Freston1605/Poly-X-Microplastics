@@ -600,8 +600,12 @@ def validate_polygon(
     return polygons, invalid, degenerate
 
 
-def _image_split(image: dict[str, Any]) -> str:
-    """The normalised split marker of one COCO image, ``train`` by default."""
+def coco_image_split(image: dict[str, Any]) -> str:
+    """The normalised split marker of one COCO image, ``train`` by default.
+
+    Public because the segmentation execution filters the canonical dataset by
+    the same rule the import audit counted: one owner for the convention.
+    """
     value: Any = image.get("split")
     attributes = image.get("attributes")
     if value is None and isinstance(attributes, dict):
@@ -658,7 +662,7 @@ def audit_coco_masks(coco: dict[str, Any]) -> DatasetAudit:
     }
     image_split: dict[int, str] = {}
     for image_id, item in images.items():
-        split = _image_split(item)
+        split = coco_image_split(item)
         image_split[image_id] = split
         scan = scans.setdefault(split, _empty_coco_scan())
         scan["n_imgs"] += 1

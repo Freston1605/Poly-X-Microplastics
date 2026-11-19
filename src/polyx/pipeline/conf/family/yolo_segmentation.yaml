@@ -1,0 +1,7 @@
+# YOLO segmentation family: the same Ultralytics wrapper as detection, trained
+# on the canonical COCO mask dataset converted at job time. The protocol is
+# identical to every other family; only `task` and the weights change.
+name: yolo_segmentation
+framework: ultralytics
+weights: yolov8n-seg.pt
+task: segment

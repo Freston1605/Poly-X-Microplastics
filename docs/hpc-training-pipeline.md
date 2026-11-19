@@ -2,13 +2,16 @@
 
 The pipeline is a headless path parallel to the shipped GUI Trainer. It does
 not change the Trainer or its native training wrapper. This page describes the
-first slice: one YOLO detection training execution on the local backend.
+first slice: one YOLO detection training execution and one YOLO-seg execution
+on the local backend, sharing one protocol, one Lightning loop, one evaluator
+and one artifact layout.
 
 ## Running one execution
 
-The command takes Hydra-style `key=value` overrides. `output_dir` and either
-`data_yaml` (a training execution) or `coco_import` (a dataset import) are
-required; every other value comes from the composed configuration.
+The command takes Hydra-style `key=value` overrides. `output_dir` and exactly
+one dataset source are required: `data_yaml` (a YOLO box dataset),
+`coco_dataset` (the imported COCO mask dataset) or `coco_import` (an import).
+Every other value comes from the composed configuration.
 
 ```bash
 polyx-pipeline \
@@ -19,8 +22,9 @@ polyx-pipeline \
 ```
 
 The command prints the output directory, the selected checkpoint, the
-selection metric and the criterion it was computed under. A non-zero exit
-status means the execution failed; the printed error names the reason.
+selection metric and the criterion it was computed under, then the
+localisation figure and its criterion beside it. A non-zero exit status means
+the execution failed; the printed error names the reason.
 
 ## Configuration sections
 
@@ -32,16 +36,27 @@ status means the execution failed; the printed error names the reason.
 - `backend` — where the execution runs. The local backend is one process with
   no scheduler and no cluster-specific values.
 - `family` — which adapter executes the protocol. `yolo_detection` wraps the
-  Ultralytics YOLO detection model in one Lightning module.
+  Ultralytics YOLO detection model in one Lightning module; `yolo_segmentation`
+  wraps the segmentation model the same way. The task is a config value, never
+  a code edit.
+- `scratch_dir` — ephemeral cache root for per-family conversion. It defaults
+  to `$POLYX_HPC_SCRATCH/polyx/pipeline`, or the system temporary directory
+  when the cluster variable is absent. Nothing written there is an artifact.
+
+A detection family only accepts `data_yaml`; a segmentation family only accepts
+`coco_dataset`. The mismatch is refused before any training starts, because a
+segmenter trained on boxes or a detector scored against masks would silently
+produce a meaningless benchmark.
 
 ## Artifact layout
 
-One output directory holds everything needed to review or reproduce the run:
+One output directory holds everything needed to review or reproduce the run,
+for every family:
 
 ```
 config.yaml            # fully resolved configuration
 resolved_protocol.yaml # the protocol exactly as the adapter consumed it
-provenance.json        # git commit, dataset hashes, dataset audit, version data
+provenance.json        # git commit, dataset hashes, audit, dataset source, conversion
 training_state.json    # adapter state, AMP precision, early-stopping decisions
 metrics.json           # named figures, per-class figures, selection criterion
 report.md              # human-readable summary, criteria included
@@ -50,19 +65,37 @@ checkpoints/best.pt    # best weights, selected by the with-class score
 checkpoints/epoch_NNN.pt # one checkpoint per epoch
 ```
 
+`provenance.json` always names the dataset source (`yolo_boxes` or
+`coco_instances`). For a segmentation execution it also records the job-time
+conversion: format, cache key, whether the cache was reused, and the scratch
+path that holds the intermediate. The intermediate is not an artifact; the
+canonical dataset stays COCO.
+
 ## Scoring
 
-The shared evaluator consumes COCO-format predictions and COCO ground truth
-built from the existing label codec. Every figure names its criterion:
+The shared evaluator consumes COCO-format predictions and COCO ground truth.
+Every figure names its criterion, and the criterion names the overlap it used:
 
-- `with_class_score` — COCO mAP@[0.50:0.95], class-aware: a detection counts
-  only when the polymer identity is correct. This is the selection metric.
-- `localisation_score` — COCO AP@0.50, class-agnostic: whether the particle was
+- detection — box IoU on the YOLO label codec's ground truth;
+- segmentation — mask IoU between rasterized COCO polygons.
+
+The figures are the same shape for both families:
+
+- `with_class_score` — class-aware mAP@[0.50:0.95]: an instance counts only
+  when the polymer identity is correct. This is the selection metric, and the
+  checkpoint with the best value is the one kept as `best.pt`.
+- `localisation_score` — class-agnostic AP@0.50: whether the particle was
   found, reported beside the selection score.
 - `mAP50` and `mAP50-95` — class-aware averages with their thresholds named.
+- `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
+  best mask IoU per ground-truth instance and the mask mAP figures.
 
-The criterion is always on the real-domain validation split. Localisation is
-never used to select a checkpoint.
+Per-class figures repeat the same criteria for every category present in the
+validation split, and `report.md` lists them. Overlap is only computed between
+a prediction and a ground-truth instance of the same image, so identical
+geometry in another image is a false positive, not a match. The criterion is
+always on the real-domain validation split. Localisation is never used to
+select a checkpoint.
 
 ## Importing the segmentation dataset
 
@@ -98,6 +131,52 @@ The first batch target is roughly ten plates stratified across PET, PP and LDPE
 and the imaging domains represented in the study, so every class appears in
 both training and validation. The target is recorded in every import manifest
 and report. Detection run folders are never touched: they stay box-only.
+
+## Training a segmentation family
+
+`yolo_segmentation` trains from the versioned COCO mask dataset. The COCO
+polygons are converted to the family's folder contract (`images/<split>`,
+`labels/<split>` with YOLO-seg polygon lines, `data.yaml`) at job time, and
+cached under `scratch_dir/seg_datasets/<cache key>`. The key is the SHA-256 of
+the canonical `dataset.json`, so a second execution over the same dataset
+reuses the cache and a different dataset cannot pick up stale labels.
+
+```bash
+polyx-pipeline \
+  coco_dataset="$POLYX_HOME/segmentation_datasets/first_batch/v1" \
+  family=yolo_segmentation \
+  output_dir=/path/to/executions/seg-tracer \
+  protocol.epochs=1
+```
+
+The command prints the checkpoint, the with-class selection score with its
+criterion and the localisation figure next to it. The canonical dataset is
+read-only here: the run folder holds no YOLO labels, no `data.yaml` and no
+masks, and deleting the scratch cache costs only a rebuild. A one-epoch run on
+the mask fixture is exercised end to end by
+`tests/test_pipeline_yolo_seg.py::test_yolo_seg_trains_from_coco_masks_for_one_epoch`,
+which imports the fixture through the command and then trains it; the test is
+the reproducible demo until a real CVAT batch exists.
+
+## How one epoch is trained
+
+Both Ultralytics families share the same wrapper:
+
+- the pretrained network is rebuilt from its own yaml with the dataset's class
+  count, and the pretrained weights are transferred into the matching layers;
+- `train_dataloader` and `val_dataloader` reuse the Ultralytics dataset and
+  batch collation over the job-time labels;
+- `training_step` hands the batch to the Ultralytics network's own loss;
+- `configure_optimizers` applies the protocol's optimizer, weight decay,
+  momentum, warmup and cosine schedule;
+- at the end of the epoch, Ultralytics validation scores the current weights
+  and the checkpoint is written; its output directory is pointed at scratch so
+  no global runs directory is touched and nothing lands in the artifact layout.
+
+On a machine without a GPU, set `protocol.amp.enabled=false`: FP16 AMP is a GPU
+request recorded in the protocol, and Lightning cannot run FP16 mixed precision
+on CPU.
+
 
 ## Decisions and vocabulary
 
