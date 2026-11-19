@@ -9,14 +9,13 @@ driver returns through ``polyx-pipeline --sweep``.
 ``sweep_trial_id``. That is the only accepted identity: parameters and Hydra's
 resettable job index are ambiguous after a preemption. Each trial persists a
 record before training; a resubmission with the same trial id resumes the
-recorded execution when it has a progress snapshot, or explicitly retries the
-same parameters when it does not. The resolved study name and storage are
-written once and reused by ``sweep_best``.
+recorded execution when it has a progress snapshot, or retries the same
+parameters in a clean directory when it does not. The resolved study name and
+storage are written once and reused by ``sweep_best``.
 """
 
 from __future__ import annotations
 
-import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -25,9 +24,9 @@ from hydra import main
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
-from polyx.pipeline.artifacts import write_json_atomic, write_yaml
+from polyx.pipeline.artifacts import write_yaml
 from polyx.pipeline.optuna_sweeper import install_trial_id_passthrough
-from polyx.pipeline.sweep_record import write_trial_record
+from polyx.pipeline.sweep_record import trial_directory, write_trial_record
 
 install_trial_id_passthrough()
 
@@ -45,28 +44,19 @@ def objective(cfg: DictConfig) -> float:
     study = _study_record()
     _persist_study(root, study)
     output = _trial_output_dir(root, trial_id)
-    write_trial_record(
-        root,
-        trial_id=trial_id,
-        parameters=_sampled_parameters(raw),
-        execution=output,
-        study_name=study["study_name"],
-        storage=study["storage"],
-    )
+    record = {
+        "trial_id": trial_id,
+        "parameters": _sampled_parameters(raw),
+        "execution": output,
+        "study_name": study["study_name"],
+        "storage": study["storage"],
+    }
+    write_trial_record(**record)
     raw["output_dir"] = str(output)
     if (output / "progress.json").is_file():
         raw["resume"] = True
     summary = run_execution(execution_config_from_raw(raw))
-    write_trial_record(
-        root,
-        trial_id=trial_id,
-        parameters=_sampled_parameters(raw),
-        execution=output,
-        study_name=study["study_name"],
-        storage=study["storage"],
-        status="completed",
-    )
-    _register_trial(output, trial_id)
+    write_trial_record(**record, status="completed")
     return float(summary["selection"]["value"])
 
 
@@ -101,7 +91,7 @@ def _persist_study(root: Path, study: dict[str, Any]) -> None:
 
 
 def _sampled_parameters(raw: dict) -> dict[str, Any]:
-    """The protocol values this trial's declared search space could suggest."""
+    """The protocol values this trial's declared search space suggested."""
     sweeper = HydraConfig.get().sweeper
     declared = sweeper.get("params") or {}
     protocol = raw.get("protocol") or {}
@@ -118,40 +108,9 @@ def _sampled_parameters(raw: dict) -> dict[str, Any]:
     return sampled
 
 
-def _index_path(root: Path) -> Path:
-    return root / "trials" / "index.json"
-
-
-def _read_index(root: Path) -> dict[str, list[str]]:
-    path = _index_path(root)
-    if not path.is_file():
-        return {}
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(loaded, dict):
-        return {}
-    return {
-        str(key): [str(name) for name in value]
-        for key, value in loaded.items()
-        if isinstance(value, list)
-    }
-
-
-def _register_trial(output: Path, trial_id: int) -> None:
-    """Record this execution's directory against its study trial number."""
-    root = output.parent.parent
-    index = _read_index(root)
-    entries = index.setdefault(str(trial_id), [])
-    if output.name not in entries:
-        entries.append(output.name)
-    write_json_atomic(index, _index_path(root))
-
-
 def _trial_output_dir(root: Path, trial_id: int) -> Path:
     """The stable execution directory for one study trial id."""
-    directory = root / "trials" / f"trial_{trial_id:03d}"
+    directory = trial_directory(root, trial_id)
     if (directory / "progress.json").is_file():
         return directory
     if directory.exists():

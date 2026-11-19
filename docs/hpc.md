@@ -137,6 +137,9 @@ decides for itself:
   published, not retrained;
 - a family that never started runs normally, because there is no snapshot to
   resume;
+- a fresh run aimed at an existing execution directory is refused: pass
+  `resume=true` to continue it or choose a new directory, so a new run can never
+  inherit an old completion marker or a stale progress snapshot;
 - a root that holds an execution for a different protocol is refused; start a
   new campaign root instead.
 

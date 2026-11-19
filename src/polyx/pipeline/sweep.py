@@ -28,7 +28,14 @@ from omegaconf import OmegaConf
 from polyx.pipeline.artifacts import ArtifactLayout, write_json, write_yaml
 from polyx.pipeline.config import CONF_DIR, ExecutionConfig, execution_config_from_raw
 from polyx.pipeline.execution import run_execution
-from polyx.pipeline.sweep_record import write_trial_record
+from polyx.pipeline.sweep_record import (
+    acquire_trial_lease,
+    completed_score,
+    read_trial_record,
+    release_trial_lease,
+    trial_directory,
+    write_trial_record,
+)
 
 #: Protocol hyperparameters a trial may change. Split, seed, augmentation
 #: subset and the evaluator are outside this set and cannot be suggested.
@@ -238,21 +245,22 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
     )
     write_yaml(_sweep_config_view(config), layout.sweep_config)
 
-    for _index in range(config.n_trials):
+    recovered = _recover_pending(config, study, layout.root)
+    for _index in range(max(0, config.n_trials - recovered)):
         trial = study.ask()
         suggestions = {
             name: _suggest(trial, name, rule) for name, rule in config.search_space.items()
         }
-        trial_dir = layout.root / "trials" / f"trial_{trial.number:03d}"
+        trial_dir = trial_directory(layout.root, trial.number)
         trial_dir.mkdir(parents=True, exist_ok=True)
-        write_trial_record(
-            layout.root,
-            trial_id=trial.number,
-            parameters=suggestions,
-            execution=trial_dir,
-            study_name=config.study_name,
-            storage=config.storage,
-        )
+        record = {
+            "trial_id": trial.number,
+            "parameters": suggestions,
+            "execution": trial_dir,
+            "study_name": config.study_name,
+            "storage": config.storage,
+        }
+        write_trial_record(**record)
         resume = (trial_dir / "progress.json").is_file()
         try:
             score = float(
@@ -261,27 +269,11 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
                 )["selection"]["value"]
             )
         except Exception:
-            write_trial_record(
-                layout.root,
-                trial_id=trial.number,
-                parameters=suggestions,
-                execution=trial_dir,
-                study_name=config.study_name,
-                storage=config.storage,
-                status="failed",
-            )
-            study.tell(trial, state=optuna.trial.TrialState.FAIL)
+            write_trial_record(**record, status="failed")
+            study.tell(trial.number, state=optuna.trial.TrialState.FAIL)
             raise
-        write_trial_record(
-            layout.root,
-            trial_id=trial.number,
-            parameters=suggestions,
-            execution=trial_dir,
-            study_name=config.study_name,
-            storage=config.storage,
-            status="completed",
-        )
-        study.tell(trial, score)
+        write_trial_record(**record, status="completed")
+        study.tell(trial.number, score)
 
     completed = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.COMPLETE]
     if not completed:
@@ -325,6 +317,70 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
         "best_trial": best.number,
         "metric": "with_class_score",
     }
+
+
+def _recover_pending(config: SweepConfig, study: Any, root: Path) -> int:
+    """Finish trials a previous invocation left ``RUNNING``.
+
+    The in-process driver owns ``study.ask()``, so it can recover the same
+    trial: run the recorded parameters in the recorded directory (resuming its
+    checkpoint when one exists), then tell the score to the *existing* trial
+    number. A trial whose execution already finished is told from its metrics
+    instead of being retrained.
+    """
+    pending: list[int] = []
+    trials_dir = root / "trials"
+    if trials_dir.is_dir():
+        for directory in sorted(trials_dir.glob("trial_*")):
+            record = read_trial_record(directory)
+            if record is None or record.get("status") != "running":
+                continue
+            try:
+                pending.append(int(record["trial_id"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+    running = [
+        int(trial.number)
+        for trial in study.get_trials(deepcopy=False)
+        if trial.state == optuna.trial.TrialState.RUNNING
+    ]
+    recovered = 0
+    for trial_id in sorted({*pending, *running}):
+        trial = study.trials[trial_id] if 0 <= trial_id < len(study.trials) else None
+        if trial is None or trial.state != optuna.trial.TrialState.RUNNING:
+            continue
+        directory = trial_directory(root, trial_id)
+        lease = acquire_trial_lease(directory)
+        if lease is None:
+            # Another runner already recovered this trial.
+            continue
+        try:
+            score = (
+                completed_score(directory) if (directory / "completion.json").is_file() else None
+            )
+            if score is not None:
+                study.tell(trial_id, score)
+                recovered += 1
+                continue
+            record = read_trial_record(directory)
+            parameters = dict(record.get("parameters") or {}) if record else dict(trial.params)
+            if not parameters:
+                continue
+            resume = (directory / "progress.json").is_file()
+            try:
+                score = float(
+                    run_execution(
+                        _trial_config(config.execution, parameters, directory, resume=resume)
+                    )["selection"]["value"]
+                )
+            except Exception:
+                study.tell(trial_id, state=optuna.trial.TrialState.FAIL)
+                raise
+            recovered += 1
+            study.tell(trial_id, score)
+        finally:
+            release_trial_lease(lease)
+    return recovered
 
 
 def _read_selection(path: Path, fallback: float) -> dict[str, Any]:

@@ -18,12 +18,14 @@ each job decide is what makes resubmission safe.
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import replace
 from pathlib import Path
 
 from hydra import main
 from omegaconf import DictConfig, OmegaConf
 
+from polyx.core.i18n import N_
 from polyx.pipeline.artifacts import ArtifactLayout
 from polyx.pipeline.config import (
     ExecutionConfig,
@@ -31,6 +33,7 @@ from polyx.pipeline.config import (
     protocol_to_dict,
 )
 from polyx.pipeline.dataset import validate_campaign_cohort
+from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.execution import run_execution
 
 
@@ -73,9 +76,13 @@ def _resume_decision(config: ExecutionConfig) -> tuple[str, dict]:
     if layout.completion.is_file():
         state = json.loads(layout.completion.read_text(encoding="utf-8"))
         if state.get("protocol") != protocol_to_dict(config):
-            raise RuntimeError(
-                f"{config.output_dir} already holds an execution for a different "
-                "protocol; use a new campaign root instead of resuming over it"
+            raise PipelineError(
+                "campaign.protocol_changed",
+                N_(
+                    "%(path)s already holds an execution for a different protocol; "
+                    "use a new campaign root instead of resuming over it"
+                ),
+                path=str(config.output_dir),
             )
         return "finished", state
     if layout.progress.is_file():
@@ -93,7 +100,14 @@ def campaign(cfg: DictConfig) -> float:
         # Both sources travel together in a campaign. They must describe the
         # same real-domain cohort; otherwise the benchmark would vary the
         # dataset as well as the model.
-        validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
+        try:
+            validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
+        except PipelineError as error:
+            # Hydra prints the exception itself; give it the operator-facing
+            # sentence in the active language. The logged traceback keeps the
+            # invariant English template and the machine code.
+            print(error.display(), file=sys.stderr)
+            raise
     run_name = config.output_dir.name
     if config.resume:
         decision, state = _resume_decision(config)

@@ -232,20 +232,26 @@ def test_completion_is_not_written_when_the_final_log_write_fails(
     assert not (output / "completion.json").exists()
 
 
-def test_a_fresh_run_invalidates_a_stale_completion_marker(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_a_fresh_run_refuses_an_existing_execution_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    selected_language,
 ) -> None:
-    """A reused output directory must not inherit an old finished marker."""
+    """A reused directory is resumed explicitly, never inherited by a new run."""
     _install_fakes(monkeypatch, [_boxes_prediction()])
     output = tmp_path / "executions" / "reused"
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
-    assert _command(f"data_yaml={data_yaml}", f"output_dir={output}", "protocol.epochs=1") == 0
+    overrides = [f"data_yaml={data_yaml}", f"output_dir={output}", "protocol.epochs=1"]
+    assert _command(*overrides) == 0
     assert (output / "completion.json").is_file()
 
-    broken = data_yaml.with_name("broken.yaml")
-    broken.write_text("path: .\nnames:\n  0: PET\n", encoding="utf-8")
-    assert _command(f"data_yaml={broken}", f"output_dir={output}", "protocol.epochs=1") == 1
-    assert not (output / "completion.json").exists()
+    selected_language("en")
+    assert _command(*overrides) == 1
+    assert "already holds an execution" in capsys.readouterr().err
+    # The finished execution is untouched: its marker and metrics survive.
+    assert (output / "completion.json").is_file()
+    assert _read(output / "metrics.json")["selection"]["value"] > 0.0
 
 
 def test_resume_rebuilds_corrupt_metrics_from_the_progress_snapshot(
@@ -529,6 +535,7 @@ def test_resume_with_a_different_protocol_is_refused(
     tiny_dataset: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    selected_language,
 ) -> None:
     """The protocol that produced a checkpoint is part of the resume contract."""
     output = tmp_path / "executions" / "protocol-drift"
@@ -545,6 +552,7 @@ def test_resume_with_a_different_protocol_is_refused(
 
     _install_fakes(monkeypatch, [_boxes_prediction()])
     capsys.readouterr()
+    selected_language("en")
     code = _command(
         f"data_yaml={tiny_dataset}",
         f"output_dir={output}",

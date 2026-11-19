@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 17:31-0300\n"
+"POT-Creation-Date: 2026-11-19 20:16-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6639,6 +6639,15 @@ msgstr "Parada anticipada"
 msgid "Per class"
 msgstr "Por clase"
 
+#: src/polyx/pipeline/campaign_app.py:81
+#, python-format
+msgid ""
+"%(path)s already holds an execution for a different protocol; use a new campaign root instead of"
+" resuming over it"
+msgstr ""
+"%(path)s ya contiene una ejecución con otro protocolo; use una raíz de campaña nueva en lugar de"
+" reanudarla"
+
 #: src/polyx/pipeline/coco_import.py:371
 msgid ""
 "A first stratified batch of roughly ten plates, spanning every study class (PET, PP and LDPE) "
@@ -6737,6 +6746,24 @@ msgstr ""
 "el dataset de máscaras reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
+#: src/polyx/pipeline/execution.py:137
+#, python-format
+msgid "dataset audit failed: %(codes)s"
+msgstr "la auditoría del dataset falló: %(codes)s"
+
+#: src/polyx/pipeline/execution.py:84
+msgid "protocol changed since the progress snapshot was written"
+msgstr "el protocolo cambió desde que se escribió la instantánea de progreso"
+
+#: src/polyx/pipeline/execution.py:99
+#, python-format
+msgid ""
+"%(path)s already holds an execution; pass resume=true to continue it or choose a new output "
+"directory"
+msgstr ""
+"%(path)s ya contiene una ejecución; pase resume=true para continuarla o elija un directorio de "
+"salida nuevo"
+
 #: src/polyx/pipeline/seg_conversion.py:161
 #, python-format
 msgid ""
@@ -6751,42 +6778,42 @@ msgstr ""
 #: src/polyx/pipeline/seg_conversion.py:174
 #, python-format
 msgid ""
-"image %(image)s has annotations %(first)s and %(second)s with the same class and serialized box;"
-" the pinned YOLO loader would collapse them into one target. Merge or remove the duplicate in "
-"the annotation tool."
+"image %(image)s has annotations %(first)s and %(second)s that serialize to the same YOLO label; "
+"the pinned loader would collapse them into one target. Merge or remove the duplicate in the "
+"annotation tool."
 msgstr ""
-"la imagen %(image)s tiene las anotaciones %(first)s y %(second)s con la misma clase y caja "
-"serializada; el cargador YOLO fijado las colapsaría en un solo objetivo. Fusiona o elimina la "
+"la imagen %(image)s tiene las anotaciones %(first)s y %(second)s que se serializan en la misma "
+"etiqueta YOLO; el cargador fijado las colapsaría en un solo objetivo. Combine o elimine la "
 "duplicada en la herramienta de anotación."
 
-#: src/polyx/pipeline/sweep_best.py:34
+#: src/polyx/pipeline/sweep_best.py:35
 msgid "Write sweep_best.json from a finished Optuna multirun"
 msgstr "Escribir sweep_best.json a partir de un multirun terminado de Optuna"
 
-#: src/polyx/pipeline/sweep_best.py:36
+#: src/polyx/pipeline/sweep_best.py:37
 msgid "the sweep root"
 msgstr "la raíz de la búsqueda"
 
-#: src/polyx/pipeline/sweep_best.py:40
+#: src/polyx/pipeline/sweep_best.py:41
 msgid "study storage URL or SQLite path (default: the work layout path)"
 msgstr "URL de almacenamiento del estudio o ruta SQLite (predeterminada: la ruta de work)"
 
-#: src/polyx/pipeline/sweep_best.py:49
+#: src/polyx/pipeline/sweep_best.py:50
 #, python-format
 msgid "no Optuna results at %(path)s"
 msgstr "no hay resultados de Optuna en %(path)s"
 
-#: src/polyx/pipeline/sweep_best.py:56
+#: src/polyx/pipeline/sweep_best.py:57
 #, python-format
 msgid "%(path)s has no best_value"
 msgstr "%(path)s no tiene best_value"
 
-#: src/polyx/pipeline/sweep_best.py:68
+#: src/polyx/pipeline/sweep_best.py:69
 #, python-format
 msgid "cannot load study %(study)s at %(storage)s"
 msgstr "no se puede cargar el estudio %(study)s en %(storage)s"
 
-#: src/polyx/pipeline/sweep_best.py:78
+#: src/polyx/pipeline/sweep_best.py:79
 #, python-format
 msgid "the winner is study trial %(trial)d but its artifact is missing under %(root)s"
 msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en %(root)s"

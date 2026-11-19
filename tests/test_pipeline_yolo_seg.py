@@ -318,9 +318,7 @@ def test_duplicate_class_and_box_are_rejected_before_conversion(
     second["segmentation"] = [list(first["segmentation"][0])]
     (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
 
-    with pytest.raises(
-        ValueError, match=r"(same class and serialized box|misma clase y caja)"
-    ) as caught:
+    with pytest.raises(ValueError, match=r"(same YOLO label|misma etiqueta YOLO)") as caught:
         convert_coco_dataset(store, tmp_path / "scratch-duplicate")
     message = str(caught.value)
     assert str(first["id"]) in message and str(second["id"]) in message
@@ -586,16 +584,17 @@ def test_a_second_run_reuses_the_scratch_conversion(
     assert first["cached"] is False
 
     _install_fakes(monkeypatch, [_perfect_validation()])
+    second_output = tmp_path / "executions" / "segmentation-second"
     second_code = _command(
         f"coco_dataset={store}",
-        f"output_dir={output}",
+        f"output_dir={second_output}",
         f"scratch_dir={tmp_path / 'scratch'}",
         "family=yolo_segmentation",
         "protocol.epochs=1",
     )
 
     assert second_code == 0
-    second = _read(output / "provenance.json")["conversion"]
+    second = _read(second_output / "provenance.json")["conversion"]
     assert second["cached"] is True
     assert second["cache_key"] == first["cache_key"]
     assert second["root"] == first["root"]

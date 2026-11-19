@@ -14,6 +14,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from polyx.core.i18n import N_
 from polyx.core.paths import ROOT
 from polyx.core.provenance import commit_git
 from polyx.pipeline.adapters import EpochResult, build_adapter
@@ -27,6 +28,7 @@ from polyx.pipeline.artifacts import (
 )
 from polyx.pipeline.coco_import import audit_as_dict
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_dict
+from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.evaluation import SharedEvaluator
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.training import EarlyStoppingState
@@ -77,14 +79,29 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
     if config.resume:
         resume_state = ResumeState.for_output_dir(config.output_dir)
         if resume_state.protocol != protocol_to_dict(config):
-            raise RuntimeError("protocol changed since the progress snapshot was written")
+            raise PipelineError(
+                "execution.protocol_changed",
+                N_("protocol changed since the progress snapshot was written"),
+            )
     layout.create()
-    if not config.resume and layout.completion.is_file():
-        # A fresh execution in a reused directory must not inherit an old
-        # completion marker. Remove it and the resume records before training;
-        # if this run stops early it will not be mistaken for finished.
-        for stale in (layout.completion, layout.progress, layout.metrics, layout.training_state):
-            stale.unlink(missing_ok=True)
+    if not config.resume:
+        # A fresh execution never reuses an execution directory: an existing
+        # record could be inherited as this run's completion, or a stale
+        # progress snapshot could resume the previous run's weights.
+        existing = [
+            path
+            for path in (layout.completion, layout.progress, layout.metrics, layout.training_state)
+            if path.is_file()
+        ]
+        if existing:
+            raise PipelineError(
+                "execution.directory_in_use",
+                N_(
+                    "%(path)s already holds an execution; pass resume=true to continue it "
+                    "or choose a new output directory"
+                ),
+                path=str(layout.root),
+            )
     if resume_state is not None and layout.completion.is_file():
         # A completed execution is never rebuilt; the completion record is the
         # one authority.
@@ -114,8 +131,12 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
     prepared = adapter.prepare(config)
     audit = prepared.audit
     if not audit.ok:
-        problems = [f"{finding.title}: {finding.detail}" for finding in audit.findings]
-        raise RuntimeError("dataset audit failed: " + "; ".join(problems))
+        codes = [finding.code or "unknown" for finding in audit.findings]
+        raise PipelineError(
+            "dataset.audit_failed",
+            N_("dataset audit failed: %(codes)s"),
+            codes=", ".join(codes),
+        )
     if prepared.conversion is not None:
         append_log(
             layout.training_log,
@@ -223,6 +244,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 ),
                 "best_metrics": best["metrics"],
                 "protocol": protocol_to_dict(config),
+                "fit": result.fit_metadata,
             }
         )
         write_json_atomic(progress, layout.progress)
@@ -235,8 +257,11 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         epochs_completed: int,
     ) -> dict[str, Any]:
         """Write every required artifact, then the completion record last."""
-        write_json(final_metrics, layout.metrics)
+        # training_state is written before the metrics it accompanies so a
+        # crash during publication leaves the fit record (precision, device,
+        # verified weights) recoverable instead of inventing one later.
         write_json(training_state, layout.training_state)
+        write_json(final_metrics, layout.metrics)
         write_json(provenance, layout.provenance)
         write_report(layout.report, final_metrics, training_state, config_to_dict(config))
         append_log(
@@ -290,6 +315,9 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 "best_checkpoint": str(best_artifact),
                 "recovered_publication": True,
             }
+            # The snapshot carries what the interrupted fit resolved, so the
+            # recovered record states the precision that actually ran.
+            training_state.update(resume_state.fit or {})
         return publish(final_metrics, training_state, best_artifact, resume_state.epochs_completed)
 
     adapter = build_adapter(config.family)

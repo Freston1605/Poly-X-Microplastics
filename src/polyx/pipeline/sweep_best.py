@@ -26,6 +26,7 @@ import yaml
 
 from polyx.core.i18n import _
 from polyx.pipeline.artifacts import write_json
+from polyx.pipeline.sweep_record import completed_score, read_trial_record, trial_directory
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -71,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     best_number = int(study.best_trial.number)
-    best_directory = _find_best_directory(root / "trials", best_number)
+    best_directory = _find_best_directory(root / "trials", best_number, study_name)
     if best_directory is None:
         print(
             "ERROR: "
@@ -136,23 +137,32 @@ def _load_study(study_name: str, storage: str) -> Any:
         return None
 
 
-def _find_best_directory(trials: Path, best_number: int) -> Path | None:
-    """The winner's execution directory, strictly by study trial number."""
+def _find_best_directory(trials: Path, best_number: int, study_name: str) -> Path | None:
+    """The winner's complete execution directory, strictly by study trial number.
+
+    A directory is the winner only when it is the one the winning study trial
+    wrote and it carries every artifact the sweep promises: a record naming
+    that trial and study, the completion marker, readable metrics and the kept
+    checkpoint. A half-written directory is reported as missing instead of
+    being exported as a best result.
+    """
     if not trials.is_dir():
         return None
-    index_path = trials / "index.json"
-    if index_path.is_file():
-        try:
-            index = json.loads(index_path.read_text(encoding="utf-8"))
-            names = index.get(str(best_number)) or []
-            if names:
-                candidate = trials / str(names[-1])
-                if (candidate / "metrics.json").is_file():
-                    return candidate
-        except (OSError, json.JSONDecodeError, AttributeError):
-            pass
-    candidate = trials / f"trial_{best_number:03d}"
-    return candidate if (candidate / "metrics.json").is_file() else None
+    candidate = trial_directory(trials.parent, best_number)
+    record = read_trial_record(candidate)
+    if record is None:
+        return None
+    if int(record.get("trial_id", -1)) != best_number:
+        return None
+    if record.get("study_name") != study_name:
+        return None
+    if not (candidate / "completion.json").is_file():
+        return None
+    if completed_score(candidate) is None:
+        return None
+    if not (candidate / "checkpoints" / "best.pt").is_file():
+        return None
+    return candidate
 
 
 def _criterion(directory: Path | None) -> str:

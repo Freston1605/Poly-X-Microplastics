@@ -730,23 +730,29 @@ Trainer and its native training wrapper are untouched by this path.
   criterion on every figure and reuses the project's `Criterion`/`Score`:
   selection is with-class operating-point F1 at `protocol.confidence` and 0.50
   IoU; localisation is reported beside it. Predictions are collected at a low
-  floor and both families may emit 300 per image so the reference 100-detection
-  cap per image/category cannot discard a confident F1 prediction; only F1
-  applies the confidence threshold. Polygons are rasterized at 5x before
-  downsampling, matching COCO's mask scale. AP is a separate ranking figure and
-  never selects a checkpoint or drives Optuna. `mask_iou` is class-aware.
+  floor and both families may emit 100 per class per image, so the reference
+  cap — applied per image **and category** — cannot let a crowded polymer hide
+  another class's confident detections; only F1 applies the confidence
+  threshold. Polygons use a port of pycocotools' boundary-crossing rasterizer,
+  checked against pycocotools, so a hit COCO counts is not emptied by rounding.
+  AP is a separate ranking figure and never selects a checkpoint or drives
+  Optuna. `mask_iou` is class-aware.
 - `execution.py` owns audit, provenance, early stopping, best-weight
   restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
   `report.md`, `logs/`, `checkpoints/`, `completion.json`). `best.pt` is the
   kept checkpoint. Saved audit findings are stable codes plus parameters, never
-  translated prose. `completion.json` is written atomically and last, after the
-  final log line; a final epoch with missing artifacts is published rather than
-  retrained, and a fresh run in a reused directory clears a stale marker first.
-  `PipelineError` carries a stable code, invariant English template and
-  parameters; the command logs those and translates only at display time.
+  translated prose. `training_state.json` is published before the metrics it
+  accompanies and `completion.json` atomically last, after the final log line; a
+  final epoch with missing artifacts is published rather than retrained, using
+  the fit record the progress snapshot carries. A fresh run aimed at an
+  existing execution directory is refused: `resume=true` continues it, a new
+  directory starts clean. `PipelineError` carries a stable code, invariant
+  English template and parameters; the command logs those and translates only
+  at display time.
 - `resume.py` reads the per-epoch progress snapshot; the best epoch's metrics
-  travel with it. Each epoch writes an immutable
+  and the fit's own record (precision that ran, device, verified weights,
+  augmentation) travel with it. Each epoch writes an immutable
   `checkpoints/lightning/checkpoint_NNN.ckpt`, and the progress record is
   published atomically only after it exists, so a preemption cannot pair new
   weights with older bookkeeping. A different protocol is refused.
@@ -760,9 +766,10 @@ Trainer and its native training wrapper are untouched by this path.
   names in the same folds with byte-identical content, and both declare
   real-domain imagery, so the model is the only variable. COCO masks with more
   than one polygon ring are refused at conversion rather than becoming several
-  YOLO instances; distinct annotations whose serialized polygons collapse to
-  one class and box are refused with their ids. The conversion cache key hashes
-  every image's bytes, not only `dataset.json`.
+  YOLO instances; two annotations are refused when the label line the shared
+  codec serializes for them is identical, which is exactly what the pinned
+  loader deduplicates on. The conversion cache key hashes every image's bytes,
+  not only `dataset.json`, and its version covers the validation rules.
 - COCO instance JSON is the canonical mask format (`coco.py`,
   `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
   ground truth; the benchmark reference is human COCO annotations only.
@@ -771,11 +778,13 @@ Trainer and its native training wrapper are untouched by this path.
   `sweep_best.json` after it. The study is SQLite on the work filesystem,
   named from `hydra.sweeper.study_name`; its identity is persisted once in
   `sweep_config.yaml`. `PolyxOptunaSweeper` injects the actual trial id, and
-  before asking for new trials it relaunches a `RUNNING` trial that still has a
-  record and progress snapshot. Both drivers write the same `record.json`
-  (`sweep_record.py`); `trials/index.json` plus `study.best_trial.number`
-  resolve the winner, which must have `metrics.json`. The export fails rather
-  than matching parameters.
+  before asking for new trials it recovers every `RUNNING` trial: resume its
+  checkpoint, retry its recorded parameters, or tell the score its finished
+  execution already wrote; a lease under `trials/.locks/` keeps two runners off
+  the same trial, and a dead owner's lease is stolen. Both drivers write the same `record.json`
+  (`sweep_record.py`). The export resolves the winner strictly by
+  `study.best_trial.number` and requires its record, `completion.json`,
+  readable metrics and `best.pt`; a partial directory is reported as missing.
 - `weights.py` resolves `family.weights` to a staged file and verifies its
   SHA-256 against the manifest before a framework sees it; absent or unverified
   pins fail closed.

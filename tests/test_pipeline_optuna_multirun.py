@@ -122,13 +122,13 @@ def test_the_real_sweeper_writes_a_sqlite_study_and_one_directory_per_trial(
     assert Path(best["best_output_dir"]).is_dir()
 
 
-def test_a_preempted_trial_does_not_reuse_a_completed_trial_directory(
+def test_a_zombie_without_recorded_parameters_is_left_untouched(
     tmp_path: Path,
     tiny_dataset: Path,
     work_env: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A RUNNING zombie must not make the resubmitted job write trial_000."""
+    """A trial Optuna never sampled parameters for cannot be relaunched."""
     output = work_env / "experiments" / "preempted"
     study_path = work_env / "studies" / "polyx-optuna.db"
     _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
@@ -138,9 +138,10 @@ def test_a_preempted_trial_does_not_reuse_a_completed_trial_directory(
         for path in (output / "trials").glob("trial_*")
     }
 
-    # A time limit killed a trial after Optuna had stored it as RUNNING.
+    # A time limit killed a trial before it sampled anything: no record, no
+    # parameters, no execution directory to continue.
     study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
-    study.ask()
+    zombie = int(study.ask().number)
 
     _install_fakes(monkeypatch, [_boxes_prediction()])
     _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
@@ -148,11 +149,10 @@ def test_a_preempted_trial_does_not_reuse_a_completed_trial_directory(
     for name, payload in completed.items():
         assert (output / "trials" / name / "metrics.json").read_bytes() == payload
     final_study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
-    last_number = max(trial.number for trial in final_study.trials)
-    assert last_number == 3  # trial 2 is the zombie, trial 3 is the new job
-    assert (output / "trials" / f"trial_{last_number:03d}" / "metrics.json").is_file()
-    index = json.loads((output / "trials" / "index.json").read_text(encoding="utf-8"))
-    assert str(last_number) in index
+    assert final_study.trials[zombie].state == optuna.trial.TrialState.RUNNING
+    newest = max(final_study.trials, key=lambda trial: trial.number)
+    assert newest.number > zombie
+    assert newest.state == optuna.trial.TrialState.COMPLETE
 
 
 def test_each_trial_records_its_study_id_and_the_study_identity(
@@ -199,6 +199,28 @@ def test_a_running_record_with_progress_is_pending_for_recovery(tmp_path: Path) 
     assert PolyxOptunaSweeper._pending_records(tmp_path) == [2]
 
 
+def _complete_execution(directory: Path, *, trial_id: int, study: str, value: float) -> None:
+    """Write the artifacts the exporter requires of a finished trial."""
+    from polyx.pipeline.sweep_record import write_trial_record
+
+    directory.mkdir(parents=True, exist_ok=True)
+    write_trial_record(
+        trial_id=trial_id,
+        parameters={},
+        execution=directory,
+        study_name=study,
+        storage="sqlite:///unused.db",
+        status="completed",
+    )
+    (directory / "completion.json").write_text('{"status": "completed"}\n', encoding="utf-8")
+    (directory / "metrics.json").write_text(
+        json.dumps({"selection": {"metric": "with_class_score", "value": value}}),
+        encoding="utf-8",
+    )
+    (directory / "checkpoints").mkdir(exist_ok=True)
+    (directory / "checkpoints" / "best.pt").write_bytes(b"weights")
+
+
 def test_export_resolves_the_winner_by_trial_number_not_parameters(
     tmp_path: Path,
 ) -> None:
@@ -207,16 +229,29 @@ def test_export_resolves_the_winner_by_trial_number_not_parameters(
 
     trials = tmp_path / "trials"
     winner = trials / "trial_001"
-    duplicate = trials / "trial_099"
-    winner.mkdir(parents=True)
-    duplicate.mkdir(parents=True)
-    (winner / "metrics.json").write_text('{"selection": {"value": 1.0}}', encoding="utf-8")
-    (duplicate / "metrics.json").write_text('{"selection": {"value": 1.0}}', encoding="utf-8")
-    (trials / "index.json").write_text(
-        json.dumps({"1": ["trial_099", "trial_001"], "99": ["trial_099"]}),
-        encoding="utf-8",
-    )
-    assert _find_best_directory(trials, 1) == winner
+    other = trials / "trial_099"
+    _complete_execution(winner, trial_id=1, study="polyx-optuna", value=1.0)
+    _complete_execution(other, trial_id=99, study="polyx-optuna", value=1.0)
+    assert _find_best_directory(trials, 1, "polyx-optuna") == winner
+
+
+def test_export_refuses_an_incomplete_or_foreign_winner(tmp_path: Path) -> None:
+    """A directory without its promise is missing, not a best result."""
+    from polyx.pipeline.sweep_best import _find_best_directory
+
+    trials = tmp_path / "trials"
+    directory = trials / "trial_001"
+    _complete_execution(directory, trial_id=1, study="polyx-optuna", value=1.0)
+    assert _find_best_directory(trials, 1, "polyx-optuna") == directory
+
+    (directory / "completion.json").unlink()
+    assert _find_best_directory(trials, 1, "polyx-optuna") is None
+
+    _complete_execution(directory, trial_id=1, study="another-study", value=1.0)
+    assert _find_best_directory(trials, 1, "polyx-optuna") is None
+
+    _complete_execution(directory, trial_id=2, study="polyx-optuna", value=1.0)
+    assert _find_best_directory(trials, 1, "polyx-optuna") is None
 
 
 def test_export_reports_a_missing_winner_instead_of_guessing(
@@ -240,9 +275,91 @@ def test_export_reports_a_missing_winner_instead_of_guessing(
         f"study_name: polyx-optuna\nstorage: {storage}\n", encoding="utf-8"
     )
     (root / "trials" / "trial_000").mkdir(parents=True)
-    (root / "trials" / "index.json").write_text('{"0": ["trial_000"]}', encoding="utf-8")
     assert sweep_best.main(["--output-dir", str(root)]) == 1
-    assert "missing" in capsys.readouterr().err
+    assert "trial 0" in capsys.readouterr().err
+
+
+def _running_trial(study_path: Path) -> int:
+    """Create the RUNNING trial an interrupted job would leave behind."""
+    study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
+    trial = study.ask()
+    trial.suggest_categorical("protocol.learning_rate", [0.001, 0.01, 0.05])
+    trial.suggest_categorical("protocol.momentum", [0.9, 0.937])
+    trial.suggest_categorical("protocol.weight_decay", [0.0001, 0.0005])
+    return int(trial.number)
+
+
+def _write_running_record(directory: Path, trial_id: int) -> None:
+    from polyx.pipeline.sweep_record import write_trial_record
+
+    directory.mkdir(parents=True, exist_ok=True)
+    write_trial_record(
+        trial_id=trial_id,
+        parameters={},
+        execution=directory,
+        study_name="polyx-optuna",
+        storage="sqlite:///unused.db",
+    )
+
+
+def test_resubmission_recovers_the_interrupted_trial_itself(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    work_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A RUNNING trial is relaunched by its own id, never abandoned."""
+    output = work_env / "experiments" / "recovered"
+    study_path = work_env / "studies" / "polyx-optuna.db"
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
+    first_metrics = (output / "trials" / "trial_000" / "metrics.json").read_bytes()
+
+    interrupted = _running_trial(study_path)
+    directory = output / "trials" / f"trial_{interrupted:03d}"
+    _write_running_record(directory, interrupted)
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
+
+    study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
+    assert len(study.trials) == 2, "recovery must not ask for a third trial"
+    assert study.trials[interrupted].state == optuna.trial.TrialState.COMPLETE
+    record = _read(directory / "record.json")
+    assert record["status"] == "completed"
+    assert (directory / "completion.json").is_file()
+    # The already finished trial is untouched.
+    assert (output / "trials" / "trial_000" / "metrics.json").read_bytes() == first_metrics
+
+
+def test_a_finished_execution_whose_score_was_never_told_is_reconciled(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    work_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The crash window after publication is closed by the execution's own metrics."""
+    output = work_env / "experiments" / "reconcile"
+    study_path = work_env / "studies" / "polyx-optuna.db"
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
+    completed = output / "trials" / "trial_000"
+
+    interrupted = _running_trial(study_path)
+    directory = output / "trials" / f"trial_{interrupted:03d}"
+    for name in ("metrics.json", "completion.json", "provenance.json", "training_state.json"):
+        (directory).mkdir(parents=True, exist_ok=True)
+        (directory / name).write_bytes((completed / name).read_bytes())
+    _write_running_record(directory, interrupted)
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
+
+    study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
+    assert study.trials[interrupted].state == optuna.trial.TrialState.COMPLETE
+    assert study.trials[interrupted].value == pytest.approx(
+        _read(directory / "metrics.json")["selection"]["value"]
+    )
 
 
 def test_a_resumed_multirun_reuses_the_study_and_never_overwrites_a_trial(
@@ -278,3 +395,23 @@ def test_a_resumed_multirun_reuses_the_study_and_never_overwrites_a_trial(
     best = _read(output / "sweep_best.json")
     assert best["total_trials"] == 3
     assert best["best_value"] == pytest.approx(study.best_value)
+
+
+def test_a_dead_runners_lease_is_stolen_and_a_live_one_is_honoured(tmp_path: Path) -> None:
+    """A killed job must not block recovery; a live runner must."""
+    import os
+
+    from polyx.pipeline.sweep_record import acquire_trial_lease, release_trial_lease
+
+    execution = tmp_path / "trials" / "trial_001"
+    execution.mkdir(parents=True)
+    lease = acquire_trial_lease(execution)
+    assert lease is not None
+    assert acquire_trial_lease(execution) is None, "a live owner keeps its lease"
+    release_trial_lease(lease)
+
+    lease = tmp_path / "trials" / ".locks" / "trial_001.lock"
+    lease.write_text("999999999", encoding="utf-8")
+    stolen = acquire_trial_lease(execution)
+    assert stolen is not None, "a dead owner's lease is stolen"
+    assert stolen.read_text(encoding="utf-8").strip() == str(os.getpid())

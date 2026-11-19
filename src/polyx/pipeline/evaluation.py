@@ -19,7 +19,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-import cv2
 import numpy as np
 
 from polyx.core.detect.protocol import Instance
@@ -34,10 +33,22 @@ _OPERATING_IOU = 0.50
 #: floor are still collected so AP can rank them; the operating point filters
 #: at the protocol's confidence instead.
 PREDICTION_FLOOR = 0.001
-#: What every family may hand the evaluator per image; AP then caps each
-#: category at 100, but F1 must see every confident prediction.
-PREDICTION_MAX_DETECTIONS = 300
+#: COCO's per-image, per-category detection cap. The cap applies to each
+#: category separately, so a plate crowded with one polymer cannot hide the
+#: highest-scoring detection of another.
 _MAX_DETECTIONS = 100
+
+
+def prediction_budget(class_count: int) -> int:
+    """How many detections a family may emit per image before shared scoring.
+
+    A detector returns one ranked list where every class competes for the same
+    slots. Giving the list ``100`` slots **per class** is the smallest budget
+    that lets the evaluator apply COCO's per-category cap without one busy
+    class crowding another out of the candidates. Both families use this same
+    number, so neither sees a different tail.
+    """
+    return _MAX_DETECTIONS * max(1, int(class_count))
 
 
 def _box_iou(first: list[float], second: list[float]) -> float:
@@ -53,38 +64,123 @@ def _box_iou(first: list[float], second: list[float]) -> float:
     return overlap / union if union > 0 else 0.0
 
 
-#: COCO rasterizes polygons at 5x before downsampling; matching that scale
-#: avoids an integer-rounded fill turning a 0.33 overlap into a 0.50 hit.
+#: pycocotools traces polygon boundaries on a grid this many times finer.
 _POLYGON_SCALE = 5
 
 
 def rasterize_segmentation(segmentation: Any, width: int, height: int) -> np.ndarray | None:
     """Fill a COCO polygon list into a boolean mask, or ``None`` if unusable.
 
-    The canonical dataset audit already rejected invalid or degenerate
-    polygons; this only guards the shape so a malformed prediction scores zero
-    instead of raising mid-evaluation. Polygons are rasterized at 5x and
-    downsampled, the scale pycocotools uses for COCO masks.
+    This is a Python port of ``rleFrPoly``/``rleDecode`` from pycocotools
+    (``maskApi.c``), the rasterizer COCO's own evaluation uses. COCO does not
+    fill integer-rounded polygons: it traces the boundary at 5x, keeps the
+    crossings that land on a whole pixel column, and encodes column runs. A
+    single subpixel-rounded ``fillPoly`` therefore made a polygon COCO counts
+    as a hit come out empty. Rings are merged as a union, as ``rleMerge`` does
+    for a COCO instance made of several polygons.
     """
     if not isinstance(segmentation, (list, tuple)) or not segmentation:
         return None
     if width <= 0 or height <= 0:
         return None
-    scale = _POLYGON_SCALE
-    mask = np.zeros((height * scale, width * scale), dtype=np.uint8)
-    filled = False
+    mask: np.ndarray | None = None
     for ring in segmentation:
         if not isinstance(ring, (list, tuple)) or len(ring) < 6 or len(ring) % 2 != 0:
             continue
         points = np.asarray(list(ring), dtype=float).reshape(-1, 2)
         if not np.all(np.isfinite(points)):
             continue
-        cv2.fillPoly(mask, [np.rint(points * scale).astype(np.int32)], (1,))
-        filled = True
-    if not filled:
+        ring_mask = _polygon_to_mask(points, height, width)
+        if ring_mask is None:
+            continue
+        mask = ring_mask if mask is None else (mask | ring_mask)
+    return mask
+
+
+def _polygon_to_mask(points: np.ndarray, height: int, width: int) -> np.ndarray | None:
+    """One polygon as a ``(width, height)`` boolean mask, as pycocotools does.
+
+    The boundary is walked at 5x resolution, reduced to the pixel columns where
+    it crosses a column boundary, and decoded as alternating column runs. The
+    result is the same mask ``maskUtils.frPyObjects`` produces, not an
+    approximation of it.
+    """
+    scale = float(_POLYGON_SCALE)
+    count = len(points)
+    # ``(int)`` in C truncates toward zero; a polygon outside the image
+    # must round the same way pycocotools rounds it.
+    scaled_x = np.trunc(scale * points[:, 0] + 0.5).astype(np.int64)
+    scaled_y = np.trunc(scale * points[:, 1] + 0.5).astype(np.int64)
+    boundary_x: list[int] = []
+    boundary_y: list[int] = []
+    for index in range(count):
+        x_start = int(scaled_x[index])
+        y_start = int(scaled_y[index])
+        x_end = int(scaled_x[(index + 1) % count])
+        y_end = int(scaled_y[(index + 1) % count])
+        dx = abs(x_end - x_start)
+        dy = abs(y_end - y_start)
+        flip = (dx >= dy and x_start > x_end) or (dx < dy and y_start > y_end)
+        if flip:
+            x_start, x_end = x_end, x_start
+            y_start, y_end = y_end, y_start
+        slope = (y_end - y_start) / dx if dx >= dy else (x_end - x_start) / dy
+        if dx >= dy:
+            for step in range(dx + 1):
+                position = dx - step if flip else step
+                boundary_x.append(position + x_start)
+                boundary_y.append(int(y_start + slope * position + 0.5))
+        else:
+            for step in range(dy + 1):
+                position = dy - step if flip else step
+                boundary_y.append(position + y_start)
+                boundary_x.append(int(x_start + slope * position + 0.5))
+    transitions: list[int] = []
+    for index in range(1, len(boundary_x)):
+        if boundary_x[index] == boundary_x[index - 1]:
+            continue
+        column = float(
+            boundary_x[index]
+            if boundary_x[index] < boundary_x[index - 1]
+            else boundary_x[index] - 1
+        )
+        column = (column + 0.5) / scale - 0.5
+        if np.floor(column) != column or column < 0 or column > width - 1:
+            continue
+        row = float(min(boundary_y[index - 1], boundary_y[index]))
+        row = (row + 0.5) / scale - 0.5
+        if row < 0:
+            row = 0.0
+        elif row > height:
+            row = float(height)
+        transitions.append(int(column) * height + int(np.ceil(row)))
+    if not transitions:
         return None
-    coverage = mask.reshape(height, scale, width, scale).mean(axis=(1, 3))
-    return coverage >= 0.5
+    # pycocotools sorts the crossings, appends the image end as a sentinel and
+    # merges a zero-length run into the run before it: two crossings that land
+    # on the same pixel cancel out instead of flipping the on/off parity.
+    ordered = sorted(transitions)
+    ordered.append(width * height)
+    deltas = [ordered[0]]
+    deltas.extend(ordered[index] - ordered[index - 1] for index in range(1, len(ordered)))
+    runs = [deltas[0]]
+    index = 1
+    while index < len(deltas):
+        if deltas[index] > 0:
+            runs.append(deltas[index])
+            index += 1
+        else:
+            index += 1
+            if index < len(deltas):
+                runs[-1] += deltas[index]
+                index += 1
+    flat = np.zeros(width * height, dtype=bool)
+    cursor = 0
+    for run_index, length in enumerate(runs):
+        if run_index % 2 == 1 and length > 0:
+            flat[cursor : cursor + length] = True
+        cursor += length
+    return flat.reshape(width, height).T
 
 
 def _mask_iou(first: np.ndarray, second: np.ndarray) -> float:
@@ -148,17 +244,20 @@ def _ranked_matches(
 
 
 def _apply_detection_cap(predictions: list[dict]) -> list[dict]:
-    """Keep COCO's top 100 predictions per image and category.
+    """Keep COCO's top 100 predictions per image **and category**.
 
     The cap is part of the reference protocol: a category with hundreds of
     low-score boxes per plate must not be scored differently from a detector
-    that stops at 100. Ground truth is not capped.
+    that stops at 100. Applying it per image alone would let one crowded class
+    push another class's confident predictions out of the ranking, so the
+    grouping key includes the category. Ground truth is not capped.
     """
-    by_image: dict[int, list[dict]] = defaultdict(list)
+    by_group: dict[tuple[int, int], list[dict]] = defaultdict(list)
     for prediction in predictions:
-        by_image[int(prediction.get("image_id", -1))].append(prediction)
+        key = (int(prediction.get("image_id", -1)), int(prediction["category_id"]))
+        by_group[key].append(prediction)
     capped: list[dict] = []
-    for items in by_image.values():
+    for items in by_group.values():
         capped.extend(
             sorted(items, key=lambda item: -float(item.get("score", 0.0)))[:_MAX_DETECTIONS]
         )

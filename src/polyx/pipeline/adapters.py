@@ -15,6 +15,7 @@ the headless command never loads a GPU stack.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -46,7 +47,7 @@ from polyx.pipeline.dataset import (
 )
 from polyx.pipeline.evaluation import (
     PREDICTION_FLOOR,
-    PREDICTION_MAX_DETECTIONS,
+    prediction_budget,
     rasterize_segmentation,
 )
 from polyx.pipeline.resume import ResumeState
@@ -71,6 +72,10 @@ class EpochResult:
     adapter_figures: dict
     checkpoint: Path
     resume_checkpoint: Path | None = None
+    #: What the fit resolved (precision actually run, device, verified weights,
+    #: augmentation). The engine writes it into the progress snapshot, so a
+    #: publication recovered after the last epoch keeps the same record.
+    fit_metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -122,6 +127,28 @@ _MIXED_PRECISION = frozenset({"16-mixed", "bf16-mixed", "16-true", "bf16-true"})
 def _amp_active(precision: str) -> bool:
     """Whether the precision Lightning reports is a mixed-precision mode."""
     return precision in _MIXED_PRECISION
+
+
+def _fit_metadata(
+    config: ExecutionConfig,
+    trainer: Any,
+    device: str,
+    requested_precision: str,
+    weights: Any,
+    augmentation: dict[str, Any],
+) -> dict[str, Any]:
+    """The fit state every epoch carries into the progress snapshot."""
+    reported = str(trainer.precision)
+    return {
+        "precision": reported,
+        "amp_requested": requested_precision,
+        "amp_active": _amp_active(reported),
+        "device": device,
+        "framework": config.family.framework,
+        "weights": weights.describe(),
+        "weights_verified": weights.verified,
+        "augmentation": augmentation,
+    }
 
 
 def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
@@ -492,7 +519,10 @@ def _torchvision_detector(
     # applies the protocol's confidence threshold only to the operating point.
     # The 100-detection cap is part of the same collection policy.
     model.roi_heads.score_thresh = PREDICTION_FLOOR
-    model.roi_heads.detections_per_img = PREDICTION_MAX_DETECTIONS
+    # One ranked list per image where every class competes for the slots, so
+    # the budget is 100 per class: the evaluator then applies COCO's cap per
+    # image and category without a busy polymer hiding another's candidates.
+    model.roi_heads.detections_per_img = prediction_budget(class_count)
     return model
 
 
@@ -660,32 +690,49 @@ def _loader_keep_mask(
     """Return the instances the pinned YOLO loader keeps after its resize.
 
     The torchvision sibling must drop exactly the instances YOLO drops. Rather
-    than approximating the loader with a scale factor, this runs the same
-    ``LetterBox`` and ``RandomPerspective.box_candidates`` classes the pinned
-    Ultralytics loader uses. Segmentation follows the loader's segment path:
-    boxes are derived from the resized polygon and the area threshold is 0.01,
-    not the box-only 0.10.
+    than approximating the loader with a scale factor, this walks the loader's
+    own path: ``load_image`` first scales the long side to ``imgsz`` with
+    ``ceil`` rounding (rect mode, aspect preserved), the segments are resampled
+    to the loader's 1000 points, ``LetterBox`` pads to a square, and
+    ``RandomPerspective.apply_segments`` derives the boxes from the resized
+    polygon. The retention test is ``box_candidates`` with the loader's segment
+    area threshold of 0.01, not the box-only 0.10.
     """
     if not boxes:
         return np.zeros((0,), dtype=bool)
     from ultralytics.data.augment import LetterBox, RandomPerspective
     from ultralytics.utils.instance import Instances
+    from ultralytics.utils.ops import resample_segments
 
-    array = np.asarray(boxes, dtype=np.float32).reshape(-1, 4)
+    # The loader's rect resize, with its ceil rounding and cap at imgsz.
+    ratio = image_size / max(image_height, image_width)
+    resized_width = min(math.ceil(image_width * ratio), image_size)
+    resized_height = min(math.ceil(image_height * ratio), image_size)
+    scale_x = resized_width / image_width
+    scale_y = resized_height / image_height
+
+    array = np.asarray(boxes, dtype=np.float32).reshape(-1, 4).copy()
+    array[:, [0, 2]] *= scale_x
+    array[:, [1, 3]] *= scale_y
     valid_segments: list[np.ndarray] = []
     if segments is not None:
         for segment in segments:
             if segment is None:
                 valid_segments = []
                 break
-            valid_segments.append(np.asarray(segment, dtype=np.float32).reshape(-1, 2))
-    segment_array = (
-        np.stack(valid_segments)
-        if valid_segments and len(valid_segments) == len(array)
-        else np.zeros((len(array), 0, 2), dtype=np.float32)
-    )
+            points = np.asarray(segment, dtype=np.float32).reshape(-1, 2).copy()
+            points[:, 0] *= scale_x
+            points[:, 1] *= scale_y
+            valid_segments.append(points)
+    if valid_segments and len(valid_segments) == len(array):
+        # The loader resamples every ring to the same number of points before
+        # stacking, which is also what lets rings with different vertex counts
+        # travel together.
+        segment_array = np.stack(resample_segments(valid_segments, n=1000))
+    else:
+        segment_array = np.zeros((len(array), 0, 2), dtype=np.float32)
     labels: dict[str, Any] = {
-        "img": np.zeros((image_height, image_width, 3), dtype=np.uint8),
+        "img": np.zeros((resized_height, resized_width, 3), dtype=np.uint8),
         "cls": np.zeros((len(array), 1), dtype=np.float32),
         "instances": Instances(
             bboxes=array,
@@ -792,7 +839,7 @@ def _validation_predictions(
         # Keep the ranked tail for AP; the shared evaluator applies the
         # operating point's confidence threshold only to F1.
         conf=PREDICTION_FLOOR,
-        max_det=PREDICTION_MAX_DETECTIONS,
+        max_det=prediction_budget(len(dataset.class_names)),
         device=device,
         verbose=False,
     )
@@ -961,6 +1008,7 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     adapter_figures={},
                     checkpoint=Path(self.checkpoint_path),
                     resume_checkpoint=resume_checkpoint,
+                    fit_metadata=dict(fit_metadata),
                 )
                 if on_epoch(result):
                     self.stop_requested = True
@@ -968,6 +1016,10 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                         current_trainer.should_stop = True
 
         trainer, requested_precision = _build_trainer(config, run_dir)
+        augmentation = _augmentation_report(protocol, self.supported_augmentations)
+        fit_metadata = _fit_metadata(
+            config, trainer, device, requested_precision, resolved_weights, augmentation
+        )
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
@@ -982,7 +1034,7 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             framework=config.family.framework,
             weights=resolved_weights.describe(),
             weights_verified=resolved_weights.verified,
-            augmentation=_augmentation_report(protocol, self.supported_augmentations),
+            augmentation=augmentation,
         )
 
 
@@ -1153,6 +1205,7 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                     adapter_figures={},
                     checkpoint=Path(self.checkpoint_path),
                     resume_checkpoint=resume_checkpoint,
+                    fit_metadata=dict(fit_metadata),
                 )
                 self.coco_predictions = []
                 # The engine scores this epoch and decides whether to stop.
@@ -1162,6 +1215,9 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                         current_trainer.should_stop = True
 
         trainer, requested_precision = _build_trainer(config, run_dir)
+        fit_metadata = _fit_metadata(
+            config, trainer, device, requested_precision, resolved_weights, augmentation
+        )
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)

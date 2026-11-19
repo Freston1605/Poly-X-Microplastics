@@ -481,6 +481,42 @@ def test_tiny_instances_use_yolos_own_side_threshold() -> None:
     assert kept == [boxes[1], boxes[2]]
 
 
+def test_mixed_vertex_polygons_travel_together_like_the_loader() -> None:
+    """A triangle and a quadrilateral in one image must not break retention.
+
+    The loader resamples every ring to the same point count before stacking;
+    stacking the raw rings raised a shape error for a valid image.
+    """
+    from polyx.pipeline.adapters import _filter_tiny_instances
+
+    boxes = [[0.0, 0.0, 20.0, 20.0], [30.0, 0.0, 60.0, 30.0]]
+    segments = [
+        np.asarray([[0.0, 0.0], [20.0, 0.0], [10.0, 20.0]], dtype=float),
+        np.asarray([[30.0, 0.0], [60.0, 0.0], [60.0, 30.0], [30.0, 30.0]], dtype=float),
+    ]
+    kept, _, labels = _filter_tiny_instances(
+        boxes,
+        [np.zeros((4, 4), dtype=bool) for _ in boxes],
+        [0, 1],
+        image_width=64,
+        image_height=64,
+        image_size=64,
+        segments=segments,
+    )
+    assert labels == [0, 1]
+    assert kept == boxes
+
+
+def test_tiny_target_retention_uses_the_loaders_ceil_resize() -> None:
+    """The loader ceil-resizes the long side first, so 31px survives and 30px does not."""
+    from polyx.pipeline.adapters import _loader_keep_mask
+
+    tall = [[0.0, 100.0, 500.0, 131.0]]
+    short = [[0.0, 100.0, 500.0, 130.0]]
+    assert _loader_keep_mask(tall, 1000, 333, 64).tolist() == [True]
+    assert _loader_keep_mask(short, 1000, 333, 64).tolist() == [False]
+
+
 def test_the_two_families_apply_the_same_effective_hsv_and_flip(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

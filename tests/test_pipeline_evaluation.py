@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from polyx.pipeline.evaluation import SharedEvaluator
+import pytest
+
+from polyx.pipeline.evaluation import SharedEvaluator, rasterize_segmentation
 
 
 def _ground_truth(count: int = 2) -> dict:
@@ -127,3 +129,40 @@ def test_wrong_polymer_is_not_a_true_positive() -> None:
     result = evaluator.evaluate([_prediction([0, 10, 20, 20], 0.9, category=1)])
     assert result["selection"]["value"] == 0.0
     assert result["figures"]["localisation_score"]["value"] == 0.0
+
+
+def test_the_detection_cap_is_applied_per_image_and_category() -> None:
+    """A crowded polymer cannot push another class out of the ranking."""
+    ground_truth = _ground_truth(1)
+    ground_truth["categories"].append({"id": 1, "name": "PP"})
+    evaluator = SharedEvaluator(ground_truth, split="val")
+    crowded = [_prediction([0, 10, 20, 20], 0.99, category=1) for _ in range(150)]
+    result = evaluator.evaluate([*crowded, _prediction([0, 10, 20, 20], 0.5)])
+    assert result["figures"]["mAP50"]["value"] == pytest.approx(1.0), (
+        "the PET true positive is ranked behind 150 PP detections; a per-image "
+        "cap would drop it, a per-image-and-category cap keeps it"
+    )
+
+
+def test_a_subpixel_shift_does_not_empty_a_coco_polygon() -> None:
+    """COCO maps both squares to the same pixel; a rounded fill does not."""
+    square = [[2.0, 2.0, 3.0, 2.0, 3.0, 3.0, 2.0, 3.0]]
+    shifted = [[2.4, 2.4, 3.4, 2.4, 3.4, 3.4, 2.4, 3.4]]
+    first = rasterize_segmentation(square, 16, 16)
+    second = rasterize_segmentation(shifted, 16, 16)
+    assert first is not None and second is not None
+    assert first[2, 2] and second[2, 2]
+    assert (first == second).all()
+
+
+def test_mask_iou_uses_cocos_polygon_rasterization() -> None:
+    """A shifted polygon is the same mask, so the predicted hit is a true one."""
+    ground_truth = _ground_truth(1)
+    ground_truth["annotations"][0]["segmentation"] = [
+        [0.0, 10.0, 20.0, 10.0, 20.0, 30.0, 0.0, 30.0]
+    ]
+    evaluator = SharedEvaluator(ground_truth, split="val", task="segment")
+    prediction = _prediction([0, 10, 20, 20], 0.9)
+    prediction["segmentation"] = [[0.4, 10.4, 20.4, 10.4, 20.4, 30.4, 0.4, 30.4]]
+    result = evaluator.evaluate([prediction])
+    assert result["selection"]["value"] == pytest.approx(1.0)

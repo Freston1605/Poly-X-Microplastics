@@ -161,12 +161,16 @@ The figures are the same shape for both families:
 - `localisation_score` — the same operating-point F1 with the class ignored,
   reported beside the selection score.
 - `mAP50` and `mAP50-95` — COCO interpolated average precision, class-aware,
-  with the reference per-image/per-category 100-detection cap. Predictions are
-  collected at a low floor and both families may emit 300 per image, so the cap
-  cannot hide a confident prediction from F1; only the operating point applies
-  `protocol.confidence`. Masks are rasterized at 5x and downsampled, the scale
-  COCO uses, so integer boundary rounding cannot turn a miss into an AP50 hit.
-  AP is reported separately and never selects a checkpoint or drives Optuna.
+  with the reference per-image/per-category 100-detection cap. The cap is
+  applied per image **and category**, so a plate crowded with one polymer
+  cannot push another class's confident detections out of the ranking.
+  Predictions are collected at a low floor; each family may emit 100 per
+  class per image, which is the smallest candidate budget that keeps that
+  guarantee. Only the operating point applies `protocol.confidence`. Masks use
+  a port of pycocotools' boundary-crossing rasterizer, so a polygon COCO counts
+  as a hit is not emptied by integer rounding; the port is checked against
+  pycocotools on the accepted input formats. AP is reported separately and
+  never selects a checkpoint or drives Optuna.
 - `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
   best mask IoU per ground-truth instance and the mask mAP figures.
 
@@ -223,17 +227,18 @@ same JSON but different pixels cannot share a cache. Each COCO annotation must
 have exactly one polygon ring: YOLO-seg would otherwise turn a multi-part
 particle into several training instances while Mask R-CNN keeps it as one. Such
 an export is refused before training, with an actionable error asking for one
-annotation per part or a single exterior polygon. Distinct annotations whose
-serialized polygons produce the same class and box are refused with the image
-and annotation ids, because the pinned YOLO loader would collapse them into one
-target. Label destinations come from the project's label codec, not from a
-re-derived path.
+annotation per part or a single exterior polygon. Two annotations collapse in
+the loader only when the label rows they serialize to are identical, so the
+converter refuses duplicates by comparing the exact line the shared label codec
+is about to write — not the declared COCO box or its extrema — with the image
+and annotation ids. Label destinations come from the project's label codec, not
+from a re-derived path.
 
-The Mask R-CNN sibling applies the pinned loader's own `LetterBox` resize,
-segment-derived boxes, clipping and `box_candidates` rule to decide which
-instances to keep. Segmentation uses the loader's 0.01 area threshold and
-box-only detection uses 0.10; a 2.0 px side is dropped and 2.1 px is kept,
-exactly as in the family being matched.
+The Mask R-CNN sibling walks the pinned loader's own path: the `ceil` resize of
+the long side, the 1000-point segment resampling, the `LetterBox` pad, the
+segment-derived boxes and `box_candidates`. Segmentation uses the loader's 0.01
+area threshold and box-only detection uses 0.10; a target that survives YOLO's
+rounding is kept, and one that does not is dropped.
 
 ```bash
 polyx-pipeline \
@@ -325,7 +330,10 @@ historical shape for compatibility. Each epoch also writes its own
 carries the weights, optimizer, scheduler and epoch progress, and the progress
 snapshot is published atomically only after that checkpoint exists. A
 preemption therefore restores a matched pair, never new weights with older
-selection bookkeeping. An Ultralytics `.pt` is not a Lightning checkpoint and
+selection bookkeeping. The snapshot also carries the fit's own record — the
+precision Lightning actually ran, the device, the verified weights and the
+augmentation — so a publication recovered after the last epoch states the same
+facts instead of inventing them. An Ultralytics `.pt` is not a Lightning checkpoint and
 is never used for resume. If a progress snapshot has no Lightning checkpoint
 (one written before this behaviour existed), the execution refuses to resume
 instead of silently restarting the epoch loop.
@@ -371,15 +379,20 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
 - `PolyxOptunaSweeper` injects the actual study trial number into each job as
   `sweep_trial_id`; identity never comes from parameters or Hydra's resettable
   job index. Before asking for new trials it scans the persisted records and
-  relaunches any trial left `RUNNING` that still has a progress snapshot, so a
-  resubmission resumes the interrupted trial itself rather than a new one. Both
-  sweep drivers publish the same `record.json` through one writer.
+  relaunches every trial left `RUNNING`: one with a progress snapshot continues
+  its checkpoint, one without a snapshot retries the same parameters in a clean
+  directory, and one whose execution finished but never reached Optuna is told
+  from its own metrics. A recovered trial keeps its study number; the lease file
+  under `trials/.locks/` stops two runners from recovering it twice, and a
+  lease whose owner is dead is stolen so a killed job cannot block resumption. Both sweep
+  drivers publish the same `record.json` through one writer, and a trial whose
+  number Optuna never sampled has no parameters to retry and is left untouched.
 - The resolved study name and storage are written once to
-  `<output_dir>/sweep_config.yaml` and reused by `sweep_best`.
-  `<output_dir>/trials/index.json` maps trial numbers to the exact directories
-  written; the export resolves the winner strictly by
-  `study.best_trial.number`, requires the winner's `metrics.json`, and fails if
-  that artifact is missing instead of matching parameters.
+  `<output_dir>/sweep_config.yaml` and reused by `sweep_best`. The export
+  resolves the winner strictly by `study.best_trial.number` and requires the
+  winner's record (same trial and study), `completion.json`, readable
+  `metrics.json` and `checkpoints/best.pt`; a partial directory is reported as
+  missing instead of being exported.
 - The search space lives in `hydra.sweeper.params` and may only touch protocol
   hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
   The sampler is a TPE seeded from the protocol, direction `maximize` and no

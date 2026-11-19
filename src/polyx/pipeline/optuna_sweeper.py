@@ -4,12 +4,17 @@ The stock plugin acquires a trial with ``study.ask()`` and launches its job,
 but the job configuration never says which trial it is. Reconstructing that
 identity from parameters or Hydra's job index is ambiguous after a preemption.
 This thin subclass injects the trial's own number as a job override, so the
-objective can persist and recover an execution keyed by the study's identity.
+objective persists and recovers an execution keyed by the study's identity.
+
+A trial killed by a time limit stays ``RUNNING`` in Optuna. Before asking for
+new trials, ``sweep`` relaunches those trials from their persisted record: a
+trial with a progress snapshot continues its checkpoint, one that never wrote
+a checkpoint retries the same parameters, and one whose execution finished
+but whose score never reached Optuna is told from its own metrics.
 """
 
 from __future__ import annotations
 
-import json
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -18,6 +23,14 @@ import optuna
 from hydra_plugins.hydra_optuna_sweeper import _impl
 from omegaconf import OmegaConf
 from optuna.trial import Trial
+
+from polyx.pipeline.sweep_record import (
+    acquire_trial_lease,
+    completed_score,
+    read_trial_record,
+    release_trial_lease,
+    trial_directory,
+)
 
 
 class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
@@ -51,10 +64,17 @@ class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
         super().sweep(arguments)
 
     def _recover_pending(self, arguments: list[str]) -> int:
-        """Relaunch pending trials that still have a checkpoint and a record."""
+        """Relaunch or reconcile every interrupted trial of this study."""
         root = Path(str(self.config.output_dir))
+        study = self._load_study()
         pending = self._pending_records(root)
-        if not pending:
+        running = [
+            int(trial.number)
+            for trial in study.get_trials(deepcopy=False)
+            if trial.state == optuna.trial.TrialState.RUNNING
+        ]
+        candidates = sorted({*pending, *running})
+        if not candidates:
             return 0
         self._process_searchspace_config()
         params_conf = self._parse_sweeper_params_config()
@@ -64,58 +84,89 @@ class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
             distributions = {**self.search_space_distributions, **distributions}
         for name in fixed:
             distributions.pop(name, None)
-        study = optuna.create_study(
-            study_name=self.study_name,
-            storage=self.storage,
-            sampler=self.sampler,
+        recovered = 0
+        for trial_id in candidates:
+            trial = self._trial_by_number(study, trial_id)
+            if trial is None or trial.state != optuna.trial.TrialState.RUNNING:
+                continue
+            directory = trial_directory(root, trial_id)
+            lease = acquire_trial_lease(directory)
+            if lease is None:
+                # Another runner already recovered this trial.
+                continue
+            try:
+                if _reconcile_finished(study, trial, directory):
+                    recovered += 1
+                    continue
+                if not trial.params:
+                    continue
+                overrides = self._configure_trials([trial], distributions, fixed)
+                returns = self.launcher.launch(overrides, initial_job_idx=self.job_idx)
+                self.job_idx += len(returns)
+                recovered += 1
+                for result in returns:
+                    try:
+                        value = float(result.return_value)
+                    except Exception:  # noqa: BLE001 - a failed recovery stays a failure
+                        study.tell(trial.number, state=optuna.trial.TrialState.FAIL)
+                    else:
+                        study.tell(trial.number, value)
+            finally:
+                release_trial_lease(lease)
+        return recovered
+
+    def _load_study(self) -> Any:
+        """The study this multirun owns, created on first use.
+
+        The plugin's own ``setup`` already resolved the storage, name and
+        directions from the composed config, so recovery reads them from the
+        sweeper instance instead of asking Hydra for its global config again.
+        """
+        return optuna.create_study(
+            study_name=str(self.study_name or "polyx-optuna"),
+            storage=str(self.storage or ""),
             directions=self._get_directions(),
             load_if_exists=True,
         )
-        recovered = 0
-        for trial_id in pending:
-            if trial_id >= len(study.trials):
-                continue
-            trial = study.trials[trial_id]
-            if trial.state != optuna.trial.TrialState.RUNNING or not trial.params:
-                continue
-            overrides = self._configure_trials([trial], distributions, fixed)
-            returns = self.launcher.launch(overrides, initial_job_idx=self.job_idx)
-            self.job_idx += len(returns)
-            recovered += 1
-            for result in returns:
-                try:
-                    value = float(result.return_value)
-                except Exception:  # noqa: BLE001 - a failed recovery stays a failure
-                    study.tell(trial, state=optuna.trial.TrialState.FAIL)
-                else:
-                    study.tell(trial, value)
-        return recovered
+
+    @staticmethod
+    def _trial_by_number(study: Any, trial_id: int) -> Any | None:
+        """One stored trial by its number, or ``None`` when it does not exist."""
+        trials = study.get_trials(deepcopy=False)
+        return trials[trial_id] if 0 <= trial_id < len(trials) else None
 
     @staticmethod
     def _pending_records(root: Path) -> list[int]:
-        """Trial ids whose record is running and whose progress survived."""
+        """Trial ids whose record says the execution never completed."""
         trials = root / "trials"
         if not trials.is_dir():
             return []
         ids: list[int] = []
         for directory in sorted(trials.glob("trial_*")):
-            record = directory / "record.json"
-            if not record.is_file() or not (directory / "progress.json").is_file():
-                continue
-            if (directory / "completion.json").is_file():
+            record = read_trial_record(directory)
+            if record is None or record.get("status") != "running":
                 continue
             try:
-                loaded = json.loads(record.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+                ids.append(int(record["trial_id"]))
+            except (KeyError, TypeError, ValueError):
                 continue
-            if isinstance(loaded, dict) and loaded.get("status") == "running":
-                ids.append(int(loaded["trial_id"]))
         return ids
 
     def _write_results(self) -> None:
         """Write the plugin's best-artifact when a run was only recovery."""
-        study = optuna.load_study(study_name=self.study_name, storage=self.storage)
+        study = self._load_study()
+        completed = [
+            trial
+            for trial in study.get_trials(deepcopy=False)
+            if trial.state == optuna.trial.TrialState.COMPLETE
+        ]
+        if not completed:
+            # Nothing to report: a failed recovery leaves the study without a
+            # complete trial, and inventing a best artifact would hide it.
+            return
         best = study.best_trial
+        sweep_dir = Path(str(self.config.hydra.sweep.dir))
+        sweep_dir.mkdir(parents=True, exist_ok=True)
         OmegaConf.save(
             OmegaConf.create(
                 {
@@ -124,8 +175,19 @@ class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
                     "best_value": best.value,
                 }
             ),
-            f"{self.config.hydra.sweep.dir}/optimization_results.yaml",
+            sweep_dir / "optimization_results.yaml",
         )
+
+
+def _reconcile_finished(study: Any, trial: Any, directory: Path) -> bool:
+    """Tell a score the finished execution wrote but Optuna never received."""
+    if not (directory / "completion.json").is_file():
+        return False
+    score = completed_score(directory)
+    if score is None:
+        return False
+    study.tell(trial.number, score)
+    return True
 
 
 def install_trial_id_passthrough() -> None:

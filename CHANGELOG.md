@@ -27,6 +27,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Fixed
+- **Third follow-up HPC review fixes.** A killed Optuna trial is recovered by
+  its own id (resume its checkpoint, retry its parameters, or reconcile a score
+  its finished execution already wrote), one trial at a time through a lease
+  file; the winner export requires the record, completion marker, metrics and
+  best checkpoint. A fresh run refuses a reused execution directory. The
+  progress snapshot carries the fit's precision, device and verified weights so
+  a recovered publication keeps them. Detection candidates are budgeted per
+  class and the reference cap is applied per image and category; polygon masks
+  use a port of pycocotools' rasterizer; Mask R-CNN retention follows the
+  loader's ceil resize and segment resampling; collision checks use the label
+  line the codec actually writes, and the conversion cache version covers the
+  new rule.
 - **Second follow-up HPC review fixes.** Interrupted Optuna trials are
   relaunched by their persisted id instead of being abandoned for a new trial.
   Pipeline failures carry invariant codes/parameters and translate only at

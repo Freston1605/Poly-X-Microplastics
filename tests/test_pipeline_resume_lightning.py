@@ -215,6 +215,39 @@ def test_a_resumed_run_that_never_improves_keeps_the_snapshot_best_metrics(
     assert metrics["figures"]["with_class_score"]["value"] == pytest.approx(1.0)
 
 
+def test_recovered_publication_keeps_the_fit_metadata(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    yolo_double: type[_RealLoopYOLO],
+) -> None:
+    """A publication recovered after the last epoch keeps precision and weights."""
+    output = tmp_path / "executions" / "recovered-publication"
+    yolo_double.prediction_sets = [_boxes_prediction(), _boxes_prediction()]
+    yolo_double.fail_on_validation = None
+    assert _fit_detection(output, tiny_dataset) == 0
+    progress = _read(output / "progress.json")
+    assert progress["fit"]["precision"], "the snapshot must carry what the fit ran"
+    assert "weights_verified" in progress["fit"]
+
+    # The crash window after the last epoch: the snapshot survived, every
+    # published artifact after it may be missing.
+    for name in ("metrics.json", "training_state.json", "completion.json", "report.md"):
+        (output / name).unlink(missing_ok=True)
+
+    yolo_double.prediction_sets = []
+    yolo_double.fail_on_validation = None
+    yolo_double.instances = []
+    validations_before = yolo_double.validation_calls
+    assert _fit_detection(output, tiny_dataset, resume=True) == 0
+    assert yolo_double.validation_calls == validations_before, "no epoch reran"
+
+    state = _read(output / "training_state.json")
+    assert state["recovered_publication"] is True
+    assert state["precision"] == progress["fit"]["precision"]
+    assert state["weights_verified"] == progress["fit"]["weights_verified"]
+    assert (output / "completion.json").is_file()
+
+
 def test_a_legacy_snapshot_without_a_lightning_checkpoint_is_refused(
     tmp_path: Path,
     tiny_dataset: Path,

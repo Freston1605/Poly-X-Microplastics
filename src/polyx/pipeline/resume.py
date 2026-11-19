@@ -38,6 +38,10 @@ class ResumeState:
     stopped_early: bool
     protocol: dict[str, Any]
     best_metrics: dict[str, Any] | None = None
+    #: The fit resolved by the interrupted execution (precision, device,
+    #: verified weights, augmentation), carried so a recovered publication
+    #: does not have to invent them.
+    fit: dict[str, Any] | None = None
 
     @classmethod
     def load(cls, path: Path) -> ResumeState:
@@ -54,6 +58,9 @@ class ResumeState:
             best_metrics = raw.get("best_metrics")
             if best_metrics is not None and not isinstance(best_metrics, dict):
                 raise TypeError("best_metrics must be a mapping")
+            fit = raw.get("fit")
+            if fit is not None and not isinstance(fit, dict):
+                raise TypeError("fit must be a mapping")
             return cls(
                 epochs_completed=int(raw["epochs_completed"]),
                 last_checkpoint=Path(checkpoint) if checkpoint else None,
@@ -65,6 +72,7 @@ class ResumeState:
                 stopped_early=bool(raw.get("stopped_early", False)),
                 protocol=dict(raw["protocol"]),
                 best_metrics=best_metrics,
+                fit=fit,
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeError(f"invalid progress snapshot {path}: {exc}") from exc

@@ -25,7 +25,7 @@ from typing import Any
 import yaml
 
 from polyx.core.i18n import N_
-from polyx.core.labels import label_path_for, write_polygon_lines
+from polyx.core.labels import format_polygon_line, label_path_for, write_polygon_lines
 from polyx.core.provenance import sha256_file
 from polyx.pipeline.dataset import (
     ordered_categories,
@@ -105,21 +105,21 @@ def _rings(annotation: dict[str, Any]) -> list[list[tuple[float, float]]]:
     return rings
 
 
-def _serialized_box(
+def _serialized_target(
     class_id: int,
     ring: list[tuple[float, float]],
     width: int,
     height: int,
-) -> tuple[int, float, float, float, float]:
-    """The box the YOLO loader derives from the serialized polygon.
+) -> str:
+    """The label line this converter is about to write for one annotation.
 
-    YOLO deduplicates on that derived box, not on the COCO ``bbox`` field.
-    Reproducing the same six-decimal normalization catches two annotations
-    whose declared boxes differ but whose written polygons collapse.
+    The pinned loader deduplicates label rows as it reads them, so two
+    annotations collapse only when their *whole* serialized line is equal — not
+    when their declared COCO boxes or their coordinate extrema match. Deriving
+    the key from the codec's own serializer keeps this check and the written
+    file from drifting.
     """
-    xs = [round(min(1.0, max(0.0, x / width)), 6) for x, _ in ring]
-    ys = [round(min(1.0, max(0.0, y / height)), 6) for _, y in ring]
-    return (class_id, min(xs), min(ys), max(xs), max(ys))
+    return format_polygon_line(class_id, ring, width, height)
 
 
 def _write_split(
@@ -151,7 +151,7 @@ def _write_split(
         # Positions, not canonical annotation ids, are the label file's order.
         ordered = sorted(annotations.get(int(image["id"]), []), key=lambda item: item["id"])
         polygons: list[tuple[int, list[tuple[float, float]]]] = []
-        seen: dict[tuple[int, tuple[float, ...]], int] = {}
+        seen: dict[str, int] = {}
         for annotation in ordered:
             class_id = indices[int(annotation["category_id"])]
             rings = _rings(annotation)
@@ -167,15 +167,15 @@ def _write_split(
                     id=annotation.get("id", "?"),
                     count=len(rings),
                 )
-            key = _serialized_box(class_id, rings[0], int(image["width"]), int(image["height"]))
+            key = _serialized_target(class_id, rings[0], int(image["width"]), int(image["height"]))
             if key in seen:
                 raise PipelineError(
                     "seg_conversion.colliding_target",
                     N_(
                         "image %(image)s has annotations %(first)s and %(second)s "
-                        "with the same class and serialized box; the pinned YOLO "
-                        "loader would collapse them into one target. Merge or remove "
-                        "the duplicate in the annotation tool."
+                        "that serialize to the same YOLO label; the pinned loader "
+                        "would collapse them into one target. Merge or remove the "
+                        "duplicate in the annotation tool."
                     ),
                     image=image["file_name"],
                     first=seen[key],
