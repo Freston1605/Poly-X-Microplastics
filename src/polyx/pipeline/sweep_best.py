@@ -45,11 +45,17 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.output_dir).expanduser().resolve()
     results_path = root / "sweep" / "optimization_results.yaml"
     if not results_path.is_file():
-        print(f"ERROR: no Optuna results at {results_path}", file=sys.stderr)
+        print(
+            "ERROR: " + _("no Optuna results at %(path)s") % {"path": results_path},
+            file=sys.stderr,
+        )
         return 1
     results = yaml.safe_load(results_path.read_text(encoding="utf-8")) or {}
     if "best_value" not in results:
-        print(f"ERROR: {results_path} has no best_value", file=sys.stderr)
+        print(
+            "ERROR: " + _("%(path)s has no best_value") % {"path": results_path},
+            file=sys.stderr,
+        )
         return 1
 
     record = _read_study_record(root)
@@ -57,14 +63,20 @@ def main(argv: list[str] | None = None) -> int:
     storage = args.storage or record.get("storage") or _storage("", study_name, root)
     study = _load_study(study_name, storage)
     if study is None:
-        print(f"ERROR: cannot load study {study_name!r} at {storage}", file=sys.stderr)
+        print(
+            "ERROR: "
+            + _("cannot load study %(study)s at %(storage)s")
+            % {"study": study_name, "storage": storage},
+            file=sys.stderr,
+        )
         return 1
     best_number = int(study.best_trial.number)
     best_directory = _find_best_directory(root / "trials", best_number)
     if best_directory is None:
         print(
-            f"ERROR: the winner is study trial {best_number} but its artifact is "
-            f"missing under {root / 'trials'}",
+            "ERROR: "
+            + _("the winner is study trial %(trial)d but its artifact is missing under %(root)s")
+            % {"trial": best_number, "root": root / "trials"},
             file=sys.stderr,
         )
         return 1
@@ -135,12 +147,12 @@ def _find_best_directory(trials: Path, best_number: int) -> Path | None:
             names = index.get(str(best_number)) or []
             if names:
                 candidate = trials / str(names[-1])
-                if candidate.is_dir():
+                if (candidate / "metrics.json").is_file():
                     return candidate
         except (OSError, json.JSONDecodeError, AttributeError):
             pass
     candidate = trials / f"trial_{best_number:03d}"
-    return candidate if candidate.is_dir() else None
+    return candidate if (candidate / "metrics.json").is_file() else None
 
 
 def _criterion(directory: Path | None) -> str:

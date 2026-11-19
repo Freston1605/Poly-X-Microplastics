@@ -44,7 +44,11 @@ from polyx.pipeline.dataset import (
     split_directory,
     split_images,
 )
-from polyx.pipeline.evaluation import PREDICTION_FLOOR, rasterize_segmentation
+from polyx.pipeline.evaluation import (
+    PREDICTION_FLOOR,
+    PREDICTION_MAX_DETECTIONS,
+    rasterize_segmentation,
+)
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset
 from polyx.pipeline.weights import resolve_weights
@@ -488,7 +492,7 @@ def _torchvision_detector(
     # applies the protocol's confidence threshold only to the operating point.
     # The 100-detection cap is part of the same collection policy.
     model.roi_heads.score_thresh = PREDICTION_FLOOR
-    model.roi_heads.detections_per_img = 100
+    model.roi_heads.detections_per_img = PREDICTION_MAX_DETECTIONS
     return model
 
 
@@ -539,6 +543,7 @@ class _CocoMaskTorchvisionDataset:
         masks: list[np.ndarray] = []
         boxes: list[list[float]] = []
         labels: list[int] = []
+        segments: list[np.ndarray | None] = []
         annotations = sorted(
             self._annotations.get(int(record["id"]), []), key=lambda item: int(item["id"])
         )
@@ -553,11 +558,15 @@ class _CocoMaskTorchvisionDataset:
             masks.append(mask)
             boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
             labels.append(category + 1)
+            rings = annotation.get("segmentation")
+            segments.append(
+                np.asarray(rings[0], dtype=np.float32).reshape(-1, 2)
+                if isinstance(rings, (list, tuple)) and len(rings) == 1
+                else None
+            )
 
-        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
-        # Ultralytics filters boxes after its LetterBox resize. Run the same
-        # loader transform here so a benchmark never trains one family on an
-        # instance the other one dropped.
+        # The loader filters geometry before colour/flip transforms. Run the
+        # same letterbox/segment path here so both families keep one set.
         boxes, masks, labels = _filter_tiny_instances(
             boxes,
             masks,
@@ -565,7 +574,9 @@ class _CocoMaskTorchvisionDataset:
             image_width=width,
             image_height=height,
             image_size=self.protocol.image_size,
+            segments=segments,
         )
+        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
         tensor = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1))).float() / 255.0
         areas = [max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1]) for box in boxes]
         target = {
@@ -643,14 +654,17 @@ def _loader_keep_mask(
     image_width: int,
     image_height: int,
     image_size: int,
+    *,
+    segments: list[np.ndarray | None] | None = None,
 ) -> np.ndarray:
-    """Return the boxes the pinned YOLO loader keeps after its resize.
+    """Return the instances the pinned YOLO loader keeps after its resize.
 
     The torchvision sibling must drop exactly the instances YOLO drops. Rather
     than approximating the loader with a scale factor, this runs the same
     ``LetterBox`` and ``RandomPerspective.box_candidates`` classes the pinned
-    Ultralytics loader uses, with the benchmark's zero geometric augmentation.
-    Rounding, stride padding and clipping therefore match the loader.
+    Ultralytics loader uses. Segmentation follows the loader's segment path:
+    boxes are derived from the resized polygon and the area threshold is 0.01,
+    not the box-only 0.10.
     """
     if not boxes:
         return np.zeros((0,), dtype=bool)
@@ -658,21 +672,31 @@ def _loader_keep_mask(
     from ultralytics.utils.instance import Instances
 
     array = np.asarray(boxes, dtype=np.float32).reshape(-1, 4)
+    valid_segments: list[np.ndarray] = []
+    if segments is not None:
+        for segment in segments:
+            if segment is None:
+                valid_segments = []
+                break
+            valid_segments.append(np.asarray(segment, dtype=np.float32).reshape(-1, 2))
+    segment_array = (
+        np.stack(valid_segments)
+        if valid_segments and len(valid_segments) == len(array)
+        else np.zeros((len(array), 0, 2), dtype=np.float32)
+    )
     labels: dict[str, Any] = {
         "img": np.zeros((image_height, image_width, 3), dtype=np.uint8),
         "cls": np.zeros((len(array), 1), dtype=np.float32),
         "instances": Instances(
             bboxes=array,
-            segments=np.zeros((len(array), 0, 2), dtype=np.float32),
+            segments=segment_array,
             bbox_format="xyxy",
             normalized=False,
         ),
     }
     labels = LetterBox(new_shape=(image_size, image_size))(labels)
     letterboxed = np.asarray(labels["instances"].bboxes, dtype=np.float32).copy()
-    clipped = letterboxed.copy()
-    clipped[:, [0, 2]] = clipped[:, [0, 2]].clip(0, image_size)
-    clipped[:, [1, 3]] = clipped[:, [1, 3]].clip(0, image_size)
+    letterboxed_segments = np.asarray(labels["instances"].segments, dtype=np.float32)
     perspective = RandomPerspective(
         degrees=0.0,
         translate=0.0,
@@ -680,8 +704,18 @@ def _loader_keep_mask(
         shear=0.0,
         perspective=0.0,
     )
+    if segment_array.size:
+        perspective.size = (labels["img"].shape[1], labels["img"].shape[0])
+        derived, _ = perspective.apply_segments(letterboxed_segments, np.eye(3, dtype=np.float32))
+        clipped = np.asarray(derived, dtype=np.float32).copy()
+        area_thr = 0.01
+    else:
+        clipped = letterboxed.copy()
+        area_thr = 0.10
+    clipped[:, [0, 2]] = clipped[:, [0, 2]].clip(0, image_size)
+    clipped[:, [1, 3]] = clipped[:, [1, 3]].clip(0, image_size)
     return np.asarray(
-        perspective.box_candidates(box1=letterboxed.T, box2=clipped.T, area_thr=0.10),
+        perspective.box_candidates(box1=letterboxed.T, box2=clipped.T, area_thr=area_thr),
         dtype=bool,
     )
 
@@ -694,14 +728,21 @@ def _filter_tiny_instances(
     image_width: int,
     image_height: int,
     image_size: int,
+    segments: list[np.ndarray | None] | None = None,
 ) -> tuple[list[list[float]], list[np.ndarray], list[int]]:
     """Apply the pinned loader's retention rule to the torchvision sibling.
 
     The model must be the only variable: one family cannot train on instances
-    the other discarded. The kept set comes from the loader's own resize and
-    clipping, not from a second approximation of that arithmetic.
+    the other discarded. The kept set comes from the loader's own resize,
+    segment-derived boxes and clipping, not from a second approximation.
     """
-    keep = _loader_keep_mask(boxes, image_width, image_height, image_size)
+    keep = _loader_keep_mask(
+        boxes,
+        image_width,
+        image_height,
+        image_size,
+        segments=segments,
+    )
     kept_boxes = [box for box, keep_one in zip(boxes, keep, strict=True) if keep_one]
     kept_masks = [mask for mask, keep_one in zip(masks, keep, strict=True) if keep_one]
     kept_labels = [label for label, keep_one in zip(labels, keep, strict=True) if keep_one]
@@ -751,6 +792,7 @@ def _validation_predictions(
         # Keep the ranked tail for AP; the shared evaluator applies the
         # operating point's confidence threshold only to F1.
         conf=PREDICTION_FLOOR,
+        max_det=PREDICTION_MAX_DETECTIONS,
         device=device,
         verbose=False,
     )

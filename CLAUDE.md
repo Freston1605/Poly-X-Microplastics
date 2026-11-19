@@ -730,17 +730,21 @@ Trainer and its native training wrapper are untouched by this path.
   criterion on every figure and reuses the project's `Criterion`/`Score`:
   selection is with-class operating-point F1 at `protocol.confidence` and 0.50
   IoU; localisation is reported beside it. Predictions are collected at a low
-  floor so COCO AP can rank the tail, with the reference 100-detection cap per
-  image/category; only F1 applies the confidence threshold. AP is a separate
-  ranking figure and never selects a checkpoint or drives Optuna. `mask_iou`
-  is class-aware.
+  floor and both families may emit 300 per image so the reference 100-detection
+  cap per image/category cannot discard a confident F1 prediction; only F1
+  applies the confidence threshold. Polygons are rasterized at 5x before
+  downsampling, matching COCO's mask scale. AP is a separate ranking figure and
+  never selects a checkpoint or drives Optuna. `mask_iou` is class-aware.
 - `execution.py` owns audit, provenance, early stopping, best-weight
   restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
   `report.md`, `logs/`, `checkpoints/`, `completion.json`). `best.pt` is the
   kept checkpoint. Saved audit findings are stable codes plus parameters, never
-  translated prose. `completion.json` is written atomically and last; a final
-  epoch with missing artifacts is published rather than retrained.
+  translated prose. `completion.json` is written atomically and last, after the
+  final log line; a final epoch with missing artifacts is published rather than
+  retrained, and a fresh run in a reused directory clears a stale marker first.
+  `PipelineError` carries a stable code, invariant English template and
+  parameters; the command logs those and translates only at display time.
 - `resume.py` reads the per-epoch progress snapshot; the best epoch's metrics
   travel with it. Each epoch writes an immutable
   `checkpoints/lightning/checkpoint_NNN.ckpt`, and the progress record is
@@ -756,8 +760,9 @@ Trainer and its native training wrapper are untouched by this path.
   names in the same folds with byte-identical content, and both declare
   real-domain imagery, so the model is the only variable. COCO masks with more
   than one polygon ring are refused at conversion rather than becoming several
-  YOLO instances, and distinct annotations the loader would collapse to one
-  class and box are refused with their ids.
+  YOLO instances; distinct annotations whose serialized polygons collapse to
+  one class and box are refused with their ids. The conversion cache key hashes
+  every image's bytes, not only `dataset.json`.
 - COCO instance JSON is the canonical mask format (`coco.py`,
   `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
   ground truth; the benchmark reference is human COCO annotations only.
@@ -765,10 +770,12 @@ Trainer and its native training wrapper are untouched by this path.
   `sweep_app.py` is the real Optuna multirun and `sweep_best.py` writes
   `sweep_best.json` after it. The study is SQLite on the work filesystem,
   named from `hydra.sweeper.study_name`; its identity is persisted once in
-  `sweep_config.yaml`. `PolyxOptunaSweeper` injects the actual trial id into
-  the job, each trial records its id/parameters/path before training, and
-  `trials/index.json` plus `study.best_trial.number` resolve the winner. The
-  export fails if that artifact is missing instead of matching parameters.
+  `sweep_config.yaml`. `PolyxOptunaSweeper` injects the actual trial id, and
+  before asking for new trials it relaunches a `RUNNING` trial that still has a
+  record and progress snapshot. Both drivers write the same `record.json`
+  (`sweep_record.py`); `trials/index.json` plus `study.best_trial.number`
+  resolve the winner, which must have `metrics.json`. The export fails rather
+  than matching parameters.
 - `weights.py` resolves `family.weights` to a staged file and verifies its
   SHA-256 against the manifest before a framework sees it; absent or unverified
   pins fail closed.

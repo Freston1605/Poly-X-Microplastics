@@ -388,7 +388,7 @@ def test_the_shared_evaluator_scores_both_segmentation_families_identically(
     # 1.0 even though mAP@[0.50:0.95] on the same predictions is 0.7.
     assert mask["selection"]["value"] == pytest.approx(1.0)
     assert mask["figures"]["mask_mAP50-95"]["value"] == pytest.approx(0.7)
-    assert mask["figures"]["mask_iou"]["value"] == pytest.approx(19.0 / 23.0)
+    assert mask["figures"]["mask_iou"]["value"] == pytest.approx(18.0 / 22.0)
 
 
 def test_both_segmentation_families_resolve_the_same_protocol(

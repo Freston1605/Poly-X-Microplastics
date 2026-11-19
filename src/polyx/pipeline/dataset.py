@@ -14,10 +14,12 @@ from typing import Any
 import yaml
 
 from polyx.core.detect.protocol import size_image
+from polyx.core.i18n import N_
 from polyx.core.labels import find_label_file, read_boxes
 from polyx.core.paths import find_images
 from polyx.core.provenance import sha256_file
 from polyx.core.quality.dataset_audit import coco_image_split
+from polyx.pipeline.errors import PipelineError
 
 
 def read_data_yaml(data_yaml: Path) -> dict[str, Any]:
@@ -88,55 +90,91 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
     declaration = read_data_yaml(data_yaml)
     coco = read_coco_store(coco_dataset)
     if not _is_real_domain(declaration):
-        raise ValueError(
-            f"{data_yaml} must declare domain: real (or validation_domain: real) "
-            "for a benchmark campaign"
+        raise PipelineError(
+            "campaign.domain_not_real",
+            N_(
+                "%(path)s must declare domain: real (or validation_domain: real) "
+                "for a benchmark campaign"
+            ),
+            path=str(data_yaml),
         )
     if not _is_real_domain(coco):
-        raise ValueError(
-            f"{coco_dataset / 'dataset.json'} must declare info.domain: real "
-            "for a benchmark campaign"
+        raise PipelineError(
+            "campaign.domain_not_real",
+            N_("%(path)s must declare info.domain: real for a benchmark campaign"),
+            path=str(coco_dataset / "dataset.json"),
         )
     boxes: dict[str, tuple[str, str]] = {}
     masks: dict[str, tuple[str, str]] = {}
     for name in ("train", "val", "test"):
         for path in split_images(data_yaml, name):
             if path.name in boxes:
-                raise ValueError(
-                    f"the box dataset reuses the image name {path.name!r} across folds; "
-                    "basenames must be unique for a cohort comparison"
+                raise PipelineError(
+                    "campaign.duplicate_box_image",
+                    N_(
+                        "the box dataset reuses the image name %(name)s across "
+                        "folds; basenames must be unique for a cohort comparison"
+                    ),
+                    name=path.name,
                 )
             boxes[path.name] = (name, sha256_file(path))
         for image in split_coco_images(coco, name):
             path = coco_dataset / str(image["file_name"])
             if path.name in masks:
-                raise ValueError(
-                    f"the mask dataset reuses the image name {path.name!r} across folds; "
-                    "basenames must be unique for a cohort comparison"
+                raise PipelineError(
+                    "campaign.duplicate_mask_image",
+                    N_(
+                        "the mask dataset reuses the image name %(name)s across "
+                        "folds; basenames must be unique for a cohort comparison"
+                    ),
+                    name=path.name,
                 )
             masks[path.name] = (name, sha256_file(path))
     if set(boxes) != set(masks):
         missing_boxes = sorted(set(masks) - set(boxes))
         missing_masks = sorted(set(boxes) - set(masks))
-        raise ValueError(
-            f"the cohorts differ between {data_yaml} and {coco_dataset}: "
-            f"only-box={missing_masks} only-mask={missing_boxes}"
+        raise PipelineError(
+            "campaign.cohort_mismatch",
+            N_(
+                "the cohorts differ between %(boxes)s and %(masks)s: "
+                "only-box=%(only_box)s only-mask=%(only_mask)s"
+            ),
+            boxes=str(data_yaml),
+            masks=str(coco_dataset),
+            only_box=missing_masks,
+            only_mask=missing_boxes,
         )
     for name in boxes:
         box_fold, box_hash = boxes[name]
         mask_fold, mask_hash = masks[name]
         if box_fold != mask_fold:
-            raise ValueError(
-                f"image {name!r} is in the {box_fold} fold of the box dataset and "
-                f"the {mask_fold} fold of the mask dataset"
+            raise PipelineError(
+                "campaign.fold_mismatch",
+                N_(
+                    "image %(name)s is in the %(box_fold)s fold of the box dataset "
+                    "and the %(mask_fold)s fold of the mask dataset"
+                ),
+                name=name,
+                box_fold=box_fold,
+                mask_fold=mask_fold,
             )
         if box_hash != mask_hash:
-            raise ValueError(
-                f"image {name!r} has different content in the box and mask datasets "
-                f"({box_hash[:12]} != {mask_hash[:12]})"
+            raise PipelineError(
+                "campaign.content_mismatch",
+                N_(
+                    "image %(name)s has different content in the box and mask "
+                    "datasets (%(box_hash)s != %(mask_hash)s)"
+                ),
+                name=name,
+                box_hash=box_hash[:12],
+                mask_hash=mask_hash[:12],
             )
     if not any(fold == split for fold, _hash in boxes.values()):
-        raise ValueError(f"the benchmark split '{split}' has no images in either dataset")
+        raise PipelineError(
+            "campaign.split_missing",
+            N_("the benchmark split %(split)s has no images in either dataset"),
+            split=split,
+        )
     signature = {
         name: {"split": fold, "sha256": digest} for name, (fold, digest) in sorted(boxes.items())
     }

@@ -207,6 +207,69 @@ def test_resume_finishes_publishing_after_metrics_before_report(
     assert "recovered_publication" not in _read(output / "training_state.json")
 
 
+def test_completion_is_not_written_when_the_final_log_write_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed log line after completion would mark a broken run complete."""
+    from polyx.pipeline import execution as engine
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "log-failure"
+    real_append = engine.append_log
+
+    def failing_append(path: Path, message: str) -> None:
+        if message.startswith("done "):
+            raise OSError("simulated log failure")
+        real_append(path, message)
+
+    monkeypatch.setattr(engine, "append_log", failing_append)
+    code = _command(
+        f"data_yaml={build_tiny_dataset(tmp_path / 'dataset')}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+    )
+    assert code == 1
+    assert not (output / "completion.json").exists()
+
+
+def test_a_fresh_run_invalidates_a_stale_completion_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A reused output directory must not inherit an old finished marker."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "reused"
+    data_yaml = build_tiny_dataset(tmp_path / "dataset")
+    assert _command(f"data_yaml={data_yaml}", f"output_dir={output}", "protocol.epochs=1") == 0
+    assert (output / "completion.json").is_file()
+
+    broken = data_yaml.with_name("broken.yaml")
+    broken.write_text("path: .\nnames:\n  0: PET\n", encoding="utf-8")
+    assert _command(f"data_yaml={broken}", f"output_dir={output}", "protocol.epochs=1") == 1
+    assert not (output / "completion.json").exists()
+
+
+def test_resume_rebuilds_corrupt_metrics_from_the_progress_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A truncated metrics file is recovered from the intact progress record."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "truncated"
+    overrides = [
+        f"data_yaml={build_tiny_dataset(tmp_path / 'dataset')}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+    ]
+    assert _command(*overrides) == 0
+    (output / "metrics.json").write_text('{"selection":', encoding="utf-8")
+    (output / "completion.json").unlink()
+    (output / "report.md").unlink()
+
+    assert _command(*overrides, "resume=true") == 0
+    assert (output / "completion.json").is_file()
+    assert (output / "report.md").is_file()
+    assert _read(output / "metrics.json")["selection"]["metric"] == "with_class_score"
+
+
 def tiny_dataset_path(tmp_path: Path) -> Path:
     """The shared fixture path used by the publication test."""
     return build_tiny_dataset(tmp_path / "dataset")

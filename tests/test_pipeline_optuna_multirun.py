@@ -186,6 +186,19 @@ def test_a_trial_with_progress_is_reused_by_its_id(tmp_path: Path) -> None:
     assert _trial_output_dir(tmp_path, 3) == trial
 
 
+def test_a_running_record_with_progress_is_pending_for_recovery(tmp_path: Path) -> None:
+    """Resubmission discovers the interrupted trial from its persisted record."""
+    from polyx.pipeline.optuna_sweeper import PolyxOptunaSweeper
+
+    trial = tmp_path / "trials" / "trial_002"
+    trial.mkdir(parents=True)
+    (trial / "record.json").write_text(
+        json.dumps({"trial_id": 2, "status": "running"}), encoding="utf-8"
+    )
+    (trial / "progress.json").write_text("{}", encoding="utf-8")
+    assert PolyxOptunaSweeper._pending_records(tmp_path) == [2]
+
+
 def test_export_resolves_the_winner_by_trial_number_not_parameters(
     tmp_path: Path,
 ) -> None:
@@ -197,6 +210,8 @@ def test_export_resolves_the_winner_by_trial_number_not_parameters(
     duplicate = trials / "trial_099"
     winner.mkdir(parents=True)
     duplicate.mkdir(parents=True)
+    (winner / "metrics.json").write_text('{"selection": {"value": 1.0}}', encoding="utf-8")
+    (duplicate / "metrics.json").write_text('{"selection": {"value": 1.0}}', encoding="utf-8")
     (trials / "index.json").write_text(
         json.dumps({"1": ["trial_099", "trial_001"], "99": ["trial_099"]}),
         encoding="utf-8",
@@ -224,6 +239,8 @@ def test_export_reports_a_missing_winner_instead_of_guessing(
     (root / "sweep_config.yaml").write_text(
         f"study_name: polyx-optuna\nstorage: {storage}\n", encoding="utf-8"
     )
+    (root / "trials" / "trial_000").mkdir(parents=True)
+    (root / "trials" / "index.json").write_text('{"0": ["trial_000"]}', encoding="utf-8")
     assert sweep_best.main(["--output-dir", str(root)]) == 1
     assert "missing" in capsys.readouterr().err
 

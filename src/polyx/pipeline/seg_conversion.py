@@ -15,6 +15,7 @@ project's only YOLO label codec.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from typing import Any
 
 import yaml
 
-from polyx.core.i18n import _
+from polyx.core.i18n import N_
 from polyx.core.labels import label_path_for, write_polygon_lines
 from polyx.core.provenance import sha256_file
 from polyx.pipeline.dataset import (
@@ -31,11 +32,12 @@ from polyx.pipeline.dataset import (
     read_coco_store,
     split_coco_images,
 )
+from polyx.pipeline.errors import PipelineError
 
 #: Name written into the conversion metadata; a change means a new cache key.
 CONVERSION_FORMAT = "yolo-seg-polygons"
 #: Bump when the produced layout changes, so old caches are not reused.
-CONVERSION_VERSION = 2
+CONVERSION_VERSION = 3
 #: Splits the canonical dataset may carry; only these are written out.
 _SPLITS = ("train", "val", "test")
 
@@ -71,8 +73,22 @@ class ConvertedDataset:
         }
 
 
-def _cache_key(dataset_json: Path) -> str:
-    return f"{CONVERSION_FORMAT}-v{CONVERSION_VERSION}-{sha256_file(dataset_json)[:16]}"
+def _cache_key(store: Path, coco: dict[str, Any]) -> str:
+    """Key the cache by the JSON and every image's actual bytes.
+
+    Two stores can share a dataset.json and still hold different pixels. A
+    JSON-only key would let the second execution silently train on the first
+    store's cached images.
+    """
+    images = {
+        str(image["file_name"]): sha256_file(store / str(image["file_name"]))
+        for image in coco.get("images", [])
+    }
+    payload = json.dumps(
+        {"dataset": sha256_file(store / "dataset.json"), "images": images},
+        sort_keys=True,
+    ).encode()
+    return f"{CONVERSION_FORMAT}-v{CONVERSION_VERSION}-{hashlib.sha256(payload).hexdigest()[:16]}"
 
 
 def _rings(annotation: dict[str, Any]) -> list[list[tuple[float, float]]]:
@@ -89,6 +105,23 @@ def _rings(annotation: dict[str, Any]) -> list[list[tuple[float, float]]]:
     return rings
 
 
+def _serialized_box(
+    class_id: int,
+    ring: list[tuple[float, float]],
+    width: int,
+    height: int,
+) -> tuple[int, float, float, float, float]:
+    """The box the YOLO loader derives from the serialized polygon.
+
+    YOLO deduplicates on that derived box, not on the COCO ``bbox`` field.
+    Reproducing the same six-decimal normalization catches two annotations
+    whose declared boxes differ but whose written polygons collapse.
+    """
+    xs = [round(min(1.0, max(0.0, x / width)), 6) for x, _ in ring]
+    ys = [round(min(1.0, max(0.0, y / height)), 6) for _, y in ring]
+    return (class_id, min(xs), min(ys), max(xs), max(ys))
+
+
 def _write_split(
     store: Path,
     coco: dict[str, Any],
@@ -103,9 +136,7 @@ def _write_split(
         annotations.setdefault(int(annotation["image_id"]), []).append(annotation)
 
     images_dir = root / "images" / split
-    labels_dir = root / "labels" / split
     images_dir.mkdir(parents=True, exist_ok=True)
-    labels_dir.mkdir(parents=True, exist_ok=True)
 
     polygon_count = 0
     label_count = 0
@@ -125,30 +156,30 @@ def _write_split(
             class_id = indices[int(annotation["category_id"])]
             rings = _rings(annotation)
             if len(rings) != 1:
-                raise ValueError(
-                    _(
+                raise PipelineError(
+                    "seg_conversion.multipart_annotation",
+                    N_(
                         "a COCO mask annotation must have exactly one polygon ring to "
                         "stay one training instance; annotation %(id)s has %(count)d. "
                         "Split the particle into separate annotations in the "
                         "annotation tool, or export a single exterior polygon."
-                    )
-                    % {"id": annotation.get("id", "?"), "count": len(rings)}
+                    ),
+                    id=annotation.get("id", "?"),
+                    count=len(rings),
                 )
-            bbox = tuple(round(float(value), 6) for value in annotation.get("bbox", []))
-            key = (class_id, bbox)
+            key = _serialized_box(class_id, rings[0], int(image["width"]), int(image["height"]))
             if key in seen:
-                raise ValueError(
-                    _(
+                raise PipelineError(
+                    "seg_conversion.colliding_target",
+                    N_(
                         "image %(image)s has annotations %(first)s and %(second)s "
-                        "with the same class and box; the pinned YOLO loader would "
-                        "collapse them into one target. Merge or remove the duplicate "
-                        "in the annotation tool."
-                    )
-                    % {
-                        "image": image["file_name"],
-                        "first": seen[key],
-                        "second": annotation.get("id", "?"),
-                    }
+                        "with the same class and serialized box; the pinned YOLO "
+                        "loader would collapse them into one target. Merge or remove "
+                        "the duplicate in the annotation tool."
+                    ),
+                    image=image["file_name"],
+                    first=seen[key],
+                    second=annotation.get("id", "?"),
                 )
             seen[key] = int(annotation.get("id", -1))
             polygons.append((class_id, rings[0]))
@@ -173,9 +204,8 @@ def convert_coco_dataset(store: Path, scratch_root: Path) -> ConvertedDataset:
     """
     store = Path(store).expanduser().resolve()
     scratch_root = Path(scratch_root).expanduser().resolve()
-    dataset_json = store / "dataset.json"
     coco = read_coco_store(store)
-    cache_key = _cache_key(dataset_json)
+    cache_key = _cache_key(store, coco)
     target = scratch_root / "seg_datasets" / cache_key
     data_yaml = target / "data.yaml"
     if data_yaml.is_file():

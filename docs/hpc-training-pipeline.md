@@ -130,7 +130,10 @@ completion.json        # written last, only after every required artifact exists
 `completion.json` is the completion authority. A campaign skips a family only
 when it exists under the same protocol; a family with a progress snapshot but
 no completion resumes, and a final epoch already on disk is published rather
-than retrained.
+than retrained. The log line is written before completion, and every JSON
+artifact is published atomically. A fresh run in a reused directory removes a
+stale completion marker first, so an interrupted new run cannot be mistaken
+for a finished one.
 
 `provenance.json` always names the dataset source (`yolo_boxes` or
 `coco_instances`). A YOLO-seg execution also records its job-time conversion:
@@ -159,9 +162,11 @@ The figures are the same shape for both families:
   reported beside the selection score.
 - `mAP50` and `mAP50-95` — COCO interpolated average precision, class-aware,
   with the reference per-image/per-category 100-detection cap. Predictions are
-  collected at a low floor so AP can rank the tail; only the operating point
-  applies `protocol.confidence`. AP is reported separately and never used to
-  select a checkpoint or to drive Optuna.
+  collected at a low floor and both families may emit 300 per image, so the cap
+  cannot hide a confident prediction from F1; only the operating point applies
+  `protocol.confidence`. Masks are rasterized at 5x and downsampled, the scale
+  COCO uses, so integer boundary rounding cannot turn a miss into an AP50 hit.
+  AP is reported separately and never selects a checkpoint or drives Optuna.
 - `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
   best mask IoU per ground-truth instance and the mask mAP figures.
 
@@ -212,22 +217,23 @@ and report. Detection run folders are never touched: they stay box-only.
 `yolo_segmentation` trains from the versioned COCO mask dataset. The COCO
 polygons are converted to the family's folder contract (`images/<split>`,
 `labels/<split>` with YOLO-seg polygon lines, `data.yaml`) at job time, and
-cached under `scratch_dir/seg_datasets/<cache key>`. The key is the SHA-256 of
-the canonical `dataset.json`, so a second execution over the same dataset
-reuses the cache and a different dataset cannot pick up stale labels. Each
-COCO annotation must have exactly one polygon ring: YOLO-seg would otherwise
-turn a multi-part particle into several training instances while Mask R-CNN
-keeps it as one. Such an export is refused before training, with an actionable
-error asking for one annotation per part or a single exterior polygon. Two
-distinct annotations with the same class and box are refused with the image and
-annotation ids, because the pinned YOLO loader would collapse them into one
+cached under `scratch_dir/seg_datasets/<cache key>`. The key hashes the
+canonical `dataset.json` and every image's actual bytes, so two stores with the
+same JSON but different pixels cannot share a cache. Each COCO annotation must
+have exactly one polygon ring: YOLO-seg would otherwise turn a multi-part
+particle into several training instances while Mask R-CNN keeps it as one. Such
+an export is refused before training, with an actionable error asking for one
+annotation per part or a single exterior polygon. Distinct annotations whose
+serialized polygons produce the same class and box are refused with the image
+and annotation ids, because the pinned YOLO loader would collapse them into one
 target. Label destinations come from the project's label codec, not from a
 re-derived path.
 
 The Mask R-CNN sibling applies the pinned loader's own `LetterBox` resize,
-clipping and `box_candidates` rule to decide which instances to keep. A 2.0 px
-side is dropped and 2.1 px is kept, exactly as in YOLO, so one family does not
-train on instances the other discarded.
+segment-derived boxes, clipping and `box_candidates` rule to decide which
+instances to keep. Segmentation uses the loader's 0.01 area threshold and
+box-only detection uses 0.10; a 2.0 px side is dropped and 2.1 px is kept,
+exactly as in the family being matched.
 
 ```bash
 polyx-pipeline \
@@ -364,16 +370,16 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
   never on scratch, and a resumed multirun extends the same study.
 - `PolyxOptunaSweeper` injects the actual study trial number into each job as
   `sweep_trial_id`; identity never comes from parameters or Hydra's resettable
-  job index. Each trial writes a `record.json` with its id, parameters and
-  execution path before training. A resubmission with the same id resumes the
-  recorded checkpoint when a progress snapshot exists, and otherwise explicitly
-  retries the same parameters in a clean directory.
+  job index. Before asking for new trials it scans the persisted records and
+  relaunches any trial left `RUNNING` that still has a progress snapshot, so a
+  resubmission resumes the interrupted trial itself rather than a new one. Both
+  sweep drivers publish the same `record.json` through one writer.
 - The resolved study name and storage are written once to
   `<output_dir>/sweep_config.yaml` and reused by `sweep_best`.
   `<output_dir>/trials/index.json` maps trial numbers to the exact directories
   written; the export resolves the winner strictly by
-  `study.best_trial.number` and fails if that artifact is missing instead of
-  matching parameters.
+  `study.best_trial.number`, requires the winner's `metrics.json`, and fails if
+  that artifact is missing instead of matching parameters.
 - The search space lives in `hydra.sweeper.params` and may only touch protocol
   hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
   The sampler is a TPE seeded from the protocol, direction `maximize` and no

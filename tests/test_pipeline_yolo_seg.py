@@ -313,11 +313,14 @@ def test_duplicate_class_and_box_are_rejected_before_conversion(
     first, second = dataset["annotations"][:2]
     second["image_id"] = first["image_id"]
     second["category_id"] = first["category_id"]
-    second["bbox"] = list(first["bbox"])
+    # Declared boxes differ, but the serialized polygons collapse to one box.
+    second["bbox"] = [value + 1.0 for value in first["bbox"]]
     second["segmentation"] = [list(first["segmentation"][0])]
     (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match=r"(same class and box|misma clase y caja)") as caught:
+    with pytest.raises(
+        ValueError, match=r"(same class and serialized box|misma clase y caja)"
+    ) as caught:
         convert_coco_dataset(store, tmp_path / "scratch-duplicate")
     message = str(caught.value)
     assert str(first["id"]) in message and str(second["id"]) in message
@@ -462,11 +465,11 @@ def test_mask_iou_and_map_are_reported_per_class_with_the_criterion_named(
     assert metrics["selection"]["metric"] == "with_class_score"
     criterion = metrics["selection"]["criterion"]
     assert "mask" in criterion.lower() and "iou" in criterion.lower()
-    # A two-pixel vertical shift of a 20x20 square: the filled rasters overlap
-    # in 399 of a 483 union (the polygon boundary is inclusive on both sides),
-    # so IoU is 19/23. Every instance still clears the 0.50 operating point,
-    # so the with-class F1 is 1.0 even though mAP@[0.50:0.95] is 0.7.
-    overlap = pytest.approx(19.0 / 23.0)
+    # A two-pixel vertical shift of a 20x20 square: exact polygon overlap is
+    # 18x20 over a 440-pixel union, so IoU is 18/22. Every instance clears the
+    # 0.50 operating point, so with-class F1 is 1.0 even though mAP@[0.50:0.95]
+    # is lower.
+    overlap = pytest.approx(18.0 / 22.0)
     assert metrics["selection"]["value"] == pytest.approx(1.0)
     assert metrics["selected_epoch"] == 0
 
@@ -596,6 +599,19 @@ def test_a_second_run_reuses_the_scratch_conversion(
     assert second["cached"] is True
     assert second["cache_key"] == first["cache_key"]
     assert second["root"] == first["root"]
+
+
+def test_changed_image_bytes_do_not_reuse_the_conversion_cache(tmp_path: Path) -> None:
+    """The cache key includes pixels, not only dataset.json."""
+    from polyx.pipeline.seg_conversion import convert_coco_dataset
+
+    store = _imported_store(tmp_path)
+    first = convert_coco_dataset(store, tmp_path / "scratch-bytes")
+    image = store / "images" / "val" / "plate_v1.png"
+    image.write_bytes(image.read_bytes() + b"\0")
+    second = convert_coco_dataset(store, tmp_path / "scratch-bytes")
+    assert first.cache_key != second.cache_key
+    assert first.root != second.root
 
 
 def test_masks_are_matched_within_the_same_image(

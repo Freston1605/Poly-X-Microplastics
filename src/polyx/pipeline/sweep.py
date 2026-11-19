@@ -28,6 +28,7 @@ from omegaconf import OmegaConf
 from polyx.pipeline.artifacts import ArtifactLayout, write_json, write_yaml
 from polyx.pipeline.config import CONF_DIR, ExecutionConfig, execution_config_from_raw
 from polyx.pipeline.execution import run_execution
+from polyx.pipeline.sweep_record import write_trial_record
 
 #: Protocol hyperparameters a trial may change. Split, seed, augmentation
 #: subset and the evaluator are outside this set and cannot be suggested.
@@ -244,15 +245,14 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
         }
         trial_dir = layout.root / "trials" / f"trial_{trial.number:03d}"
         trial_dir.mkdir(parents=True, exist_ok=True)
-        record = {
-            "trial_id": trial.number,
-            "parameters": suggestions,
-            "execution": str(trial_dir),
-            "status": "running",
-            "study_name": config.study_name,
-            "storage": config.storage,
-        }
-        write_json(record, trial_dir / "record.json")
+        write_trial_record(
+            layout.root,
+            trial_id=trial.number,
+            parameters=suggestions,
+            execution=trial_dir,
+            study_name=config.study_name,
+            storage=config.storage,
+        )
         resume = (trial_dir / "progress.json").is_file()
         try:
             score = float(
@@ -261,10 +261,26 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
                 )["selection"]["value"]
             )
         except Exception:
-            write_json({**record, "status": "failed"}, trial_dir / "record.json")
+            write_trial_record(
+                layout.root,
+                trial_id=trial.number,
+                parameters=suggestions,
+                execution=trial_dir,
+                study_name=config.study_name,
+                storage=config.storage,
+                status="failed",
+            )
             study.tell(trial, state=optuna.trial.TrialState.FAIL)
             raise
-        write_json({**record, "status": "completed"}, trial_dir / "record.json")
+        write_trial_record(
+            layout.root,
+            trial_id=trial.number,
+            parameters=suggestions,
+            execution=trial_dir,
+            study_name=config.study_name,
+            storage=config.storage,
+            status="completed",
+        )
         study.tell(trial, score)
 
     completed = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.COMPLETE]

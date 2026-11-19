@@ -34,6 +34,9 @@ _OPERATING_IOU = 0.50
 #: floor are still collected so AP can rank them; the operating point filters
 #: at the protocol's confidence instead.
 PREDICTION_FLOOR = 0.001
+#: What every family may hand the evaluator per image; AP then caps each
+#: category at 100, but F1 must see every confident prediction.
+PREDICTION_MAX_DETECTIONS = 300
 _MAX_DETECTIONS = 100
 
 
@@ -50,18 +53,25 @@ def _box_iou(first: list[float], second: list[float]) -> float:
     return overlap / union if union > 0 else 0.0
 
 
+#: COCO rasterizes polygons at 5x before downsampling; matching that scale
+#: avoids an integer-rounded fill turning a 0.33 overlap into a 0.50 hit.
+_POLYGON_SCALE = 5
+
+
 def rasterize_segmentation(segmentation: Any, width: int, height: int) -> np.ndarray | None:
     """Fill a COCO polygon list into a boolean mask, or ``None`` if unusable.
 
     The canonical dataset audit already rejected invalid or degenerate
     polygons; this only guards the shape so a malformed prediction scores zero
-    instead of raising mid-evaluation.
+    instead of raising mid-evaluation. Polygons are rasterized at 5x and
+    downsampled, the scale pycocotools uses for COCO masks.
     """
     if not isinstance(segmentation, (list, tuple)) or not segmentation:
         return None
     if width <= 0 or height <= 0:
         return None
-    mask = np.zeros((height, width), dtype=np.uint8)
+    scale = _POLYGON_SCALE
+    mask = np.zeros((height * scale, width * scale), dtype=np.uint8)
     filled = False
     for ring in segmentation:
         if not isinstance(ring, (list, tuple)) or len(ring) < 6 or len(ring) % 2 != 0:
@@ -69,9 +79,12 @@ def rasterize_segmentation(segmentation: Any, width: int, height: int) -> np.nda
         points = np.asarray(list(ring), dtype=float).reshape(-1, 2)
         if not np.all(np.isfinite(points)):
             continue
-        cv2.fillPoly(mask, [np.rint(points).astype(np.int32)], (1,))
+        cv2.fillPoly(mask, [np.rint(points * scale).astype(np.int32)], (1,))
         filled = True
-    return mask.astype(bool) if filled else None
+    if not filled:
+        return None
+    coverage = mask.reshape(height, scale, width, scale).mean(axis=(1, 3))
+    return coverage >= 0.5
 
 
 def _mask_iou(first: np.ndarray, second: np.ndarray) -> float:

@@ -32,6 +32,7 @@ from polyx.core.provenance.observability import event_error, logger_for
 from polyx.pipeline.artifacts import write_json, write_yaml
 from polyx.pipeline.coco_import import audit_as_dict, import_coco_dataset, write_import_report
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, load_config
+from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.execution import run_execution
 
 
@@ -71,13 +72,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return 0
             summary = run_execution(config)
     except Exception as exc:  # noqa: BLE001 - the command reports any failure as exit 1
-        event_error(
-            logger_for("pipeline"),
-            "pipeline.error",
-            exc,
-            command="sweep" if sweep else "execution",
-        )
-        print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
+        if isinstance(exc, PipelineError):
+            event_error(
+                logger_for("pipeline"),
+                "pipeline.error",
+                exc,
+                command="sweep" if sweep else "execution",
+                error_code=exc.code,
+                error_parameters=exc.parameters,
+            )
+            print(f"ERROR: {type(exc).__name__}: {exc.display()}", file=sys.stderr)
+        else:
+            event_error(
+                logger_for("pipeline"),
+                "pipeline.error",
+                exc,
+                command="sweep" if sweep else "execution",
+            )
+            print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
     selection = summary["selection"]

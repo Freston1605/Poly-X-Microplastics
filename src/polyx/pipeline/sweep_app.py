@@ -27,6 +27,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from polyx.pipeline.artifacts import write_json_atomic, write_yaml
 from polyx.pipeline.optuna_sweeper import install_trial_id_passthrough
+from polyx.pipeline.sweep_record import write_trial_record
 
 install_trial_id_passthrough()
 
@@ -44,19 +45,27 @@ def objective(cfg: DictConfig) -> float:
     study = _study_record()
     _persist_study(root, study)
     output = _trial_output_dir(root, trial_id)
-    record = {
-        "trial_id": trial_id,
-        "parameters": _trial_parameters(raw),
-        "execution": str(output),
-        "status": "running",
-        **study,
-    }
-    write_json_atomic(record, output / "record.json")
+    write_trial_record(
+        root,
+        trial_id=trial_id,
+        parameters=_sampled_parameters(raw),
+        execution=output,
+        study_name=study["study_name"],
+        storage=study["storage"],
+    )
     raw["output_dir"] = str(output)
     if (output / "progress.json").is_file():
         raw["resume"] = True
     summary = run_execution(execution_config_from_raw(raw))
-    write_json_atomic({**record, "status": "completed"}, output / "record.json")
+    write_trial_record(
+        root,
+        trial_id=trial_id,
+        parameters=_sampled_parameters(raw),
+        execution=output,
+        study_name=study["study_name"],
+        storage=study["storage"],
+        status="completed",
+    )
     _register_trial(output, trial_id)
     return float(summary["selection"]["value"])
 
@@ -91,12 +100,22 @@ def _persist_study(root: Path, study: dict[str, Any]) -> None:
     write_yaml(study, path)
 
 
-def _trial_parameters(raw: dict) -> dict[str, Any]:
-    """The protocol values this trial actually received."""
+def _sampled_parameters(raw: dict) -> dict[str, Any]:
+    """The protocol values this trial's declared search space could suggest."""
+    sweeper = HydraConfig.get().sweeper
+    declared = sweeper.get("params") or {}
     protocol = raw.get("protocol") or {}
     if not isinstance(protocol, dict):
         return {}
-    return {f"protocol.{key}": value for key, value in protocol.items()}
+    sampled: dict[str, Any] = {}
+    for key in declared:
+        name = str(key)
+        if not name.startswith("protocol."):
+            continue
+        field = name.split(".", 1)[1]
+        if field in protocol:
+            sampled[name] = protocol[field]
+    return sampled
 
 
 def _index_path(root: Path) -> Path:

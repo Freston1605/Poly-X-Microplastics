@@ -27,6 +27,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Fixed
+- **Second follow-up HPC review fixes.** Interrupted Optuna trials are
+  relaunched by their persisted id instead of being abandoned for a new trial.
+  Pipeline failures carry invariant codes/parameters and translate only at
+  display; completion is written after the final log line; a fresh run clears a
+  stale marker; and the export requires the winner's metrics. Detection and
+  evaluation now share a 300-prediction collection cap, masks are rasterized at
+  COCO's 5x scale, segmentation uses the loader's segment-derived boxes and
+  0.01 area threshold, colliding serialized polygons are refused, and the
+  conversion cache key includes image bytes.
 - **Follow-up HPC review fixes.** Checkpoint validation and `best.pt` now use
   the live weights without carrying a staged checkpoint's EMA; COCO AP has the
   reference per-image/category 100-detection cap while F1 applies the configured

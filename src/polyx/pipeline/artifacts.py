@@ -97,17 +97,11 @@ def write_yaml(data: dict, path: Path) -> None:
 
 
 def write_json(data: dict, path: Path) -> None:
-    """Write a formatted JSON artifact."""
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def write_json_atomic(data: dict, path: Path) -> None:
     """Publish a JSON artifact in one rename, never as a half-written file.
 
-    The progress snapshot is the resume contract. A killed process must leave
-    either the previous complete snapshot or the new one, never truncated
-    JSON that only looks like a valid checkpoint pointer.
+    Every saved artifact is a resume or review contract. A killed process must
+    leave either the previous complete file or the new one, never truncated
+    JSON that only looks valid until the next reader arrives.
     """
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -124,6 +118,11 @@ def write_json_atomic(data: dict, path: Path) -> None:
     except BaseException:
         Path(temporary).unlink(missing_ok=True)
         raise
+
+
+def write_json_atomic(data: dict, path: Path) -> None:
+    """Backward-compatible alias for the one atomic JSON writer."""
+    write_json(data, path)
 
 
 def append_log(path: Path, message: str) -> None:

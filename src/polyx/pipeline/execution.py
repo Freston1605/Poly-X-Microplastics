@@ -34,13 +34,19 @@ from polyx.pipeline.training import EarlyStoppingState
 
 def _read_json(path: Path) -> dict[str, Any]:
     """Read one JSON artifact written by this engine."""
+    loaded = _try_read_json(path)
+    if loaded is None:
+        raise RuntimeError(f"cannot read artifact {path}")
+    return loaded
+
+
+def _try_read_json(path: Path) -> dict[str, Any] | None:
+    """Read a JSON artifact, or ``None`` when it is absent or truncated."""
     try:
         loaded = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"cannot read artifact {path}: {exc}") from exc
-    if not isinstance(loaded, dict):
-        raise RuntimeError(f"artifact {path} is not a JSON object")
-    return loaded
+    except (OSError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
 
 
 def _completion_record(
@@ -73,6 +79,12 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         if resume_state.protocol != protocol_to_dict(config):
             raise RuntimeError("protocol changed since the progress snapshot was written")
     layout.create()
+    if not config.resume and layout.completion.is_file():
+        # A fresh execution in a reused directory must not inherit an old
+        # completion marker. Remove it and the resume records before training;
+        # if this run stops early it will not be mistaken for finished.
+        for stale in (layout.completion, layout.progress, layout.metrics, layout.training_state):
+            stale.unlink(missing_ok=True)
     if resume_state is not None and layout.completion.is_file():
         # A completed execution is never rebuilt; the completion record is the
         # one authority.
@@ -227,6 +239,12 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         write_json(training_state, layout.training_state)
         write_json(provenance, layout.provenance)
         write_report(layout.report, final_metrics, training_state, config_to_dict(config))
+        append_log(
+            layout.training_log,
+            f"done best={best_artifact} selection={final_metrics['selection']['value']:.6f}",
+        )
+        # The completion record is the final write: no artifact or log line may
+        # fail after the run has already been marked complete.
         write_json_atomic(
             _completion_record(
                 config,
@@ -236,10 +254,6 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 epochs_completed=epochs_completed,
             ),
             layout.completion,
-        )
-        append_log(
-            layout.training_log,
-            f"done best={best_artifact} selection={final_metrics['selection']['value']:.6f}",
         )
         return {
             "output_dir": layout.root,
@@ -258,16 +272,14 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         if stopping.best_checkpoint is None:
             raise RuntimeError("the progress snapshot has no best checkpoint to publish")
         best_artifact = stopping.restore(layout.best_checkpoint)
-        if layout.metrics.is_file():
-            final_metrics = _read_json(layout.metrics)
-        else:
+        final_metrics = _try_read_json(layout.metrics)
+        if final_metrics is None:
             if resume_state.best_metrics is None:
                 raise RuntimeError("the progress snapshot has no best metrics to publish")
             final_metrics = dict(resume_state.best_metrics)
         final_metrics.setdefault("selected_epoch", resume_state.best_epoch)
-        if layout.training_state.is_file():
-            training_state = _read_json(layout.training_state)
-        else:
+        training_state = _try_read_json(layout.training_state)
+        if training_state is None:
             training_state = {
                 "protocol": protocol_to_dict(config),
                 "family": asdict(config.family),

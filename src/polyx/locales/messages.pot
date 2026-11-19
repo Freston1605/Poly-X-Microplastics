@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 14:38-0300\n"
+"POT-Creation-Date: 2026-11-19 17:31-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6051,31 +6051,31 @@ msgstr ""
 msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:144
+#: src/polyx/pipeline/artifacts.py:143
 msgid "Training execution report"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:146
+#: src/polyx/pipeline/artifacts.py:145
 msgid "Family"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:147
+#: src/polyx/pipeline/artifacts.py:146
 msgid "Backend"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:148
+#: src/polyx/pipeline/artifacts.py:147
 msgid "Selection metric"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:150
+#: src/polyx/pipeline/artifacts.py:149
 msgid "Figures"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:162
+#: src/polyx/pipeline/artifacts.py:161
 msgid "Early stopping"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:156
+#: src/polyx/pipeline/artifacts.py:155
 msgid "Per class"
 msgstr ""
 
@@ -6118,7 +6118,53 @@ msgstr ""
 msgid "Audit"
 msgstr ""
 
-#: src/polyx/pipeline/seg_conversion.py:129
+#: src/polyx/pipeline/dataset.py:95
+#, python-format
+msgid "%(path)s must declare domain: real (or validation_domain: real) for a benchmark campaign"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:104
+#, python-format
+msgid "%(path)s must declare info.domain: real for a benchmark campaign"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:138
+#, python-format
+msgid "the cohorts differ between %(boxes)s and %(masks)s: only-box=%(only_box)s only-mask=%(only_mask)s"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:175
+#, python-format
+msgid "the benchmark split %(split)s has no images in either dataset"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:153
+#, python-format
+msgid ""
+"image %(name)s is in the %(box_fold)s fold of the box dataset and the %(mask_fold)s fold of the "
+"mask dataset"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:164
+#, python-format
+msgid "image %(name)s has different content in the box and mask datasets (%(box_hash)s != %(mask_hash)s)"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:114
+#, python-format
+msgid ""
+"the box dataset reuses the image name %(name)s across folds; basenames must be unique for a "
+"cohort comparison"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:126
+#, python-format
+msgid ""
+"the mask dataset reuses the image name %(name)s across folds; basenames must be unique for a "
+"cohort comparison"
+msgstr ""
+
+#: src/polyx/pipeline/seg_conversion.py:161
 #, python-format
 msgid ""
 "a COCO mask annotation must have exactly one polygon ring to stay one training instance; "
@@ -6126,12 +6172,12 @@ msgid ""
 "tool, or export a single exterior polygon."
 msgstr ""
 
-#: src/polyx/pipeline/seg_conversion.py:141
+#: src/polyx/pipeline/seg_conversion.py:174
 #, python-format
 msgid ""
-"image %(image)s has annotations %(first)s and %(second)s with the same class and box; the pinned"
-" YOLO loader would collapse them into one target. Merge or remove the duplicate in the "
-"annotation tool."
+"image %(image)s has annotations %(first)s and %(second)s with the same class and serialized box;"
+" the pinned YOLO loader would collapse them into one target. Merge or remove the duplicate in "
+"the annotation tool."
 msgstr ""
 
 #: src/polyx/pipeline/sweep_best.py:34
@@ -6144,5 +6190,25 @@ msgstr ""
 
 #: src/polyx/pipeline/sweep_best.py:40
 msgid "study storage URL or SQLite path (default: the work layout path)"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:49
+#, python-format
+msgid "no Optuna results at %(path)s"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:56
+#, python-format
+msgid "%(path)s has no best_value"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:68
+#, python-format
+msgid "cannot load study %(study)s at %(storage)s"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:78
+#, python-format
+msgid "the winner is study trial %(trial)d but its artifact is missing under %(root)s"
 msgstr ""
 
