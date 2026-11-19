@@ -83,7 +83,22 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             }
         )
 
-    best: dict[str, Any] = {"predictions": [], "adapter_figures": {}, "epoch": -1}
+    best: dict[str, Any] = {
+        "predictions": [],
+        "adapter_figures": {},
+        "metrics": None,
+        "epoch": -1,
+    }
+    if resume_state is not None and resume_state.best_epoch >= 0:
+        # A resumed execution inherits the best epoch it never re-evaluates.
+        # Without its figures a non-improving remaining epoch would score an
+        # empty prediction list and overwrite the real metrics with zeros.
+        if resume_state.best_metrics is None:
+            raise RuntimeError(
+                "the progress snapshot names a best epoch but carries no best "
+                "metrics; it predates the resumable selection record"
+            )
+        best.update(metrics=resume_state.best_metrics, epoch=resume_state.best_epoch)
     first_checkpoint: Path | None = (
         resume_state.last_checkpoint if resume_state is not None else None
     )
@@ -106,6 +121,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             best.update(
                 predictions=result.predictions,
                 adapter_figures=result.adapter_figures,
+                metrics=metrics,
                 epoch=result.epoch,
             )
         progress = stopping.to_dict(result.epoch + 1)
@@ -119,6 +135,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 "best_checkpoint": (
                     str(stopping.best_checkpoint) if stopping.best_checkpoint else None
                 ),
+                "best_metrics": best["metrics"],
                 "protocol": protocol_to_dict(config),
             }
         )
@@ -132,7 +149,12 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         stopping.update(0.0, 0, first_checkpoint)
     best_artifact = stopping.restore(layout.best_checkpoint)
 
-    final_metrics = evaluator.evaluate(best["predictions"], adapter_figures=best["adapter_figures"])
+    if best["metrics"] is not None:
+        final_metrics = dict(best["metrics"])
+    else:
+        final_metrics = evaluator.evaluate(
+            best["predictions"], adapter_figures=best["adapter_figures"]
+        )
     final_metrics["selected_epoch"] = best["epoch"]
     write_json(final_metrics, layout.metrics)
 
