@@ -171,7 +171,7 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
     if coco_dataset and task != "segment":
         raise ValueError(
             "a COCO mask dataset requires a segmentation family; set "
-            "family=yolo_segmentation instead of a detection family"
+            "family=yolo_segmentation or family=mask_rcnn instead of a detection family"
         )
     if data_yaml and task != "detect":
         raise ValueError(

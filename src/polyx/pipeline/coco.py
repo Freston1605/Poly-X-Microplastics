@@ -37,6 +37,67 @@ def coco_predictions_from_results(results: Any) -> list[dict]:
     return predictions
 
 
+def coco_segmentation_predictions_from_torchvision(
+    outputs: Any, image_ids: list[int]
+) -> list[dict]:
+    """Turn torchvision Mask R-CNN outputs into COCO instance predictions.
+
+    torchvision returns soft masks at the input image's resolution. They are
+    thresholded at 0.5 and polygonized so the shared evaluator measures mask
+    IoU exactly as it does for YOLO-seg. Label 0 is torchvision's background
+    and is never emitted; the remaining labels are shifted back to the dense,
+    zero-based class indices the evaluator's ground truth uses.
+    """
+    predictions: list[dict] = []
+    for output, image_id in zip(outputs or [], image_ids, strict=False):
+        boxes = _numpy(output.get("boxes")).reshape(-1, 4)
+        labels = _numpy(output.get("labels")).reshape(-1)
+        scores = _numpy(output.get("scores")).reshape(-1)
+        masks = output.get("masks")
+        for index in range(boxes.shape[0]):
+            label = int(labels[index]) if index < labels.shape[0] else 0
+            if label <= 0:
+                continue
+            if masks is None or index >= len(masks):
+                continue
+            segmentation = _polygons_from_mask(masks[index])
+            if not segmentation:
+                continue
+            x1, y1, x2, y2 = (float(value) for value in boxes[index])
+            predictions.append(
+                {
+                    "image_id": int(image_id),
+                    "category_id": label - 1,
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "segmentation": segmentation,
+                    "score": float(scores[index]) if index < scores.shape[0] else 1.0,
+                }
+            )
+    return predictions
+
+
+def _numpy(value: Any) -> np.ndarray:
+    """A numpy view of a tensor or array without importing torch here."""
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value, dtype=float)
+
+
+def _polygons_from_mask(mask: Any) -> list[list[float]]:
+    """Exterior contours of one thresholded instance mask, as COCO polygons."""
+    import cv2
+
+    array = _numpy(mask)
+    binary = (np.squeeze(array) >= 0.5).astype(np.uint8)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    polygons: list[list[float]] = []
+    for contour in contours:
+        if contour.shape[0] < 3:
+            continue
+        polygons.append(contour.reshape(-1).astype(float).tolist())
+    return polygons
+
+
 def coco_segmentation_predictions_from_results(results: Any) -> list[dict]:
     """Turn Ultralytics segmentation results into COCO instance predictions.
 
