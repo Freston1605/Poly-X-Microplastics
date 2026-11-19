@@ -888,10 +888,13 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                         trainer.should_stop = True
 
         trainer, precision = _build_trainer(config, run_dir)
-        fit_kwargs: dict[str, Any] = {}
-        if resumed_checkpoint is not None and Path(resumed_checkpoint).is_file():
-            fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
-        trainer.fit(_MaskRcnnLightningModule(), **fit_kwargs)
+        # The per-epoch checkpoint holds the model state dict, not a Lightning
+        # checkpoint; its weights were restored above. Handing that file to
+        # ``Trainer.fit(ckpt_path=...)`` would make Lightning fail looking for
+        # its own bookkeeping, so the loop restarts with restored weights and
+        # the engine's progress snapshot keeps selection and early stopping
+        # continuous.
+        trainer.fit(_MaskRcnnLightningModule())
         return FitResult(
             precision=precision,
             epochs_completed=int(trainer.current_epoch),

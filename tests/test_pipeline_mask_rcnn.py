@@ -129,6 +129,8 @@ class _FakeLightningModule:
 class _FakeTrainer:
     """Runs the validation loop, the epoch hook and the registered callback."""
 
+    interrupt_after: int | None = None
+
     def __init__(self, **kwargs: object) -> None:
         self.kwargs = kwargs
         self.max_epochs = int(kwargs.get("max_epochs", 1))
@@ -138,7 +140,7 @@ class _FakeTrainer:
         self.current_epoch = 0
 
     def fit(self, module: object, ckpt_path: object = None) -> None:
-        for epoch in range(self.max_epochs):
+        for completed, epoch in enumerate(range(self.max_epochs), start=1):
             self.current_epoch = epoch
             module._epoch = epoch
             for index, batch in enumerate(module.val_dataloader()):
@@ -149,6 +151,8 @@ class _FakeTrainer:
             self.current_epoch = epoch + 1
             if self.should_stop:
                 break
+            if self.interrupt_after is not None and completed >= self.interrupt_after:
+                raise RuntimeError("simulated preemption after the epoch checkpoint")
 
 
 class _FakeCallback:
@@ -158,12 +162,15 @@ class _FakeCallback:
 def _install_fakes(
     monkeypatch: pytest.MonkeyPatch,
     prediction_sets: list[list[list[dict]]],
+    *,
+    interrupt_after: int | None = None,
 ) -> None:
     """Fake the framework boundary: Lightning and the torchvision factory."""
     _FakeDetector.prediction_sets = list(prediction_sets)
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.factory_calls = []
+    _FakeTrainer.interrupt_after = interrupt_after
     lightning = types.ModuleType("lightning")
     lightning.LightningModule = _FakeLightningModule
     lightning.Callback = _FakeCallback
@@ -451,6 +458,47 @@ def test_one_epoch_completes_under_the_real_lightning_loop(
     assert state["epochs_completed"] == 1
     assert (output / "checkpoints" / "epoch_000.pt").is_file()
     assert _read(output / "metrics.json")["selection"]["value"] == pytest.approx(1.0)
+
+
+def test_a_preempted_mask_rcnn_run_resumes_from_the_last_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The weights and the engine's selection state survive a preemption."""
+    store = _imported_store(tmp_path)
+    output = tmp_path / "executions" / "resumable-mask"
+    overrides = (
+        f"coco_dataset={store}",
+        f"output_dir={output}",
+        f"scratch_dir={tmp_path / 'scratch'}",
+        "family=mask_rcnn",
+        "protocol.epochs=2",
+        "protocol.early_stopping.patience=99",
+    )
+
+    _install_fakes(
+        monkeypatch,
+        [_perfect_validation(), _perfect_validation()],
+        interrupt_after=1,
+    )
+    assert _command(*overrides) == 1
+
+    progress = _read(output / "progress.json")
+    assert progress["epochs_completed"] == 1
+    resumed_from = progress["last_checkpoint"]
+    assert Path(resumed_from).is_file()
+    first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
+    assert not (output / "training_state.json").exists()
+
+    _install_fakes(monkeypatch, [_perfect_validation(), _perfect_validation()])
+    assert _command(*overrides, "resume=true") == 0
+
+    state = _read(output / "training_state.json")
+    assert state["resumed"] is True
+    assert state["resumed_from_epoch"] == 1
+    assert state["resumed_from"] == resumed_from
+    assert state["epochs_completed"] == 2
+    assert (output / "checkpoints" / "epoch_001.pt").is_file()
+    assert (output / "checkpoints" / "epoch_000.pt").read_bytes() == first_best
 
 
 def test_mask_rcnn_requires_the_coco_mask_dataset(
