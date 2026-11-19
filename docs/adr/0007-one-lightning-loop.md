@@ -71,8 +71,10 @@ backends; only the backend composition changes.
 - Protocol parity is a file comparison: the resolved protocol in the artifacts
   is the same mapping every adapter received.
 - FP16 AMP is requested through the protocol and recorded in the training
-  state. On a machine without a supported accelerator the setting remains a
-  request; the GPU smoke job is the acceptance check for the real AMP pass.
+  state as `amp_requested`; the precision Lightning actually ran is recorded
+  separately and `amp_active` follows it (on CPU, Lightning substitutes
+  `bf16-mixed` for `16-mixed`). The GPU smoke job is the acceptance check for
+  the real FP16 pass.
 - The first adapter was detection-only. The COCO mask dataset and the YOLO-seg
   and Mask R-CNN adapters arrived in later tickets without changing this
   decision; they use the same loop, evaluator and artifact layout.
