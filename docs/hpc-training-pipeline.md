@@ -290,6 +290,44 @@ request recorded in the protocol, and Lightning cannot run FP16 mixed precision
 on CPU.
 
 
+## Sweeps
+
+A hyperparameter search is a Hydra Optuna multirun, not a campaign. It runs
+inside one allocation, one trial at a time, and reuses its SQLite study when the
+same study name and storage are supplied:
+
+```sh
+python -m polyx.pipeline.sweep_app --multirun \
+  output_dir="$POLYX_HPC_WORK/results/sweep-<timestamp>" \
+  data_yaml="$POLYX_HOME/data/data.yaml" \
+  hydra.sweeper.n_trials=20
+python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-<timestamp>"
+```
+
+- `output_dir` is the sweep root; it is required and is not a trial directory.
+- The study is `sqlite:///$POLYX_HPC_WORK/studies/polyx-optuna.db`, or under the
+  sweep root when the work variable is unset. It is never on scratch, and a
+  resumed multirun extends the same study instead of creating a new one.
+- Each trial writes a normal execution under
+  `<output_dir>/trials/trial_<number>`. The number is the study's running trial,
+  so a resumed invocation cannot overwrite an earlier trial's directory.
+- The search space lives in `hydra.sweeper.params` and may only touch protocol
+  hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
+  The sampler is a TPE seeded from the protocol, direction `maximize` and no
+  pruner: trials are separate processes, so Lightning early stopping stops each
+  one.
+- The objective is the shared evaluator's with-class score, the same number a
+  single execution reports.
+- `python -m polyx.pipeline.sweep_best` reads the plugin's
+  `optimization_results.yaml` and the per-trial artifacts and writes
+  `<output_dir>/sweep_best.json` with the winning parameters, value, criterion
+  and trial directory.
+
+`polyx-pipeline --sweep` remains the fast in-process driver for a local check;
+it reads the same `hydra.sweeper` node and writes the same artifacts. The plugin
+path is proven by `tests/test_pipeline_optuna_multirun.py`, including study
+resume and the best-artifact step.
+
 ## Decisions and vocabulary
 
 See [ADR-0007](adr/0007-one-lightning-loop.md) for the single-loop decision,

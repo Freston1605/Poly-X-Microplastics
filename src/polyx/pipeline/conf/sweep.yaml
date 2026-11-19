@@ -12,45 +12,52 @@ defaults:
   - _self_
 
 data_yaml: ???
+# The sweep root. Each trial writes a normal execution under
+# `<output_dir>/trials/trial_<number>`, so per-trial artifacts never collide,
+# including after a resume.
 output_dir: ???
+coco_dataset: ""
 dataset_name: polyx
+dataset_root: ""
+scratch_dir: ""
+weights_dir: ""
+weights_manifest: ""
 # Checkpoint resume inside each trial is independent of study resume: a study
 # always reuses its SQLite file when the same name and storage are supplied.
 resume: false
 
 hydra:
+  # Create the SQLite study's directory before the sweeper opens the file.
+  callbacks:
+    prepare_study_directory:
+      _target_: polyx.pipeline.sweep_app.PrepareStudyDirectory
+  sweep:
+    # Hydra's own job directories, separate from the per-trial execution
+    # artifacts. The sweeper writes `optimization_results.yaml` here.
+    dir: ${output_dir}/sweep
+    subdir: ${hydra.job.num}
   sweeper:
     # The objective is the shared evaluator's with-class score: maximize it.
     direction: maximize
     study_name: polyx-optuna
-    # Computed from the work filesystem by the driver; a real multirun passes
-    # an explicit sqlite:/// URL as `hydra.sweeper.storage=...`.
-    storage: null
+    # SQLite study on the work filesystem: `POLYX_HPC_WORK/studies` when the
+    # cluster variable is set, otherwise under the sweep root. Stable across
+    # resumed jobs, never on scratch.
+    storage: sqlite:///${oc.env:POLYX_HPC_WORK,${output_dir}}/studies/polyx-optuna.db
     n_trials: 3
     n_jobs: 1
     max_failure_rate: 0.0
     sampler:
       # Same seed as the protocol: trials are reproducible and the split, seed
       # and augmentation subset stay fixed across them.
+      _target_: optuna.samplers.TPESampler
       seed: ${protocol.seed}
-    # Declared protocol-only search space. Split, seed, augmentation subset and
-    # evaluator are deliberately absent and cannot be suggested by a trial.
-    search_space:
-      protocol.learning_rate:
-        type: categorical
-        choices: [0.001, 0.01, 0.05]
-      protocol.momentum:
-        type: categorical
-        choices: [0.9, 0.937]
-      protocol.weight_decay:
-        type: categorical
-        choices: [0.0001, 0.0005]
+    # Declared protocol-only search space, in the sweeper's `params` syntax.
+    # Split, seed, augmentation subset and evaluator are deliberately absent
+    # and cannot be suggested by a trial.
+    params:
+      protocol.learning_rate: choice(0.001,0.01,0.05)
+      protocol.momentum: choice(0.9,0.937)
+      protocol.weight_decay: choice(0.0001,0.0005)
     # No pruner is configured on purpose. Hydra trials are separate processes,
     # so Optuna cannot prune them; Lightning's early stopping stops each trial.
-# Hash-verified model weights: the directory and its sha256sum manifest. Empty
-# resolves to POLYX_WEIGHTS_DIR / POLYX_WEIGHTS_MANIFEST when those are set;
-# with neither, the framework's default weights are used unverified (local
-# debugging only). Cluster jobs set both, and training fails closed if a pinned
-# file is absent or does not match its digest.
-weights_dir: ""
-weights_manifest: ""

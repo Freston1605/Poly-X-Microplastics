@@ -31,8 +31,9 @@ Hydra basic launcher runs the jobs sequentially **inside one allocation**, so a
 campaign never queues one SLURM job per family or per configuration. A
 hyperparameter search is a different command:
 `python -m polyx.pipeline.sweep_app --multirun` runs Optuna trials, also inside
-one allocation (see the pipeline page and
-[ADR-0010](adr/0010-optuna-objective.md)).
+one allocation; the study, the per-trial directories and the best-artifact step
+are described in the [sweeps section](hpc-training-pipeline.md#sweeps) and
+[ADR-0010](adr/0010-optuna-objective.md).
 
 The three first-wave families and the source each consumes:
 

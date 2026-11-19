@@ -20,6 +20,7 @@ from typing import Any
 
 import hydra_plugins.hydra_optuna_sweeper.config  # noqa: F401 - registers the config groups
 import optuna
+import yaml
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
@@ -74,6 +75,57 @@ def _study_url(storage: Any, study_name: str, output_dir: Path) -> str:
     return f"sqlite:///{path}"
 
 
+def _yaml_scalar(text: str) -> Any:
+    """One Hydra override value as the Python scalar it denotes."""
+    text = text.strip()
+    try:
+        return yaml.safe_load(text)
+    except yaml.YAMLError:
+        return text
+
+
+def _declaration(key: str, value: Any) -> dict[str, Any]:
+    """Translate one ``hydra.sweeper.params`` entry into a trial declaration.
+
+    The plugin consumes the same string using Hydra's override syntax
+    (``choice(...)``, ``interval(...)``, ``range(...)``); parsing it here keeps
+    the one-process driver and the real multirun on one declared space.
+    """
+    text = str(value).strip()
+    kind, _, argument = text.partition("(")
+    if not argument.endswith(")"):
+        raise ValueError(f"unsupported search-space declaration for {key}: {text}")
+    parts = [part.strip() for part in argument[:-1].split(",") if part.strip()]
+    kind = kind.strip()
+    if kind == "choice":
+        return {"type": "categorical", "choices": [_yaml_scalar(part) for part in parts]}
+    if kind in {"interval", "range"} and len(parts) >= 2:
+        low, high = _yaml_scalar(parts[0]), _yaml_scalar(parts[1])
+        declaration: dict[str, Any] = {"type": "int" if kind == "range" else "float"}
+        declaration["low"], declaration["high"] = low, high
+        if len(parts) > 2:
+            if parts[2].lower() in {"log", "log=True"}:
+                declaration["log"] = True
+            else:
+                declaration["step"] = _yaml_scalar(parts[2])
+        return declaration
+    raise ValueError(f"unsupported search-space declaration for {key}: {text}")
+
+
+def _search_space(sweeper: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The declared protocol-only space, from `params` or a legacy `search_space`."""
+    params = sweeper.get("params")
+    if params:
+        space = {str(key): _declaration(str(key), value) for key, value in params.items()}
+    else:
+        space = dict(sweeper.get("search_space") or {})
+    for key in space:
+        parts = key.split(".")
+        if len(parts) != 2 or parts[0] != "protocol" or parts[1] not in SEARCHABLE_PROTOCOL_FIELDS:
+            raise ValueError(f"search space may only declare protocol hyperparameters: {key}")
+    return space
+
+
 def load_sweep_config(overrides: list[str] | None = None) -> SweepConfig:
     """Compose ``sweep.yaml`` with Hydra and validate the declared space."""
     with initialize_config_dir(config_dir=str(CONF_DIR), version_base="1.3"):
@@ -89,11 +141,7 @@ def load_sweep_config(overrides: list[str] | None = None) -> SweepConfig:
     assert isinstance(sweeper, dict)
 
     execution = execution_config_from_raw(task)
-    space = sweeper.get("search_space") or {}
-    for key in space:
-        parts = key.split(".")
-        if len(parts) != 2 or parts[0] != "protocol" or parts[1] not in SEARCHABLE_PROTOCOL_FIELDS:
-            raise ValueError(f"search space may only declare protocol hyperparameters: {key}")
+    space = _search_space(sweeper)
 
     sampler = sweeper.get("sampler") or {}
     return SweepConfig(
@@ -107,7 +155,7 @@ def load_sweep_config(overrides: list[str] | None = None) -> SweepConfig:
         n_jobs=int(sweeper["n_jobs"]),
         sampler_target=str(sampler["_target_"]),
         sampler_seed=int(sampler["seed"]),
-        search_space=dict(space),
+        search_space=space,
         pruner="none" if not sweeper.get("pruner") else str(sweeper["pruner"]),
     )
 
