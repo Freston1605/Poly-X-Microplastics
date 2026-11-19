@@ -484,6 +484,39 @@ def test_segmentation_and_detection_share_the_same_protocol(
     assert protocol(seg_output) == protocol(det_output)
 
 
+def test_amp_records_the_precision_that_actually_ran_not_the_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Lightning substitutes bf16-mixed for 16-mixed on CPU; say so honestly.
+
+    The engine used to record the requested ``16-mixed`` as the precision that
+    ran and derived ``amp_active`` from that request, so a CPU execution
+    claimed FP16 AMP it never had.
+    """
+    store = _imported_store(tmp_path)
+    network = _tiny_seg_net()
+    _install_real_lightning_fakes(monkeypatch, network, [_perfect_validation()])
+    output = tmp_path / "executions" / "amp-cpu"
+
+    code = _command(
+        f"coco_dataset={store}",
+        f"output_dir={output}",
+        f"scratch_dir={tmp_path / 'scratch'}",
+        "family=yolo_segmentation",
+        "protocol.epochs=1",
+        "protocol.amp.enabled=true",
+        "protocol.amp.dtype=fp16",
+        "protocol.warmup_epochs=0",
+    )
+
+    assert code == 0
+    state = _read(output / "training_state.json")
+    # What Lightning says it ran, on this CPU host.
+    assert state["precision"] == "bf16-mixed"
+    assert state["amp_requested"] == "16-mixed"
+    assert state["amp_active"] is True, "bf16-mixed is mixed precision, but not fp16"
+
+
 def test_a_second_run_reuses_the_scratch_conversion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

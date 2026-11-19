@@ -164,6 +164,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         "backend": asdict(config.backend),
         "amp": asdict(config.protocol.amp),
         "precision": fit.precision,
+        "amp_requested": fit.amp_requested,
         "amp_active": fit.amp_active,
         "device": fit.device,
         "framework": fit.framework,

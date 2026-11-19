@@ -91,15 +91,31 @@ class PreparedDataset:
 
 @dataclass
 class FitResult:
-    """Observable state of the finished Lightning fit."""
+    """Observable state of the finished Lightning fit.
+
+    ``precision`` is what Lightning actually ran; ``amp_requested`` is the
+    protocol's request. They differ when Lightning substitutes a precision the
+    device supports (for example bf16-mixed for 16-mixed on CPU), and only the
+    former can honestly drive ``amp_active``.
+    """
 
     precision: str
+    amp_requested: str
     epochs_completed: int
     amp_active: bool
     device: str
     framework: str
     weights: str
     augmentation: dict[str, Any] = field(default_factory=dict)
+
+
+#: Precision strings that mean some form of automatic mixed precision.
+_MIXED_PRECISION = frozenset({"16-mixed", "bf16-mixed", "16-true", "bf16-true"})
+
+
+def _amp_active(precision: str) -> bool:
+    """Whether the precision Lightning reports is a mixed-precision mode."""
+    return precision in _MIXED_PRECISION
 
 
 def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
@@ -370,10 +386,12 @@ class _CocoMaskAdapter(FamilyAdapter):
 
 
 def _build_trainer(config: ExecutionConfig, run_dir: Path) -> tuple[Any, str]:
-    """The one Lightning trainer and precision every family uses.
+    """The one Lightning trainer and the precision that was requested.
 
-    The monitor forwards a module's stop decision, made from the shared
-    evaluator's score, to the training loop.
+    Lightning may substitute a precision the device supports; the caller
+    records ``trainer.precision``, not this request. The monitor forwards a
+    module's stop decision, made from the shared evaluator's score, to the
+    training loop.
     """
     from lightning import Callback, Trainer
 
@@ -753,15 +771,17 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     if current_trainer is not None:
                         current_trainer.should_stop = True
 
-        trainer, precision = _build_trainer(config, run_dir)
+        trainer, requested_precision = _build_trainer(config, run_dir)
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
         trainer.fit(_YoloLightningModule(), **fit_kwargs)
+        reported_precision = str(trainer.precision)
         return FitResult(
-            precision=precision,
+            precision=reported_precision,
+            amp_requested=requested_precision,
             epochs_completed=int(trainer.current_epoch),
-            amp_active=precision == "16-mixed",
+            amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
             weights=config.family.weights,
@@ -937,15 +957,17 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                     if current_trainer is not None:
                         current_trainer.should_stop = True
 
-        trainer, precision = _build_trainer(config, run_dir)
+        trainer, requested_precision = _build_trainer(config, run_dir)
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
         trainer.fit(_MaskRcnnLightningModule(), **fit_kwargs)
+        reported_precision = str(trainer.precision)
         return FitResult(
-            precision=precision,
+            precision=reported_precision,
+            amp_requested=requested_precision,
             epochs_completed=int(trainer.current_epoch),
-            amp_active=precision == "16-mixed",
+            amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
             weights=config.family.weights,
