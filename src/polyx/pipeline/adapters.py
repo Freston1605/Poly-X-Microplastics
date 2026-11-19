@@ -138,20 +138,36 @@ def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
     return network
 
 
+def _declared_augmentations(protocol: Protocol) -> list[str]:
+    """Every transform this execution declared, benchmark and exploratory."""
+    return [*protocol.augmentation_subset, *protocol.exploratory_augmentation]
+
+
 def _augmentation_report(protocol: Protocol, supported: frozenset[str]) -> dict[str, Any]:
     """Which declared augmentations this family can apply without substitution.
 
-    The protocol names one common subset for the benchmark campaign. A family
-    reports what it applied and what it skipped; it never replaces a skipped
-    transform with a framework-specific one, which would make the model the
-    wrong variable.
+    The protocol names one common subset for the benchmark campaign and an
+    optional exploratory list for runs where comparability is not the point. A
+    family reports what it applied and what it skipped; it never replaces a
+    skipped transform with a framework-specific one, which would make the model
+    the wrong variable. The magnitudes travel with the report so two families
+    can be judged on the transform they actually applied.
     """
-    declared = list(protocol.augmentation_subset)
+    declared = _declared_augmentations(protocol)
     return {
-        "subset": declared,
+        "benchmark": protocol.benchmark,
+        "subset": list(protocol.augmentation_subset),
+        "exploratory": list(protocol.exploratory_augmentation),
+        "declared": declared,
         "applied": [name for name in declared if name in supported],
         "skipped": [name for name in declared if name not in supported],
         "family_specific": False,
+        "parameters": {
+            "hsv_h": protocol.hsv_h,
+            "hsv_s": protocol.hsv_s,
+            "hsv_v": protocol.hsv_v,
+            "flip_lr_probability": protocol.flip_lr_probability,
+        },
     }
 
 
@@ -179,14 +195,14 @@ def _lightning_resume_path(resume: ResumeState | None) -> Path | None:
 def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
     """The Ultralytics argument namespace the dataloader and loss both read.
 
-    Augmentation is restricted to the protocol's common subset: the declared
-    transforms are enabled and every family-specific knob is switched off, so a
-    YOLO run and a Mask R-CNN run differ in augmentation only where the
-    protocol says so.
+    Augmentation is restricted to the protocol's declared list: the declared
+    transforms are enabled at the protocol's magnitudes and every
+    family-specific knob is switched off, so a YOLO run and a Mask R-CNN run
+    differ in augmentation only where the protocol says so.
     """
     from ultralytics.cfg import get_cfg
 
-    augment = protocol.augmentation_subset
+    augment = _declared_augmentations(protocol)
     hsv = "hsv" in augment
     return get_cfg(
         overrides={
@@ -199,10 +215,10 @@ def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
             "fraction": 1.0,
             "deterministic": True,
             "workers": 0,
-            "hsv_h": 0.015 if hsv else 0.0,
-            "hsv_s": 0.7 if hsv else 0.0,
-            "hsv_v": 0.4 if hsv else 0.0,
-            "fliplr": 0.5 if "flip_lr" in augment else 0.0,
+            "hsv_h": protocol.hsv_h if hsv else 0.0,
+            "hsv_s": protocol.hsv_s if hsv else 0.0,
+            "hsv_v": protocol.hsv_v if hsv else 0.0,
+            "fliplr": protocol.flip_lr_probability if "flip_lr" in augment else 0.0,
             "mosaic": 1.0 if "mosaic" in augment else 0.0,
             "close_mosaic": 0,
             # Everything outside the benchmark's common subset stays off.
@@ -469,11 +485,13 @@ class _CocoMaskTorchvisionDataset:
         split: str,
         class_indices: dict[int, int],
         augmentation: list[str],
+        protocol: Protocol,
     ) -> None:
         self.store = Path(store)
         self.images = split_coco_images(coco, split)
         self.class_indices = dict(class_indices)
         self.augmentation = list(augmentation)
+        self.protocol = protocol
         by_image: dict[int, list[dict[str, Any]]] = {}
         for annotation in coco.get("annotations", []):
             by_image.setdefault(int(annotation["image_id"]), []).append(annotation)
@@ -513,7 +531,7 @@ class _CocoMaskTorchvisionDataset:
             boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
             labels.append(category + 1)
 
-        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation)
+        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
         tensor = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1))).float() / 255.0
         areas = [max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1]) for box in boxes]
         target = {
@@ -536,26 +554,46 @@ def _augment(
     masks: list[np.ndarray],
     boxes: list[list[float]],
     augmentation: list[str],
+    protocol: Protocol,
 ) -> tuple[np.ndarray, list[np.ndarray], list[list[float]]]:
-    """Apply only protocol-declared, framework-neutral transforms.
+    """Apply only protocol-declared transforms at the protocol's magnitudes.
 
-    ``flip_lr`` flips the image, its instance masks and its boxes together.
-    ``hsv`` jitters colour only. Nothing else is applied: a transform the
+    ``flip_lr`` flips the image, its instance masks and its boxes together at
+    the protocol's probability. ``hsv`` reproduces Ultralytics' ``RandomHSV``
+    exactly: the same multiplicative gains drawn in the same order, applied
+    through the same channel LUTs. Nothing else is applied, and a transform the
     family cannot express is reported as skipped, never replaced.
     """
     import cv2
 
-    if "flip_lr" in augmentation and np.random.random() < 0.5:
+    if "flip_lr" in augmentation and np.random.random() < protocol.flip_lr_probability:
         width = image.shape[1]
         image = np.ascontiguousarray(image[:, ::-1])
         masks = [np.ascontiguousarray(mask[:, ::-1]) for mask in masks]
         boxes = [[width - box[2], box[1], width - box[0], box[3]] for box in boxes]
-    if "hsv" in augmentation:
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
-        hsv[..., 0] = (hsv[..., 0] + np.random.uniform(-9.0, 9.0)) % 180.0
-        hsv[..., 1] = np.clip(hsv[..., 1] * np.random.uniform(0.5, 1.5), 0.0, 255.0)
-        hsv[..., 2] = np.clip(hsv[..., 2] * np.random.uniform(0.5, 1.5), 0.0, 255.0)
-        image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+    if "hsv" in augmentation and (protocol.hsv_h or protocol.hsv_s or protocol.hsv_v):
+        gains = (
+            np.random.uniform(-1, 1, 3)
+            * [
+                protocol.hsv_h,
+                protocol.hsv_s,
+                protocol.hsv_v,
+            ]
+            + 1
+        )
+        hue, saturation, value = cv2.split(cv2.cvtColor(image, cv2.COLOR_RGB2HSV))
+        levels = np.arange(0, 256, dtype=gains.dtype)
+        hue_lut = ((levels * gains[0]) % 180).astype(np.uint8)
+        saturation_lut = np.clip(levels * gains[1], 0, 255).astype(np.uint8)
+        value_lut = np.clip(levels * gains[2], 0, 255).astype(np.uint8)
+        augmented = cv2.merge(
+            (
+                cv2.LUT(hue, hue_lut),
+                cv2.LUT(saturation, saturation_lut),
+                cv2.LUT(value, value_lut),
+            )
+        )
+        image = cv2.cvtColor(augmented, cv2.COLOR_HSV2RGB)
     return image, masks, boxes
 
 
@@ -874,7 +912,7 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
 
             def _split_dataset(self, split: str) -> Any:
                 applied = augmentation["applied"] if split == "train" else []
-                return _CocoMaskTorchvisionDataset(store, coco, split, indices, applied)
+                return _CocoMaskTorchvisionDataset(store, coco, split, indices, applied, protocol)
 
             def train_dataloader(self) -> Any:
                 from torch.utils.data import DataLoader

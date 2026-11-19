@@ -29,6 +29,9 @@ from tests.test_pipeline_yolo_seg import (
     _perfect_validation,
     _shifted_validation,
 )
+from tests.test_pipeline_yolo_seg import (
+    _install_fakes as _install_yolo,
+)
 
 # ── torchvision / Lightning doubles ───────────────────────────────────────
 
@@ -413,10 +416,15 @@ def test_both_segmentation_families_resolve_the_same_protocol(
     assert mask_config["family"] != seg_config["family"]
 
 
-def test_benchmark_augmentation_is_the_protocol_subset_only(
+def test_benchmark_augmentation_is_the_true_common_subset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No family-specific augmentation enters the benchmark campaign."""
+    """Both families apply the same effective transforms; mosaic is not one.
+
+    The campaign's common subset used to declare mosaic, which Mask R-CNN
+    skips, and an HSV implementation with different magnitudes from
+    Ultralytics, which confounded the augmentation with the model.
+    """
     store = _imported_store(tmp_path)
     mask_code, mask_output = _train_mask_rcnn(
         tmp_path, store, monkeypatch, [_perfect_validation()], label="aug-mask"
@@ -428,22 +436,119 @@ def test_benchmark_augmentation_is_the_protocol_subset_only(
 
     mask_augmentation = _read(mask_output / "training_state.json")["augmentation"]
     seg_augmentation = _read(seg_output / "training_state.json")["augmentation"]
-    declared = ["hsv", "flip_lr", "mosaic"]
 
     for augmentation in (mask_augmentation, seg_augmentation):
-        assert augmentation["subset"] == declared
+        assert augmentation["benchmark"] is True
+        assert augmentation["subset"] == ["hsv", "flip_lr"]
+        assert augmentation["exploratory"] == []
+        assert "mosaic" not in augmentation["subset"]
         assert augmentation["family_specific"] is False
-        assert set(augmentation["applied"]) <= set(declared)
-        assert not set(augmentation["applied"]) & set(augmentation["skipped"])
+        assert augmentation["applied"] == ["hsv", "flip_lr"]
+        assert augmentation["skipped"] == []
 
-    # Mask R-CNN implements the two framework-neutral transforms and never
-    # substitutes a torchvision-specific one for mosaic.
-    assert mask_augmentation["applied"] == ["hsv", "flip_lr"]
-    assert mask_augmentation["skipped"] == ["mosaic"]
-    assert seg_augmentation["applied"] == declared
-    # The declared subset is the same in both families, so the benchmark
-    # campaign's augmentation is not a per-family variable.
+    # The model is the only variable: same transforms at the same magnitudes.
     assert mask_augmentation["subset"] == seg_augmentation["subset"]
+    assert mask_augmentation["parameters"] == seg_augmentation["parameters"]
+    assert mask_augmentation["parameters"] == {
+        "hsv_h": pytest.approx(0.015),
+        "hsv_s": pytest.approx(0.4),
+        "hsv_v": pytest.approx(0.4),
+        "flip_lr_probability": pytest.approx(0.5),
+    }
+
+
+def test_the_two_families_apply_the_same_effective_hsv_and_flip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The magnitudes are shared values, not two implementations' defaults.
+
+    ``RandomHSV`` and ``RandomFlip`` from Ultralytics are the reference: the
+    torchvision-side transform must produce the same pixels and the same
+    flipped boxes for the same seed.
+    """
+    import random
+
+    import cv2
+    from ultralytics.data.augment import RandomFlip, RandomHSV
+
+    from polyx.pipeline.adapters import _augment
+    from polyx.pipeline.config import Protocol
+
+    protocol = Protocol()
+    rng = np.random.default_rng(7)
+    rgb = rng.integers(0, 256, size=(32, 40, 3), dtype=np.uint8)
+    bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    boxes = [[4.0, 6.0, 20.0, 18.0]]
+
+    # HSV: the Ultralytics reference on a BGR uint8 image.
+    np.random.seed(1234)
+    reference = RandomHSV(hgain=protocol.hsv_h, sgain=protocol.hsv_s, vgain=protocol.hsv_v)(
+        {"img": bgr.copy()}
+    )["img"]
+    np.random.seed(1234)
+    transformed, _, _ = _augment(rgb.copy(), [], [], ["hsv"], protocol)
+    assert np.array_equal(cv2.cvtColor(transformed, cv2.COLOR_RGB2BGR), reference)
+
+    # Horizontal flip: force both RNGs to take the branch and match the geometry.
+    from ultralytics.utils.instance import Instances
+
+    boxes = [[4.0, 6.0, 24.0, 24.0]]  # xyxy, as the torchvision dataset carries them
+    monkeypatch.setattr(random, "random", lambda: 0.0)
+    reference_labels = RandomFlip(p=protocol.flip_lr_probability)(
+        {
+            "img": bgr.copy(),
+            "instances": Instances(
+                np.array(boxes, dtype=float),
+                segments=np.array([[[4.0, 6.0], [24.0, 6.0], [24.0, 24.0], [4.0, 24.0]]]),
+                bbox_format="xyxy",
+                normalized=False,
+            ),
+        }
+    )
+    monkeypatch.setattr(np.random, "random", lambda *args, **kwargs: 0.0)
+    flipped, _, flipped_boxes = _augment(rgb.copy(), [], boxes, ["flip_lr"], protocol)
+    reference_instances = reference_labels["instances"]
+    reference_instances.convert_bbox(format="xyxy")
+    assert np.array_equal(cv2.cvtColor(flipped, cv2.COLOR_RGB2BGR), reference_labels["img"])
+    assert reference_instances.bboxes.tolist() == flipped_boxes
+    assert flipped_boxes == [[40.0 - 24.0, 6.0, 40.0 - 4.0, 24.0]]
+
+
+def test_an_exploratory_run_may_declare_mosaic_but_the_benchmark_may_not(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Family-specific transforms never contaminate the benchmark campaign."""
+    store = _imported_store(tmp_path)
+    _install_yolo(monkeypatch, [_perfect_validation()])
+
+    benchmark = _command(
+        f"coco_dataset={store}",
+        f"output_dir={tmp_path / 'executions' / 'benchmark-mosaic'}",
+        f"scratch_dir={tmp_path / 'scratch'}",
+        "family=yolo_segmentation",
+        "protocol.epochs=1",
+        "protocol.augmentation_subset=[hsv,flip_lr,mosaic]",
+    )
+    assert benchmark == 1
+    assert "benchmark" in capsys.readouterr().err.lower()
+
+    exploratory = _command(
+        f"coco_dataset={store}",
+        f"output_dir={tmp_path / 'executions' / 'exploratory-mosaic'}",
+        f"scratch_dir={tmp_path / 'scratch'}",
+        "family=yolo_segmentation",
+        "protocol.epochs=1",
+        "protocol.benchmark=false",
+        "protocol.exploratory_augmentation=[mosaic]",
+    )
+    assert exploratory == 0
+    augmentation = _read(tmp_path / "executions" / "exploratory-mosaic" / "training_state.json")[
+        "augmentation"
+    ]
+    assert augmentation["benchmark"] is False
+    assert "mosaic" in augmentation["applied"]
 
 
 def test_one_epoch_completes_under_the_real_lightning_loop(

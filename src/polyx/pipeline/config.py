@@ -27,6 +27,12 @@ CONF_DIR = Path(__file__).resolve().parent / "conf"
 #: segmentation consumes the canonical COCO mask dataset.
 _TASKS = ("detect", "segment")
 
+#: Augmentations every first-wave family can express identically. The
+#: benchmark campaign may not declare anything outside this set: a transform
+#: one family skips would make the model result depend on the augmentation.
+#: Family-specific transforms belong in an exploratory run.
+BENCHMARK_AUGMENTATIONS = frozenset({"hsv", "flip_lr"})
+
 
 def default_scratch_dir() -> Path:
     """Scratch root for ephemeral per-family conversion intermediates.
@@ -61,7 +67,13 @@ class EarlyStoppingConfig:
 
 @dataclass
 class Protocol:
-    """Framework-neutral part of the configuration, shared by every adapter."""
+    """Framework-neutral part of the configuration, shared by every adapter.
+
+    ``augmentation_subset`` is the benchmark's common subset: transforms every
+    first-wave family applies with the same magnitudes. ``exploratory_augmentation``
+    is for runs where the benchmark is not the point; a benchmark execution
+    refuses it and refuses any subset entry outside the common set.
+    """
 
     split: str = "val"
     seed: int = 42
@@ -74,7 +86,16 @@ class Protocol:
     weight_decay: float = 0.0005
     schedule: str = "cosine"
     warmup_epochs: int = 5
-    augmentation_subset: list[str] = field(default_factory=list)
+    augmentation_subset: list[str] = field(default_factory=lambda: ["hsv", "flip_lr"])
+    exploratory_augmentation: list[str] = field(default_factory=list)
+    benchmark: bool = True
+    # Magnitudes both families apply identically. The HSV defaults are the
+    # Ultralytics reference values, so the torchvision sibling reproduces
+    # them instead of choosing its own.
+    hsv_h: float = 0.015
+    hsv_s: float = 0.4
+    hsv_v: float = 0.4
+    flip_lr_probability: float = 0.5
     amp: AmpConfig = field(default_factory=AmpConfig)
     early_stopping: EarlyStoppingConfig = field(default_factory=EarlyStoppingConfig)
 
@@ -123,6 +144,20 @@ class ExecutionConfig:
 def _build_protocol(raw: dict) -> Protocol:
     amp = raw.get("amp") or {}
     stopping = raw.get("early_stopping") or {}
+    subset = [str(item) for item in raw.get("augmentation_subset", ["hsv", "flip_lr"])]
+    exploratory = [str(item) for item in raw.get("exploratory_augmentation", [])]
+    benchmark = bool(raw.get("benchmark", True))
+    if benchmark:
+        outside = sorted((set(subset) | set(exploratory)) - BENCHMARK_AUGMENTATIONS)
+        if outside:
+            raise ValueError(
+                "benchmark augmentation must be the family-neutral common subset "
+                f"{sorted(BENCHMARK_AUGMENTATIONS)}; move {outside} to "
+                "protocol.exploratory_augmentation and set protocol.benchmark=false"
+            )
+    probability = float(raw.get("flip_lr_probability", 0.5))
+    if not 0.0 <= probability <= 1.0:
+        raise ValueError("protocol.flip_lr_probability must be within [0, 1]")
     return Protocol(
         split=str(raw["split"]),
         seed=int(raw["seed"]),
@@ -135,7 +170,13 @@ def _build_protocol(raw: dict) -> Protocol:
         weight_decay=float(raw["weight_decay"]),
         schedule=str(raw["schedule"]),
         warmup_epochs=int(raw["warmup_epochs"]),
-        augmentation_subset=[str(item) for item in raw.get("augmentation_subset", [])],
+        augmentation_subset=subset,
+        exploratory_augmentation=exploratory,
+        benchmark=benchmark,
+        hsv_h=float(raw.get("hsv_h", 0.015)),
+        hsv_s=float(raw.get("hsv_s", 0.4)),
+        hsv_v=float(raw.get("hsv_v", 0.4)),
+        flip_lr_probability=probability,
         amp=AmpConfig(enabled=bool(amp.get("enabled", True)), dtype=str(amp.get("dtype", "fp16"))),
         early_stopping=EarlyStoppingConfig(
             monitor=str(stopping.get("monitor", "with_class_score")),

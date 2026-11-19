@@ -75,12 +75,19 @@ segmenter can never train on boxes or a detector be scored against masks. The
 mismatch would silently produce a meaningless benchmark, so it is refused
 before any training starts.
 
-`protocol.augmentation_subset` is the only augmentation the benchmark campaign
-allows. Every adapter records in `training_state.json` what it applied and what
-it skipped, with `family_specific: false`: a transform a family cannot express
-is reported as skipped, never replaced by a framework-specific one. Mask R-CNN
-implements `hsv` and `flip_lr` and skips `mosaic`; the Ultralytics adapter
-switches every knob outside the subset off.
+`protocol.augmentation_subset` is the benchmark campaign's common subset, and
+it is exactly the intersection the first-wave families can express identically:
+`hsv` and `flip_lr`. Their magnitudes are protocol values (`hsv_h`, `hsv_s`,
+`hsv_v`, `flip_lr_probability`) and both families apply them with the same
+arithmetic, so the transform is not a second variable. A benchmark execution
+refuses any transform outside that intersection, so `mosaic` cannot enter a
+campaign by accident. Family-specific transforms belong to an exploratory run:
+`protocol.benchmark=false` with `protocol.exploratory_augmentation=[mosaic]`.
+
+Every adapter records in `training_state.json` what it applied and what it
+skipped, the magnitudes, and `family_specific: false`: a transform a family
+cannot express is reported as skipped, never replaced by a framework-specific
+one. Mask R-CNN implements `hsv` and `flip_lr` and skips `mosaic`.
 
 ## Artifact layout
 
@@ -229,8 +236,13 @@ only variable:
 - `test_the_shared_evaluator_scores_both_segmentation_families_identically`
   asserts the same figure names, criteria and operating-point scores from
   identical prediction geometry;
-- `test_benchmark_augmentation_is_the_protocol_subset_only` asserts that no
-  family-specific augmentation enters the campaign.
+- `test_benchmark_augmentation_is_the_true_common_subset` asserts that both
+  families declare and apply the same subset and the same HSV/flip magnitudes,
+  and that `mosaic` is not part of the benchmark;
+- `test_the_two_families_apply_the_same_effective_hsv_and_flip` compares the
+  torchvision-side transform against Ultralytics' own `RandomHSV`/`RandomFlip`
+  for the same seed, so parity is asserted on the pixels and boxes, not on the
+  transform names.
 
 ## How one epoch is trained
 
