@@ -11,8 +11,10 @@ defaults:
   - family: yolo_detection
   - _self_
 
-# Required: the directory that holds one execution per family.
-campaign_root: ""
+# Required: the directory that holds one execution per family. Declared as a
+# mandatory value so Hydra refuses the multirun during composition, before it
+# can create a `hydra/` directory or `multirun.yaml` in the working directory.
+campaign_root: ???
 # Both training sources may be supplied together, because a detection family
 # consumes the YOLO box dataset and a segmentation family consumes the canonical
 # COCO mask dataset. The family's task decides which one it uses.
@@ -22,6 +24,13 @@ coco_import: ""
 dataset_name: polyx
 dataset_root: ""
 scratch_dir: ""
+# Hash-verified model weights: the directory and its sha256sum manifest. Empty
+# resolves to POLYX_WEIGHTS_DIR / POLYX_WEIGHTS_MANIFEST when those are set;
+# with neither, the framework's default weights are used unverified (local
+# debugging only). Cluster jobs set both, and training fails closed if a pinned
+# file is absent or does not match its digest.
+weights_dir: ""
+weights_manifest: ""
 # An explicit output_dir overrides `<campaign_root>/<family>`; leave it empty
 # for a campaign so every family gets its own directory.
 output_dir: ""
@@ -33,6 +42,6 @@ hydra:
     # required root is missing the job still fails with the campaign's own
     # message instead of writing anything into the repository.
     dir: ${campaign_root}
-    subdir: hydra/${family.name}
+    subdir: hydra/${family.run_name}
   job:
     chdir: false

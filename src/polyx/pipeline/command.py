@@ -16,6 +16,10 @@ the same config, evaluator and artifact layout; the real search uses the Hydra
 sweeper plugin through ``python -m polyx.pipeline.sweep_app --multirun``.
 A benchmark campaign across model families is a separate multirun,
 ``python -m polyx.pipeline.campaign_app --multirun``.
+
+The printed lines are machine tokens consumed by job scripts and logs, not
+interface copy, so they are deliberately not wrapped in ``_()``; the
+human-facing GUI keeps using the translation catalog.
 """
 
 from __future__ import annotations

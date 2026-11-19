@@ -31,20 +31,38 @@ Hydra basic launcher runs the jobs sequentially **inside one allocation**, so a
 campaign never queues one SLURM job per family or per configuration. A
 hyperparameter search is a different command:
 `python -m polyx.pipeline.sweep_app --multirun` runs Optuna trials, also inside
-one allocation (see the pipeline page and
-[ADR-0010](adr/0010-optuna-objective.md)).
+one allocation; the study, the per-trial directories and the best-artifact step
+are described in the [sweeps section](hpc-training-pipeline.md#sweeps) and
+[ADR-0010](adr/0010-optuna-objective.md).
 
 The three first-wave families and the source each consumes:
 
 | Family | Framework | Dataset source |
 | --- | --- | --- |
-| `yolo_detection` | Ultralytics YOLO detection | `data_yaml` (YOLO box labels) |
+| `yolo_detection` | Ultralytics YOLO detection (v8-n) | `data_yaml` (YOLO box labels) |
+| `yolo_detection_v11` | Ultralytics YOLO detection (v11-n) | `data_yaml` (YOLO box labels) |
 | `yolo_segmentation` | Ultralytics YOLO-seg | `coco_dataset` (canonical COCO masks) |
 | `mask_rcnn` | torchvision | `coco_dataset` (canonical COCO masks) |
+
+The two detection entries share the `yolo_detection` adapter and differ only in
+`run_name` and the staged weights; select either or both in the `family=`
+multirun list.
 
 A campaign job carries both sources; the family's task decides which one it
 uses. A single-execution invocation still refuses the wrong source for the
 family, so a segmenter cannot silently train on boxes.
+
+## Weights
+
+Jobs never download a model: `cluster/smoke_job.sh` and
+`cluster/campaign_job.sh` require `POLYX_WEIGHTS_DIR` and
+`POLYX_WEIGHTS_MANIFEST`, run `python -m polyx.hpc.stage_weights`, and pass both
+values to every execution. `stage_weights` verifies the staged files against
+the manifest and, when `POLYX_WEIGHTS_URL` is set on a networked node, fetches
+the missing ones first. Training then resolves `family.weights` to a local,
+verified file and fails closed if it is absent, unpinned or does not match its
+digest. See the [weights section](hpc-environment.md#verified-model-weights) for
+the manifest and staging details.
 
 ## Queue usage
 
@@ -88,20 +106,33 @@ python -m polyx.pipeline.campaign_app --multirun \
 python -m polyx.hpc.sync_back --campaign "$CAMPAIGN_ROOT" "$SYNC_ROOT"
 ```
 
-The same command runs locally with the local backend for debugging; drop
-`backend=slurm` and the environment variables. The project gate proves the
-local multirun with real Hydra and real Lightning in
+Each family writes under `<campaign_root>/<family.run_name>`, which defaults to
+the family name. To put two detection variants in one campaign, add family
+configs that share `name: yolo_detection` but declare different `run_name` and
+`weights`, and list them in the multirun; each variant gets its own directory
+and its own metrics. The same command runs locally with the local backend for
+debugging; drop `backend=slurm` and the environment variables. The project gate
+proves the local multirun with real Hydra and real Lightning in
 `tests/test_pipeline_campaign.py`.
 
 ### Resuming a preempted campaign
 
 Set `POLYX_CAMPAIGN_ROOT` to the previous campaign root and `POLYX_RESUME=true`,
-then submit again. Each family resumes from its own progress snapshot and real
-Lightning checkpoint (`checkpoints/lightning/last.ckpt`); completed epochs are
-not rerun. A family whose execution already finished is rerun from its last
-state, so a campaign root is reused only while any family still needs epochs.
-The engine refuses to resume without a snapshot, with a different protocol, or
-with a snapshot that has no Lightning checkpoint.
+then submit again. The job passes `resume=true` to every family and each family
+decides for itself:
+
+- a family with a `progress.json` resumes from its Lightning checkpoint
+  (`checkpoints/lightning/last.ckpt`); completed epochs are not rerun;
+- a family whose `training_state.json` already exists for the same protocol is
+  **skipped**, so a finished execution's metrics are never recomputed or
+  overwritten;
+- a family that never started runs normally, because there is no snapshot to
+  resume;
+- a root that holds an execution for a different protocol is refused; start a
+  new campaign root instead.
+
+The engine still refuses a resume without a snapshot, or with a snapshot that
+has no Lightning checkpoint.
 
 ```sh
 POLYX_CAMPAIGN_ROOT="$POLYX_HPC_WORK/results/campaign-20261118-101500" \
@@ -130,11 +161,36 @@ have a 1 MB cap; the kept checkpoint has its own larger cap. An oversized
 artifact is an error, never a truncated copy. `polyx.hpc.sync_back` implements
 this allow-list; `--campaign` iterates the family directories.
 
+### From the login node to your machine
+
+`sync_back` stops at the cluster's work filesystem: the job writes
+`<work>/results/local/<campaign>/`, which survives quotas and a preemption but
+is still on OCÉANO. The final transfer is a manual step from your own machine,
+run **outside** the cluster session:
+
+```sh
+rsync -av <login-node>:<work>/results/local/<campaign>/ ./results/<campaign>/
+```
+
+Only the same small-artifact tree described above moves; datasets, environments
+and the per-epoch checkpoint series never leave the cluster. The account and
+host come from your SSH configuration, not from a committed file.
+
+## Container-first jobs
+
+If `POLYX_CONTAINER` is set, `cluster/smoke_job.sh` and
+`cluster/campaign_job.sh` run every Python command through
+`apptainer exec --nv "$POLYX_CONTAINER"`. The definition is built from the
+pinned base in `container/` with the locked environment inside; see
+[the environment page](hpc-environment.md). Without it, the job assumes a
+pre-activated conda plus uv environment on the node — the documented fallback.
+
 ## Verification status
 
 | Check | Status |
 | --- | --- |
 | Local three-family multirun under one protocol | Verified by `tests/test_pipeline_campaign.py` |
+| Local real Ultralytics one-epoch training | Verified by `tests/test_pipeline_real_framework.py` |
 | Local real-Lightning resume for YOLO and Mask R-CNN | Verified by `tests/test_pipeline_resume_lightning.py` |
 | Local campaign sync-back of every family | Verified by `tests/test_hpc_slurm_backend.py` |
 | OCÉANO smoke job (GPU visibility, `sm_70`, AMP, one epoch) | **Pending** cluster verification |

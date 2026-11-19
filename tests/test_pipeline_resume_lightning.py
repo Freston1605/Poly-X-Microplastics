@@ -78,7 +78,7 @@ class _RealLoopYOLO:
         self.weights = self.model.weight
         _RealLoopYOLO.instances.append(self)
 
-    def val(self, **_kwargs: object) -> list[_FakeResult]:
+    def predict(self, **_kwargs: object) -> list[_FakeResult]:
         self.val_calls += 1
         if _RealLoopYOLO.fail_on_validation == self.val_calls:
             # A time limit or preemption after the previous epoch's checkpoint
@@ -176,6 +176,42 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     # The restored weights were the ones in the Lightning checkpoint, not a
     # fresh pretrained model: the first loss of the resumed run saw them.
     assert resumed.first_weight == pytest.approx(saved_weight)
+
+
+def test_a_resumed_run_that_never_improves_keeps_the_snapshot_best_metrics(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    yolo_double: type[_RealLoopYOLO],
+) -> None:
+    """The remaining epoch does not beat the snapshot: no zero is written.
+
+    Before the fix a resumed execution started its ``best`` bookkeeping from
+    empty, so a non-improving remaining epoch evaluated an empty prediction
+    list and overwrote ``metrics.json`` with 0.0 and ``selected_epoch = -1``
+    even though ``best.pt`` and the early-stopping state named epoch 0.
+    """
+    output = tmp_path / "executions" / "resume-no-improvement"
+    yolo_double.prediction_sets = [_boxes_prediction(), _boxes_prediction()]
+    yolo_double.fail_on_validation = 2
+    assert _fit_detection(output, tiny_dataset) == 1
+
+    progress = _read(output / "progress.json")
+    assert progress["best_epoch"] == 0
+    assert progress["best_score"] == pytest.approx(1.0)
+
+    # The resumed epoch finds nothing: the with-class score drops to zero and
+    # cannot beat the snapshot's best.
+    yolo_double.prediction_sets = [[]]
+    yolo_double.fail_on_validation = None
+    yolo_double.instances = []
+    assert _fit_detection(output, tiny_dataset, resume=True) == 0
+
+    metrics = _read(output / "metrics.json")
+    state = _read(output / "training_state.json")
+    assert metrics["selection"]["value"] == pytest.approx(state["early_stopping"]["best_score"])
+    assert metrics["selection"]["value"] == pytest.approx(1.0)
+    assert metrics["selected_epoch"] == state["early_stopping"]["best_epoch"] == 0
+    assert metrics["figures"]["with_class_score"]["value"] == pytest.approx(1.0)
 
 
 def test_a_legacy_snapshot_without_a_lightning_checkpoint_is_refused(

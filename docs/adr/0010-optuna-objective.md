@@ -29,13 +29,17 @@ SQLite file on work, and no cross-process pruning is attempted.**
 
 `conf/sweep.yaml` sets `direction: maximize`, a `TPESampler` seeded from
 `protocol.seed`, `n_jobs: 1`, a small verification trial count and a declared
-`search_space` containing only protocol hyperparameters (learning rate,
-momentum, weight decay). Split, seed, augmentation subset and evaluator are
-absent from that space and cannot vary between trials. Both the real search
-multirun (`python -m polyx.pipeline.sweep_app --multirun`) and the in-process
-smoke driver (`polyx-pipeline --sweep`) read the same sweeper node and call the
-same `run_execution`; the objective function returns
-`selection["value"]` from the shared evaluator, never an adapter's own metric.
+`hydra.sweeper.params` space containing only protocol hyperparameters (learning
+rate, momentum, weight decay). Split, seed, augmentation subset and evaluator
+are absent from that space and cannot vary between trials. Each trial writes a
+normal execution under
+`<output_dir>/trials/trial_<study trial number>`, so a resumed multirun cannot
+overwrite an earlier trial's directory; `python -m polyx.pipeline.sweep_best`
+folds the plugin's result into `sweep_best.json`. Both the real search multirun
+(`python -m polyx.pipeline.sweep_app --multirun`) and the in-process smoke
+driver (`polyx-pipeline --sweep`) read the same sweeper node and call the same
+`run_execution`; the objective function returns `selection["value"]` from the
+shared evaluator, never an adapter's own metric.
 
 The study is `sqlite:///<work>/studies/<study-name>.db`, supplied by the work
 layout from `POLYX_HPC_WORK` or by an explicit `hydra.sweeper.storage` override.

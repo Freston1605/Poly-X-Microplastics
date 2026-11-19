@@ -34,6 +34,14 @@ class EarlyStoppingState:
             raise ValueError(f"unsupported early-stopping monitor: {self.monitor}")
         if self.mode != "max":
             raise ValueError(f"unsupported early-stopping mode: {self.mode}")
+        if not self.restore_best:
+            # The loop always keeps the best epoch's weights as `best.pt`; the
+            # artifact layout has no mode that omits it, so the flag is
+            # validated out instead of crashing at the end of training.
+            raise ValueError(
+                "early_stopping.restore_best=false is not supported: the loop "
+                "always keeps the best checkpoint as best.pt"
+            )
         self.best_score: float | None = None
         self.best_epoch = -1
         self.best_checkpoint: Path | None = None

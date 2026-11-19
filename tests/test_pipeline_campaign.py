@@ -68,28 +68,30 @@ def _run_campaign(
     data_yaml: Path,
     store: Path,
     scratch: Path,
+    *,
+    families: tuple[str, ...] = FAMILIES,
+    resume: bool = False,
 ) -> None:
     from polyx.pipeline import campaign_app
 
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "campaign_app",
-            "--multirun",
-            f"campaign_root={root}",
-            f"data_yaml={data_yaml}",
-            f"coco_dataset={store}",
-            f"scratch_dir={scratch}",
-            f"family={','.join(FAMILIES)}",
-            "protocol.epochs=1",
-            "protocol.batch=2",
-            "protocol.image_size=64",
-            "protocol.warmup_epochs=0",
-            "protocol.amp.enabled=false",
-            "protocol.early_stopping.patience=99",
-        ],
-    )
+    overrides = [
+        "campaign_app",
+        "--multirun",
+        f"campaign_root={root}",
+        f"data_yaml={data_yaml}",
+        f"coco_dataset={store}",
+        f"scratch_dir={scratch}",
+        f"family={','.join(families)}",
+        "protocol.epochs=1",
+        "protocol.batch=2",
+        "protocol.image_size=64",
+        "protocol.warmup_epochs=0",
+        "protocol.amp.enabled=false",
+        "protocol.early_stopping.patience=99",
+    ]
+    if resume:
+        overrides.append("resume=true")
+    monkeypatch.setattr(sys, "argv", overrides)
     campaign_app.campaign()
 
 
@@ -162,6 +164,83 @@ def test_one_multirun_trains_every_family_under_the_same_protocol(
             assert (tmp_path / "local" / family / relative).is_file(), f"{family}: {relative}"
 
 
+def test_resuming_a_campaign_skips_finished_families_and_starts_the_missing_ones(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A preempted campaign resumes only the families that need epochs.
+
+    The bug: ``resume`` was passed to every family, so a family that never
+    started aborted the whole job on a missing progress snapshot, and a family
+    that had finished was rerun from its last state and could overwrite its
+    metrics.
+    """
+    data_yaml = build_tiny_dataset(tmp_path / "detection")
+    store = _imported_store(tmp_path)
+    root = tmp_path / "campaign"
+    scratch = tmp_path / "scratch"
+
+    _install_framework_doubles(monkeypatch)
+    _run_campaign(monkeypatch, root, data_yaml, store, scratch, families=("yolo_detection",))
+
+    finished = root / "yolo_detection" / "metrics.json"
+    finished_before = finished.read_bytes()
+    finished_time = finished.stat().st_mtime_ns
+
+    _install_framework_doubles(monkeypatch)
+    _run_campaign(
+        monkeypatch,
+        root,
+        data_yaml,
+        store,
+        scratch,
+        families=FAMILIES,
+        resume=True,
+    )
+
+    assert finished.read_bytes() == finished_before, "a finished family was overwritten"
+    assert finished.stat().st_mtime_ns == finished_time
+    printed = capsys.readouterr().out
+    assert "SKIPPED" in printed and "yolo_detection" in printed
+    for family in FAMILIES:
+        state = _read(root / family / "training_state.json")
+        assert state["epochs_completed"] == 1, family
+    # The families that never started resumed nothing; they ran normally.
+    assert _read(root / "yolo_segmentation" / "training_state.json").get("resumed") is None
+    assert _read(root / "mask_rcnn" / "training_state.json").get("resumed") is None
+    # The campaign still syncs every family's artifacts.
+    from polyx.hpc.sync_back import sync_campaign
+
+    assert set(sync_campaign(root, tmp_path / "local")) == set(FAMILIES)
+
+
+def test_two_detection_variants_coexist_in_one_campaign(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """v8 and v11 detection differ by run_name, not only by weights."""
+    data_yaml = build_tiny_dataset(tmp_path / "detection")
+    store = _imported_store(tmp_path)
+    root = tmp_path / "campaign"
+    _install_framework_doubles(monkeypatch)
+
+    _run_campaign(
+        monkeypatch,
+        root,
+        data_yaml,
+        store,
+        tmp_path / "scratch",
+        families=("yolo_detection", "yolo_detection_v11"),
+    )
+
+    v8 = _read(root / "yolo_detection" / "training_state.json")
+    v11 = _read(root / "yolo_detection_v11" / "training_state.json")
+    # Both jobs use the same adapter; only the run name and weights change.
+    assert v8["family"]["name"] == v11["family"]["name"] == "yolo_detection"
+    assert v8["weights"] != v11["weights"]
+    assert v11["weights"] == "yolo11n.pt"
+    assert (root / "hydra" / "yolo_detection_v11").is_dir()
+    assert (root / "yolo_detection_v11" / "metrics.json").is_file()
+
+
 def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -172,6 +251,7 @@ def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
 
     from polyx.pipeline import campaign_app
 
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -181,10 +261,13 @@ def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
             f"data_yaml={data_yaml}",
             f"coco_dataset={store}",
             f"family={','.join(FAMILIES)}",
-            f"hydra.sweep.dir={tmp_path / 'nowhere'}",
             "protocol.epochs=1",
         ],
     )
     with pytest.raises(SystemExit):
         campaign_app.campaign()
     assert "campaign_root" in capsys.readouterr().err.lower()
+    # Hydra never wrote anything into the working directory.
+    assert not (tmp_path / "hydra").exists()
+    assert not (tmp_path / "multirun.yaml").exists()
+    assert not (tmp_path / "outputs").exists()

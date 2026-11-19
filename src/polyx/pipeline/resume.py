@@ -7,8 +7,11 @@ from the last saved epoch without rerunning completed work. It names two
 checkpoints: ``last_checkpoint`` is the family-native export used for
 best-weight restoration, and ``resume_checkpoint`` is the real Lightning
 checkpoint whose weights, optimizer, scheduler and epoch progress continue the
-loop. The protocol that produced the snapshot is stored with it: resuming a
-different protocol would mix methodologies and is refused.
+loop. The best epoch's evaluated figures travel with the snapshot, so a resumed
+execution that never improves can still report the best epoch it inherited
+instead of scoring an empty prediction list. The protocol that produced the
+snapshot is stored with it: resuming a different protocol would mix
+methodologies and is refused.
 """
 
 from __future__ import annotations
@@ -34,6 +37,7 @@ class ResumeState:
     non_improving: int
     stopped_early: bool
     protocol: dict[str, Any]
+    best_metrics: dict[str, Any] | None = None
 
     @classmethod
     def load(cls, path: Path) -> ResumeState:
@@ -47,6 +51,9 @@ class ResumeState:
             checkpoint = raw["last_checkpoint"]
             resume_checkpoint = raw.get("resume_checkpoint")
             best_checkpoint = raw.get("best_checkpoint")
+            best_metrics = raw.get("best_metrics")
+            if best_metrics is not None and not isinstance(best_metrics, dict):
+                raise TypeError("best_metrics must be a mapping")
             return cls(
                 epochs_completed=int(raw["epochs_completed"]),
                 last_checkpoint=Path(checkpoint) if checkpoint else None,
@@ -57,6 +64,7 @@ class ResumeState:
                 non_improving=int(raw.get("non_improving", 0)),
                 stopped_early=bool(raw.get("stopped_early", False)),
                 protocol=dict(raw["protocol"]),
+                best_metrics=best_metrics,
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeError(f"invalid progress snapshot {path}: {exc}") from exc

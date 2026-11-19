@@ -7,6 +7,19 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Headless, model-agnostic training pipeline (`polyx-pipeline`).** A new
+  parallel path beside the GUI Trainer composes `conf/` with Hydra and trains
+  YOLO detection, YOLO-seg and torchvision Mask R-CNN through one PyTorch
+  Lightning loop under one framework-neutral protocol. It ships a shared COCO
+  evaluator whose figures always name the criterion, best-weight selection by
+  the with-class score, resumable progress snapshots and real Lightning
+  checkpoints, a COCO mask import/conversion path (machine masks are never
+  ground truth), an Optuna sweeper multirun with a SQLite study on the work
+  filesystem and a `sweep_best.json` artifact, hash-verified weights resolved
+  before a framework loads them, and SLURM job scripts that stage weights and
+  honour `POLYX_CONTAINER`. The GUI Trainer is unchanged. See `docs/hpc.md`,
+  `docs/hpc-training-pipeline.md`, ADR-0007 to ADR-0010 and the
+  `src/polyx/pipeline/` section in `CLAUDE.md`.
 - Fast `Ruff` CI workflow (`ruff check` + `ruff format --check`) that installs
   the ruff version pinned in `uv.lock` and needs no project dependencies, so a
   lint failure reports in seconds instead of after the gate's suite.

@@ -28,13 +28,22 @@ selection metric and the criterion it was computed under, then the
 localisation figure and its criterion beside it. A non-zero exit status means
 the execution failed; the printed error names the reason.
 
+Those terminal lines are **machine tokens** (`OUTPUT:`, `CHECKPOINT:`,
+`SELECTION:`, `CRITERION:`, `STUDY:`, `BEST_VALUE:` and the like), parsed by
+job scripts and logs exactly as they are printed. They are deliberately not
+wrapped in `_()`: they are not interface copy and a translated key could not be
+consumed by a script. The artifact text (`report.md`, figure criteria, state
+keys) is English by the project's source-language rule, and human-facing GUI
+copy keeps going through the translation catalog.
+
 ## Running a campaign
 
 A campaign is one Hydra multirun whose jobs are the model families. Each job
 composes the same protocol and writes its own execution under
-`<campaign_root>/<family>/`; the family is the only variable. Both training
-source overrides are supplied because the detection family consumes the YOLO
-box dataset and the segmentation families consume the canonical COCO dataset:
+`<campaign_root>/<family.run_name>/` (the family name by default); the model is
+the only variable. Both training source overrides are supplied because the
+detection family consumes the YOLO box dataset and the segmentation families
+consume the canonical COCO dataset:
 
 ```bash
 python -m polyx.pipeline.campaign_app --multirun \
@@ -67,6 +76,14 @@ proven by `tests/test_pipeline_campaign.py`.
 - `scratch_dir` — ephemeral cache root for per-family conversion. It defaults
   to `$POLYX_HPC_SCRATCH/polyx/pipeline`, or the system temporary directory
   when the cluster variable is absent. Nothing written there is an artifact.
+- `weights_dir` / `weights_manifest` — the staged weights directory and its
+  `sha256sum` manifest. Empty resolves to `POLYX_WEIGHTS_DIR` /
+  `POLYX_WEIGHTS_MANIFEST`. When either is configured, `family.weights` is
+  resolved to a local file, verified, and handed to the framework; an absent,
+  unpinned or mismatching file stops the execution. `training_state.json`
+  records the resolved path and `weights_verified`. With neither configured the
+  framework's own default is used and reported unverified — local debugging
+  only; cluster jobs always stage and pin.
 
 A detection family consumes only `data_yaml`; a segmentation family consumes
 only `coco_dataset`. A campaign job may declare both, so one multirun can serve
@@ -75,12 +92,19 @@ segmenter can never train on boxes or a detector be scored against masks. The
 mismatch would silently produce a meaningless benchmark, so it is refused
 before any training starts.
 
-`protocol.augmentation_subset` is the only augmentation the benchmark campaign
-allows. Every adapter records in `training_state.json` what it applied and what
-it skipped, with `family_specific: false`: a transform a family cannot express
-is reported as skipped, never replaced by a framework-specific one. Mask R-CNN
-implements `hsv` and `flip_lr` and skips `mosaic`; the Ultralytics adapter
-switches every knob outside the subset off.
+`protocol.augmentation_subset` is the benchmark campaign's common subset, and
+it is exactly the intersection the first-wave families can express identically:
+`hsv` and `flip_lr`. Their magnitudes are protocol values (`hsv_h`, `hsv_s`,
+`hsv_v`, `flip_lr_probability`) and both families apply them with the same
+arithmetic, so the transform is not a second variable. A benchmark execution
+refuses any transform outside that intersection, so `mosaic` cannot enter a
+campaign by accident. Family-specific transforms belong to an exploratory run:
+`protocol.benchmark=false` with `protocol.exploratory_augmentation=[mosaic]`.
+
+Every adapter records in `training_state.json` what it applied and what it
+skipped, the magnitudes, and `family_specific: false`: a transform a family
+cannot express is reported as skipped, never replaced by a framework-specific
+one. Mask R-CNN implements `hsv` and `flip_lr` and skips `mosaic`.
 
 ## Artifact layout
 
@@ -229,8 +253,13 @@ only variable:
 - `test_the_shared_evaluator_scores_both_segmentation_families_identically`
   asserts the same figure names, criteria and operating-point scores from
   identical prediction geometry;
-- `test_benchmark_augmentation_is_the_protocol_subset_only` asserts that no
-  family-specific augmentation enters the campaign.
+- `test_benchmark_augmentation_is_the_true_common_subset` asserts that both
+  families declare and apply the same subset and the same HSV/flip magnitudes,
+  and that `mosaic` is not part of the benchmark;
+- `test_the_two_families_apply_the_same_effective_hsv_and_flip` compares the
+  torchvision-side transform against Ultralytics' own `RandomHSV`/`RandomFlip`
+  for the same seed, so parity is asserted on the pixels and boxes, not on the
+  transform names.
 
 ## How one epoch is trained
 
@@ -238,14 +267,15 @@ The Ultralytics families share one wrapper:
 
 - the pretrained network is rebuilt from its own yaml with the dataset's class
   count, and the pretrained weights are transferred into the matching layers;
-- `train_dataloader` and `val_dataloader` reuse the Ultralytics dataset and
-  batch collation over the job-time labels;
+- `train_dataloader` reuses the Ultralytics dataset and batch collation over
+  the job-time labels;
 - `training_step` hands the batch to the Ultralytics network's own loss;
 - `configure_optimizers` applies the protocol's optimizer, weight decay,
   momentum, warmup and cosine schedule;
-- at the end of the epoch, Ultralytics validation scores the current weights
-  and the checkpoint is written; its output directory is pointed at scratch so
-  no global runs directory is touched and nothing lands in the artifact layout.
+- at the end of the epoch, one Ultralytics prediction pass over the validation
+  split produces COCO predictions; the shared evaluator scores them, and that
+  score is the only one recorded. Ultralytics' own validator is not run a second
+  time and no discarded figures are presented as a cross-check.
 
 Mask R-CNN follows the same shape with torchvision's own pieces: a
 `DataLoader` over the canonical COCO instances and their rasterized masks, the
@@ -264,10 +294,54 @@ Lightning checkpoint and is never used for resume. If a progress snapshot has
 no Lightning checkpoint (one written before this behaviour existed), the
 execution refuses to resume instead of silently restarting the epoch loop.
 
-On a machine without a GPU, set `protocol.amp.enabled=false`: FP16 AMP is a GPU
-request recorded in the protocol, and Lightning cannot run FP16 mixed precision
-on CPU.
+On a machine without a GPU, Lightning substitutes `bf16-mixed` for the requested
+`16-mixed`. `training_state.json` records `amp_requested` (`16-mixed`) next to
+`precision` (`bf16-mixed`) and derives `amp_active` from what actually ran, so a
+CPU execution never claims FP16. FP16 itself remains a GPU acceptance check.
 
+The wrapper is not merely import-compatible: `tests/test_pipeline_real_framework.py`
+builds `YOLO("yolov8n.yaml")` offline, rebuilds its head for the fixture's three
+classes and runs one real training epoch and prediction pass under real
+Lightning.
+
+
+## Sweeps
+
+A hyperparameter search is a Hydra Optuna multirun, not a campaign. It runs
+inside one allocation, one trial at a time, and reuses its SQLite study when the
+same study name and storage are supplied:
+
+```sh
+python -m polyx.pipeline.sweep_app --multirun \
+  output_dir="$POLYX_HPC_WORK/results/sweep-<timestamp>" \
+  data_yaml="$POLYX_HOME/data/data.yaml" \
+  hydra.sweeper.n_trials=20
+python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-<timestamp>"
+```
+
+- `output_dir` is the sweep root; it is required and is not a trial directory.
+- The study is `sqlite:///$POLYX_HPC_WORK/studies/polyx-optuna.db`, or under the
+  sweep root when the work variable is unset. It is never on scratch, and a
+  resumed multirun extends the same study instead of creating a new one.
+- Each trial writes a normal execution under
+  `<output_dir>/trials/trial_<number>`. The number is the study's running trial,
+  so a resumed invocation cannot overwrite an earlier trial's directory.
+- The search space lives in `hydra.sweeper.params` and may only touch protocol
+  hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
+  The sampler is a TPE seeded from the protocol, direction `maximize` and no
+  pruner: trials are separate processes, so Lightning early stopping stops each
+  one.
+- The objective is the shared evaluator's with-class score, the same number a
+  single execution reports.
+- `python -m polyx.pipeline.sweep_best` reads the plugin's
+  `optimization_results.yaml` and the per-trial artifacts and writes
+  `<output_dir>/sweep_best.json` with the winning parameters, value, criterion
+  and trial directory.
+
+`polyx-pipeline --sweep` remains the fast in-process driver for a local check;
+it reads the same `hydra.sweeper` node and writes the same artifacts. The plugin
+path is proven by `tests/test_pipeline_optuna_multirun.py`, including study
+resume and the best-artifact step.
 
 ## Decisions and vocabulary
 

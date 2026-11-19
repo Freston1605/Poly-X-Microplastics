@@ -16,7 +16,15 @@ warmup_epochs: 5
 augmentation_subset:
   - hsv
   - flip_lr
-  - mosaic
+# Family-specific extras are allowed only outside the benchmark; a benchmark
+# execution refuses them so the model stays the only variable.
+exploratory_augmentation: []
+benchmark: true
+# Magnitudes every family applies identically (Ultralytics reference values).
+hsv_h: 0.015
+hsv_s: 0.4
+hsv_v: 0.4
+flip_lr_probability: 0.5
 amp:
   enabled: true
   dtype: fp16

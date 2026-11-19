@@ -27,6 +27,12 @@ CONF_DIR = Path(__file__).resolve().parent / "conf"
 #: segmentation consumes the canonical COCO mask dataset.
 _TASKS = ("detect", "segment")
 
+#: Augmentations every first-wave family can express identically. The
+#: benchmark campaign may not declare anything outside this set: a transform
+#: one family skips would make the model result depend on the augmentation.
+#: Family-specific transforms belong in an exploratory run.
+BENCHMARK_AUGMENTATIONS = frozenset({"hsv", "flip_lr"})
+
 
 def default_scratch_dir() -> Path:
     """Scratch root for ephemeral per-family conversion intermediates.
@@ -61,7 +67,13 @@ class EarlyStoppingConfig:
 
 @dataclass
 class Protocol:
-    """Framework-neutral part of the configuration, shared by every adapter."""
+    """Framework-neutral part of the configuration, shared by every adapter.
+
+    ``augmentation_subset`` is the benchmark's common subset: transforms every
+    first-wave family applies with the same magnitudes. ``exploratory_augmentation``
+    is for runs where the benchmark is not the point; a benchmark execution
+    refuses it and refuses any subset entry outside the common set.
+    """
 
     split: str = "val"
     seed: int = 42
@@ -74,7 +86,16 @@ class Protocol:
     weight_decay: float = 0.0005
     schedule: str = "cosine"
     warmup_epochs: int = 5
-    augmentation_subset: list[str] = field(default_factory=list)
+    augmentation_subset: list[str] = field(default_factory=lambda: ["hsv", "flip_lr"])
+    exploratory_augmentation: list[str] = field(default_factory=list)
+    benchmark: bool = True
+    # Magnitudes both families apply identically. The HSV defaults are the
+    # Ultralytics reference values, so the torchvision sibling reproduces
+    # them instead of choosing its own.
+    hsv_h: float = 0.015
+    hsv_s: float = 0.4
+    hsv_v: float = 0.4
+    flip_lr_probability: float = 0.5
     amp: AmpConfig = field(default_factory=AmpConfig)
     early_stopping: EarlyStoppingConfig = field(default_factory=EarlyStoppingConfig)
 
@@ -89,12 +110,18 @@ class Backend:
 
 @dataclass
 class Family:
-    """Which adapter executes the protocol."""
+    """Which adapter executes the protocol.
+
+    ``run_name`` is the directory this execution occupies inside a campaign
+    root. It defaults to the family name; two detection variants (say v8-n and
+    v11-n) coexist in one campaign by declaring different run names.
+    """
 
     name: str = "yolo_detection"
     framework: str = "ultralytics"
     weights: str = "yolov8n.pt"
     task: str = "detect"
+    run_name: str = ""
 
 
 @dataclass
@@ -118,11 +145,27 @@ class ExecutionConfig:
     coco_dataset: Path | None = None
     dataset_root: Path = SEGMENTATION_DATASETS_DIR
     scratch_dir: Path = field(default_factory=default_scratch_dir)
+    weights_dir: Path | None = None
+    weights_manifest: Path | None = None
 
 
 def _build_protocol(raw: dict) -> Protocol:
     amp = raw.get("amp") or {}
     stopping = raw.get("early_stopping") or {}
+    subset = [str(item) for item in raw.get("augmentation_subset", ["hsv", "flip_lr"])]
+    exploratory = [str(item) for item in raw.get("exploratory_augmentation", [])]
+    benchmark = bool(raw.get("benchmark", True))
+    if benchmark:
+        outside = sorted((set(subset) | set(exploratory)) - BENCHMARK_AUGMENTATIONS)
+        if outside:
+            raise ValueError(
+                "benchmark augmentation must be the family-neutral common subset "
+                f"{sorted(BENCHMARK_AUGMENTATIONS)}; move {outside} to "
+                "protocol.exploratory_augmentation and set protocol.benchmark=false"
+            )
+    probability = float(raw.get("flip_lr_probability", 0.5))
+    if not 0.0 <= probability <= 1.0:
+        raise ValueError("protocol.flip_lr_probability must be within [0, 1]")
     return Protocol(
         split=str(raw["split"]),
         seed=int(raw["seed"]),
@@ -135,7 +178,13 @@ def _build_protocol(raw: dict) -> Protocol:
         weight_decay=float(raw["weight_decay"]),
         schedule=str(raw["schedule"]),
         warmup_epochs=int(raw["warmup_epochs"]),
-        augmentation_subset=[str(item) for item in raw.get("augmentation_subset", [])],
+        augmentation_subset=subset,
+        exploratory_augmentation=exploratory,
+        benchmark=benchmark,
+        hsv_h=float(raw.get("hsv_h", 0.015)),
+        hsv_s=float(raw.get("hsv_s", 0.4)),
+        hsv_v=float(raw.get("hsv_v", 0.4)),
+        flip_lr_probability=probability,
         amp=AmpConfig(enabled=bool(amp.get("enabled", True)), dtype=str(amp.get("dtype", "fp16"))),
         early_stopping=EarlyStoppingConfig(
             monitor=str(stopping.get("monitor", "with_class_score")),
@@ -145,6 +194,14 @@ def _build_protocol(raw: dict) -> Protocol:
             restore_best=bool(stopping.get("restore_best", True)),
         ),
     )
+
+
+def _run_name(raw: dict) -> str:
+    """The single directory-component name one campaign execution occupies."""
+    candidate = str(raw.get("run_name") or raw.get("name") or "run").strip()
+    if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
+        raise ValueError(f"family.run_name must be one directory name, got {candidate!r}")
+    return candidate
 
 
 def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
@@ -188,6 +245,8 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
             raise ValueError("a segmentation family needs a COCO mask dataset; set coco_dataset")
     dataset_root = str(raw.get("dataset_root") or "")
     scratch_dir = str(raw.get("scratch_dir") or "")
+    weights_dir = str(raw.get("weights_dir") or "")
+    weights_manifest = str(raw.get("weights_manifest") or "")
     return ExecutionConfig(
         data_yaml=Path(data_yaml).expanduser().resolve() if data_yaml else None,
         output_dir=Path(output_dir).expanduser().resolve(),
@@ -201,6 +260,7 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
             framework=str(family_raw.get("framework", "ultralytics")),
             weights=str(family_raw.get("weights", "yolov8n.pt")),
             task=task,
+            run_name=_run_name(family_raw),
         ),
         dataset_name=str(raw.get("dataset_name", "polyx")),
         resume=bool(raw.get("resume", False)),
@@ -211,6 +271,10 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
         ),
         scratch_dir=(
             Path(scratch_dir).expanduser().resolve() if scratch_dir else default_scratch_dir()
+        ),
+        weights_dir=Path(weights_dir).expanduser().resolve() if weights_dir else None,
+        weights_manifest=(
+            Path(weights_manifest).expanduser().resolve() if weights_manifest else None
         ),
     )
 
@@ -232,6 +296,8 @@ def config_to_dict(config: ExecutionConfig) -> dict[str, Any]:
     data["coco_dataset"] = str(config.coco_dataset) if config.coco_dataset else ""
     data["dataset_root"] = str(config.dataset_root)
     data["scratch_dir"] = str(config.scratch_dir)
+    data["weights_dir"] = str(config.weights_dir) if config.weights_dir else ""
+    data["weights_manifest"] = str(config.weights_manifest) if config.weights_manifest else ""
     return data
 
 

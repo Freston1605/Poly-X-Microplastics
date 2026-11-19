@@ -124,7 +124,7 @@ def test_small_sweep_writes_study_saves_best_and_uses_shared_objective(
         )
         assert protocol["split"] == "val"
         assert protocol["seed"] == 42
-        assert protocol["augmentation_subset"] == ["hsv", "flip_lr", "mosaic"]
+        assert protocol["augmentation_subset"] == ["hsv", "flip_lr"]
         assert (trial_dir / "checkpoints" / "best.pt").is_file()
 
     # The objective is the with-class score, not localisation or mAP: the first

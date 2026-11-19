@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 
-from polyx.core.evaluation import _metrics_from_results
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
@@ -47,6 +46,7 @@ from polyx.pipeline.dataset import (
 from polyx.pipeline.evaluation import rasterize_segmentation
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset
+from polyx.pipeline.weights import ARCHITECTURE_SUFFIXES, resolve_weights
 
 EpochCallback = Callable[["EpochResult"], bool]
 
@@ -91,15 +91,32 @@ class PreparedDataset:
 
 @dataclass
 class FitResult:
-    """Observable state of the finished Lightning fit."""
+    """Observable state of the finished Lightning fit.
+
+    ``precision`` is what Lightning actually ran; ``amp_requested`` is the
+    protocol's request. They differ when Lightning substitutes a precision the
+    device supports (for example bf16-mixed for 16-mixed on CPU), and only the
+    former can honestly drive ``amp_active``.
+    """
 
     precision: str
+    amp_requested: str
     epochs_completed: int
     amp_active: bool
     device: str
     framework: str
     weights: str
+    weights_verified: bool
     augmentation: dict[str, Any] = field(default_factory=dict)
+
+
+#: Precision strings that mean some form of automatic mixed precision.
+_MIXED_PRECISION = frozenset({"16-mixed", "bf16-mixed", "16-true", "bf16-true"})
+
+
+def _amp_active(precision: str) -> bool:
+    """Whether the precision Lightning reports is a mixed-precision mode."""
+    return precision in _MIXED_PRECISION
 
 
 def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
@@ -122,20 +139,36 @@ def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
     return network
 
 
+def _declared_augmentations(protocol: Protocol) -> list[str]:
+    """Every transform this execution declared, benchmark and exploratory."""
+    return [*protocol.augmentation_subset, *protocol.exploratory_augmentation]
+
+
 def _augmentation_report(protocol: Protocol, supported: frozenset[str]) -> dict[str, Any]:
     """Which declared augmentations this family can apply without substitution.
 
-    The protocol names one common subset for the benchmark campaign. A family
-    reports what it applied and what it skipped; it never replaces a skipped
-    transform with a framework-specific one, which would make the model the
-    wrong variable.
+    The protocol names one common subset for the benchmark campaign and an
+    optional exploratory list for runs where comparability is not the point. A
+    family reports what it applied and what it skipped; it never replaces a
+    skipped transform with a framework-specific one, which would make the model
+    the wrong variable. The magnitudes travel with the report so two families
+    can be judged on the transform they actually applied.
     """
-    declared = list(protocol.augmentation_subset)
+    declared = _declared_augmentations(protocol)
     return {
-        "subset": declared,
+        "benchmark": protocol.benchmark,
+        "subset": list(protocol.augmentation_subset),
+        "exploratory": list(protocol.exploratory_augmentation),
+        "declared": declared,
         "applied": [name for name in declared if name in supported],
         "skipped": [name for name in declared if name not in supported],
         "family_specific": False,
+        "parameters": {
+            "hsv_h": protocol.hsv_h,
+            "hsv_s": protocol.hsv_s,
+            "hsv_v": protocol.hsv_v,
+            "flip_lr_probability": protocol.flip_lr_probability,
+        },
     }
 
 
@@ -163,14 +196,14 @@ def _lightning_resume_path(resume: ResumeState | None) -> Path | None:
 def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
     """The Ultralytics argument namespace the dataloader and loss both read.
 
-    Augmentation is restricted to the protocol's common subset: the declared
-    transforms are enabled and every family-specific knob is switched off, so a
-    YOLO run and a Mask R-CNN run differ in augmentation only where the
-    protocol says so.
+    Augmentation is restricted to the protocol's declared list: the declared
+    transforms are enabled at the protocol's magnitudes and every
+    family-specific knob is switched off, so a YOLO run and a Mask R-CNN run
+    differ in augmentation only where the protocol says so.
     """
     from ultralytics.cfg import get_cfg
 
-    augment = protocol.augmentation_subset
+    augment = _declared_augmentations(protocol)
     hsv = "hsv" in augment
     return get_cfg(
         overrides={
@@ -183,10 +216,10 @@ def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
             "fraction": 1.0,
             "deterministic": True,
             "workers": 0,
-            "hsv_h": 0.015 if hsv else 0.0,
-            "hsv_s": 0.7 if hsv else 0.0,
-            "hsv_v": 0.4 if hsv else 0.0,
-            "fliplr": 0.5 if "flip_lr" in augment else 0.0,
+            "hsv_h": protocol.hsv_h if hsv else 0.0,
+            "hsv_s": protocol.hsv_s if hsv else 0.0,
+            "hsv_v": protocol.hsv_v if hsv else 0.0,
+            "fliplr": protocol.flip_lr_probability if "flip_lr" in augment else 0.0,
             "mosaic": 1.0 if "mosaic" in augment else 0.0,
             "close_mosaic": 0,
             # Everything outside the benchmark's common subset stays off.
@@ -370,10 +403,12 @@ class _CocoMaskAdapter(FamilyAdapter):
 
 
 def _build_trainer(config: ExecutionConfig, run_dir: Path) -> tuple[Any, str]:
-    """The one Lightning trainer and precision every family uses.
+    """The one Lightning trainer and the precision that was requested.
 
-    The monitor forwards a module's stop decision, made from the shared
-    evaluator's score, to the training loop.
+    Lightning may substitute a precision the device supports; the caller
+    records ``trainer.precision``, not this request. The monitor forwards a
+    module's stop decision, made from the shared evaluator's score, to the
+    training loop.
     """
     from lightning import Callback, Trainer
 
@@ -405,7 +440,12 @@ def _build_trainer(config: ExecutionConfig, run_dir: Path) -> tuple[Any, str]:
     return trainer, precision
 
 
-def _torchvision_detector(weights_name: str, class_count: int, image_size: int) -> Any:
+def _torchvision_detector(
+    weights_name: str,
+    class_count: int,
+    image_size: int,
+    weights_path: Path | None = None,
+) -> Any:
     """Build the torchvision detector and size its heads for the dataset.
 
     Like the Ultralytics wrapper, pretrained heads are rebuilt for the
@@ -413,7 +453,11 @@ def _torchvision_detector(weights_name: str, class_count: int, image_size: int) 
     output layer needs ``class_count + 1`` classes. The protocol's image size
     replaces the pretrained transform's own 800/1333 defaults so the model
     family is not silently changing the input scale.
+
+    A pinned, hash-verified checkpoint is loaded from its local path; the
+    factory is asked for an untrained model in that case so nothing downloads.
     """
+    import torch
     from torchvision.models import detection
     from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
     from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -426,7 +470,14 @@ def _torchvision_detector(weights_name: str, class_count: int, image_size: int) 
         factory = getattr(detection, name, None)
         if factory is None:
             raise ValueError(f"unsupported torchvision segmentation model: {weights_name}")
-        model = factory(weights="DEFAULT", **size)
+        if weights_path is not None:
+            model = factory(weights=None, weights_backbone=None, **size)
+            state = torch.load(weights_path, map_location="cpu", weights_only=True)
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            model.load_state_dict(state)
+        else:
+            model = factory(weights="DEFAULT", **size)
     classes = class_count + 1
     box_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(box_features, classes)
@@ -451,11 +502,13 @@ class _CocoMaskTorchvisionDataset:
         split: str,
         class_indices: dict[int, int],
         augmentation: list[str],
+        protocol: Protocol,
     ) -> None:
         self.store = Path(store)
         self.images = split_coco_images(coco, split)
         self.class_indices = dict(class_indices)
         self.augmentation = list(augmentation)
+        self.protocol = protocol
         by_image: dict[int, list[dict[str, Any]]] = {}
         for annotation in coco.get("annotations", []):
             by_image.setdefault(int(annotation["image_id"]), []).append(annotation)
@@ -495,7 +548,7 @@ class _CocoMaskTorchvisionDataset:
             boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
             labels.append(category + 1)
 
-        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation)
+        rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
         tensor = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1))).float() / 255.0
         areas = [max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1]) for box in boxes]
         target = {
@@ -518,26 +571,46 @@ def _augment(
     masks: list[np.ndarray],
     boxes: list[list[float]],
     augmentation: list[str],
+    protocol: Protocol,
 ) -> tuple[np.ndarray, list[np.ndarray], list[list[float]]]:
-    """Apply only protocol-declared, framework-neutral transforms.
+    """Apply only protocol-declared transforms at the protocol's magnitudes.
 
-    ``flip_lr`` flips the image, its instance masks and its boxes together.
-    ``hsv`` jitters colour only. Nothing else is applied: a transform the
+    ``flip_lr`` flips the image, its instance masks and its boxes together at
+    the protocol's probability. ``hsv`` reproduces Ultralytics' ``RandomHSV``
+    exactly: the same multiplicative gains drawn in the same order, applied
+    through the same channel LUTs. Nothing else is applied, and a transform the
     family cannot express is reported as skipped, never replaced.
     """
     import cv2
 
-    if "flip_lr" in augmentation and np.random.random() < 0.5:
+    if "flip_lr" in augmentation and np.random.random() < protocol.flip_lr_probability:
         width = image.shape[1]
         image = np.ascontiguousarray(image[:, ::-1])
         masks = [np.ascontiguousarray(mask[:, ::-1]) for mask in masks]
         boxes = [[width - box[2], box[1], width - box[0], box[3]] for box in boxes]
-    if "hsv" in augmentation:
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
-        hsv[..., 0] = (hsv[..., 0] + np.random.uniform(-9.0, 9.0)) % 180.0
-        hsv[..., 1] = np.clip(hsv[..., 1] * np.random.uniform(0.5, 1.5), 0.0, 255.0)
-        hsv[..., 2] = np.clip(hsv[..., 2] * np.random.uniform(0.5, 1.5), 0.0, 255.0)
-        image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+    if "hsv" in augmentation and (protocol.hsv_h or protocol.hsv_s or protocol.hsv_v):
+        gains = (
+            np.random.uniform(-1, 1, 3)
+            * [
+                protocol.hsv_h,
+                protocol.hsv_s,
+                protocol.hsv_v,
+            ]
+            + 1
+        )
+        hue, saturation, value = cv2.split(cv2.cvtColor(image, cv2.COLOR_RGB2HSV))
+        levels = np.arange(0, 256, dtype=gains.dtype)
+        hue_lut = ((levels * gains[0]) % 180).astype(np.uint8)
+        saturation_lut = np.clip(levels * gains[1], 0, 255).astype(np.uint8)
+        value_lut = np.clip(levels * gains[2], 0, 255).astype(np.uint8)
+        augmented = cv2.merge(
+            (
+                cv2.LUT(hue, hue_lut),
+                cv2.LUT(saturation, saturation_lut),
+                cv2.LUT(value, value_lut),
+            )
+        )
+        image = cv2.cvtColor(augmented, cv2.COLOR_HSV2RGB)
     return image, masks, boxes
 
 
@@ -590,8 +663,15 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
         # Always start from the family's declared pretrained weights and let
         # Lightning restore the execution's own checkpoint. An Ultralytics .pt
         # is not a Lightning checkpoint, so handing it to ``Trainer.fit`` would
-        # fail looking for Lightning's bookkeeping.
-        model = YOLO(config.family.weights)
+        # fail looking for Lightning's bookkeeping. A pinned weight is resolved
+        # to its verified local file first, so an offline node never downloads.
+        resolved_weights = resolve_weights(
+            config.family,
+            weights_dir=config.weights_dir,
+            manifest=config.weights_manifest,
+        )
+        architecture_only = Path(config.family.weights).suffix.lower() in ARCHITECTURE_SUFFIXES
+        model = YOLO(str(resolved_weights.path) if resolved_weights.path else config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
         # dataset decides the class count, so the Ultralytics network is rebuilt
         # from its yaml and the pretrained weights are transferred into it.
@@ -614,10 +694,8 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 # model.eval() into a full Ultralytics training job.
                 self.net = model.model
                 self.coco_predictions: list[dict] = []
-                self.adapter_figures: dict = {}
                 self.checkpoint_path = checkpoint_dir / "epoch_000.pt"
                 self._train_dataset: Any | None = None
-                self._val_dataset: Any | None = None
                 self._cfg: Any | None = None
                 self.stop_requested = False
 
@@ -648,24 +726,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     collate_fn=self._train_dataset.collate_fn,
                 )
 
-            def val_dataloader(self) -> Any:
-                # The protocol's validation is Ultralytics' own validator in
-                # ``on_validation_epoch_end``; this loader only makes Lightning
-                # run the validation loop that invokes it.
-                from torch.utils.data import DataLoader
-
-                if self._val_dataset is None:
-                    self._val_dataset = _ultralytics_dataset(
-                        dataset.data_yaml, self._arguments(), mode="val"
-                    )
-                return DataLoader(
-                    self._val_dataset,
-                    batch_size=protocol.batch,
-                    shuffle=False,
-                    num_workers=0,
-                    collate_fn=self._val_dataset.collate_fn,
-                )
-
             def training_step(self, batch: Any, batch_idx: int) -> Any:
                 # The Ultralytics network computes its own task loss from the
                 # batch its dataloader produced; Lightning owns the step. The
@@ -682,9 +742,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 loss, _items = self.net.loss(batch)
                 return loss
 
-            def validation_step(self, batch: Any, batch_idx: int) -> None:
-                return None
-
             def configure_optimizers(self) -> Any:
                 from torch.optim.lr_scheduler import LambdaLR
 
@@ -695,40 +752,31 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
                 }
 
-            def on_validation_epoch_end(self) -> None:
-                # Ultralytics writes its own plots under ``project``; keep that
-                # ephemeral so the artifact layout stays the only output and no
-                # global ``runs_dir`` is touched.
-                validation_root = Path(config.scratch_dir) / "validation" / Path(run_dir).name
-                raw = model.val(
-                    data=str(dataset.data_yaml),
-                    split=protocol.split,
+            def on_train_epoch_end(self) -> None:
+                # One inference pass produces the COCO predictions the shared
+                # evaluator scores; the shared evaluator is the only authority,
+                # so Ultralytics' own validation is not run a second time and
+                # its discarded metrics are not presented as a cross-check.
+                images = split_images(dataset.data_yaml, protocol.split)
+                raw = model.predict(
+                    source=[str(image) for image in images],
                     imgsz=protocol.image_size,
                     batch=protocol.batch,
                     device=device,
-                    project=str(validation_root),
-                    name=str(getattr(self, "current_epoch", 0)),
-                    plots=False,
-                    save_json=False,
-                    exist_ok=True,
                 )
                 results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
-                if not results or getattr(results[0], "boxes", None) is None:
-                    images = split_images(dataset.data_yaml, protocol.split)
-                    raw = model.predict(
-                        source=[str(image) for image in images],
-                        imgsz=protocol.image_size,
-                        batch=protocol.batch,
-                        device=device,
-                    )
-                    results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
                 self.coco_predictions = predict(results)
-                self.adapter_figures = (
-                    _metrics_from_results(results[0], dataset.class_names) if results else {}
-                )
                 epoch = int(getattr(self, "current_epoch", 0))
                 self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
-                model.save(str(self.checkpoint_path))
+                if architecture_only:
+                    # An architecture declaration has no Ultralytics checkpoint
+                    # dictionary to merge; export the network itself so the
+                    # artifact still exists and can be loaded back.
+                    import torch
+
+                    torch.save({"model": model.model}, self.checkpoint_path)
+                else:
+                    model.save(str(self.checkpoint_path))
                 # A real Lightning checkpoint carries the weights, optimizer,
                 # scheduler and epoch progress; the family-native export above
                 # stays for compatibility and best-weight restoration.
@@ -738,13 +786,13 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     current_trainer.save_checkpoint(str(lightning_checkpoint))
                     resume_checkpoint = lightning_checkpoint
                 # The engine scores this epoch and decides whether to stop.
-                # Lightning calls callbacks before the module hook, so the
-                # decision is made here and the callback only forwards the flag
-                # to loop implementations that do not expose ``self.trainer``.
+                # Setting ``trainer.should_stop`` ends the loop after this
+                # epoch; the registered callback is the same decision for the
+                # validation-driven sibling adapter.
                 result = EpochResult(
                     epoch=epoch,
                     predictions=list(self.coco_predictions),
-                    adapter_figures=dict(self.adapter_figures),
+                    adapter_figures={},
                     checkpoint=Path(self.checkpoint_path),
                     resume_checkpoint=resume_checkpoint,
                 )
@@ -753,18 +801,21 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     if current_trainer is not None:
                         current_trainer.should_stop = True
 
-        trainer, precision = _build_trainer(config, run_dir)
+        trainer, requested_precision = _build_trainer(config, run_dir)
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
         trainer.fit(_YoloLightningModule(), **fit_kwargs)
+        reported_precision = str(trainer.precision)
         return FitResult(
-            precision=precision,
+            precision=reported_precision,
+            amp_requested=requested_precision,
             epochs_completed=int(trainer.current_epoch),
-            amp_active=precision == "16-mixed",
+            amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
-            weights=config.family.weights,
+            weights=resolved_weights.describe(),
+            weights_verified=resolved_weights.verified,
             augmentation=_augmentation_report(protocol, self.supported_augmentations),
         )
 
@@ -825,8 +876,16 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
         indices = category_indices(coco)
         augmentation = _augmentation_report(protocol, self.supported_augmentations)
 
+        resolved_weights = resolve_weights(
+            config.family,
+            weights_dir=config.weights_dir,
+            manifest=config.weights_manifest,
+        )
         model = _torchvision_detector(
-            config.family.weights, len(dataset.class_names), protocol.image_size
+            config.family.weights,
+            len(dataset.class_names),
+            protocol.image_size,
+            resolved_weights.path,
         )
         # The checkpoint's weights, optimizer, scheduler and epoch progress are
         # restored by Lightning from its own checkpoint; a pre-fix snapshot has
@@ -854,7 +913,7 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
 
             def _split_dataset(self, split: str) -> Any:
                 applied = augmentation["applied"] if split == "train" else []
-                return _CocoMaskTorchvisionDataset(store, coco, split, indices, applied)
+                return _CocoMaskTorchvisionDataset(store, coco, split, indices, applied, protocol)
 
             def train_dataloader(self) -> Any:
                 from torch.utils.data import DataLoader
@@ -937,18 +996,21 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                     if current_trainer is not None:
                         current_trainer.should_stop = True
 
-        trainer, precision = _build_trainer(config, run_dir)
+        trainer, requested_precision = _build_trainer(config, run_dir)
         fit_kwargs: dict[str, Any] = {}
         if resumed_checkpoint is not None:
             fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
         trainer.fit(_MaskRcnnLightningModule(), **fit_kwargs)
+        reported_precision = str(trainer.precision)
         return FitResult(
-            precision=precision,
+            precision=reported_precision,
+            amp_requested=requested_precision,
             epochs_completed=int(trainer.current_epoch),
-            amp_active=precision == "16-mixed",
+            amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
-            weights=config.family.weights,
+            weights=resolved_weights.describe(),
+            weights_verified=resolved_weights.verified,
             augmentation=augmentation,
         )
 

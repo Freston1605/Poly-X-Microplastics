@@ -130,7 +130,7 @@ class _FakeYOLO:
         self.model = _FakeYOLO.network or types.SimpleNamespace(parameters=lambda: iter(()))
         _FakeYOLO.instances.append(self)
 
-    def val(self, **_kwargs: object) -> list[_FakeSegResult]:
+    def predict(self, **_kwargs: object) -> list[_FakeSegResult]:
         per_image = _FakeYOLO.prediction_sets.pop(0)
         return [_FakeSegResult(detections) for detections in per_image]
 
@@ -166,7 +166,7 @@ class _FakeTrainer:
         for epoch in range(start_epoch, self.max_epochs):
             self.current_epoch = epoch
             module._epoch = epoch
-            module.on_validation_epoch_end()
+            module.on_train_epoch_end()
             for callback in self.callbacks:
                 callback.on_validation_epoch_end(self, module)
             self.current_epoch = epoch + 1
@@ -484,6 +484,39 @@ def test_segmentation_and_detection_share_the_same_protocol(
     assert protocol(seg_output) == protocol(det_output)
 
 
+def test_amp_records_the_precision_that_actually_ran_not_the_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Lightning substitutes bf16-mixed for 16-mixed on CPU; say so honestly.
+
+    The engine used to record the requested ``16-mixed`` as the precision that
+    ran and derived ``amp_active`` from that request, so a CPU execution
+    claimed FP16 AMP it never had.
+    """
+    store = _imported_store(tmp_path)
+    network = _tiny_seg_net()
+    _install_real_lightning_fakes(monkeypatch, network, [_perfect_validation()])
+    output = tmp_path / "executions" / "amp-cpu"
+
+    code = _command(
+        f"coco_dataset={store}",
+        f"output_dir={output}",
+        f"scratch_dir={tmp_path / 'scratch'}",
+        "family=yolo_segmentation",
+        "protocol.epochs=1",
+        "protocol.amp.enabled=true",
+        "protocol.amp.dtype=fp16",
+        "protocol.warmup_epochs=0",
+    )
+
+    assert code == 0
+    state = _read(output / "training_state.json")
+    # What Lightning says it ran, on this CPU host.
+    assert state["precision"] == "bf16-mixed"
+    assert state["amp_requested"] == "16-mixed"
+    assert state["amp_active"] is True, "bf16-mixed is mixed precision, but not fp16"
+
+
 def test_a_second_run_reuses_the_scratch_conversion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -531,6 +564,34 @@ def test_masks_are_matched_within_the_same_image(
     # image: PP AP is 0.5 instead of the 1.0 a cross-image match would give.
     assert metrics["figures"]["mask_iou"]["value"] == pytest.approx(0.75)
     assert metrics["selection"]["value"] == pytest.approx((1.0 + 0.5 + 1.0) / 3)
+
+
+def test_mask_iou_is_class_aware_like_its_criterion_says(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An identical mask with the wrong polymer is not an overlap.
+
+    ``_best_iou`` ignored ``category_id``, so a perfect PP prediction against
+    a PET ground truth scored ``mask_iou = 1.0`` while the with-class selection
+    correctly scored zero, contradicting the figure's own class-aware
+    criterion.
+    """
+    store = _imported_store(tmp_path)
+    wrong_class = [
+        [{**detection, "class_id": (detection["class_id"] + 1) % len(NAMES)} for detection in image]
+        for image in _perfect_validation()
+    ]
+
+    code, output = _train_segmentation(tmp_path, store, monkeypatch, [wrong_class])
+
+    assert code == 0
+    metrics = _read(output / "metrics.json")
+    assert metrics["selection"]["value"] == pytest.approx(0.0)
+    assert metrics["figures"]["localisation_score"]["value"] == pytest.approx(1.0)
+    assert metrics["figures"]["mask_iou"]["value"] == pytest.approx(0.0)
+    assert "class-aware" in metrics["figures"]["mask_iou"]["criterion"]
+    for name, class_figures in metrics["per_class"].items():
+        assert class_figures["mask_iou"]["value"] == pytest.approx(0.0), name
 
 
 def test_segmentation_family_requires_the_coco_mask_dataset(
