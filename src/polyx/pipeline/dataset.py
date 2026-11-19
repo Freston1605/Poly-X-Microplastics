@@ -7,6 +7,7 @@ hashes are produced with the project's existing SHA-256 helper.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from polyx.core.detect.protocol import size_image
 from polyx.core.labels import find_label_file, read_boxes
 from polyx.core.paths import find_images
 from polyx.core.provenance import sha256_file
+from polyx.core.quality.dataset_audit import coco_image_split
 
 
 def read_data_yaml(data_yaml: Path) -> dict[str, Any]:
@@ -112,4 +114,120 @@ def dataset_hashes(data_yaml: Path) -> dict[str, str]:
         if path == data_yaml or not path.is_file():
             continue
         result[path.relative_to(root).as_posix()] = sha256_file(path)
+    return result
+
+
+# ── The canonical COCO mask dataset (ADR-0009) ────────────────────────────
+
+
+def read_coco_store(store: Path) -> dict[str, Any]:
+    """Load the canonical ``dataset.json`` of one versioned mask tool output."""
+    dataset_json = Path(store).expanduser() / "dataset.json"
+    if not dataset_json.is_file():
+        raise ValueError(f"not a COCO segmentation dataset: {dataset_json} is missing")
+    try:
+        coco = json.loads(dataset_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not read the COCO segmentation dataset: {exc}") from exc
+    if not isinstance(coco, dict) or any(
+        not isinstance(coco.get(key), list) for key in ("images", "annotations", "categories")
+    ):
+        raise ValueError("the COCO segmentation dataset needs images, annotations and categories")
+    return coco
+
+
+def ordered_categories(coco: dict[str, Any]) -> list[tuple[int, str]]:
+    """Canonical categories as ``(id, name)`` in the dense order families use.
+
+    COCO category ids are arbitrary — CVAT starts at 1 — while every family
+    expects the dense ``0..N-1`` class indices its label files hold. Sorting by
+    canonical id is the one mapping used by the import audit, the job-time
+    conversion and the evaluator's ground-truth view.
+    """
+    names = {int(item["id"]): str(item["name"]) for item in coco.get("categories", [])}
+    return sorted(names.items())
+
+
+def category_indices(coco: dict[str, Any]) -> dict[int, int]:
+    """Canonical category id to the family's dense class index."""
+    return {category_id: index for index, (category_id, _) in enumerate(ordered_categories(coco))}
+
+
+def split_coco_images(coco: dict[str, Any], split: str) -> list[dict[str, Any]]:
+    """Images of one split in canonical file order.
+
+    The conversion writes the family's images in exactly this order and the
+    evaluator numbers the ground truth from it, so a prediction's position in
+    the family's result list is its COCO ``image_id`` in both places.
+    """
+    return [dict(image) for image in coco.get("images", []) if coco_image_split(image) == split]
+
+
+def coco_store_ground_truth(coco: dict[str, Any], split: str) -> dict[str, Any]:
+    """COCO instance view of one split of the canonical mask dataset.
+
+    The view keeps the canonical polygons and remaps ids to the dense class
+    indices the family reports, and to the zero-based image positions that
+    order the split. Masks never leave COCO on disk; this is what the shared
+    evaluator scores against.
+    """
+    images = split_coco_images(coco, split)
+    positions = {int(image["id"]): index for index, image in enumerate(images)}
+    indices = category_indices(coco)
+    annotations: list[dict[str, Any]] = []
+    for annotation in coco.get("annotations", []):
+        position = positions.get(int(annotation["image_id"]))
+        if position is None:
+            continue
+        category = indices.get(int(annotation["category_id"]))
+        if category is None:
+            continue
+        item: dict[str, Any] = {
+            "id": int(annotation["id"]),
+            "image_id": position,
+            "category_id": category,
+            "bbox": list(annotation.get("bbox", [])),
+            "area": float(annotation.get("area", 0.0)),
+            "iscrowd": int(annotation.get("iscrowd", 0)),
+        }
+        if "segmentation" in annotation:
+            item["segmentation"] = annotation["segmentation"]
+        annotations.append(item)
+    return {
+        "images": [
+            {
+                "id": index,
+                "file_name": str(image["file_name"]),
+                "width": int(image["width"]),
+                "height": int(image["height"]),
+            }
+            for index, image in enumerate(images)
+        ],
+        "annotations": annotations,
+        "categories": [
+            {"id": index, "name": name}
+            for index, (_category_id, name) in enumerate(ordered_categories(coco))
+        ],
+    }
+
+
+def coco_store_hashes(store: Path, coco: dict[str, Any] | None = None) -> dict[str, str]:
+    """SHA-256 of the canonical dataset, preferring the import manifest's own."""
+    store = Path(store)
+    manifest_path = store / "manifest.json"
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+        recorded = manifest.get("dataset_hashes") if isinstance(manifest, dict) else None
+        if isinstance(recorded, dict) and recorded:
+            return {str(key): str(value) for key, value in recorded.items()}
+    dataset = read_coco_store(store) if coco is None else coco
+    result = {"dataset.json": sha256_file(store / "dataset.json")}
+    for image in dataset.get("images", []):
+        relative = str(image.get("file_name", ""))
+        path = store / relative
+        if relative and path.is_file():
+            result[relative] = sha256_file(path)
     return result

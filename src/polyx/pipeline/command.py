@@ -2,15 +2,18 @@
 
 Usage:
     polyx-pipeline data_yaml=... output_dir=... protocol.epochs=2
+    polyx-pipeline coco_dataset=... output_dir=... family=yolo_segmentation
     polyx-pipeline coco_import=... output_dir=... dataset_name=first_batch
     polyx-pipeline --sweep data_yaml=... output_dir=... hydra.sweeper.n_trials=3
 
-Overrides are Hydra-style ``key=value`` strings. With ``coco_import`` the same
-command imports and audits a CVAT COCO export as the canonical segmentation
-training dataset instead of running a detection execution. ``--sweep`` runs the
-small Optuna driver over the same config, evaluator and artifact layout; the
-real campaign uses the Hydra sweeper plugin through
-``python -m polyx.pipeline.sweep_app --multirun``.
+Overrides are Hydra-style ``key=value`` strings. ``data_yaml`` trains a
+detection family from YOLO box labels; ``coco_dataset`` trains a segmentation
+family from the imported canonical COCO mask dataset, converted to the family's
+format at job time into scratch. With ``coco_import`` the same command imports
+and audits a CVAT COCO export as the canonical segmentation training dataset
+instead of running an execution. ``--sweep`` runs the small Optuna driver over
+the same config, evaluator and artifact layout; the real campaign uses the
+Hydra sweeper plugin through ``python -m polyx.pipeline.sweep_app --multirun``.
 """
 
 from __future__ import annotations
@@ -73,6 +76,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"SELECTION: {selection['metric']}={selection['value']:.6f}")
     if selection.get("criterion"):
         print(f"CRITERION: {selection['criterion']}")
+    localisation = summary.get("metrics", {}).get("figures", {}).get("localisation_score")
+    if localisation:
+        # Reported beside the selection score, never instead of it.
+        print(f"LOCALISATION: {localisation['value']:.6f}")
+        print(f"LOCALISATION_CRITERION: {localisation['criterion']}")
     if sweep:
         print(f"TRIALS_RUN: {summary['trials_run']}")
         print(f"TOTAL_TRIALS: {summary['total_trials']}")

@@ -119,6 +119,13 @@ def write_report(
     ]
     for name, figure in metrics["figures"].items():
         lines.append(f"- {name}: {figure['value']:.6f} — {figure['criterion']}")
+    if metrics.get("per_class"):
+        lines.extend(["", "## Per class", ""])
+        for class_name, class_figures in metrics["per_class"].items():
+            for figure_name, figure in class_figures.items():
+                lines.append(
+                    f"- {class_name} / {figure_name}: {figure['value']:.6f} — {figure['criterion']}"
+                )
     lines.extend(["", "## Early stopping", ""])
     stopping = training_state["early_stopping"]
     lines.extend(

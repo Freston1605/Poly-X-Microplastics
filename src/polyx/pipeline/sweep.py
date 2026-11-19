@@ -150,7 +150,12 @@ def _sweep_config_view(config: SweepConfig) -> dict[str, Any]:
         "sampler": {"target": config.sampler_target, "seed": config.sampler_seed},
         "pruner": config.pruner,
         "search_space": config.search_space,
-        "data_yaml": str(config.execution.data_yaml),
+        "data_yaml": (
+            str(config.execution.data_yaml) if config.execution.data_yaml is not None else ""
+        ),
+        "coco_dataset": (
+            str(config.execution.coco_dataset) if config.execution.coco_dataset else ""
+        ),
         "family": config.execution.family.name,
         "backend": config.execution.backend.name,
         "fixed": {
