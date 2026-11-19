@@ -58,6 +58,28 @@ validation split, never a family-specific metric, mAP-only figure or
 localisation score. Localisation is reported beside it, not optimized instead
 of it. Decided in ADR-0010.
 
+## Segmentation training dataset
+
+The canonical set of human-annotated masks used to train and benchmark the
+segmentation families of the headless pipeline. It is produced outside Poly-X
+(CVAT by default), imported through the same headless command, audited with the
+existing dataset audit for class distribution and polygon validity, and stored
+as a versioned tool output under the user data dir. It is not a detection run
+artifact — those folders stay box-only under ADR-0002 — and it never contains
+machine-generated masks. Decided in
+[ADR-0009](docs/adr/0009-coco-segmentation-dataset.md).
+
+## COCO mask dataset
+
+A segmentation training dataset in COCO instance-JSON form: `images`,
+`annotations` (each with a polygon `segmentation` and a `category_id`) and
+`categories`. The canonical on-disk mask format of the pipeline: conversion to
+a family's expected format happens at job time into scratch, never into a
+second canonical format. A split is carried as an image-level `split`
+attribute; polygons are required because the project has no RLE codec, so an
+RLE-only export is rejected at import. _Avoid_: mask PNG (that would be a
+derived raster, not the canonical dataset).
+
 ## The triptych
 
 The three saved views of a detection run over one plate: the
