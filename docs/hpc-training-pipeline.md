@@ -68,6 +68,14 @@ proven by `tests/test_pipeline_campaign.py`.
 - `scratch_dir` — ephemeral cache root for per-family conversion. It defaults
   to `$POLYX_HPC_SCRATCH/polyx/pipeline`, or the system temporary directory
   when the cluster variable is absent. Nothing written there is an artifact.
+- `weights_dir` / `weights_manifest` — the staged weights directory and its
+  `sha256sum` manifest. Empty resolves to `POLYX_WEIGHTS_DIR` /
+  `POLYX_WEIGHTS_MANIFEST`. When either is configured, `family.weights` is
+  resolved to a local file, verified, and handed to the framework; an absent,
+  unpinned or mismatching file stops the execution. `training_state.json`
+  records the resolved path and `weights_verified`. With neither configured the
+  framework's own default is used and reported unverified — local debugging
+  only; cluster jobs always stage and pin.
 
 A detection family consumes only `data_yaml`; a segmentation family consumes
 only `coco_dataset`. A campaign job may declare both, so one multirun can serve

@@ -100,11 +100,71 @@ def test_submit_script_requests_one_gpu_and_the_short_test_quality_of_service() 
 def test_job_body_runs_the_environment_check_the_short_training_and_the_sync_back() -> None:
     text = (ROOT / "cluster" / "smoke_job.sh").read_text(encoding="utf-8")
 
-    assert "python -m polyx.hpc.check_env" in text
+    assert "-m polyx.hpc.check_env" in text
     assert "polyx.pipeline.command" in text
     assert "protocol.epochs=1" in text
     assert "backend=slurm" in text
     assert "polyx.hpc.sync_back" in text or "sync_back" in text
+
+
+def test_job_scripts_stage_and_pin_the_verified_weights() -> None:
+    """Both job bodies verify the staged weights and pass the pin to training."""
+    for relative in ("cluster/smoke_job.sh", "cluster/campaign_job.sh"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "POLYX_WEIGHTS_DIR" in text, relative
+        assert "POLYX_WEIGHTS_MANIFEST" in text, relative
+        assert "polyx.hpc.stage_weights" in text, relative
+        assert "weights_dir=" in text, relative
+        assert "weights_manifest=" in text, relative
+
+
+def test_job_scripts_run_inside_the_pinned_container_when_configured() -> None:
+    """Container-first is wired: POLYX_CONTAINER wraps every python call."""
+    for relative in ("cluster/smoke_job.sh", "cluster/campaign_job.sh"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "POLYX_CONTAINER" in text, relative
+        assert "apptainer exec --nv" in text, relative
+        assert "run_polyx" in text, relative
+
+
+def test_stage_weights_refuses_missing_files_and_can_fetch_on_a_networked_node(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The staging step verifies the manifest and only fetches when asked."""
+    from polyx.core.provenance import sha256_file
+    from polyx.hpc import stage_weights
+
+    directory = tmp_path / "weights"
+    directory.mkdir()
+    manifest = tmp_path / "weights.sha256"
+    weights = directory / "yolov8n.pt"
+    weights.write_bytes(b"pinned")
+    manifest.write_text(f"{sha256_file(weights)}  yolov8n.pt\n", encoding="utf-8")
+
+    assert stage_weights.main(["--weights-dir", str(directory), "--manifest", str(manifest)]) == 0
+
+    weights.unlink()
+    assert stage_weights.main(["--weights-dir", str(directory), "--manifest", str(manifest)]) == 1
+
+    def fake_fetch(manifest_path: Path, destination: Path, *, base_url: str) -> list[Path]:
+        assert base_url == "https://weights.invalid"
+        (destination / "yolov8n.pt").write_bytes(b"pinned")
+        return [destination / "yolov8n.pt"]
+
+    monkeypatch.setattr(stage_weights, "fetch_weights", fake_fetch)
+    assert (
+        stage_weights.main(
+            [
+                "--weights-dir",
+                str(directory),
+                "--manifest",
+                str(manifest),
+                "--url",
+                "https://weights.invalid",
+            ]
+        )
+        == 0
+    )
 
 
 def test_same_command_composes_the_slurm_backend() -> None:

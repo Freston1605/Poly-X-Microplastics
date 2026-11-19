@@ -47,3 +47,10 @@ hydra:
         choices: [0.0001, 0.0005]
     # No pruner is configured on purpose. Hydra trials are separate processes,
     # so Optuna cannot prune them; Lightning's early stopping stops each trial.
+# Hash-verified model weights: the directory and its sha256sum manifest. Empty
+# resolves to POLYX_WEIGHTS_DIR / POLYX_WEIGHTS_MANIFEST when those are set;
+# with neither, the framework's default weights are used unverified (local
+# debugging only). Cluster jobs set both, and training fails closed if a pinned
+# file is absent or does not match its digest.
+weights_dir: ""
+weights_manifest: ""

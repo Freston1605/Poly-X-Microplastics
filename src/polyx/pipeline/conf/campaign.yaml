@@ -22,6 +22,13 @@ coco_import: ""
 dataset_name: polyx
 dataset_root: ""
 scratch_dir: ""
+# Hash-verified model weights: the directory and its sha256sum manifest. Empty
+# resolves to POLYX_WEIGHTS_DIR / POLYX_WEIGHTS_MANIFEST when those are set;
+# with neither, the framework's default weights are used unverified (local
+# debugging only). Cluster jobs set both, and training fails closed if a pinned
+# file is absent or does not match its digest.
+weights_dir: ""
+weights_manifest: ""
 # An explicit output_dir overrides `<campaign_root>/<family>`; leave it empty
 # for a campaign so every family gets its own directory.
 output_dir: ""

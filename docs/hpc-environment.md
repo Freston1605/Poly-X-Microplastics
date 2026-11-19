@@ -115,7 +115,28 @@ fetch_weights(Path("weights.sha256"), Path("weights"), base_url=__import__("os")
 ```
 
 `polyx-download-models --sha256 <digest>` remains available for interactive
-use. The pipeline never uses a weight whose digest is not pinned.
+use.
+
+### How the training path uses the manifest
+
+The job scripts require `POLYX_WEIGHTS_DIR` and `POLYX_WEIGHTS_MANIFEST` and run
+`python -m polyx.hpc.stage_weights` before any training. On a login node with
+`POLYX_WEIGHTS_URL` set, the staging step fetches the missing files and verifies
+every digest; on a compute node the URL is unset and a missing file fails the
+job with its name.
+
+The pipeline then passes the same directory and manifest to every family
+(`weights_dir`, `weights_manifest`). `family.weights` is resolved to a local
+file and checked against the manifest; a file that is absent, unpinned or does
+not match its digest stops the execution before the framework is called. The
+Ultralytics adapter hands the absolute path to `YOLO`, and the torchvision
+adapter loads the verified state dict into an untrained model instead of asking
+for `weights=DEFAULT`. Only when neither the directory nor the manifest is
+configured — a local debugging machine — does the framework use its own default
+weights, and `training_state.json` records `weights_verified: false`.
+
+An architecture declaration (`family.weights=yolov8n.yaml`) and an explicitly
+untrained detector (`family.weights=none`) carry no weights to verify.
 
 ## Pre-flight environment check
 

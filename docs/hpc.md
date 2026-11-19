@@ -46,6 +46,18 @@ A campaign job carries both sources; the family's task decides which one it
 uses. A single-execution invocation still refuses the wrong source for the
 family, so a segmenter cannot silently train on boxes.
 
+## Weights
+
+Jobs never download a model: `cluster/smoke_job.sh` and
+`cluster/campaign_job.sh` require `POLYX_WEIGHTS_DIR` and
+`POLYX_WEIGHTS_MANIFEST`, run `python -m polyx.hpc.stage_weights`, and pass both
+values to every execution. `stage_weights` verifies the staged files against
+the manifest and, when `POLYX_WEIGHTS_URL` is set on a networked node, fetches
+the missing ones first. Training then resolves `family.weights` to a local,
+verified file and fails closed if it is absent, unpinned or does not match its
+digest. See the [weights section](hpc-environment.md#verified-model-weights) for
+the manifest and staging details.
+
 ## Queue usage
 
 | Job | Quality of service | GPUs | Allocation |

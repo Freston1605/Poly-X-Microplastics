@@ -47,6 +47,7 @@ from polyx.pipeline.dataset import (
 from polyx.pipeline.evaluation import rasterize_segmentation
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset
+from polyx.pipeline.weights import resolve_weights
 
 EpochCallback = Callable[["EpochResult"], bool]
 
@@ -106,6 +107,7 @@ class FitResult:
     device: str
     framework: str
     weights: str
+    weights_verified: bool
     augmentation: dict[str, Any] = field(default_factory=dict)
 
 
@@ -439,7 +441,12 @@ def _build_trainer(config: ExecutionConfig, run_dir: Path) -> tuple[Any, str]:
     return trainer, precision
 
 
-def _torchvision_detector(weights_name: str, class_count: int, image_size: int) -> Any:
+def _torchvision_detector(
+    weights_name: str,
+    class_count: int,
+    image_size: int,
+    weights_path: Path | None = None,
+) -> Any:
     """Build the torchvision detector and size its heads for the dataset.
 
     Like the Ultralytics wrapper, pretrained heads are rebuilt for the
@@ -447,7 +454,11 @@ def _torchvision_detector(weights_name: str, class_count: int, image_size: int) 
     output layer needs ``class_count + 1`` classes. The protocol's image size
     replaces the pretrained transform's own 800/1333 defaults so the model
     family is not silently changing the input scale.
+
+    A pinned, hash-verified checkpoint is loaded from its local path; the
+    factory is asked for an untrained model in that case so nothing downloads.
     """
+    import torch
     from torchvision.models import detection
     from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
     from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -460,7 +471,14 @@ def _torchvision_detector(weights_name: str, class_count: int, image_size: int) 
         factory = getattr(detection, name, None)
         if factory is None:
             raise ValueError(f"unsupported torchvision segmentation model: {weights_name}")
-        model = factory(weights="DEFAULT", **size)
+        if weights_path is not None:
+            model = factory(weights=None, weights_backbone=None, **size)
+            state = torch.load(weights_path, map_location="cpu", weights_only=True)
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            model.load_state_dict(state)
+        else:
+            model = factory(weights="DEFAULT", **size)
     classes = class_count + 1
     box_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(box_features, classes)
@@ -646,8 +664,14 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
         # Always start from the family's declared pretrained weights and let
         # Lightning restore the execution's own checkpoint. An Ultralytics .pt
         # is not a Lightning checkpoint, so handing it to ``Trainer.fit`` would
-        # fail looking for Lightning's bookkeeping.
-        model = YOLO(config.family.weights)
+        # fail looking for Lightning's bookkeeping. A pinned weight is resolved
+        # to its verified local file first, so an offline node never downloads.
+        resolved_weights = resolve_weights(
+            config.family,
+            weights_dir=config.weights_dir,
+            manifest=config.weights_manifest,
+        )
+        model = YOLO(str(resolved_weights.path) if resolved_weights.path else config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
         # dataset decides the class count, so the Ultralytics network is rebuilt
         # from its yaml and the pretrained weights are transferred into it.
@@ -822,7 +846,8 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
-            weights=config.family.weights,
+            weights=resolved_weights.describe(),
+            weights_verified=resolved_weights.verified,
             augmentation=_augmentation_report(protocol, self.supported_augmentations),
         )
 
@@ -883,8 +908,16 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
         indices = category_indices(coco)
         augmentation = _augmentation_report(protocol, self.supported_augmentations)
 
+        resolved_weights = resolve_weights(
+            config.family,
+            weights_dir=config.weights_dir,
+            manifest=config.weights_manifest,
+        )
         model = _torchvision_detector(
-            config.family.weights, len(dataset.class_names), protocol.image_size
+            config.family.weights,
+            len(dataset.class_names),
+            protocol.image_size,
+            resolved_weights.path,
         )
         # The checkpoint's weights, optimizer, scheduler and epoch progress are
         # restored by Lightning from its own checkpoint; a pre-fix snapshot has
@@ -1008,7 +1041,8 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
             amp_active=_amp_active(reported_precision),
             device=device,
             framework=config.family.framework,
-            weights=config.family.weights,
+            weights=resolved_weights.describe(),
+            weights_verified=resolved_weights.verified,
             augmentation=augmentation,
         )
 

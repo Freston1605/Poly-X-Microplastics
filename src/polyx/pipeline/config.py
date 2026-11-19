@@ -145,6 +145,8 @@ class ExecutionConfig:
     coco_dataset: Path | None = None
     dataset_root: Path = SEGMENTATION_DATASETS_DIR
     scratch_dir: Path = field(default_factory=default_scratch_dir)
+    weights_dir: Path | None = None
+    weights_manifest: Path | None = None
 
 
 def _build_protocol(raw: dict) -> Protocol:
@@ -243,6 +245,8 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
             raise ValueError("a segmentation family needs a COCO mask dataset; set coco_dataset")
     dataset_root = str(raw.get("dataset_root") or "")
     scratch_dir = str(raw.get("scratch_dir") or "")
+    weights_dir = str(raw.get("weights_dir") or "")
+    weights_manifest = str(raw.get("weights_manifest") or "")
     return ExecutionConfig(
         data_yaml=Path(data_yaml).expanduser().resolve() if data_yaml else None,
         output_dir=Path(output_dir).expanduser().resolve(),
@@ -268,6 +272,10 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
         scratch_dir=(
             Path(scratch_dir).expanduser().resolve() if scratch_dir else default_scratch_dir()
         ),
+        weights_dir=Path(weights_dir).expanduser().resolve() if weights_dir else None,
+        weights_manifest=(
+            Path(weights_manifest).expanduser().resolve() if weights_manifest else None
+        ),
     )
 
 
@@ -288,6 +296,8 @@ def config_to_dict(config: ExecutionConfig) -> dict[str, Any]:
     data["coco_dataset"] = str(config.coco_dataset) if config.coco_dataset else ""
     data["dataset_root"] = str(config.dataset_root)
     data["scratch_dir"] = str(config.scratch_dir)
+    data["weights_dir"] = str(config.weights_dir) if config.weights_dir else ""
+    data["weights_manifest"] = str(config.weights_manifest) if config.weights_manifest else ""
     return data
 
 

@@ -29,5 +29,12 @@ dataset_root: ""
 # Ephemeral conversion cache; empty resolves to POLYX_HPC_SCRATCH or the system
 # temporary directory.
 scratch_dir: ""
+# Hash-verified model weights: the directory and its sha256sum manifest. Empty
+# resolves to POLYX_WEIGHTS_DIR / POLYX_WEIGHTS_MANIFEST when those are set;
+# with neither, the framework's default weights are used unverified (local
+# debugging only). Cluster jobs set both, and training fails closed if a pinned
+# file is absent or does not match its digest.
+weights_dir: ""
+weights_manifest: ""
 # Continue an interrupted execution from the last checkpoint in output_dir.
 resume: false

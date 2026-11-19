@@ -169,6 +169,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         "device": fit.device,
         "framework": fit.framework,
         "weights": fit.weights,
+        "weights_verified": fit.weights_verified,
         "epochs_completed": fit.epochs_completed,
         "augmentation": fit.augmentation,
         "early_stopping": stopping.to_dict(fit.epochs_completed),
