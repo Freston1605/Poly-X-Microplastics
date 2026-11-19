@@ -273,5 +273,6 @@ on CPU.
 
 See [ADR-0007](adr/0007-one-lightning-loop.md) for the single-loop decision,
 [ADR-0009](adr/0009-coco-segmentation-dataset.md) for the COCO segmentation
-dataset, and the [glossary](../GLOSSARY.md) for *run*, *protocol*,
+dataset, [ADR-0010](adr/0010-optuna-objective.md) for the shared optimization
+objective, and the [glossary](../GLOSSARY.md) for *run*, *protocol*, *campaign*,
 *segmentation training dataset* and *COCO mask dataset*.

@@ -146,6 +146,21 @@ def test_one_multirun_trains_every_family_under_the_same_protocol(
     for family in FAMILIES:
         assert (root / "hydra" / family).is_dir(), f"no multirun job directory for {family}"
 
+    # The campaign's artifacts sync back per family, checkpoints included.
+    from polyx.hpc.sync_back import sync_campaign
+
+    synced = sync_campaign(root, tmp_path / "local")
+    assert set(synced) == set(FAMILIES)
+    for family in FAMILIES:
+        for relative in (
+            "config.yaml",
+            "resolved_protocol.yaml",
+            "metrics.json",
+            "report.md",
+            "checkpoints/best.pt",
+        ):
+            assert (tmp_path / "local" / family / relative).is_file(), f"{family}: {relative}"
+
 
 def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

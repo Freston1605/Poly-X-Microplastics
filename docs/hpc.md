@@ -29,9 +29,10 @@ family is the only variable.
 `python -m polyx.pipeline.campaign_app --multirun` is the campaign command. The
 Hydra basic launcher runs the jobs sequentially **inside one allocation**, so a
 campaign never queues one SLURM job per family or per configuration. A
-hyperparameter search is a different command: `python -m
-polyx.pipeline.sweep_app --multirun` runs Optuna trials, also inside one
-allocation (see the pipeline page and ADR-0010).
+hyperparameter search is a different command:
+`python -m polyx.pipeline.sweep_app --multirun` runs Optuna trials, also inside
+one allocation (see the pipeline page and
+[ADR-0010](adr/0010-optuna-objective.md)).
 
 The three first-wave families and the source each consumes:
 
