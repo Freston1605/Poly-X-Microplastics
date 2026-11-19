@@ -87,7 +87,7 @@ class _FakeYOLO:
         self.model = types.SimpleNamespace(parameters=lambda: iter(()))
         _FakeYOLO.instances.append(self)
 
-    def val(self, **_kwargs: object) -> list[_FakeResult]:
+    def predict(self, **_kwargs: object) -> list[_FakeResult]:
         per_image = _FakeYOLO.prediction_sets.pop(0)
         return [_FakeResult([p for p in per_image if p["image_id"] == i]) for i in range(2)]
 
@@ -132,7 +132,7 @@ class _FakeTrainer:
         for completed, epoch in enumerate(range(start_epoch, self.max_epochs), start=1):
             self.current_epoch = epoch
             module._epoch = epoch
-            module.on_validation_epoch_end()
+            module.on_train_epoch_end()
             for callback in self.callbacks:
                 callback.on_validation_epoch_end(self, module)
             self.current_epoch = epoch + 1
@@ -267,7 +267,7 @@ def test_local_tracer_emits_every_artifact_and_names_each_criterion(
     assert "localisation" in metrics["figures"]["localisation_score"]["criterion"]
     assert metrics["figures"]["with_class_score"]["value"] == pytest.approx(1.0)
     assert 0.0 <= metrics["figures"]["localisation_score"]["value"] <= 1.0
-    assert "adapter_cross_check" in metrics
+    assert "adapter_cross_check" not in metrics, "the shared evaluator is the only scorer"
 
     # Early stopping: the empty epoch did not improve the with-class score,
     # patience=1 stops after it and the best (first) weights are restored.

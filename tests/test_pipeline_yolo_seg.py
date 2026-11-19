@@ -130,7 +130,7 @@ class _FakeYOLO:
         self.model = _FakeYOLO.network or types.SimpleNamespace(parameters=lambda: iter(()))
         _FakeYOLO.instances.append(self)
 
-    def val(self, **_kwargs: object) -> list[_FakeSegResult]:
+    def predict(self, **_kwargs: object) -> list[_FakeSegResult]:
         per_image = _FakeYOLO.prediction_sets.pop(0)
         return [_FakeSegResult(detections) for detections in per_image]
 
@@ -166,7 +166,7 @@ class _FakeTrainer:
         for epoch in range(start_epoch, self.max_epochs):
             self.current_epoch = epoch
             module._epoch = epoch
-            module.on_validation_epoch_end()
+            module.on_train_epoch_end()
             for callback in self.callbacks:
                 callback.on_validation_epoch_end(self, module)
             self.current_epoch = epoch + 1

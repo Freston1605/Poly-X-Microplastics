@@ -161,6 +161,7 @@ this allow-list; `--campaign` iterates the family directories.
 | Check | Status |
 | --- | --- |
 | Local three-family multirun under one protocol | Verified by `tests/test_pipeline_campaign.py` |
+| Local real Ultralytics one-epoch training | Verified by `tests/test_pipeline_real_framework.py` |
 | Local real-Lightning resume for YOLO and Mask R-CNN | Verified by `tests/test_pipeline_resume_lightning.py` |
 | Local campaign sync-back of every family | Verified by `tests/test_hpc_slurm_backend.py` |
 | OCÉANO smoke job (GPU visibility, `sm_70`, AMP, one epoch) | **Pending** cluster verification |

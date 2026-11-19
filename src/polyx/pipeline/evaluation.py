@@ -322,8 +322,8 @@ class SharedEvaluator:
                 "value": with_class,
             },
         }
-        if adapter_figures is not None:
-            # The existing evaluator's per-class extraction is kept as a
-            # cross-check of the adapter's own Ultralytics validation figures.
+        if adapter_figures:
+            # Only real adapter figures are attached. An empty mapping is never
+            # presented as a cross-check: the shared evaluator is the authority.
             result["adapter_cross_check"] = adapter_figures
         return result

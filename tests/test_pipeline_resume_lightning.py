@@ -78,7 +78,7 @@ class _RealLoopYOLO:
         self.weights = self.model.weight
         _RealLoopYOLO.instances.append(self)
 
-    def val(self, **_kwargs: object) -> list[_FakeResult]:
+    def predict(self, **_kwargs: object) -> list[_FakeResult]:
         self.val_calls += 1
         if _RealLoopYOLO.fail_on_validation == self.val_calls:
             # A time limit or preemption after the previous epoch's checkpoint

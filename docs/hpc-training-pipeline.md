@@ -259,14 +259,15 @@ The Ultralytics families share one wrapper:
 
 - the pretrained network is rebuilt from its own yaml with the dataset's class
   count, and the pretrained weights are transferred into the matching layers;
-- `train_dataloader` and `val_dataloader` reuse the Ultralytics dataset and
-  batch collation over the job-time labels;
+- `train_dataloader` reuses the Ultralytics dataset and batch collation over
+  the job-time labels;
 - `training_step` hands the batch to the Ultralytics network's own loss;
 - `configure_optimizers` applies the protocol's optimizer, weight decay,
   momentum, warmup and cosine schedule;
-- at the end of the epoch, Ultralytics validation scores the current weights
-  and the checkpoint is written; its output directory is pointed at scratch so
-  no global runs directory is touched and nothing lands in the artifact layout.
+- at the end of the epoch, one Ultralytics prediction pass over the validation
+  split produces COCO predictions; the shared evaluator scores them, and that
+  score is the only one recorded. Ultralytics' own validator is not run a second
+  time and no discarded figures are presented as a cross-check.
 
 Mask R-CNN follows the same shape with torchvision's own pieces: a
 `DataLoader` over the canonical COCO instances and their rasterized masks, the
@@ -285,9 +286,15 @@ Lightning checkpoint and is never used for resume. If a progress snapshot has
 no Lightning checkpoint (one written before this behaviour existed), the
 execution refuses to resume instead of silently restarting the epoch loop.
 
-On a machine without a GPU, set `protocol.amp.enabled=false`: FP16 AMP is a GPU
-request recorded in the protocol, and Lightning cannot run FP16 mixed precision
-on CPU.
+On a machine without a GPU, Lightning substitutes `bf16-mixed` for the requested
+`16-mixed`. `training_state.json` records `amp_requested` (`16-mixed`) next to
+`precision` (`bf16-mixed`) and derives `amp_active` from what actually ran, so a
+CPU execution never claims FP16. FP16 itself remains a GPU acceptance check.
+
+The wrapper is not merely import-compatible: `tests/test_pipeline_real_framework.py`
+builds `YOLO("yolov8n.yaml")` offline, rebuilds its head for the fixture's three
+classes and runs one real training epoch and prediction pass under real
+Lightning.
 
 
 ## Sweeps

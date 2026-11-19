@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 
-from polyx.core.evaluation import _metrics_from_results
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
@@ -47,7 +46,7 @@ from polyx.pipeline.dataset import (
 from polyx.pipeline.evaluation import rasterize_segmentation
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset
-from polyx.pipeline.weights import resolve_weights
+from polyx.pipeline.weights import ARCHITECTURE_SUFFIXES, resolve_weights
 
 EpochCallback = Callable[["EpochResult"], bool]
 
@@ -671,6 +670,7 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             weights_dir=config.weights_dir,
             manifest=config.weights_manifest,
         )
+        architecture_only = Path(config.family.weights).suffix.lower() in ARCHITECTURE_SUFFIXES
         model = YOLO(str(resolved_weights.path) if resolved_weights.path else config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
         # dataset decides the class count, so the Ultralytics network is rebuilt
@@ -694,10 +694,8 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 # model.eval() into a full Ultralytics training job.
                 self.net = model.model
                 self.coco_predictions: list[dict] = []
-                self.adapter_figures: dict = {}
                 self.checkpoint_path = checkpoint_dir / "epoch_000.pt"
                 self._train_dataset: Any | None = None
-                self._val_dataset: Any | None = None
                 self._cfg: Any | None = None
                 self.stop_requested = False
 
@@ -728,24 +726,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     collate_fn=self._train_dataset.collate_fn,
                 )
 
-            def val_dataloader(self) -> Any:
-                # The protocol's validation is Ultralytics' own validator in
-                # ``on_validation_epoch_end``; this loader only makes Lightning
-                # run the validation loop that invokes it.
-                from torch.utils.data import DataLoader
-
-                if self._val_dataset is None:
-                    self._val_dataset = _ultralytics_dataset(
-                        dataset.data_yaml, self._arguments(), mode="val"
-                    )
-                return DataLoader(
-                    self._val_dataset,
-                    batch_size=protocol.batch,
-                    shuffle=False,
-                    num_workers=0,
-                    collate_fn=self._val_dataset.collate_fn,
-                )
-
             def training_step(self, batch: Any, batch_idx: int) -> Any:
                 # The Ultralytics network computes its own task loss from the
                 # batch its dataloader produced; Lightning owns the step. The
@@ -762,9 +742,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 loss, _items = self.net.loss(batch)
                 return loss
 
-            def validation_step(self, batch: Any, batch_idx: int) -> None:
-                return None
-
             def configure_optimizers(self) -> Any:
                 from torch.optim.lr_scheduler import LambdaLR
 
@@ -775,40 +752,31 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
                 }
 
-            def on_validation_epoch_end(self) -> None:
-                # Ultralytics writes its own plots under ``project``; keep that
-                # ephemeral so the artifact layout stays the only output and no
-                # global ``runs_dir`` is touched.
-                validation_root = Path(config.scratch_dir) / "validation" / Path(run_dir).name
-                raw = model.val(
-                    data=str(dataset.data_yaml),
-                    split=protocol.split,
+            def on_train_epoch_end(self) -> None:
+                # One inference pass produces the COCO predictions the shared
+                # evaluator scores; the shared evaluator is the only authority,
+                # so Ultralytics' own validation is not run a second time and
+                # its discarded metrics are not presented as a cross-check.
+                images = split_images(dataset.data_yaml, protocol.split)
+                raw = model.predict(
+                    source=[str(image) for image in images],
                     imgsz=protocol.image_size,
                     batch=protocol.batch,
                     device=device,
-                    project=str(validation_root),
-                    name=str(getattr(self, "current_epoch", 0)),
-                    plots=False,
-                    save_json=False,
-                    exist_ok=True,
                 )
                 results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
-                if not results or getattr(results[0], "boxes", None) is None:
-                    images = split_images(dataset.data_yaml, protocol.split)
-                    raw = model.predict(
-                        source=[str(image) for image in images],
-                        imgsz=protocol.image_size,
-                        batch=protocol.batch,
-                        device=device,
-                    )
-                    results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
                 self.coco_predictions = predict(results)
-                self.adapter_figures = (
-                    _metrics_from_results(results[0], dataset.class_names) if results else {}
-                )
                 epoch = int(getattr(self, "current_epoch", 0))
                 self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
-                model.save(str(self.checkpoint_path))
+                if architecture_only:
+                    # An architecture declaration has no Ultralytics checkpoint
+                    # dictionary to merge; export the network itself so the
+                    # artifact still exists and can be loaded back.
+                    import torch
+
+                    torch.save({"model": model.model}, self.checkpoint_path)
+                else:
+                    model.save(str(self.checkpoint_path))
                 # A real Lightning checkpoint carries the weights, optimizer,
                 # scheduler and epoch progress; the family-native export above
                 # stays for compatibility and best-weight restoration.
@@ -824,7 +792,7 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 result = EpochResult(
                     epoch=epoch,
                     predictions=list(self.coco_predictions),
-                    adapter_figures=dict(self.adapter_figures),
+                    adapter_figures={},
                     checkpoint=Path(self.checkpoint_path),
                     resume_checkpoint=resume_checkpoint,
                 )
