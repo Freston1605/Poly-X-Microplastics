@@ -22,8 +22,6 @@ dataset_root: ""
 scratch_dir: ""
 weights_dir: ""
 weights_manifest: ""
-weights_dir: ""
-weights_manifest: ""
 # Checkpoint resume inside each trial is independent of study resume: a study
 # always reuses its SQLite file when the same name and storage are supplied.
 resume: false
