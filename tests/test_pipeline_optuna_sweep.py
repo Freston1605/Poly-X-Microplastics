@@ -19,15 +19,7 @@ from tests.test_pipeline_local_tracer import (
     _boxes_prediction,
     _empty_prediction,
     _install_fakes,
-    build_tiny_dataset,
 )
-
-
-@pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
-    """The same fixture dataset as the tracer suite, built in this test's tmp dir."""
-    return build_tiny_dataset(tmp_path / "dataset")
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SEARCH_KEYS = (
@@ -128,9 +120,11 @@ def test_small_sweep_writes_study_saves_best_and_uses_shared_objective(
         assert (trial_dir / "checkpoints" / "best.pt").is_file()
 
     # The objective is the with-class score, not localisation or mAP: the first
-    # trial finds every box but with the wrong polymer and scores zero.
+    # trial finds every box but with the wrong polymer and scores zero. The
+    # core criterion also keeps misclassified boxes out of localisation's
+    # true-positive numerator.
     first = _read(output / "trials" / "trial_000" / "metrics.json")
-    assert first["figures"]["localisation_score"]["value"] == pytest.approx(1.0)
+    assert first["figures"]["localisation_score"]["value"] == pytest.approx(0.0)
     assert first["selection"]["value"] == pytest.approx(0.0)
 
     best = _read(output / "sweep_best.json")

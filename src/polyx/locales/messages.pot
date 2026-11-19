@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 21:38-0300\n"
+"POT-Creation-Date: 2026-11-19 12:57-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -673,206 +673,206 @@ msgid ""
 "threshold %(threshold).2f"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:193
+#: src/polyx/core/quality/dataset_audit.py:212
 msgid "data.yaml not found"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:235
+#: src/polyx/core/quality/dataset_audit.py:264
 #, python-format
 msgid "class %(id)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:291
+#: src/polyx/core/quality/dataset_audit.py:326
 msgid "No classes defined"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:291
+#: src/polyx/core/quality/dataset_audit.py:327
 msgid "The data.yaml has no 'names' key."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:295
+#: src/polyx/core/quality/dataset_audit.py:333
 msgid "Empty train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:296
+#: src/polyx/core/quality/dataset_audit.py:334
 msgid "The train folder exists but contains no images."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:301
+#: src/polyx/core/quality/dataset_audit.py:340
 msgid "Empty val"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:302
+#: src/polyx/core/quality/dataset_audit.py:341
 msgid "The val folder exists but contains no images → metrics cannot be measured."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:307
+#: src/polyx/core/quality/dataset_audit.py:347
 msgid "No validation split in the COCO export"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:308
+#: src/polyx/core/quality/dataset_audit.py:348
 msgid ""
 "Every mask was imported into train because no image carries a split marker. Mark the validation "
 "images before training: class coverage and metrics cannot be audited without them."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:326
+#: src/polyx/core/quality/dataset_audit.py:367
 msgid ""
 "These classes have examples in train but ZERO in val. mAP will not measure their performance (it"
 " will give you a false sense of success). Add images of these classes to the validation split."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:337
+#: src/polyx/core/quality/dataset_audit.py:380
 msgid ""
 "The validation set contains a single class even though the model learns several. Multiclass "
 "metrics are not valid."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:448
+#: src/polyx/core/quality/dataset_audit.py:514
 msgid ""
 "Those lines were skipped. A YOLO-seg polygon line is valid YOLO but not a detection box, so the "
 "audit counts boxes only."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:501
+#: src/polyx/core/quality/dataset_audit.py:575
 msgid "These masks reference an image that is not declared in the export's images list."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:513
+#: src/polyx/core/quality/dataset_audit.py:589
 msgid "With so few images the metrics are unstable. Aim for ≥ 10-20."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:521
+#: src/polyx/core/quality/dataset_audit.py:599
 msgid "No dataset problems detected"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:522
+#: src/polyx/core/quality/dataset_audit.py:600
 msgid "Class distribution, validation and format all look correct."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:199
+#: src/polyx/core/quality/dataset_audit.py:224
 msgid "Could not read data.yaml"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:325
+#: src/polyx/core/quality/dataset_audit.py:366
 #, python-format
 msgid "Classes without validation: %(classes)s"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:335
+#: src/polyx/core/quality/dataset_audit.py:378
 #, python-format
 msgid "Single-class validation (%(class)s)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:353
+#: src/polyx/core/quality/dataset_audit.py:401
 msgid "Strong class imbalance in train"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:417
+#: src/polyx/core/quality/dataset_audit.py:475
 msgid "Boxes with width/height ~0. Check the annotation."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:424
+#: src/polyx/core/quality/dataset_audit.py:484
 msgid "Badly normalised labels; YOLO will interpret them wrongly."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:431
+#: src/polyx/core/quality/dataset_audit.py:493
 msgid "The same box repeated within one file."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:438
+#: src/polyx/core/quality/dataset_audit.py:502
 msgid "They will be trained as background (no objects). Confirm this is intentional."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:447
+#: src/polyx/core/quality/dataset_audit.py:513
 #, python-format
 msgid "Label lines that are not detection boxes: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:470
+#: src/polyx/core/quality/dataset_audit.py:538
 msgid ""
 "A mask polygon needs at least three finite, in-bounds points and an even coordinate count. RLE "
 "segmentation is not a polygon; export polygons from the annotation tool."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:481
+#: src/polyx/core/quality/dataset_audit.py:551
 msgid ""
 "These polygons enclose zero area (collinear or repeated points) and cannot be used as "
 "segmentation ground truth."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:491
+#: src/polyx/core/quality/dataset_audit.py:563
 msgid "Every mask must reference a category declared in the export's categories list."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:500
+#: src/polyx/core/quality/dataset_audit.py:574
 #, python-format
 msgid "Annotations with an unknown image: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:512
+#: src/polyx/core/quality/dataset_audit.py:588
 #, python-format
 msgid "Very small validation set (%(count)d images)"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:254
+#: src/polyx/core/quality/dataset_audit.py:283
 #, python-format
 msgid "No %(split)s split declared"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:255
+#: src/polyx/core/quality/dataset_audit.py:284
 #, python-format
 msgid "The data.yaml has no '%(split)s' key. Ultralytics needs it to train and measure metrics."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:354
+#: src/polyx/core/quality/dataset_audit.py:402
 #, python-format
 msgid ""
 "“%(top)s” has %(top_count)d boxes and “%(bottom)s” only %(bottom_count)d (%(ratio).0f× more). "
 "Consider balancing or using class weights."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:415
+#: src/polyx/core/quality/dataset_audit.py:473
 #, python-format
 msgid "Degenerate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:422
+#: src/polyx/core/quality/dataset_audit.py:482
 #, python-format
 msgid "Coordinates outside [0,1] in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:429
+#: src/polyx/core/quality/dataset_audit.py:491
 #, python-format
 msgid "Duplicate boxes in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:436
+#: src/polyx/core/quality/dataset_audit.py:500
 #, python-format
 msgid "Images with no label in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:468
+#: src/polyx/core/quality/dataset_audit.py:536
 #, python-format
 msgid "Invalid mask polygons in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:479
+#: src/polyx/core/quality/dataset_audit.py:549
 #, python-format
 msgid "Degenerate mask polygons in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:489
+#: src/polyx/core/quality/dataset_audit.py:561
 #, python-format
 msgid "Annotations with an unknown category in %(split)s: %(count)d"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:265
+#: src/polyx/core/quality/dataset_audit.py:296
 #, python-format
 msgid "%(split)s path does not exist"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:266
+#: src/polyx/core/quality/dataset_audit.py:297
 #, python-format
 msgid ""
 "The data.yaml points to “%(path)s”, which does not exist on this computer. This usually happens "
@@ -880,25 +880,25 @@ msgid ""
 "relative paths)."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:377
+#: src/polyx/core/quality/dataset_audit.py:427
 #, python-format
 msgid "“%(class)s”: little diversity"
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:378
+#: src/polyx/core/quality/dataset_audit.py:428
 #, python-format
 msgid ""
 "%(percent).0f%% of its boxes come from a single image (%(image)s). The model may overfit to that"
 " scene."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:402
+#: src/polyx/core/quality/dataset_audit.py:458
 msgid ""
 "Their boxes are the same size, so the model can only tell them apart by colour/texture. If they "
 "also look alike, expect confusion between the two."
 msgstr ""
 
-#: src/polyx/core/quality/dataset_audit.py:400
+#: src/polyx/core/quality/dataset_audit.py:456
 #, python-format
 msgid "“%(first)s” and “%(second)s” are almost identical in size"
 msgstr ""
@@ -1266,7 +1266,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/polyx/gui/detector/review_dialog.py:331 src/polyx/gui/trainer/pages/dataset.py:109
-#: src/polyx/gui/trainer/window.py:28
+#: src/polyx/gui/trainer/window.py:28 src/polyx/pipeline/coco_import.py:353
 msgid "Dataset"
 msgstr ""
 
@@ -1714,7 +1714,7 @@ msgid ""
 " sibling 'labels/' folder that mirrors 'images/', they are loaded and enable error analysis."
 msgstr ""
 
-#: src/polyx/gui/detector/pages/images.py:41
+#: src/polyx/gui/detector/pages/images.py:41 src/polyx/pipeline/coco_import.py:356
 msgid "Source"
 msgstr ""
 
@@ -6025,5 +6025,108 @@ msgstr[1] ""
 #: src/polyx/gui/viewer/window.py:1602
 #, python-format
 msgid "● Error: %(error)s"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:25
+msgid "Stage and verify pinned model weights"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:29
+msgid "directory holding the weight files (default: POLYX_WEIGHTS_DIR)"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:34
+msgid "sha256sum-style manifest (default: POLYX_WEIGHTS_MANIFEST)"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:39
+msgid "base URL to fetch missing files from (default: POLYX_WEIGHTS_URL); leave unset on a compute node"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:49
+msgid "set POLYX_WEIGHTS_DIR and POLYX_WEIGHTS_MANIFEST before staging weights"
+msgstr ""
+
+#: src/polyx/hpc/stage_weights.py:70
+msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:139
+msgid "Training execution report"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:141
+msgid "Family"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:142
+msgid "Backend"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:143
+msgid "Selection metric"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:145
+msgid "Figures"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:157
+msgid "Early stopping"
+msgstr ""
+
+#: src/polyx/pipeline/artifacts.py:151
+msgid "Per class"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:371
+msgid ""
+"A first stratified batch of roughly ten plates, spanning every study class (PET, PP and LDPE) "
+"and the imaging domains represented in the study, so each class appears in both the training and"
+" validation folds before a larger annotation effort is committed."
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:351
+msgid "COCO segmentation dataset import"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:354
+msgid "Version"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:355
+msgid "Canonical tool output"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:357
+msgid "Source JSON"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:358
+msgid "Ground-truth policy"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:360
+msgid "Class distribution"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:369
+msgid "First stratified batch"
+msgstr ""
+
+#: src/polyx/pipeline/coco_import.py:378
+msgid "Audit"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:35
+msgid "Write sweep_best.json from a finished Optuna multirun"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:37
+msgid "the sweep root"
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:41
+msgid "study storage URL or SQLite path (default: the work layout path)"
 msgstr ""
 

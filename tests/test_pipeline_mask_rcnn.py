@@ -339,7 +339,7 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
     assert call["min_size"] == 1280 and call["max_size"] == 1280
     printed = capsys.readouterr().out
     assert "SELECTION: with_class_score=1.000000" in printed
-    assert "CRITERION: COCO mask mAP" in printed
+    assert "CRITERION: with-class operating-point F1" in printed
     assert "LOCALISATION: 1.000000" in printed
 
     from polyx.core.provenance import sha256_file
@@ -383,8 +383,10 @@ def test_the_shared_evaluator_scores_both_segmentation_families_identically(
                 seg["per_class"][class_name][name]["value"]
             ), (class_name, name)
 
-    # The operating point is a real number, not a degenerate perfect score.
-    assert mask["selection"]["value"] == pytest.approx(0.7)
+    # Every shifted mask still clears the 0.50 operating point, so the F1 is
+    # 1.0 even though mAP@[0.50:0.95] on the same predictions is 0.7.
+    assert mask["selection"]["value"] == pytest.approx(1.0)
+    assert mask["figures"]["mask_mAP50-95"]["value"] == pytest.approx(0.7)
     assert mask["figures"]["mask_iou"]["value"] == pytest.approx(19.0 / 23.0)
 
 
@@ -455,6 +457,23 @@ def test_benchmark_augmentation_is_the_true_common_subset(
         "hsv_v": pytest.approx(0.4),
         "flip_lr_probability": pytest.approx(0.5),
     }
+
+
+def test_tiny_instances_use_yolos_own_side_threshold() -> None:
+    """The torchvision sibling drops the same boxes the YOLO loader drops."""
+    from polyx.pipeline.adapters import _filter_tiny_instances
+
+    original = [[1.0, 1.0, 4.0, 4.0], [10.0, 10.0, 30.0, 30.0]]
+    # If the image is resized 4x, the first box grows to 12 px and survives;
+    # when resized 0.5x it becomes 1.5 px and is dropped, as in YOLO.
+    kept, _, labels = _filter_tiny_instances(
+        original,
+        [np.zeros((4, 4), dtype=bool), np.zeros((4, 4), dtype=bool)],
+        [0, 1],
+        measured_boxes=[[0.5, 0.5, 2.0, 2.0], [5.0, 5.0, 15.0, 15.0]],
+    )
+    assert labels == [1]
+    assert kept == [[10.0, 10.0, 30.0, 30.0]]
 
 
 def test_the_two_families_apply_the_same_effective_hsv_and_flip(

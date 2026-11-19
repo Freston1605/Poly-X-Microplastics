@@ -21,7 +21,7 @@ import pytest
 import yaml
 
 from polyx.core.provenance import sha256_file
-from tests.conftest import split_dataset
+from tests.conftest import build_tiny_dataset as build_tiny_dataset  # re-export for sibling suites
 
 NAMES = {0: "PET", 1: "PP", 2: "LDPE"}
 
@@ -175,42 +175,6 @@ def _install_fakes(
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
 
 
-def build_tiny_dataset(root: Path) -> Path:
-    """Two train and two val images with box labels, plus a data.yaml."""
-    labels = {
-        "train_a": "0 0.375 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n",
-        "train_b": "2 0.375 0.75 0.25 0.25\n",
-        "val_a": "0 0.375 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n",
-        "val_b": "2 0.375 0.75 0.25 0.25\n",
-    }
-    root = split_dataset(
-        root,
-        {
-            "train": {k: v for k, v in labels.items() if k.startswith("train")},
-            "val": {k: v for k, v in labels.items() if k.startswith("val")},
-        },
-        names=("PET", "PP", "LDPE"),
-        data_yaml=True,
-    )
-    images = root / "images"
-    for split in ("train", "val"):
-        for image in (images / split).glob("*.png"):
-            # split_dataset writes 60x40 images; rewrite them at 80x80 so the
-            # prediction boxes above de-normalise to whole pixel coordinates.
-            import cv2
-
-            ok, buffer = cv2.imencode(".png", np.full((80, 80, 3), 0, dtype=np.uint8))
-            assert ok
-            image.write_bytes(buffer.tobytes())
-    return root / "data.yaml"
-
-
-@pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
-    """The shared tiny dataset, rooted in one test's temporary directory."""
-    return build_tiny_dataset(tmp_path / "dataset")
-
-
 def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -294,9 +258,9 @@ def test_local_tracer_emits_every_artifact_and_names_each_criterion(
     provenance = _read(output / "provenance.json")
     assert provenance["git"]["commit"]
     assert "data.yaml" in provenance["dataset_hashes"]
-    assert "images/val/val_a.png" in provenance["dataset_hashes"]
-    assert provenance["dataset_hashes"]["images/val/val_a.png"] == sha256_file(
-        tiny_dataset.parent / "images" / "val" / "val_a.png"
+    assert "images/val/plate_v1.png" in provenance["dataset_hashes"]
+    assert provenance["dataset_hashes"]["images/val/plate_v1.png"] == sha256_file(
+        tiny_dataset.parent / "images" / "val" / "plate_v1.png"
     )
     assert provenance["dataset_audit"]["ok"] is True
 

@@ -7,6 +7,8 @@ seed: 42
 epochs: 150
 batch: 8
 image_size: 1280
+# Validation predictions and the shared operating point use one threshold.
+confidence: 0.25
 optimizer: SGD
 learning_rate: 0.01
 momentum: 0.937

@@ -37,7 +37,7 @@ run_polyx -m polyx.pipeline.campaign_app --multirun \
   campaign_root="${CAMPAIGN_ROOT}" \
   data_yaml="${POLYX_HOME}/data/data.yaml" \
   coco_dataset="${POLYX_HOME}/segmentation_datasets/first_batch/v1" \
-  family=yolo_detection,yolo_segmentation,mask_rcnn \
+  family=yolo_detection,yolo_detection_v11,yolo_segmentation,yolo_segmentation_v11,mask_rcnn \
   backend=slurm \
   weights_dir="${POLYX_WEIGHTS_DIR}" \
   weights_manifest="${POLYX_WEIGHTS_MANIFEST}" \

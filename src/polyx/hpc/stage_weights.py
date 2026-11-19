@@ -15,34 +15,38 @@ import os
 import sys
 from pathlib import Path
 
+from polyx.core.i18n import _
 from polyx.hpc.hashing import HashError, verify_manifest
 from polyx.hpc.weights import fetch_weights
 
 
 def main(argv: list[str] | None = None) -> int:
     """Verify the staged weights, optionally fetch them, and report the outcome."""
-    parser = argparse.ArgumentParser(description="Stage and verify pinned model weights")
+    parser = argparse.ArgumentParser(description=_("Stage and verify pinned model weights"))
     parser.add_argument(
         "--weights-dir",
         default=os.environ.get("POLYX_WEIGHTS_DIR", ""),
-        help="directory holding the weight files (default: POLYX_WEIGHTS_DIR)",
+        help=_("directory holding the weight files (default: POLYX_WEIGHTS_DIR)"),
     )
     parser.add_argument(
         "--manifest",
         default=os.environ.get("POLYX_WEIGHTS_MANIFEST", ""),
-        help="sha256sum-style manifest (default: POLYX_WEIGHTS_MANIFEST)",
+        help=_("sha256sum-style manifest (default: POLYX_WEIGHTS_MANIFEST)"),
     )
     parser.add_argument(
         "--url",
         default=os.environ.get("POLYX_WEIGHTS_URL", ""),
-        help="base URL to fetch missing files from (default: POLYX_WEIGHTS_URL); "
-        "leave unset on a compute node",
+        help=_(
+            "base URL to fetch missing files from (default: POLYX_WEIGHTS_URL); "
+            "leave unset on a compute node"
+        ),
     )
     args = parser.parse_args(argv)
 
     if not args.weights_dir or not args.manifest:
         print(
-            "ERROR: set POLYX_WEIGHTS_DIR and POLYX_WEIGHTS_MANIFEST before staging weights",
+            "ERROR: "
+            + _("set POLYX_WEIGHTS_DIR and POLYX_WEIGHTS_MANIFEST before staging weights"),
             file=sys.stderr,
         )
         return 1
@@ -62,8 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems:
             print(f"WEIGHTS: {problem}", file=sys.stderr)
         print(
-            "ERROR: pinned weights are missing or unverified; stage them with "
-            "--url on a networked node",
+            "ERROR: "
+            + _(
+                "pinned weights are missing or unverified; stage them with "
+                "--url on a networked node"
+            ),
             file=sys.stderr,
         )
         return 1

@@ -723,25 +723,41 @@ Trainer and its native training wrapper are untouched by this path.
   Ultralytics adapters reuse the YOLO neural module and dataloader; Mask R-CNN
   is the sibling torchvision adapter under the same contract.
 - `protocol` in `conf/protocol/default.yaml` is framework-neutral and consumed
-  unchanged: split, seed, epochs, batch, image size, optimizer, LR, momentum,
-  weight decay, schedule, warmup, the benchmark augmentation subset, AMP and
-  early stopping.
-- `evaluation.py` is the only scorer. It consumes COCO predictions and names
-  the criterion on every figure; selection is the with-class score and
-  localisation is reported beside it. `mask_iou` is class-aware.
+  unchanged: split, seed, epochs, batch, image size, confidence, optimizer, LR,
+  momentum, weight decay, schedule, warmup, the benchmark augmentation subset,
+  AMP and early stopping.
+- `evaluation.py` is the only scorer. It consumes COCO predictions, names the
+  criterion on every figure and reuses the project's `Criterion`/`Score`:
+  selection is with-class operating-point F1 at `protocol.confidence` and 0.50
+  IoU; localisation is reported beside it. COCO AP is a separate ranking figure
+  and never selects a checkpoint or drives Optuna. `mask_iou` is class-aware.
 - `execution.py` owns audit, provenance, early stopping, best-weight
   restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
   `report.md`, `logs/`, `checkpoints/`). `best.pt` is the kept checkpoint.
+  Saved audit findings are stable codes plus parameters, never translated prose.
 - `resume.py` reads the per-epoch progress snapshot; the best epoch's metrics
-  travel with it, and the Lightning checkpoint continues weights, optimizer,
-  scheduler and epoch state. A different protocol is refused.
+  travel with it. Each epoch writes an immutable
+  `checkpoints/lightning/checkpoint_NNN.ckpt`, and the progress record is
+  published atomically only after it exists, so a preemption cannot pair new
+  weights with older bookkeeping. A different protocol is refused.
+- YOLO validation scores a fresh inference wrapper loaded from that epoch's
+  native checkpoint: Ultralytics fuses and freezes whatever network it
+  predicts with, so scoring with the live training module would break the next
+  backward pass. The two-epoch real-framework test guards this.
+- A campaign first proves that its box and mask sources hold the same image
+  basenames in the same folds and both declare real-domain imagery, so the
+  model is the only variable. COCO masks with more than one polygon ring are
+  refused at conversion rather than becoming several YOLO instances.
 - COCO instance JSON is the canonical mask format (`coco.py`,
   `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
   ground truth; the benchmark reference is human COCO annotations only.
 - `sweep.py` is the in-process driver over the same `hydra.sweeper` node;
   `sweep_app.py` is the real Optuna multirun and `sweep_best.py` writes
-  `sweep_best.json` after it. The study is SQLite on the work filesystem.
+  `sweep_best.json` after it. The study is SQLite on the work filesystem,
+  named from `hydra.sweeper.study_name`. Trial directories are keyed by study
+  trial number, not Hydra's resettable job index, and `trials/index.json` lets
+  the best-artifact step find the winner after a preemption.
 - `weights.py` resolves `family.weights` to a staged file and verifies its
   SHA-256 against the manifest before a framework sees it; absent or unverified
   pins fail closed.
@@ -755,7 +771,9 @@ work/scratch/user-data from `POLYX_HPC_*` (never committed paths),
 `hashing.py` reads sha256sum manifests, `weights.py` fetches and verifies them,
 `stage_weights.py` is the pre-job staging step, `environment.py` and
 `check_env.py` prove the pinned V100 stack, and `sync_back.py` copies only the
-agreed small artifacts back to the work filesystem. The job scripts in
+agreed small artifacts back to the work filesystem. Container builds stamp the
+source commit into `POLYX_SOURCE_SHA`/`SOURCE_SHA`, which provenance uses when
+there is no `.git` in the image. The job scripts in
 `cluster/` and the definitions in `container/` are documented in
 `docs/hpc.md`, `docs/hpc-environment.md` and `docs/hpc-submission.md`; the
 cluster smoke job and campaign remain pending until OCEANO access exists.

@@ -21,10 +21,10 @@ def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_a_real_ultralytics_network_trains_one_epoch_on_the_fixture(
+def test_a_real_ultralytics_network_trains_two_epochs_after_validation(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Real Ultralytics, real Lightning, one batch of real training."""
+    """Validation must not freeze the live network: training continues."""
     from polyx.pipeline.command import main
 
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
@@ -37,7 +37,7 @@ def test_a_real_ultralytics_network_trains_one_epoch_on_the_fixture(
             # The architecture yaml needs no network: no weights are
             # downloaded and nothing is claimed to be hash-pinned.
             "family.weights=yolov8n.yaml",
-            "protocol.epochs=1",
+            "protocol.epochs=2",
             "protocol.batch=2",
             "protocol.image_size=64",
             "protocol.warmup_epochs=0",
@@ -49,25 +49,36 @@ def test_a_real_ultralytics_network_trains_one_epoch_on_the_fixture(
     assert code == 0, capsys.readouterr().err
     state = _read(output / "training_state.json")
     assert state["framework"] == "ultralytics"
-    assert state["epochs_completed"] == 1
+    assert state["epochs_completed"] == 2
     assert state["weights"] == "yolov8n.yaml"
     assert state["weights_verified"] is False
 
-    # The training log records the shared evaluator's score for the epoch, so
-    # the real loop really ran a training step and a prediction pass.
+    # Both epochs were scored by the shared evaluator.
     log = (output / "logs" / "training.log").read_text(encoding="utf-8")
     assert "epoch=0 with_class_score=" in log
+    assert "epoch=1 with_class_score=" in log
 
-    # The exported checkpoint is the real Ultralytics network, sized for the
-    # fixture's three classes, not a Lightning state dict and not a stub.
+    # The exported checkpoints are real Ultralytics networks, and the second
+    # one has different weights: Ultralytics' predictor in-place fusion used to
+    # freeze the training network at the first validation, so the second
+    # backward pass either failed or left the weights untouched.
     import torch
 
-    checkpoint = torch.load(
+    first = torch.load(
         output / "checkpoints" / "epoch_000.pt", map_location="cpu", weights_only=False
-    )
-    assert "model" in checkpoint
-    network = checkpoint["model"]
-    assert getattr(network, "nc", None) == 3 or (getattr(network, "yaml", {}) or {}).get("nc") == 3
+    )["model"]
+    second = torch.load(
+        output / "checkpoints" / "epoch_001.pt", map_location="cpu", weights_only=False
+    )["model"]
+    assert getattr(first, "nc", None) == 3 or (getattr(first, "yaml", {}) or {}).get("nc") == 3
+    first_state = first.state_dict()
+    second_state = second.state_dict()
+    assert first_state.keys() == second_state.keys()
+    assert any(
+        not torch.equal(first_state[name].float(), second_state[name].float())
+        for name in first_state
+        if first_state[name].is_floating_point()
+    ), "validation froze the training network"
     assert (output / "checkpoints" / "best.pt").is_file()
     metrics = _read(output / "metrics.json")
     assert metrics["selection"]["metric"] == "with_class_score"

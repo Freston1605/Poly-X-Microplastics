@@ -347,4 +347,8 @@ def test_container_definitions_pin_the_base_and_the_cuda_build() -> None:
         assert "cu126" in text
         assert "torch==2.7.1+cu126" in text
         assert "--no-index" in text
+        # The source commit is stamped into the image; a container has no
+        # .git for commit_git() to read.
+        assert "SOURCE_SHA" in text
+        assert "POLYX_SOURCE_SHA" in text
     assert "Bootstrap: docker" in definition

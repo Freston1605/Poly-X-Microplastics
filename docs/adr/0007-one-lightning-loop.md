@@ -39,8 +39,9 @@ module, reuses the Ultralytics data path and returns COCO-format predictions
 per validation epoch. Lightning, Ultralytics and torch are imported lazily, so
 importing the command does not load a GPU stack. One shared evaluator scores
 those predictions against COCO ground truth built from the existing label
-codec; it always names the criterion, selects on the with-class score and
-reports localisation beside it. Early stopping watches that one score with the
+codec; it always names the criterion, selects on the with-class operating-point
+F1 at one confidence and IoU threshold, and reports localisation beside it.
+COCO AP is reported separately and never selects a checkpoint. Early stopping watches that one score with the
 protocol's patience and minimum delta, and the best epoch's weights are copied
 to one stable checkpoint path.
 
@@ -79,7 +80,7 @@ backends; only the backend composition changes.
   and Mask R-CNN adapters arrived in later tickets without changing this
   decision; they use the same loop, evaluator and artifact layout.
 - An interrupted execution resumes from a real Lightning checkpoint
-  (`checkpoints/lightning/last.ckpt`), which restores weights, optimizer,
+  (`checkpoints/lightning/checkpoint_NNN.ckpt`), which restores weights, optimizer,
   scheduler and epoch progress. A family-native `.pt` export is kept for
   compatibility and best-weight restoration but is never passed to
   `Trainer.fit` as a checkpoint.

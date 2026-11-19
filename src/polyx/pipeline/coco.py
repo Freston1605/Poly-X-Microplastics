@@ -22,9 +22,12 @@ def coco_predictions_from_results(results: Any) -> list[dict]:
         boxes = getattr(result, "boxes", None)
         if boxes is None:
             continue
-        xyxy = np.asarray(getattr(boxes, "xyxy", []), dtype=float).reshape(-1, 4)
-        conf = np.asarray(getattr(boxes, "conf", []), dtype=float).reshape(-1)
-        classes = np.asarray(getattr(boxes, "cls", []), dtype=int).reshape(-1)
+        # Ultralytics results may hold CUDA tensors. This helper detaches and
+        # moves them to CPU before NumPy sees them, exactly as the torchvision
+        # path does, so a GPU validation pass cannot raise here.
+        xyxy = _numpy(getattr(boxes, "xyxy", [])).reshape(-1, 4)
+        conf = _numpy(getattr(boxes, "conf", [])).reshape(-1)
+        classes = _numpy(getattr(boxes, "cls", [])).astype(int).reshape(-1)
         for index, (x1, y1, x2, y2) in enumerate(xyxy):
             predictions.append(
                 {
@@ -112,12 +115,12 @@ def coco_segmentation_predictions_from_results(results: Any) -> list[dict]:
         masks = getattr(result, "masks", None)
         if boxes is None or masks is None:
             continue
-        xyxy = np.asarray(getattr(boxes, "xyxy", []), dtype=float).reshape(-1, 4)
-        conf = np.asarray(getattr(boxes, "conf", []), dtype=float).reshape(-1)
-        classes = np.asarray(getattr(boxes, "cls", []), dtype=int).reshape(-1)
+        xyxy = _numpy(getattr(boxes, "xyxy", [])).reshape(-1, 4)
+        conf = _numpy(getattr(boxes, "conf", [])).reshape(-1)
+        classes = _numpy(getattr(boxes, "cls", [])).astype(int).reshape(-1)
         polygons = list(getattr(masks, "xy", []) or [])
         for index, polygon in enumerate(polygons):
-            points = np.asarray(polygon, dtype=float).reshape(-1, 2)
+            points = _numpy(polygon).reshape(-1, 2)
             if points.shape[0] < 3 or index >= len(xyxy):
                 continue
             x1, y1, x2, y2 = (float(value) for value in xyxy[index])

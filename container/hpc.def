@@ -18,6 +18,8 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
   definition is built on the cluster, never claimed as built locally.
 
 %files
+  # Build context: git rev-parse HEAD > source_sha.txt
+  source_sha.txt /opt/polyx/SOURCE_SHA
   wheelhouse /opt/polyx/wheelhouse
   pyproject.toml /opt/polyx/pyproject.toml
   uv.lock /opt/polyx/uv.lock
@@ -37,6 +39,7 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
   rm -rf /root/.cache/uv /root/.cache/pip
 
 %environment
+  export POLYX_SOURCE_SHA="$(cat /opt/polyx/SOURCE_SHA 2>/dev/null || echo unknown)"
   export VIRTUAL_ENV=/opt/venv
   export PATH=/opt/venv/bin:$PATH
   export PYTHONDONTWRITEBYTECODE=1

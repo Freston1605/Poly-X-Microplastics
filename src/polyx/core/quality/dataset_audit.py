@@ -32,6 +32,10 @@ class Finding:
     level: str  # ok | warn | error
     title: str
     detail: str = ""
+    #: Stable machine identity for saved artifacts. The prose is translated at
+    #: display time; only the code and its parameters survive serialization.
+    code: str = ""
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -44,8 +48,21 @@ class DatasetAudit:
     )  # class -> median normalised area
     ok: bool = True  # False if there is any Finding at error level
 
-    def add(self, level: str, title: str, detail: str = ""):
-        self.findings.append(Finding(level, title, detail))
+    def add(
+        self,
+        level: str,
+        title: str,
+        detail: str = "",
+        *,
+        code: str = "",
+        parameters: dict[str, Any] | None = None,
+    ) -> None:
+        """Record one finding with a stable machine code and its parameters.
+
+        ``title`` and ``detail`` are translated for people reading the report;
+        only ``code`` and ``parameters`` are written to scientific artifacts.
+        """
+        self.findings.append(Finding(level, title, detail, code=code, parameters=parameters or {}))
         if level == LEVEL_ERROR:
             self.ok = False
 
@@ -190,13 +207,25 @@ class _Auditor:
     def run(self) -> DatasetAudit:
         audit = self.audit
         if not self.yaml_path.exists():
-            audit.add(LEVEL_ERROR, _("data.yaml not found"), str(self.yaml_path))
+            audit.add(
+                LEVEL_ERROR,
+                _("data.yaml not found"),
+                str(self.yaml_path),
+                code="data_yaml_missing",
+                parameters={"path": str(self.yaml_path)},
+            )
             return audit
 
         try:
             self.data = _load_yaml(self.yaml_path)
         except Exception as e:  # noqa: BLE001
-            audit.add(LEVEL_ERROR, _("Could not read data.yaml"), str(e))
+            audit.add(
+                LEVEL_ERROR,
+                _("Could not read data.yaml"),
+                str(e),
+                code="data_yaml_unreadable",
+                parameters={"path": str(self.yaml_path)},
+            )
             return audit
 
         self.yaml_dir = self.yaml_path.parent
@@ -257,6 +286,8 @@ class _Auditor:
                         "to train and measure metrics."
                     )
                     % {"split": split},
+                    code="split_missing",
+                    parameters={"split": split},
                 )
             elif split_value and (resolved is None or not resolved.exists()):
                 lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
@@ -269,6 +300,8 @@ class _Auditor:
                         "folder or PC: fix the paths in the data.yaml (or use relative paths)."
                     )
                     % {"path": resolved},
+                    code="split_path_missing",
+                    parameters={"split": split, "path": str(resolved)},
                 )
             imgs = _iter_images(resolved, yaml_dir, root)
             scans[split] = _scan_split(imgs)
@@ -288,18 +321,25 @@ class _Auditor:
     def _check_structure(self) -> None:
         audit, tr, vl = self.audit, self.tr, self.vl
         if not audit.class_names:
-            audit.add(LEVEL_ERROR, _("No classes defined"), _("The data.yaml has no 'names' key."))
+            audit.add(
+                LEVEL_ERROR,
+                _("No classes defined"),
+                _("The data.yaml has no 'names' key."),
+                code="classes_missing",
+            )
         if tr["n_imgs"] == 0 and tr.get("path_exists"):
             audit.add(
                 LEVEL_ERROR,
                 _("Empty train"),
                 _("The train folder exists but contains no images."),
+                code="train_empty",
             )
         if vl["n_imgs"] == 0 and vl.get("path_exists"):
             audit.add(
                 LEVEL_ERROR,
                 _("Empty val"),
                 _("The val folder exists but contains no images → metrics cannot be measured."),
+                code="val_empty",
             )
         if self.source == "coco" and tr["n_imgs"] > 0 and vl["n_imgs"] == 0:
             audit.add(
@@ -310,6 +350,7 @@ class _Auditor:
                     "marker. Mark the validation images before training: class coverage and "
                     "metrics cannot be audited without them."
                 ),
+                code="coco_val_split_missing",
             )
 
     def _check_class_coverage(self) -> None:
@@ -328,6 +369,8 @@ class _Auditor:
                     "measure their performance (it will give you a false sense of success). "
                     "Add images of these classes to the validation split."
                 ),
+                code="classes_missing_in_val",
+                parameters={"classes": sorted(self._cls_name(c) for c in missing_in_val)},
             )
         if len(val_classes) == 1 and len(train_classes) > 1:
             audit.add(
@@ -338,6 +381,11 @@ class _Auditor:
                     "The validation set contains a single class even though the model "
                     "learns several. Multiclass metrics are not valid."
                 ),
+                code="single_class_val",
+                parameters={
+                    "class": self._cls_name(next(iter(val_classes))),
+                    "train_classes": sorted(self._cls_name(c) for c in train_classes),
+                },
             )
 
     def _check_imbalance(self) -> None:
@@ -363,6 +411,8 @@ class _Auditor:
                         "bottom_count": mn,
                         "ratio": mx / mn,
                     },
+                    code="class_imbalance",
+                    parameters={"top": top, "bottom": bot, "ratio": mx / mn},
                 )
 
     def _check_dominance(self) -> None:
@@ -382,6 +432,12 @@ class _Auditor:
                         % {
                             "percent": top_n / total * 100,
                             "image": top_img,
+                        },
+                        code="class_dominated_by_image",
+                        parameters={
+                            "class": self._cls_name(c),
+                            "image": top_img,
+                            "share": top_n / total,
                         },
                     )
 
@@ -404,6 +460,8 @@ class _Auditor:
                                 "them apart by colour/texture. If they also look alike, "
                                 "expect confusion between the two."
                             ),
+                            code="similar_class_sizes",
+                            parameters={"first": na, "second": nb, "ratio": ratio},
                         )
 
     def _check_mechanical(self) -> None:
@@ -415,6 +473,8 @@ class _Auditor:
                     _("Degenerate boxes in %(split)s: %(count)d")
                     % {"split": split, "count": sc["degenerate"]},
                     _("Boxes with width/height ~0. Check the annotation."),
+                    code="degenerate_boxes",
+                    parameters={"split": split, "count": sc["degenerate"]},
                 )
             if sc["out_range"]:
                 audit.add(
@@ -422,6 +482,8 @@ class _Auditor:
                     _("Coordinates outside [0,1] in %(split)s: %(count)d")
                     % {"split": split, "count": sc["out_range"]},
                     _("Badly normalised labels; YOLO will interpret them wrongly."),
+                    code="out_of_range_boxes",
+                    parameters={"split": split, "count": sc["out_range"]},
                 )
             if sc["duplicates"]:
                 audit.add(
@@ -429,6 +491,8 @@ class _Auditor:
                     _("Duplicate boxes in %(split)s: %(count)d")
                     % {"split": split, "count": sc["duplicates"]},
                     _("The same box repeated within one file."),
+                    code="duplicate_boxes",
+                    parameters={"split": split, "count": sc["duplicates"]},
                 )
             if sc["no_label"]:
                 audit.add(
@@ -439,6 +503,8 @@ class _Auditor:
                         "They will be trained as background (no objects). Confirm this is "
                         "intentional."
                     ),
+                    code="images_without_labels",
+                    parameters={"split": split, "count": sc["no_label"]},
                 )
         malformed = sum(scan["malformed"] for scan in self.scans.values())
         if malformed:
@@ -449,6 +515,8 @@ class _Auditor:
                     "Those lines were skipped. A YOLO-seg polygon line is valid YOLO "
                     "but not a detection box, so the audit counts boxes only."
                 ),
+                code="non_box_label_lines",
+                parameters={"count": malformed},
             )
 
     def _check_polygons(self) -> None:
@@ -472,6 +540,8 @@ class _Auditor:
                         "an even coordinate count. RLE segmentation is not a polygon; "
                         "export polygons from the annotation tool."
                     ),
+                    code="invalid_mask_polygons",
+                    parameters={"split": split, "count": invalid},
                 )
             if degenerate:
                 audit.add(
@@ -482,6 +552,8 @@ class _Auditor:
                         "These polygons enclose zero area (collinear or repeated points) "
                         "and cannot be used as segmentation ground truth."
                     ),
+                    code="degenerate_mask_polygons",
+                    parameters={"split": split, "count": degenerate},
                 )
             if unknown:
                 audit.add(
@@ -492,6 +564,8 @@ class _Auditor:
                         "Every mask must reference a category declared in the export's "
                         "categories list."
                     ),
+                    code="unknown_mask_category",
+                    parameters={"split": split, "count": unknown},
                 )
         orphans = sum(int(scan.get("orphan_annotations", 0)) for scan in self.scans.values())
         if orphans:
@@ -502,6 +576,8 @@ class _Auditor:
                     "These masks reference an image that is not declared in the export's "
                     "images list."
                 ),
+                code="orphan_mask_image",
+                parameters={"count": orphans},
             )
 
     def _check_val_size(self) -> None:
@@ -511,6 +587,8 @@ class _Auditor:
                 LEVEL_WARN,
                 _("Very small validation set (%(count)d images)") % {"count": vl["n_imgs"]},
                 _("With so few images the metrics are unstable. Aim for ≥ 10-20."),
+                code="small_validation_set",
+                parameters={"count": vl["n_imgs"]},
             )
 
     def _finalize(self) -> None:
@@ -520,6 +598,7 @@ class _Auditor:
                 LEVEL_OK,
                 _("No dataset problems detected"),
                 _("Class distribution, validation and format all look correct."),
+                code="no_problems",
             )
 
 

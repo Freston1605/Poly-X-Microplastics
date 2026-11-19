@@ -23,7 +23,7 @@ from typing import Any
 
 import yaml
 
-from polyx.core.labels import write_polygon_lines
+from polyx.core.labels import label_path_for, write_polygon_lines
 from polyx.core.provenance import sha256_file
 from polyx.pipeline.dataset import (
     ordered_categories,
@@ -34,7 +34,7 @@ from polyx.pipeline.dataset import (
 #: Name written into the conversion metadata; a change means a new cache key.
 CONVERSION_FORMAT = "yolo-seg-polygons"
 #: Bump when the produced layout changes, so old caches are not reused.
-CONVERSION_VERSION = 1
+CONVERSION_VERSION = 2
 #: Splits the canonical dataset may carry; only these are written out.
 _SPLITS = ("train", "val", "test")
 
@@ -121,9 +121,19 @@ def _write_split(
         polygons: list[tuple[int, list[tuple[float, float]]]] = []
         for annotation in ordered:
             class_id = indices[int(annotation["category_id"])]
-            polygons.extend((class_id, ring) for ring in _rings(annotation))
+            rings = _rings(annotation)
+            if len(rings) != 1:
+                raise ValueError(
+                    "a COCO mask annotation must have exactly one polygon ring to "
+                    "stay one training instance; annotation "
+                    f"{annotation.get('id', '?')} has {len(rings)}. Split the "
+                    "particle into separate annotations in the annotation tool, "
+                    "or export a single exterior polygon."
+                )
+            polygons.append((class_id, rings[0]))
+        label_path = label_path_for(images_dir / f"{stem}{suffix}")
         write_polygon_lines(
-            labels_dir / f"{stem}.txt",
+            label_path,
             polygons,
             int(image["width"]),
             int(image["height"]),

@@ -22,11 +22,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from tests.test_pipeline_local_tracer import (
-    _boxes_prediction,
-    _FakeResult,
-    build_tiny_dataset,
-)
+from tests.test_pipeline_local_tracer import _boxes_prediction, _FakeResult
 from tests.test_pipeline_mask_rcnn import (
     _FakeDetector,
     _install_torchvision_factory,
@@ -69,6 +65,9 @@ class _RealLoopYOLO:
     prediction_sets: list[list[dict]] = []
     fail_on_validation: int | None = None
     instances: list[_RealLoopYOLO] = []
+    # Each validation uses a fresh snapshot wrapper, so the interruption has
+    # to be counted at the class level, not per instance.
+    validation_calls = 0
 
     def __init__(self, weights: object) -> None:
         self.requested_weights = str(weights)
@@ -80,7 +79,8 @@ class _RealLoopYOLO:
 
     def predict(self, **_kwargs: object) -> list[_FakeResult]:
         self.val_calls += 1
-        if _RealLoopYOLO.fail_on_validation == self.val_calls:
+        type(self).validation_calls += 1
+        if _RealLoopYOLO.fail_on_validation == type(self).validation_calls:
             # A time limit or preemption after the previous epoch's checkpoint
             # and progress snapshot were written.
             raise RuntimeError("simulated preemption during validation")
@@ -94,12 +94,6 @@ class _RealLoopYOLO:
 
 
 @pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
-    """The suite's tiny YOLO box dataset, rooted in this test's tmp dir."""
-    return build_tiny_dataset(tmp_path / "dataset")
-
-
-@pytest.fixture
 def yolo_double(monkeypatch: pytest.MonkeyPatch) -> type[_RealLoopYOLO]:
     """Patch only the Ultralytics wrapper; Lightning stays real."""
     import ultralytics
@@ -108,6 +102,7 @@ def yolo_double(monkeypatch: pytest.MonkeyPatch) -> type[_RealLoopYOLO]:
     _RealLoopYOLO.prediction_sets = []
     _RealLoopYOLO.fail_on_validation = None
     _RealLoopYOLO.instances = []
+    _RealLoopYOLO.validation_calls = 0
     return _RealLoopYOLO
 
 
@@ -140,8 +135,10 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     yolo_double.fail_on_validation = 2
 
     assert _fit_detection(output, tiny_dataset) == 1
-    first = yolo_double.instances[-1]
-    assert first.val_calls == 2, "the first epoch must complete before the preemption"
+    # Epoch 0 validated once on its own snapshot; the second validation call
+    # is the simulated preemption.
+    assert yolo_double.validation_calls == 2
+    assert yolo_double.instances[-1].val_calls == 1
 
     progress = _read(output / "progress.json")
     assert progress["epochs_completed"] == 1
@@ -150,7 +147,7 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     assert Path(progress["last_checkpoint"]).is_file()
     # ...while resume names a real Lightning checkpoint.
     lightning = Path(progress["resume_checkpoint"])
-    assert lightning == output / "checkpoints" / "lightning" / "last.ckpt"
+    assert lightning == output / "checkpoints" / "lightning" / "checkpoint_000.ckpt"
     assert lightning.is_file()
     saved = torch.load(lightning, map_location="cpu", weights_only=False)
     assert "pytorch-lightning_version" in saved
@@ -162,11 +159,15 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     yolo_double.prediction_sets = [_boxes_prediction()]
     yolo_double.fail_on_validation = None
     yolo_double.instances = []
+    validations_before_resume = yolo_double.validation_calls
     assert _fit_detection(output, tiny_dataset, resume=True) == 0
-    resumed = yolo_double.instances[-1]
+    # The training wrapper is created first; later instances are validation
+    # snapshots loaded from the epoch checkpoints.
+    resumed = yolo_double.instances[0]
 
-    # Exactly the remaining epoch ran: a restart would validate twice.
-    assert resumed.val_calls == 1
+    # Exactly the remaining epoch ran: a restart would validate twice. The
+    # count is class-wide because each validation loads its own snapshot.
+    assert yolo_double.validation_calls - validations_before_resume == 1
     state = _read(output / "training_state.json")
     assert state["epochs_completed"] == 2
     assert state["resumed"] is True

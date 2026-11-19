@@ -30,6 +30,7 @@ from polyx.pipeline.config import (
     execution_config_from_raw,
     protocol_to_dict,
 )
+from polyx.pipeline.dataset import validate_campaign_cohort
 from polyx.pipeline.execution import run_execution
 
 
@@ -82,6 +83,11 @@ def _resume_decision(config: ExecutionConfig) -> tuple[str, dict]:
 def campaign(cfg: DictConfig) -> float:
     """Run one family's training execution and return its with-class score."""
     config = execution_config_from_raw(campaign_raw(cfg))
+    if config.data_yaml is not None and config.coco_dataset is not None:
+        # Both sources travel together in a campaign. They must describe the
+        # same real-domain cohort; otherwise the benchmark would vary the
+        # dataset as well as the model.
+        validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
     run_name = config.output_dir.name
     if config.resume:
         decision, state = _resume_decision(config)

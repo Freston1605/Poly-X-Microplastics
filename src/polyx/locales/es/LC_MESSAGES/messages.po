@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-18 21:38-0300\n"
+"POT-Creation-Date: 2026-11-19 12:57-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -692,44 +692,44 @@ msgstr ""
 "%(unassigned)d de %(total)d partículas sin polímero asignable (%(percent).1f %%), umbral "
 "%(threshold).2f"
 
-#: src/polyx/core/quality/dataset_audit.py:193
+#: src/polyx/core/quality/dataset_audit.py:212
 msgid "data.yaml not found"
 msgstr "data.yaml no encontrado"
 
-#: src/polyx/core/quality/dataset_audit.py:235
+#: src/polyx/core/quality/dataset_audit.py:264
 #, python-format
 msgid "class %(id)s"
 msgstr "clase %(id)s"
 
-#: src/polyx/core/quality/dataset_audit.py:291
+#: src/polyx/core/quality/dataset_audit.py:326
 msgid "No classes defined"
 msgstr "Sin clases definidas"
 
-#: src/polyx/core/quality/dataset_audit.py:291
+#: src/polyx/core/quality/dataset_audit.py:327
 msgid "The data.yaml has no 'names' key."
 msgstr "El data.yaml no tiene clave 'names'."
 
-#: src/polyx/core/quality/dataset_audit.py:295
+#: src/polyx/core/quality/dataset_audit.py:333
 msgid "Empty train"
 msgstr "Train vacío"
 
-#: src/polyx/core/quality/dataset_audit.py:296
+#: src/polyx/core/quality/dataset_audit.py:334
 msgid "The train folder exists but contains no images."
 msgstr "La carpeta de train existe pero no contiene imágenes."
 
-#: src/polyx/core/quality/dataset_audit.py:301
+#: src/polyx/core/quality/dataset_audit.py:340
 msgid "Empty val"
 msgstr "Val vacío"
 
-#: src/polyx/core/quality/dataset_audit.py:302
+#: src/polyx/core/quality/dataset_audit.py:341
 msgid "The val folder exists but contains no images → metrics cannot be measured."
 msgstr "La carpeta de val existe pero no contiene imágenes → no se pueden medir métricas."
 
-#: src/polyx/core/quality/dataset_audit.py:307
+#: src/polyx/core/quality/dataset_audit.py:347
 msgid "No validation split in the COCO export"
 msgstr "Sin split de validación en la exportación COCO"
 
-#: src/polyx/core/quality/dataset_audit.py:308
+#: src/polyx/core/quality/dataset_audit.py:348
 msgid ""
 "Every mask was imported into train because no image carries a split marker. Mark the validation "
 "images before training: class coverage and metrics cannot be audited without them."
@@ -738,7 +738,7 @@ msgstr ""
 "imágenes de validación antes de entrenar: sin ellas no se pueden auditar la cobertura de clases "
 "ni las métricas."
 
-#: src/polyx/core/quality/dataset_audit.py:326
+#: src/polyx/core/quality/dataset_audit.py:367
 msgid ""
 "These classes have examples in train but ZERO in val. mAP will not measure their performance (it"
 " will give you a false sense of success). Add images of these classes to the validation split."
@@ -746,7 +746,7 @@ msgstr ""
 "Estas clases tienen ejemplos en train pero CERO en val. El mAP no medirá su rendimiento (te dará"
 " una falsa sensación de éxito). Agrega imágenes de estas clases al split de validación."
 
-#: src/polyx/core/quality/dataset_audit.py:337
+#: src/polyx/core/quality/dataset_audit.py:380
 msgid ""
 "The validation set contains a single class even though the model learns several. Multiclass "
 "metrics are not valid."
@@ -754,7 +754,7 @@ msgstr ""
 "El set de validación contiene una única clase pese a que el modelo aprende varias. Las métricas "
 "multiclase no son válidas."
 
-#: src/polyx/core/quality/dataset_audit.py:448
+#: src/polyx/core/quality/dataset_audit.py:514
 msgid ""
 "Those lines were skipped. A YOLO-seg polygon line is valid YOLO but not a detection box, so the "
 "audit counts boxes only."
@@ -762,64 +762,64 @@ msgstr ""
 "Esas líneas se omitieron. Una línea de polígono YOLO-seg es YOLO válido pero no una caja de "
 "detección, así que la auditoría solo cuenta cajas."
 
-#: src/polyx/core/quality/dataset_audit.py:501
+#: src/polyx/core/quality/dataset_audit.py:575
 msgid "These masks reference an image that is not declared in the export's images list."
 msgstr ""
 "Estas máscaras referencian una imagen que no está declarada en la lista de imágenes de la "
 "exportación."
 
-#: src/polyx/core/quality/dataset_audit.py:513
+#: src/polyx/core/quality/dataset_audit.py:589
 msgid "With so few images the metrics are unstable. Aim for ≥ 10-20."
 msgstr "Con tan pocas imágenes las métricas son inestables. Apunta a ≥ 10-20."
 
-#: src/polyx/core/quality/dataset_audit.py:521
+#: src/polyx/core/quality/dataset_audit.py:599
 msgid "No dataset problems detected"
 msgstr "Dataset sin problemas detectados"
 
-#: src/polyx/core/quality/dataset_audit.py:522
+#: src/polyx/core/quality/dataset_audit.py:600
 msgid "Class distribution, validation and format all look correct."
 msgstr "Distribución de clases, validación y formato se ven correctos."
 
-#: src/polyx/core/quality/dataset_audit.py:199
+#: src/polyx/core/quality/dataset_audit.py:224
 msgid "Could not read data.yaml"
 msgstr "No se pudo leer data.yaml"
 
-#: src/polyx/core/quality/dataset_audit.py:325
+#: src/polyx/core/quality/dataset_audit.py:366
 #, python-format
 msgid "Classes without validation: %(classes)s"
 msgstr "Clases sin validación: %(classes)s"
 
-#: src/polyx/core/quality/dataset_audit.py:335
+#: src/polyx/core/quality/dataset_audit.py:378
 #, python-format
 msgid "Single-class validation (%(class)s)"
 msgstr "Validación de una sola clase (%(class)s)"
 
-#: src/polyx/core/quality/dataset_audit.py:353
+#: src/polyx/core/quality/dataset_audit.py:401
 msgid "Strong class imbalance in train"
 msgstr "Desbalance fuerte de clases en train"
 
-#: src/polyx/core/quality/dataset_audit.py:417
+#: src/polyx/core/quality/dataset_audit.py:475
 msgid "Boxes with width/height ~0. Check the annotation."
 msgstr "Cajas con ancho/alto ~0. Revisa la anotación."
 
-#: src/polyx/core/quality/dataset_audit.py:424
+#: src/polyx/core/quality/dataset_audit.py:484
 msgid "Badly normalised labels; YOLO will interpret them wrongly."
 msgstr "Labels mal normalizadas; YOLO las interpretará mal."
 
-#: src/polyx/core/quality/dataset_audit.py:431
+#: src/polyx/core/quality/dataset_audit.py:493
 msgid "The same box repeated within one file."
 msgstr "Misma caja repetida en un archivo."
 
-#: src/polyx/core/quality/dataset_audit.py:438
+#: src/polyx/core/quality/dataset_audit.py:502
 msgid "They will be trained as background (no objects). Confirm this is intentional."
 msgstr "Se entrenarán como fondo (sin objetos). Confirma que es intencional."
 
-#: src/polyx/core/quality/dataset_audit.py:447
+#: src/polyx/core/quality/dataset_audit.py:513
 #, python-format
 msgid "Label lines that are not detection boxes: %(count)d"
 msgstr "Líneas de etiqueta que no son cajas de detección: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:470
+#: src/polyx/core/quality/dataset_audit.py:538
 msgid ""
 "A mask polygon needs at least three finite, in-bounds points and an even coordinate count. RLE "
 "segmentation is not a polygon; export polygons from the annotation tool."
@@ -828,7 +828,7 @@ msgstr ""
 "par de coordenadas. La segmentación RLE no es un polígono; exporta polígonos desde la "
 "herramienta de anotación."
 
-#: src/polyx/core/quality/dataset_audit.py:481
+#: src/polyx/core/quality/dataset_audit.py:551
 msgid ""
 "These polygons enclose zero area (collinear or repeated points) and cannot be used as "
 "segmentation ground truth."
@@ -836,33 +836,33 @@ msgstr ""
 "Estos polígonos encierran área cero (puntos colineales o repetidos) y no pueden usarse como "
 "verdad de referencia para segmentación."
 
-#: src/polyx/core/quality/dataset_audit.py:491
+#: src/polyx/core/quality/dataset_audit.py:563
 msgid "Every mask must reference a category declared in the export's categories list."
 msgstr ""
 "Cada máscara debe referenciar una categoría declarada en la lista de categorías de la "
 "exportación."
 
-#: src/polyx/core/quality/dataset_audit.py:500
+#: src/polyx/core/quality/dataset_audit.py:574
 #, python-format
 msgid "Annotations with an unknown image: %(count)d"
 msgstr "Anotaciones con imagen desconocida: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:512
+#: src/polyx/core/quality/dataset_audit.py:588
 #, python-format
 msgid "Very small validation set (%(count)d images)"
 msgstr "Validación muy pequeña (%(count)d imágenes)"
 
-#: src/polyx/core/quality/dataset_audit.py:254
+#: src/polyx/core/quality/dataset_audit.py:283
 #, python-format
 msgid "No %(split)s split declared"
 msgstr "Sin split %(split)s declarado"
 
-#: src/polyx/core/quality/dataset_audit.py:255
+#: src/polyx/core/quality/dataset_audit.py:284
 #, python-format
 msgid "The data.yaml has no '%(split)s' key. Ultralytics needs it to train and measure metrics."
 msgstr "El data.yaml no tiene clave '%(split)s'. Ultralytics la necesita para entrenar y medir métricas."
 
-#: src/polyx/core/quality/dataset_audit.py:354
+#: src/polyx/core/quality/dataset_audit.py:402
 #, python-format
 msgid ""
 "“%(top)s” has %(top_count)d boxes and “%(bottom)s” only %(bottom_count)d (%(ratio).0f× more). "
@@ -871,47 +871,47 @@ msgstr ""
 "«%(top)s» tiene %(top_count)d cajas y «%(bottom)s» solo %(bottom_count)d (%(ratio).0f× más). "
 "Considera balancear o usar pesos por clase."
 
-#: src/polyx/core/quality/dataset_audit.py:415
+#: src/polyx/core/quality/dataset_audit.py:473
 #, python-format
 msgid "Degenerate boxes in %(split)s: %(count)d"
 msgstr "Cajas degeneradas en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:422
+#: src/polyx/core/quality/dataset_audit.py:482
 #, python-format
 msgid "Coordinates outside [0,1] in %(split)s: %(count)d"
 msgstr "Coordenadas fuera de [0,1] en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:429
+#: src/polyx/core/quality/dataset_audit.py:491
 #, python-format
 msgid "Duplicate boxes in %(split)s: %(count)d"
 msgstr "Cajas duplicadas en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:436
+#: src/polyx/core/quality/dataset_audit.py:500
 #, python-format
 msgid "Images with no label in %(split)s: %(count)d"
 msgstr "Imágenes sin label en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:468
+#: src/polyx/core/quality/dataset_audit.py:536
 #, python-format
 msgid "Invalid mask polygons in %(split)s: %(count)d"
 msgstr "Polígonos de máscara inválidos en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:479
+#: src/polyx/core/quality/dataset_audit.py:549
 #, python-format
 msgid "Degenerate mask polygons in %(split)s: %(count)d"
 msgstr "Polígonos de máscara degenerados en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:489
+#: src/polyx/core/quality/dataset_audit.py:561
 #, python-format
 msgid "Annotations with an unknown category in %(split)s: %(count)d"
 msgstr "Anotaciones con categoría desconocida en %(split)s: %(count)d"
 
-#: src/polyx/core/quality/dataset_audit.py:265
+#: src/polyx/core/quality/dataset_audit.py:296
 #, python-format
 msgid "%(split)s path does not exist"
 msgstr "Ruta de %(split)s no existe"
 
-#: src/polyx/core/quality/dataset_audit.py:266
+#: src/polyx/core/quality/dataset_audit.py:297
 #, python-format
 msgid ""
 "The data.yaml points to “%(path)s”, which does not exist on this computer. This usually happens "
@@ -921,12 +921,12 @@ msgstr ""
 "El data.yaml apunta a «%(path)s», que no existe en este equipo. Suele pasar al mover el proyecto"
 " de carpeta o de PC: corrige las rutas del data.yaml (o usa rutas relativas)."
 
-#: src/polyx/core/quality/dataset_audit.py:377
+#: src/polyx/core/quality/dataset_audit.py:427
 #, python-format
 msgid "“%(class)s”: little diversity"
 msgstr "«%(class)s»: poca diversidad"
 
-#: src/polyx/core/quality/dataset_audit.py:378
+#: src/polyx/core/quality/dataset_audit.py:428
 #, python-format
 msgid ""
 "%(percent).0f%% of its boxes come from a single image (%(image)s). The model may overfit to that"
@@ -935,7 +935,7 @@ msgstr ""
 "El %(percent).0f%% de sus cajas viene de una sola imagen (%(image)s). El modelo puede "
 "sobreajustar a esa escena."
 
-#: src/polyx/core/quality/dataset_audit.py:402
+#: src/polyx/core/quality/dataset_audit.py:458
 msgid ""
 "Their boxes are the same size, so the model can only tell them apart by colour/texture. If they "
 "also look alike, expect confusion between the two."
@@ -943,7 +943,7 @@ msgstr ""
 "Sus cajas son del mismo tamaño, así que el modelo solo puede distinguirlas por color/textura. Si"
 " además se parecen visualmente, esperá confusión entre ambas."
 
-#: src/polyx/core/quality/dataset_audit.py:400
+#: src/polyx/core/quality/dataset_audit.py:456
 #, python-format
 msgid "“%(first)s” and “%(second)s” are almost identical in size"
 msgstr "«%(first)s» y «%(second)s» tienen tamaño casi idéntico"
@@ -1330,7 +1330,7 @@ msgstr[0] "✓ Guardado: %(path)s  (%(count)d caja)"
 msgstr[1] "✓ Guardado: %(path)s  (%(count)d cajas)"
 
 #: src/polyx/gui/detector/review_dialog.py:331 src/polyx/gui/trainer/pages/dataset.py:109
-#: src/polyx/gui/trainer/window.py:28
+#: src/polyx/gui/trainer/window.py:28 src/polyx/pipeline/coco_import.py:353
 msgid "Dataset"
 msgstr "Dataset"
 
@@ -1811,7 +1811,7 @@ msgstr ""
 "(.txt) en una carpeta 'labels/' hermana que replica 'images/', se cargarán y activarán el "
 "análisis de errores."
 
-#: src/polyx/gui/detector/pages/images.py:41
+#: src/polyx/gui/detector/pages/images.py:41 src/polyx/pipeline/coco_import.py:356
 msgid "Source"
 msgstr "Origen"
 
@@ -6584,6 +6584,114 @@ msgstr[1] "● %(count)d detecciones (imgsz %(imgsz)d)"
 #, python-format
 msgid "● Error: %(error)s"
 msgstr "● Error: %(error)s"
+
+#: src/polyx/hpc/stage_weights.py:25
+msgid "Stage and verify pinned model weights"
+msgstr "Preparar y verificar los pesos fijados"
+
+#: src/polyx/hpc/stage_weights.py:29
+msgid "directory holding the weight files (default: POLYX_WEIGHTS_DIR)"
+msgstr "directorio con los archivos de pesos (predeterminado: POLYX_WEIGHTS_DIR)"
+
+#: src/polyx/hpc/stage_weights.py:34
+msgid "sha256sum-style manifest (default: POLYX_WEIGHTS_MANIFEST)"
+msgstr "manifiesto de estilo sha256sum (predeterminado: POLYX_WEIGHTS_MANIFEST)"
+
+#: src/polyx/hpc/stage_weights.py:39
+msgid "base URL to fetch missing files from (default: POLYX_WEIGHTS_URL); leave unset on a compute node"
+msgstr ""
+"URL base para descargar los archivos que falten (predeterminada: POLYX_WEIGHTS_URL); déjala sin "
+"definir en un nodo de cómputo"
+
+#: src/polyx/hpc/stage_weights.py:49
+msgid "set POLYX_WEIGHTS_DIR and POLYX_WEIGHTS_MANIFEST before staging weights"
+msgstr "define POLYX_WEIGHTS_DIR y POLYX_WEIGHTS_MANIFEST antes de preparar los pesos"
+
+#: src/polyx/hpc/stage_weights.py:70
+msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
+msgstr "faltan los pesos fijados o no se pudieron verificar; prepáralos con --url en un nodo con red"
+
+#: src/polyx/pipeline/artifacts.py:139
+msgid "Training execution report"
+msgstr "Informe de ejecución del entrenamiento"
+
+#: src/polyx/pipeline/artifacts.py:141
+msgid "Family"
+msgstr "Familia"
+
+#: src/polyx/pipeline/artifacts.py:142
+msgid "Backend"
+msgstr "Backend"
+
+#: src/polyx/pipeline/artifacts.py:143
+msgid "Selection metric"
+msgstr "Métrica de selección"
+
+#: src/polyx/pipeline/artifacts.py:145
+msgid "Figures"
+msgstr "Figuras"
+
+#: src/polyx/pipeline/artifacts.py:157
+msgid "Early stopping"
+msgstr "Parada anticipada"
+
+#: src/polyx/pipeline/artifacts.py:151
+msgid "Per class"
+msgstr "Por clase"
+
+#: src/polyx/pipeline/coco_import.py:371
+msgid ""
+"A first stratified batch of roughly ten plates, spanning every study class (PET, PP and LDPE) "
+"and the imaging domains represented in the study, so each class appears in both the training and"
+" validation folds before a larger annotation effort is committed."
+msgstr ""
+"Un primer lote estratificado de unas diez placas, que abarque todas las clases del estudio (PET,"
+" PP y LDPE) y los dominios de imagen representados, de modo que cada clase aparezca en los "
+"pliegues de entrenamiento y validación antes de abordar un esfuerzo mayor de anotación."
+
+#: src/polyx/pipeline/coco_import.py:351
+msgid "COCO segmentation dataset import"
+msgstr "Importación de un dataset de segmentación COCO"
+
+#: src/polyx/pipeline/coco_import.py:354
+msgid "Version"
+msgstr "Versión"
+
+#: src/polyx/pipeline/coco_import.py:355
+msgid "Canonical tool output"
+msgstr "Salida canónica de la herramienta"
+
+#: src/polyx/pipeline/coco_import.py:357
+msgid "Source JSON"
+msgstr "JSON de origen"
+
+#: src/polyx/pipeline/coco_import.py:358
+msgid "Ground-truth policy"
+msgstr "Política de verdad de referencia"
+
+#: src/polyx/pipeline/coco_import.py:360
+msgid "Class distribution"
+msgstr "Distribución de clases"
+
+#: src/polyx/pipeline/coco_import.py:369
+msgid "First stratified batch"
+msgstr "Primer lote estratificado"
+
+#: src/polyx/pipeline/coco_import.py:378
+msgid "Audit"
+msgstr "Auditoría"
+
+#: src/polyx/pipeline/sweep_best.py:35
+msgid "Write sweep_best.json from a finished Optuna multirun"
+msgstr "Escribir sweep_best.json a partir de un multirun terminado de Optuna"
+
+#: src/polyx/pipeline/sweep_best.py:37
+msgid "the sweep root"
+msgstr "la raíz de la búsqueda"
+
+#: src/polyx/pipeline/sweep_best.py:41
+msgid "study storage URL or SQLite path (default: the work layout path)"
+msgstr "URL de almacenamiento del estudio o ruta SQLite (predeterminada: la ruta de work)"
 
 #~ msgid ""
 #~ "The language will be applied when you reopen "

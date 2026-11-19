@@ -87,7 +87,10 @@ def sync_campaign(
             config = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
         except (OSError, yaml.YAMLError) as exc:
             raise SyncError(f"unreadable campaign configuration {config_file}: {exc}") from exc
-        family = str((config.get("family") or {}).get("name") or run.name)
+        declaration = config.get("family") or {}
+        # run_name is the per-execution campaign directory, so two variants of
+        # the same adapter must not collapse onto one synced family name.
+        family = str(declaration.get("run_name") or declaration.get("name") or run.name)
         synced[family] = sync_back(
             run,
             destination / family,

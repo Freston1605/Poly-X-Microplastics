@@ -35,22 +35,28 @@ one allocation; the study, the per-trial directories and the best-artifact step
 are described in the [sweeps section](hpc-training-pipeline.md#sweeps) and
 [ADR-0010](adr/0010-optuna-objective.md).
 
-The three first-wave families and the source each consumes:
+The five first-wave variants and the source each consumes:
 
 | Family | Framework | Dataset source |
 | --- | --- | --- |
 | `yolo_detection` | Ultralytics YOLO detection (v8-n) | `data_yaml` (YOLO box labels) |
 | `yolo_detection_v11` | Ultralytics YOLO detection (v11-n) | `data_yaml` (YOLO box labels) |
-| `yolo_segmentation` | Ultralytics YOLO-seg | `coco_dataset` (canonical COCO masks) |
+| `yolo_segmentation` | Ultralytics YOLO-seg (v8-n) | `coco_dataset` (canonical COCO masks) |
+| `yolo_segmentation_v11` | Ultralytics YOLO-seg (v11-n) | `coco_dataset` (canonical COCO masks) |
 | `mask_rcnn` | torchvision | `coco_dataset` (canonical COCO masks) |
 
-The two detection entries share the `yolo_detection` adapter and differ only in
-`run_name` and the staged weights; select either or both in the `family=`
-multirun list.
+The two detection entries share the `yolo_detection` adapter and the two
+segmentation entries share `yolo_segmentation`; each pair differs only in
+`run_name` and the staged weights. All five are listed in the submitted
+campaign, and their artifacts sync into separate directories.
 
 A campaign job carries both sources; the family's task decides which one it
 uses. A single-execution invocation still refuses the wrong source for the
-family, so a segmenter cannot silently train on boxes.
+family, so a segmenter cannot silently train on boxes. Before any job starts,
+the campaign checks that the two sources contain the same image basenames in
+the same folds and that both explicitly declare real-domain imagery. Different
+plate sets, or a validation fold that is not declared real, are refused rather
+than presented as a fair comparison.
 
 ## Weights
 
@@ -122,7 +128,7 @@ then submit again. The job passes `resume=true` to every family and each family
 decides for itself:
 
 - a family with a `progress.json` resumes from its Lightning checkpoint
-  (`checkpoints/lightning/last.ckpt`); completed epochs are not rerun;
+  (`checkpoints/lightning/checkpoint_NNN.ckpt`); completed epochs are not rerun;
 - a family whose `training_state.json` already exists for the same protocol is
   **skipped**, so a finished execution's metrics are never recomputed or
   overwritten;

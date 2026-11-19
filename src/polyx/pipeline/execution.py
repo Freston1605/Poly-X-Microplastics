@@ -8,6 +8,7 @@ adapter owns only the framework-specific fit.
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -19,9 +20,11 @@ from polyx.pipeline.artifacts import (
     ArtifactLayout,
     append_log,
     write_json,
+    write_json_atomic,
     write_report,
     write_yaml,
 )
+from polyx.pipeline.coco_import import audit_as_dict
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_dict
 from polyx.pipeline.evaluation import SharedEvaluator
 from polyx.pipeline.resume import ResumeState
@@ -67,7 +70,10 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         )
 
     evaluator = SharedEvaluator(
-        prepared.ground_truth, config.protocol.split, task=config.family.task
+        prepared.ground_truth,
+        config.protocol.split,
+        task=config.family.task,
+        confidence_threshold=config.protocol.confidence,
     )
     stopping = EarlyStoppingState(asdict(config.protocol.early_stopping))
     if resume_state is not None:
@@ -139,7 +145,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 "protocol": protocol_to_dict(config),
             }
         )
-        write_json(progress, layout.progress)
+        write_json_atomic(progress, layout.progress)
         return decision.stop
 
     adapter = build_adapter(config.family)
@@ -183,10 +189,16 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         )
     write_json(training_state, layout.training_state)
 
+    git = commit_git(ROOT)
+    # A container has no source checkout: the build embeds the commit as
+    # POLYX_SOURCE_SHA. Keep the repository answer when one is available.
+    image_commit = os.environ.get("POLYX_SOURCE_SHA", "").strip()
+    if not git.get("commit") and image_commit:
+        git = {**git, "commit": image_commit, "source": "image"}
     provenance: dict[str, Any] = {
-        "git": commit_git(ROOT),
+        "git": git,
         "dataset_hashes": prepared.hashes,
-        "dataset_audit": asdict(audit),
+        "dataset_audit": audit_as_dict(audit),
         "data_yaml": (
             str(config.data_yaml)
             if prepared.source_kind == "yolo_boxes" and config.data_yaml is not None

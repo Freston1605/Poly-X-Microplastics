@@ -30,7 +30,13 @@ from tests.test_pipeline_yolo_seg import (
     _perfect_validation,
 )
 
-FAMILIES = ("yolo_detection", "yolo_segmentation", "mask_rcnn")
+FAMILIES = (
+    "yolo_detection",
+    "yolo_detection_v11",
+    "yolo_segmentation",
+    "yolo_segmentation_v11",
+    "mask_rcnn",
+)
 
 
 class _CampaignNet(torch.nn.Module):
@@ -49,8 +55,8 @@ def _install_framework_doubles(monkeypatch: pytest.MonkeyPatch) -> None:
     import ultralytics
 
     _FakeYOLO.network = _CampaignNet()
-    # One validation call per YOLO family, one epoch each.
-    _FakeYOLO.prediction_sets = [_perfect_validation(), _perfect_validation()]
+    # One validation call per YOLO family/variant, one epoch each.
+    _FakeYOLO.prediction_sets = [_perfect_validation() for _ in range(4)]
     _FakeYOLO.instances = []
     monkeypatch.setattr(ultralytics, "YOLO", _FakeYOLO)
 
@@ -125,11 +131,11 @@ def test_one_multirun_trains_every_family_under_the_same_protocol(
         ):
             assert (output / relative).is_file(), f"{family} is missing {relative}"
         state = _read(output / "training_state.json")
-        assert state["family"]["name"] == family
+        assert state["family"]["run_name"] == family
         assert state["epochs_completed"] == 1
         assert _read(output / "metrics.json")["selection"]["metric"] == "with_class_score"
         provenance = _read(output / "provenance.json")
-        if family == "yolo_detection":
+        if family in {"yolo_detection", "yolo_detection_v11"}:
             assert provenance["data_yaml"] == str(data_yaml)
             assert provenance["dataset_source"]["kind"] == "yolo_boxes"
         else:
@@ -239,6 +245,29 @@ def test_two_detection_variants_coexist_in_one_campaign(
     assert v11["weights"] == "yolo11n.pt"
     assert (root / "hydra" / "yolo_detection_v11").is_dir()
     assert (root / "yolo_detection_v11" / "metrics.json").is_file()
+
+
+def test_the_campaign_refuses_mismatched_or_synthetic_cohorts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A benchmark cannot compare models on different plate sets."""
+    from polyx.pipeline.dataset import validate_campaign_cohort
+
+    data_yaml = build_tiny_dataset(tmp_path / "detection")
+    store = _imported_store(tmp_path)
+
+    # Different image names in one fold is a different cohort.
+    renamed = tmp_path / "detection" / "images" / "val" / "plate_v1.png"
+    renamed.rename(renamed.with_name("other_plate.png"))
+    with pytest.raises(ValueError, match="cohorts differ"):
+        validate_campaign_cohort(data_yaml, store, "val")
+    renamed.with_name("other_plate.png").rename(renamed)
+
+    # A synthetic declaration must be explicit, never inferred from 'val'.
+    declaration = data_yaml.read_text(encoding="utf-8").replace("domain: real", "domain: synthetic")
+    data_yaml.write_text(declaration, encoding="utf-8")
+    with pytest.raises(ValueError, match="must declare domain: real"):
+        validate_campaign_cohort(data_yaml, store, "val")
 
 
 def test_the_campaign_requires_a_root_and_a_dataset_for_each_family(

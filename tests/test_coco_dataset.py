@@ -91,7 +91,10 @@ def _build_export(
         annotations.append(annotation)
 
     export = {
-        "info": {"description": "CVAT export of the stratified first plate batch"},
+        "info": {
+            "description": "CVAT export of the stratified first plate batch",
+            "domain": "real",
+        },
         "images": images,
         "categories": [{"id": index, "name": name} for index, name in enumerate(NAMES, start=1)],
         "annotations": annotations,
@@ -182,10 +185,12 @@ def test_coco_import_emits_a_versioned_tool_output_through_the_command(
         "report.md",
     }
     report = (output / "report.md").read_text(encoding="utf-8")
-    assert "Class distribution" in report
+    # The suite pins POLYX_LOCALE=es; report prose now follows the catalog
+    # while machine tokens in the manifest stay English.
+    assert "Distribución de clases" in report
     assert "PET" in report and "LDPE" in report
     assert str(store) in report
-    assert "ten plates" in report
+    assert "diez placas" in report
 
     printed = capsys.readouterr().out
     assert str(store) in printed
@@ -328,8 +333,11 @@ def test_an_export_without_split_markers_imports_with_a_warning(
         "val": {},
         "test": {},
     }
-    titles = [finding["title"].lower() for finding in audit["findings"]]
-    assert any("validation" in title for title in titles)
+    codes = {finding["code"] for finding in audit["findings"]}
+    assert "coco_val_split_missing" in codes
+    assert all(set(finding) == {"level", "code", "parameters"} for finding in audit["findings"]), (
+        "saved audit metadata must not carry translated prose"
+    )
 
 
 def test_ambiguous_input_is_refused(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

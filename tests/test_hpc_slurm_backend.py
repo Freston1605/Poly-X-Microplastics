@@ -194,7 +194,9 @@ def test_campaign_job_runs_one_multirun_and_syncs_each_family() -> None:
     text = (ROOT / "cluster" / "campaign_job.sh").read_text(encoding="utf-8")
 
     assert "polyx.pipeline.campaign_app --multirun" in text
-    assert "family=yolo_detection,yolo_segmentation,mask_rcnn" in text
+    assert (
+        "family=yolo_detection,yolo_detection_v11,yolo_segmentation,yolo_segmentation_v11,mask_rcnn"
+    ) in text
     assert "backend=slurm" in text
     assert "sync_back --campaign" in text
     assert "POLYX_RESUME" in text
@@ -287,12 +289,17 @@ def test_campaign_sync_copies_every_family_into_its_own_directory(tmp_path: Path
     from polyx.pipeline.artifacts import ArtifactLayout
 
     root = tmp_path / "campaign"
-    families = ("yolo_detection", "yolo_segmentation", "mask_rcnn")
+    families = ("yolo_detection", "yolo_detection_v11", "mask_rcnn")
     for family in families:
         run = root / family
         layout = ArtifactLayout(run)
         layout.create()
-        (run / "config.yaml").write_text(f"family:\n  name: {family}\n", encoding="utf-8")
+        # The two detection variants share an adapter name but occupy distinct
+        # run directories; sync-back must not overwrite one with the other.
+        adapter = "yolo_detection" if family.startswith("yolo_detection") else family
+        (run / "config.yaml").write_text(
+            f"family:\n  name: {adapter}\n  run_name: {family}\n", encoding="utf-8"
+        )
         (layout.metrics).write_text('{"selection": {}}', encoding="utf-8")
         (layout.report).write_text("# report\n", encoding="utf-8")
         (run / "resolved_protocol.yaml").write_text("epochs: 1\n", encoding="utf-8")

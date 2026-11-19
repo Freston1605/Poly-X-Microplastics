@@ -74,7 +74,7 @@ def _build_export(root: Path) -> Path:
         for index, (image_id, category_id, offset) in enumerate(planned, start=1)
     ]
     export = {
-        "info": {"description": "CVAT export of the mask fixture"},
+        "info": {"description": "CVAT export of the mask fixture", "domain": "real"},
         "images": images,
         "categories": [{"id": index, "name": name} for index, name in enumerate(NAMES, start=1)],
         "annotations": annotations,
@@ -296,6 +296,25 @@ def _imported_store(tmp_path: Path) -> Path:
     return store
 
 
+def test_multipart_masks_are_rejected_instead_of_becoming_two_targets(
+    tmp_path: Path,
+) -> None:
+    """One COCO instance must remain one YOLO instance at conversion time."""
+    from polyx.pipeline.seg_conversion import convert_coco_dataset
+
+    store = _imported_store(tmp_path)
+    dataset = _read(store / "dataset.json")
+    annotation = dataset["annotations"][0]
+    annotation["segmentation"] = [
+        _square(),
+        [40.0, 8.0, 50.0, 8.0, 50.0, 18.0, 40.0, 18.0],
+    ]
+    (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="exactly one polygon ring"):
+        convert_coco_dataset(store, tmp_path / "scratch-multipart")
+
+
 def _train_segmentation(
     tmp_path: Path,
     store: Path,
@@ -379,7 +398,12 @@ def test_yolo_seg_trains_from_coco_masks_for_one_epoch(
     assert first[0].split()[0] == "0"
 
     # The adapter received the scratch declaration, not a canonical path.
-    assert _FakeYOLO.instances[-1].weights == "yolov8n-seg.pt"
+    # The first wrapper is the training model; every later one is the
+    # per-epoch validation snapshot loaded from disk.
+    assert _FakeYOLO.instances[0].weights == "yolov8n-seg.pt"
+    assert all(
+        Path(instance.weights).name.startswith("epoch_") for instance in _FakeYOLO.instances[1:]
+    )
 
     # Checkpoint selection uses the with-class score; localisation is printed
     # beside it and the best weights are the kept epoch's own file.
@@ -387,7 +411,7 @@ def test_yolo_seg_trains_from_coco_masks_for_one_epoch(
 
     printed = capsys.readouterr().out
     assert "SELECTION: with_class_score=1.000000" in printed
-    assert "CRITERION: COCO mask mAP" in printed
+    assert "CRITERION: with-class operating-point F1" in printed
     assert "LOCALISATION: 1.000000" in printed
     assert "mask IoU" in printed
     assert sha256_file(output / "checkpoints" / "best.pt") == sha256_file(
@@ -410,9 +434,10 @@ def test_mask_iou_and_map_are_reported_per_class_with_the_criterion_named(
     assert "mask" in criterion.lower() and "iou" in criterion.lower()
     # A two-pixel vertical shift of a 20x20 square: the filled rasters overlap
     # in 399 of a 483 union (the polygon boundary is inclusive on both sides),
-    # so IoU is 19/23 and the top four thresholds fail: with-class score 0.7.
+    # so IoU is 19/23. Every instance still clears the 0.50 operating point,
+    # so the with-class F1 is 1.0 even though mAP@[0.50:0.95] is 0.7.
     overlap = pytest.approx(19.0 / 23.0)
-    assert metrics["selection"]["value"] == pytest.approx(0.7)
+    assert metrics["selection"]["value"] == pytest.approx(1.0)
     assert metrics["selected_epoch"] == 0
 
     figures = metrics["figures"]
@@ -424,7 +449,7 @@ def test_mask_iou_and_map_are_reported_per_class_with_the_criterion_named(
     assert "localisation" in figures["localisation_score"]["criterion"].lower()
     assert figures["localisation_score"]["value"] == pytest.approx(1.0)
     assert figures["mask_mAP50-95"]["value"] == pytest.approx(0.7)
-    assert figures["with_class_score"]["value"] == pytest.approx(0.7)
+    assert figures["with_class_score"]["value"] == pytest.approx(1.0)
 
     per_class = metrics["per_class"]
     assert set(per_class) == set(NAMES)
@@ -560,10 +585,11 @@ def test_masks_are_matched_within_the_same_image(
 
     assert code == 0
     metrics = _read(output / "metrics.json")
-    # PET 1.0, LDPE 1.0 and the two PP truths share two predictions from one
-    # image: PP AP is 0.5 instead of the 1.0 a cross-image match would give.
+    # Three true positives, one false positive and one false negative survive
+    # image-scoped matching; the micro operating-point F1 is 0.75. A
+    # cross-image match would have hidden the duplicate and scored 1.0.
     assert metrics["figures"]["mask_iou"]["value"] == pytest.approx(0.75)
-    assert metrics["selection"]["value"] == pytest.approx((1.0 + 0.5 + 1.0) / 3)
+    assert metrics["selection"]["value"] == pytest.approx(0.75)
 
 
 def test_mask_iou_is_class_aware_like_its_criterion_says(
@@ -587,7 +613,9 @@ def test_mask_iou_is_class_aware_like_its_criterion_says(
     assert code == 0
     metrics = _read(output / "metrics.json")
     assert metrics["selection"]["value"] == pytest.approx(0.0)
-    assert metrics["figures"]["localisation_score"]["value"] == pytest.approx(1.0)
+    # The core definition keeps a misclassified box out of both criteria's
+    # true-positive numerator; localisation cannot claim it either.
+    assert metrics["figures"]["localisation_score"]["value"] == pytest.approx(0.0)
     assert metrics["figures"]["mask_iou"]["value"] == pytest.approx(0.0)
     assert "class-aware" in metrics["figures"]["mask_iou"]["criterion"]
     for name, class_figures in metrics["per_class"].items():

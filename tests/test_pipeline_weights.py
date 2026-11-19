@@ -118,7 +118,7 @@ def test_a_staged_verified_weight_is_the_one_the_framework_receives(
     assert code == 0
     from tests.test_pipeline_local_tracer import _FakeYOLO
 
-    assert _FakeYOLO.instances[-1].weights == str(staged.resolve())
+    assert _FakeYOLO.instances[0].weights == str(staged.resolve())
     state = _read(output / "training_state.json")
     assert state["weights_verified"] is True
     assert state["weights"] == str(staged.resolve())

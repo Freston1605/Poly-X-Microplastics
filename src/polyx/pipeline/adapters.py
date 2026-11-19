@@ -22,6 +22,7 @@ from typing import Any
 
 import numpy as np
 
+from polyx.core.editing import MIN_SIDE_PX
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
@@ -549,6 +550,12 @@ class _CocoMaskTorchvisionDataset:
             labels.append(category + 1)
 
         rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
+        # Ultralytics filters boxes after resizing to the protocol's input
+        # size. Measure the same geometry here so a benchmark never trains one
+        # family on instances the other one dropped.
+        scale = self.protocol.image_size / max(1, height, width)
+        resized = [[value * scale for value in box] for box in boxes]
+        boxes, masks, labels = _filter_tiny_instances(boxes, masks, labels, measured_boxes=resized)
         tensor = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1))).float() / 255.0
         areas = [max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1]) for box in boxes]
         target = {
@@ -621,6 +628,69 @@ def _image_target_pairs(batch: list[tuple[Any, dict[str, Any]]]) -> tuple[list[A
     return images, targets
 
 
+def _filter_tiny_instances(
+    boxes: list[list[float]],
+    masks: list[np.ndarray],
+    labels: list[int],
+    *,
+    measured_boxes: list[list[float]] | None = None,
+) -> tuple[list[list[float]], list[np.ndarray], list[int]]:
+    """Apply the YOLO loader's small-box rule to the torchvision sibling.
+
+    Ultralytics' random-perspective loader drops boxes whose resized side is
+    not greater than ``MIN_SIDE_PX``. The benchmark declares no geometric
+    transforms, but that filter still applies after the resize; without the
+    same rule the two families would train on different instance sets and the
+    model would no longer be the only variable. The thresholds mirror
+    Ultralytics' ``box_candidates`` (wh > 2, aspect < 100).
+    """
+    kept_boxes: list[list[float]] = []
+    kept_masks: list[np.ndarray] = []
+    kept_labels: list[int] = []
+    geometry = measured_boxes if measured_boxes is not None else boxes
+    for box, measured, mask, label in zip(boxes, geometry, masks, labels, strict=True):
+        width = measured[2] - measured[0]
+        height = measured[3] - measured[1]
+        if width <= MIN_SIDE_PX or height <= MIN_SIDE_PX:
+            continue
+        if max(width, height) / max(1e-12, min(width, height)) >= 100.0:
+            continue
+        kept_boxes.append(box)
+        kept_masks.append(mask)
+        kept_labels.append(label)
+    return kept_boxes, kept_masks, kept_labels
+
+
+def _validation_predictions(
+    checkpoint: Path,
+    config: ExecutionConfig,
+    dataset: PreparedDataset,
+    device: str,
+    convert: Callable[[list[Any]], list[dict]],
+) -> list[dict]:
+    """Score a fresh inference model loaded from this epoch's snapshot.
+
+    Ultralytics' predictor fuses and freezes the network it is handed. Giving
+    it Lightning's live network makes the next backward pass fail, so each
+    epoch validates a separate wrapper created from the immutable checkpoint
+    written immediately before this call. The copy is loaded from disk, so it
+    shares no parameters with the model being trained.
+    """
+    from ultralytics import YOLO
+
+    snapshot = YOLO(str(checkpoint))
+    images = split_images(dataset.data_yaml, config.protocol.split)
+    raw = snapshot.predict(
+        source=[str(image) for image in images],
+        imgsz=config.protocol.image_size,
+        batch=config.protocol.batch,
+        conf=config.protocol.confidence,
+        device=device,
+        verbose=False,
+    )
+    return convert(list(raw) if isinstance(raw, (list, tuple)) else [raw])
+
+
 class _UltralyticsAdapter(_CocoMaskAdapter):
     """Shared Ultralytics wrapper: one Lightning module, two label currencies."""
 
@@ -680,7 +750,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         resume_dir = checkpoint_dir / "lightning"
         resume_dir.mkdir(parents=True, exist_ok=True)
-        lightning_checkpoint = resume_dir / "last.ckpt"
         predict = self._predictions
 
         class _YoloLightningModule(LightningModule):  # type: ignore[misc,valid-type]
@@ -753,19 +822,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                 }
 
             def on_train_epoch_end(self) -> None:
-                # One inference pass produces the COCO predictions the shared
-                # evaluator scores; the shared evaluator is the only authority,
-                # so Ultralytics' own validation is not run a second time and
-                # its discarded metrics are not presented as a cross-check.
-                images = split_images(dataset.data_yaml, protocol.split)
-                raw = model.predict(
-                    source=[str(image) for image in images],
-                    imgsz=protocol.image_size,
-                    batch=protocol.batch,
-                    device=device,
-                )
-                results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
-                self.coco_predictions = predict(results)
                 epoch = int(getattr(self, "current_epoch", 0))
                 self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
                 if architecture_only:
@@ -777,14 +833,23 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
                     torch.save({"model": model.model}, self.checkpoint_path)
                 else:
                     model.save(str(self.checkpoint_path))
+                # Validation runs on a fresh model loaded from this immutable
+                # snapshot. Ultralytics fuses and freezes whatever network it
+                # predicts with, so using the live training module would break
+                # the next backward pass. The shared evaluator remains the only
+                # scorer; no second Ultralytics validation is run.
+                self.coco_predictions = _validation_predictions(
+                    self.checkpoint_path, config, dataset, device, predict
+                )
                 # A real Lightning checkpoint carries the weights, optimizer,
-                # scheduler and epoch progress; the family-native export above
-                # stays for compatibility and best-weight restoration.
+                # scheduler and epoch progress. One file per epoch is published
+                # before the progress record points at it, so a preemption can
+                # never pair a new checkpoint with an older progress record.
                 resume_checkpoint: Path | None = None
                 current_trainer = getattr(self, "trainer", None)
                 if current_trainer is not None:
-                    current_trainer.save_checkpoint(str(lightning_checkpoint))
-                    resume_checkpoint = lightning_checkpoint
+                    resume_checkpoint = resume_dir / f"checkpoint_{epoch:03d}.ckpt"
+                    current_trainer.save_checkpoint(str(resume_checkpoint))
                 # The engine scores this epoch and decides whether to stop.
                 # Setting ``trainer.should_stop`` ends the loop after this
                 # epoch; the registered callback is the same decision for the
@@ -896,7 +961,6 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         resume_dir = checkpoint_dir / "lightning"
         resume_dir.mkdir(parents=True, exist_ok=True)
-        lightning_checkpoint = resume_dir / "last.ckpt"
         store = Path(dataset.source_path)
 
         class _MaskRcnnLightningModule(LightningModule):  # type: ignore[misc,valid-type]
@@ -980,8 +1044,8 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                 resume_checkpoint: Path | None = None
                 current_trainer = getattr(self, "trainer", None)
                 if current_trainer is not None:
-                    current_trainer.save_checkpoint(str(lightning_checkpoint))
-                    resume_checkpoint = lightning_checkpoint
+                    resume_checkpoint = resume_dir / f"checkpoint_{epoch:03d}.ckpt"
+                    current_trainer.save_checkpoint(str(resume_checkpoint))
                 result = EpochResult(
                     epoch=epoch,
                     predictions=list(self.coco_predictions),

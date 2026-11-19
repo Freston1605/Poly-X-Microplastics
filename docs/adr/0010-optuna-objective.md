@@ -11,8 +11,10 @@ If optimization introduced its own scoring routine, the tuned models would be
 selected by a different methodology from the benchmark's reported figures, and
 the comparison would no longer be fair. The pipeline already has one shared
 evaluator (ADR-0007): it consumes COCO predictions, names its criterion and
-selects on the with-class score on the real-domain validation split while
-reporting localisation alongside. Hyperparameter search must reuse that number.
+selects on the with-class operating-point F1 at one confidence and IoU
+threshold on the real-domain validation split, reporting localisation
+alongside. COCO AP is a ranking figure and is never the objective.
+Hyperparameter search must reuse that number.
 
 Hydra composes configuration and its Optuna sweeper plugin owns the trial loop;
 hand-rolling a search would duplicate code the plugin already provides. Cluster

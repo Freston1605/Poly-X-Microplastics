@@ -17,6 +17,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from polyx.core.i18n import _
 from polyx.core.provenance import sha256_file
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks
 from polyx.pipeline.artifacts import write_json
@@ -332,7 +333,11 @@ def audit_as_dict(audit: DatasetAudit) -> dict[str, Any]:
         "per_class": {split: dict(counts) for split, counts in audit.per_class.items()},
         "box_area_median": dict(audit.box_area_median),
         "findings": [
-            {"level": item.level, "title": item.title, "detail": item.detail}
+            {
+                "level": item.level,
+                "code": item.code,
+                "parameters": item.parameters,
+            }
             for item in audit.findings
         ],
     }
@@ -343,22 +348,37 @@ def write_import_report(
 ) -> None:
     """The command-facing report: distribution, store location and audit."""
     lines = [
-        "# COCO segmentation dataset import",
+        f"# {_('COCO segmentation dataset import')}",
         "",
-        f"- Dataset: {manifest['name']}",
-        f"- Version: {manifest['version']}",
-        f"- Canonical tool output: {store}",
-        f"- Source: {manifest['source_tool']} COCO instances export",
-        f"- Source JSON: {manifest['source_export']}",
-        f"- Ground-truth policy: {manifest['ground_truth']['policy']}",
+        f"- {_('Dataset')}: {manifest['name']}",
+        f"- {_('Version')}: {manifest['version']}",
+        f"- {_('Canonical tool output')}: {store}",
+        f"- {_('Source')}: {manifest['source_tool']} COCO instances export",
+        f"- {_('Source JSON')}: {manifest['source_export']}",
+        f"- {_('Ground-truth policy')}: {manifest['ground_truth']['policy']}",
         "",
-        "## Class distribution",
+        f"## {_('Class distribution')}",
         "",
     ]
     for split, counts in manifest["class_distribution"].items():
         rendered = ", ".join(f"{name}={count}" for name, count in counts.items())
         lines.append(f"- {split}: {rendered}")
-    lines.extend(["", "## First stratified batch", "", FIRST_BATCH_TARGET, "", "## Audit", ""])
+    lines.extend(
+        [
+            "",
+            f"## {_('First stratified batch')}",
+            "",
+            _(
+                "A first stratified batch of roughly ten plates, spanning every study class "
+                "(PET, PP and LDPE) and the imaging domains represented in the study, so each "
+                "class appears in both the training and validation folds before a larger "
+                "annotation effort is committed."
+            ),
+            "",
+            f"## {_('Audit')}",
+            "",
+        ]
+    )
     lines.append(f"- ok: {str(audit.ok).lower()}")
     lines.extend(f"- {finding.level}: {finding.title}" for finding in audit.findings)
     lines.append("")

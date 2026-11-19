@@ -64,6 +64,60 @@ def split_images(data_yaml: Path, split: str) -> list[Path]:
     return find_images(directory)
 
 
+def _is_real_domain(declaration: Any) -> bool:
+    """Whether an explicit dataset declaration names real-domain imagery."""
+    if not isinstance(declaration, dict):
+        return False
+    for key in ("domain", "validation_domain", "image_domain"):
+        if str(declaration.get(key, "")).strip().lower() in {"real", "real_domain"}:
+            return True
+    info = declaration.get("info")
+    return _is_real_domain(info) if isinstance(info, dict) else False
+
+
+def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) -> dict[str, Any]:
+    """Prove the two campaign sources describe the same real-domain cohort.
+
+    A benchmark may carry a YOLO box dataset and a COCO mask dataset so the
+    detection and segmentation families each consume the source they need.
+    Sharing a protocol is not enough: if those two sources hold different
+    images or different folds, the model is no longer the only variable. Both
+    must declare real-domain imagery as well; a synthetic validation fold
+    cannot support a paper-quality comparison.
+    """
+    declaration = read_data_yaml(data_yaml)
+    coco = read_coco_store(coco_dataset)
+    if not _is_real_domain(declaration):
+        raise ValueError(
+            f"{data_yaml} must declare domain: real (or validation_domain: real) "
+            "for a benchmark campaign"
+        )
+    if not _is_real_domain(coco):
+        raise ValueError(
+            f"{coco_dataset / 'dataset.json'} must declare info.domain: real "
+            "for a benchmark campaign"
+        )
+    signature: dict[str, list[str]] = {}
+    for name in ("train", "val", "test"):
+        boxes = sorted(path.name for path in split_images(data_yaml, name))
+        masks = sorted(
+            Path(str(image["file_name"])).name for image in split_coco_images(coco, name)
+        )
+        if boxes != masks:
+            raise ValueError(
+                f"the {name} cohorts differ between {data_yaml} and {coco_dataset}: "
+                f"boxes={boxes} masks={masks}"
+            )
+        if boxes:
+            signature[name] = boxes
+    if split not in signature:
+        raise ValueError(
+            f"the benchmark split '{split}' has no images in either dataset; "
+            f"available splits: {sorted(signature)}"
+        )
+    return {"split": split, "images": signature, "domain": "real"}
+
+
 def coco_ground_truth(data_yaml: Path, split: str) -> dict[str, Any]:
     """COCO instance view of the split's YOLO box labels."""
     data = read_data_yaml(data_yaml)

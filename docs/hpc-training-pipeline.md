@@ -2,11 +2,11 @@
 
 The pipeline is a headless path parallel to the shipped GUI Trainer. It does
 not change the Trainer or its native training wrapper. This page describes the
-local backend and the per-family executions: one YOLO detection training
-execution and two segmentation executions — YOLO-seg and Mask R-CNN — sharing
-one protocol, one Lightning loop, one evaluator and one artifact layout. The
-three families can also run as one multirun campaign; the cluster procedure is
-in [hpc.md](hpc.md).
+local backend and the per-family executions: YOLO detection and YOLO-seg in
+both v8 and v11 variants, plus Mask R-CNN — all sharing one protocol, one
+Lightning loop, one evaluator and one artifact layout. The five variants can
+also run as one multirun campaign; the cluster procedure is in
+[hpc.md](hpc.md).
 
 ## Running one execution
 
@@ -71,8 +71,9 @@ proven by `tests/test_pipeline_campaign.py`.
 - `family` — which adapter executes the protocol. `yolo_detection` wraps the
   Ultralytics YOLO detection model in one Lightning module; `yolo_segmentation`
   wraps the segmentation model the same way; `mask_rcnn` is the sibling
-  non-Ultralytics adapter built on torchvision. The task is a config value,
-  never a code edit.
+  non-Ultralytics adapter built on torchvision. The `_v11` configs share the
+  same adapters and differ only in staged weights and `run_name`. The task is a
+  config value, never a code edit.
 - `scratch_dir` — ephemeral cache root for per-family conversion. It defaults
   to `$POLYX_HPC_SCRATCH/polyx/pipeline`, or the system temporary directory
   when the cluster variable is absent. Nothing written there is an artifact.
@@ -121,7 +122,7 @@ report.md              # human-readable summary, criteria included
 logs/training.log      # plain-text execution log
 checkpoints/best.pt    # best weights, selected by the with-class score
 checkpoints/epoch_NNN.pt # one family-native export per epoch
-checkpoints/lightning/last.ckpt # real Lightning checkpoint: weights, optimizer, scheduler, epoch
+checkpoints/lightning/checkpoint_NNN.ckpt # immutable per-epoch Lightning state
 ```
 
 `provenance.json` always names the dataset source (`yolo_boxes` or
@@ -141,12 +142,17 @@ Every figure names its criterion, and the criterion names the overlap it used:
 
 The figures are the same shape for both families:
 
-- `with_class_score` — class-aware mAP@[0.50:0.95]: an instance counts only
-  when the polymer identity is correct. This is the selection metric, and the
-  checkpoint with the best value is the one kept as `best.pt`.
-- `localisation_score` — class-agnostic AP@0.50: whether the particle was
-  found, reported beside the selection score.
-- `mAP50` and `mAP50-95` — class-aware averages with their thresholds named.
+- `with_class_score` — class-aware operating-point F1 at the protocol's
+  `confidence` (default 0.25) and 0.50 box/mask IoU. It reuses the project's
+  `Criterion`/`Score` definition: a well-placed box of the wrong polymer is a
+  false positive of the predicted class and a false negative of the true one.
+  This is the selection metric, and the checkpoint with the best value is the
+  one kept as `best.pt`. The threshold and IoU rule are recorded beside it.
+- `localisation_score` — the same operating-point F1 with the class ignored,
+  reported beside the selection score.
+- `mAP50` and `mAP50-95` — COCO interpolated average precision, class-aware.
+  These rank predictions by confidence; they are reported separately and never
+  used to select a checkpoint or to drive Optuna.
 - `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
   best mask IoU per ground-truth instance and the mask mAP figures.
 
@@ -199,7 +205,12 @@ polygons are converted to the family's folder contract (`images/<split>`,
 `labels/<split>` with YOLO-seg polygon lines, `data.yaml`) at job time, and
 cached under `scratch_dir/seg_datasets/<cache key>`. The key is the SHA-256 of
 the canonical `dataset.json`, so a second execution over the same dataset
-reuses the cache and a different dataset cannot pick up stale labels.
+reuses the cache and a different dataset cannot pick up stale labels. Each
+COCO annotation must have exactly one polygon ring: YOLO-seg would otherwise
+turn a multi-part particle into several training instances while Mask R-CNN
+keeps it as one. Such an export is refused before training, with an actionable
+error asking for one annotation per part or a single exterior polygon. Label
+destinations come from the project's label codec, not from a re-derived path.
 
 ```bash
 polyx-pipeline \
@@ -286,13 +297,20 @@ shared evaluator already consumes.
 
 At the end of every epoch each adapter writes two kinds of checkpoint. The
 family-native export (`epoch_NNN.pt`, and `best.pt` restored from it) keeps its
-historical shape for compatibility. `checkpoints/lightning/last.ckpt` is a real
-Lightning checkpoint written by `Trainer.save_checkpoint`: it carries the
-weights, optimizer, scheduler and epoch progress, and it is the file a resumed
-execution hands to `Trainer.fit(ckpt_path=...)`. An Ultralytics `.pt` is not a
-Lightning checkpoint and is never used for resume. If a progress snapshot has
-no Lightning checkpoint (one written before this behaviour existed), the
-execution refuses to resume instead of silently restarting the epoch loop.
+historical shape for compatibility. Each epoch also writes its own
+`checkpoints/lightning/checkpoint_NNN.ckpt` with `Trainer.save_checkpoint`: it
+carries the weights, optimizer, scheduler and epoch progress, and the progress
+snapshot is published atomically only after that checkpoint exists. A
+preemption therefore restores a matched pair, never new weights with older
+selection bookkeeping. An Ultralytics `.pt` is not a Lightning checkpoint and
+is never used for resume. If a progress snapshot has no Lightning checkpoint
+(one written before this behaviour existed), the execution refuses to resume
+instead of silently restarting the epoch loop.
+
+Validation loads a fresh inference wrapper from that epoch's immutable native
+checkpoint. Ultralytics' predictor fuses and freezes the network it is handed,
+so scoring with the live training module would break the next backward pass;
+the two-epoch real-framework test guards this.
 
 On a machine without a GPU, Lightning substitutes `bf16-mixed` for the requested
 `16-mixed`. `training_state.json` records `amp_requested` (`16-mixed`) next to
@@ -320,12 +338,15 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
 ```
 
 - `output_dir` is the sweep root; it is required and is not a trial directory.
-- The study is `sqlite:///$POLYX_HPC_WORK/studies/polyx-optuna.db`, or under the
-  sweep root when the work variable is unset. It is never on scratch, and a
-  resumed multirun extends the same study instead of creating a new one.
+- The study file derives from `hydra.sweeper.study_name`, so overriding only the
+  name also moves the SQLite file; `sweep_best` resolves the same path. It is
+  never on scratch, and a resumed multirun extends the same study.
 - Each trial writes a normal execution under
-  `<output_dir>/trials/trial_<number>`. The number is the study's running trial,
-  so a resumed invocation cannot overwrite an earlier trial's directory.
+  `<output_dir>/trials/trial_<number>`. The number is matched from the study's
+  running trials and the sampled parameters, not from Hydra's resettable job
+  index; a preemption leaves a `RUNNING` zombie, and the next submission picks
+  the new trial. `<output_dir>/trials/index.json` maps trial numbers to the
+  exact directories written, so `sweep_best` never has to guess by parameters.
 - The search space lives in `hydra.sweeper.params` and may only touch protocol
   hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
   The sampler is a TPE seeded from the protocol, direction `maximize` and no

@@ -18,17 +18,7 @@ import optuna
 import pytest
 import yaml
 
-from tests.test_pipeline_local_tracer import (
-    _boxes_prediction,
-    _install_fakes,
-    build_tiny_dataset,
-)
-
-
-@pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
-    """The suite's tiny YOLO box dataset."""
-    return build_tiny_dataset(tmp_path / "dataset")
+from tests.test_pipeline_local_tracer import _boxes_prediction, _install_fakes
 
 
 @pytest.fixture
@@ -130,6 +120,39 @@ def test_the_real_sweeper_writes_a_sqlite_study_and_one_directory_per_trial(
         ]["criterion"]
     )
     assert Path(best["best_output_dir"]).is_dir()
+
+
+def test_a_preempted_trial_does_not_reuse_a_completed_trial_directory(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    work_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A RUNNING zombie must not make the resubmitted job write trial_000."""
+    output = work_env / "experiments" / "preempted"
+    study_path = work_env / "studies" / "polyx-optuna.db"
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=2)
+    completed = {
+        path.name: (path / "metrics.json").read_bytes()
+        for path in (output / "trials").glob("trial_*")
+    }
+
+    # A time limit killed a trial after Optuna had stored it as RUNNING.
+    study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
+    study.ask()
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
+
+    for name, payload in completed.items():
+        assert (output / "trials" / name / "metrics.json").read_bytes() == payload
+    final_study = optuna.load_study(study_name="polyx-optuna", storage=f"sqlite:///{study_path}")
+    last_number = max(trial.number for trial in final_study.trials)
+    assert last_number == 3  # trial 2 is the zombie, trial 3 is the new job
+    assert (output / "trials" / f"trial_{last_number:03d}" / "metrics.json").is_file()
+    index = json.loads((output / "trials" / "index.json").read_text(encoding="utf-8"))
+    assert str(last_number) in index
 
 
 def test_a_resumed_multirun_reuses_the_study_and_never_overwrites_a_trial(

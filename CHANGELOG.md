@@ -9,10 +9,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - **Headless, model-agnostic training pipeline (`polyx-pipeline`).** A new
   parallel path beside the GUI Trainer composes `conf/` with Hydra and trains
-  YOLO detection, YOLO-seg and torchvision Mask R-CNN through one PyTorch
-  Lightning loop under one framework-neutral protocol. It ships a shared COCO
-  evaluator whose figures always name the criterion, best-weight selection by
-  the with-class score, resumable progress snapshots and real Lightning
+  YOLO v8/v11 detection and segmentation and torchvision Mask R-CNN through one
+  PyTorch Lightning loop under one framework-neutral protocol. It ships a shared
+  COCO evaluator whose figures always name the criterion, best-weight selection
+  by the with-class operating-point F1, resumable progress snapshots and real Lightning
   checkpoints, a COCO mask import/conversion path (machine masks are never
   ground truth), an Optuna sweeper multirun with a SQLite study on the work
   filesystem and a `sweep_best.json` artifact, hash-verified weights resolved
@@ -25,6 +25,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lint failure reports in seconds instead of after the gate's suite.
 - `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
   a hook that was never installed locally still fails the PR.
+
+### Fixed
+- **HPC pipeline review fixes.** YOLO validation now scores a fresh snapshot
+  model instead of fusing and freezing the live training network, so training
+  continues past the first epoch; GPU result tensors are converted to CPU
+  before NumPy. Checkpoint selection and Optuna now reuse the project's
+  with-class operating-point F1 (with recorded confidence and IoU), while COCO
+  AP is reported separately. Per-epoch immutable Lightning checkpoints and
+  atomic progress records keep preempted resumes consistent; preempted Optuna
+  trials no longer overwrite completed trial directories. Campaign jobs cover
+  v8 and v11 detection and segmentation, verify a shared real-domain cohort,
+  keep one instance per COCO mask annotation, and sync variants by `run_name`.
+  Saved audit findings are stable codes, CLI/report prose is translated, and
+  container builds stamp the source commit into provenance.
 
 ### Changed
 - **Per-image calibration index for crops without a visible dish.** A new

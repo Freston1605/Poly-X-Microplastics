@@ -2,27 +2,34 @@
 
 It consumes COCO-format predictions and the COCO instance view of the
 validation split, so a detector and a segmenter are scored by the same
-arithmetic. Every figure it emits carries the criterion that produced it:
-localisation asks only whether the object was found, while the with-class
-score also requires the polymer identity. Selection always uses the with-class
-score; localisation is reported next to it, never instead of it.
+arithmetic. Two different questions are kept apart:
 
-A segmentation family adds a second currency: overlap is measured as mask IoU
-between rasterized polygons, and the criterion names that explicitly. A
-detection family keeps box IoU. Overlap is only computed between a prediction
-and a ground-truth instance of the same image and the same category, so
-identical geometry in another image or under another polymer is a false
-positive rather than a match.
+* average precision (COCO AP) rewards the ranking of all predictions;
+* the operating-point F1 at one confidence threshold is the quantity used to
+  select checkpoints and to drive Optuna.
+
+The second one reuses the project's ``Criterion``/``Score`` definition through
+``Score.from_counts``: a well-placed box of the wrong polymer is a false
+positive of the predicted class and a false negative of the true one. Every
+figure names the overlap, the criterion and the split it was computed on.
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 
 import cv2
 import numpy as np
 
+from polyx.core.detect.protocol import Instance
+from polyx.core.detection_run.operating_point import Criterion, Score
+from polyx.core.quality.metrics import match_image
+
+#: Ten IoU points, the threshold range used by COCO's mAP@[0.50:0.95].
 _IOU_THRESHOLDS = [0.50 + 0.05 * index for index in range(10)]
+#: One match rule for every family. Recorded beside every score.
+_OPERATING_IOU = 0.50
 
 
 def _box_iou(first: list[float], second: list[float]) -> float:
@@ -75,13 +82,13 @@ def _prepare(items: list[dict], sizes: dict[int, tuple[int, int]], task: str) ->
     """Copy the items and attach the rasterized mask a segmenter compares."""
     prepared: list[dict] = []
     for item in items:
-        copy = dict(item)
+        copied = dict(item)
         if task == "segment":
-            size = sizes.get(int(copy.get("image_id", -1)))
-            copy["_mask"] = (
-                rasterize_segmentation(copy.get("segmentation"), *size) if size else None
+            size = sizes.get(int(copied.get("image_id", -1)))
+            copied["_mask"] = (
+                rasterize_segmentation(copied.get("segmentation"), *size) if size else None
             )
-        prepared.append(copy)
+        prepared.append(copied)
     return prepared
 
 
@@ -99,16 +106,13 @@ def _same_image(prediction: dict, truth: dict) -> bool:
     return int(prediction.get("image_id", -1)) == int(truth.get("image_id", -2))
 
 
-def _ap_at_iou(
+def _ranked_matches(
     predictions: list[dict], ground_truth: list[dict], threshold: float, task: str
-) -> float:
-    """Average precision for one category at one IoU threshold."""
-    if not ground_truth:
-        return 0.0
+) -> list[bool]:
+    """Greedy, score-ordered matches: whether each prediction found a truth."""
     used: set[int] = set()
-    precision_points: list[float] = []
-    ordered = sorted(predictions, key=lambda item: -float(item.get("score", 0.0)))
-    for rank, prediction in enumerate(ordered, start=1):
+    matches: list[bool] = []
+    for prediction in sorted(predictions, key=lambda item: -float(item.get("score", 0.0))):
         best_iou = 0.0
         best_index = -1
         for index, truth in enumerate(ground_truth):
@@ -118,15 +122,49 @@ def _ap_at_iou(
             if value > best_iou:
                 best_iou = value
                 best_index = index
-        if best_index >= 0 and best_iou >= threshold:
+        found = best_index >= 0 and best_iou >= threshold
+        if found:
             used.add(best_index)
-            precision_points.append(len(used) / rank)
-        else:
-            precision_points.append(0.0)
-    hits = sum(1 for point in precision_points if point > 0)
-    if hits == 0:
+        matches.append(found)
+    return matches
+
+
+def _ap_at_iou(
+    predictions: list[dict], ground_truth: list[dict], threshold: float, task: str
+) -> float:
+    """COCO-style 101-point interpolated AP for one category at one IoU.
+
+    Interpolation matters: a late low-score false positive must not erase the
+    precision already achieved at a lower recall. Summing precision only at
+    the ranks where a match happened, as an earlier version did, produced a
+    number that was neither COCO AP nor thresholded F1.
+    """
+    total = len(ground_truth)
+    if not total:
         return 0.0
-    return sum(point for point in precision_points if point > 0) / len(ground_truth)
+    matches = _ranked_matches(predictions, ground_truth, threshold, task)
+    recalls: list[float] = []
+    precisions: list[float] = []
+    hits = 0
+    for rank, found in enumerate(matches, start=1):
+        if found:
+            hits += 1
+        recalls.append(hits / total)
+        precisions.append(hits / rank)
+    # Step-wise interpolation: precision at recall r is the best precision
+    # achieved at any recall >= r.
+    for index in range(len(precisions) - 2, -1, -1):
+        precisions[index] = max(precisions[index], precisions[index + 1])
+    return sum(_precision_at(recalls, precisions, point / 100) for point in range(101)) / 101
+
+
+def _precision_at(recalls: list[float], precisions: list[float], target: float) -> float:
+    """Interpolated precision at one recall point."""
+    best = 0.0
+    for recall, precision in zip(recalls, precisions, strict=True):
+        if recall >= target:
+            best = max(best, precision)
+    return best
 
 
 def _map(
@@ -135,6 +173,66 @@ def _map(
     return sum(
         _ap_at_iou(predictions, ground_truth, threshold, task) for threshold in thresholds
     ) / len(thresholds)
+
+
+def _instance(item: dict) -> Instance:
+    """The canonical instance type the core matcher and scorer consume."""
+    x, y, width, height = (float(value) for value in item["bbox"])
+    return Instance(
+        class_id=int(item["category_id"]),
+        class_name=str(item.get("category_id", item["category_id"])),
+        conf=float(item.get("score", 1.0)),
+        x1=x,
+        y1=y,
+        x2=x + width,
+        y2=y + height,
+        mask=item.get("_mask"),
+    )
+
+
+def _operating_score(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    task: str,
+    criterion: Criterion,
+    confidence_threshold: float,
+    *,
+    category: int | None = None,
+) -> Score:
+    """Score one fixed operating point with the project's one F1 definition."""
+    selected_predictions = predictions
+    selected_truths = ground_truth
+    if category is not None:
+        selected_predictions = [
+            item for item in predictions if int(item["category_id"]) == category
+        ]
+        selected_truths = [item for item in ground_truth if int(item["category_id"]) == category]
+    by_image: dict[int, tuple[list[Instance], list[Instance]]] = defaultdict(lambda: ([], []))
+    for item in selected_predictions:
+        by_image[int(item.get("image_id", -1))][0].append(_instance(item))
+    for item in selected_truths:
+        by_image[int(item.get("image_id", -1))][1].append(_instance(item))
+
+    tp = fp = fn = miscls = 0
+    for predicted, truths in by_image.values():
+        match = match_image(
+            predicted,
+            truths,
+            iou_thr=_OPERATING_IOU,
+            use_mask_iou=task == "segment",
+        )
+        tp += match.tp
+        fp += match.fp
+        fn += match.fn
+        miscls += match.miscls
+    return Score.from_counts(
+        criterion,
+        confidence_threshold,
+        tp=tp,
+        fp=fp,
+        fn=fn,
+        miscls=miscls,
+    )
 
 
 def _best_iou(predictions: list[dict], truth: dict, task: str) -> float:
@@ -164,21 +262,38 @@ def _mean_best_iou(predictions: list[dict], truths: list[dict], task: str) -> fl
 class SharedEvaluator:
     """Scores COCO predictions against one frozen COCO ground truth."""
 
-    def __init__(self, ground_truth: dict, split: str = "val", task: str = "detect") -> None:
+    def __init__(
+        self,
+        ground_truth: dict,
+        split: str = "val",
+        task: str = "detect",
+        *,
+        confidence_threshold: float = 0.25,
+    ) -> None:
         if task not in ("detect", "segment"):
             raise ValueError(f"unknown evaluation task: {task}")
         self.ground_truth = ground_truth
         self.split = split
         self.task = task
+        self.confidence_threshold = float(confidence_threshold)
         overlap = "mask IoU" if task == "segment" else "box IoU"
         metric = "mask " if task == "segment" else ""
+        operating = (
+            f"with-class operating-point F1 (confidence >= {self.confidence_threshold:.2f}, "
+            f"{overlap} >= {_OPERATING_IOU:.2f})"
+        )
         self.class_criterion = (
-            f"COCO {metric}mAP@[0.50:0.95] ({overlap}), class-aware, real-domain "
-            f"validation split '{split}' (category id must match)"
+            f"{operating}, class-aware, real-domain validation split '{split}' "
+            "(category id must match)"
         )
         self.localisation_criterion = (
-            f"COCO {metric}AP@0.50 ({overlap}), class-agnostic, real-domain "
+            f"localisation operating-point F1 (confidence >= {self.confidence_threshold:.2f}, "
+            f"{overlap} >= {_OPERATING_IOU:.2f}), class-agnostic, real-domain "
             f"validation split '{split}' (localisation only)"
+        )
+        self.map_criterion = (
+            f"COCO {metric}mAP@[0.50:0.95] ({overlap}), class-aware, "
+            f"real-domain validation split '{split}'"
         )
         self._sizes = {
             int(image["id"]): (int(image["width"]), int(image["height"]))
@@ -225,9 +340,23 @@ class SharedEvaluator:
     ) -> dict:
         """Return named figures, per-class figures and the selection criterion."""
         prepared = self._prepare(predictions)
-        with_class = self._score(prepared, class_aware=True, thresholds=_IOU_THRESHOLDS)
-        localisation = self._score(prepared, class_aware=False, thresholds=[0.50])
+        with_class = _operating_score(
+            prepared,
+            self._truths,
+            self.task,
+            Criterion.WITH_CLASS,
+            self.confidence_threshold,
+        ).f1
+        localisation = _operating_score(
+            prepared,
+            self._truths,
+            self.task,
+            Criterion.LOCALISATION,
+            self.confidence_threshold,
+        ).f1
         map50 = self._score(prepared, class_aware=True, thresholds=[0.50])
+        map5095 = self._score(prepared, class_aware=True, thresholds=_IOU_THRESHOLDS)
+        metric = "mask " if self.task == "segment" else ""
         figures: dict[str, dict[str, Any]] = {
             "with_class_score": {"value": with_class, "criterion": self.class_criterion},
             "localisation_score": {
@@ -237,11 +366,11 @@ class SharedEvaluator:
             "mAP50": {
                 "value": map50,
                 "criterion": (
-                    f"COCO {'mask ' if self.task == 'segment' else ''}AP@0.50, "
-                    f"class-aware, real-domain validation split '{self.split}'"
+                    f"COCO {metric}AP@0.50, class-aware, real-domain validation split "
+                    f"'{self.split}'"
                 ),
             },
-            "mAP50-95": {"value": with_class, "criterion": self.class_criterion},
+            "mAP50-95": {"value": map5095, "criterion": self.map_criterion},
         }
 
         predicted = self._grouped(prepared, class_aware=True)
@@ -264,8 +393,11 @@ class SharedEvaluator:
                 ),
             }
             figures["mask_mAP50-95"] = {
-                "value": with_class,
-                "criterion": self.class_criterion,
+                "value": map5095,
+                "criterion": (
+                    f"COCO mask mAP@[0.50:0.95] (mask IoU), class-aware, "
+                    f"real-domain validation split '{self.split}'"
+                ),
             }
 
         names = {
@@ -274,6 +406,14 @@ class SharedEvaluator:
         per_class: dict[str, dict[str, dict]] = {}
         for category in sorted(truths):
             name = names.get(category, str(category))
+            class_score = _operating_score(
+                prepared,
+                self._truths,
+                self.task,
+                Criterion.WITH_CLASS,
+                self.confidence_threshold,
+                category=category,
+            )
             class_figures: dict[str, dict[str, Any]] = {
                 "AP50": {
                     "value": _ap_at_iou(
@@ -282,12 +422,7 @@ class SharedEvaluator:
                     "criterion": f"COCO AP@0.50, class '{name}', real-domain validation split",
                 },
                 "with_class_score": {
-                    "value": _map(
-                        predicted.get(category, []),
-                        truths[category],
-                        _IOU_THRESHOLDS,
-                        self.task,
-                    ),
+                    "value": class_score.f1,
                     "criterion": f"{self.class_criterion}; class '{name}'",
                 },
             }
@@ -319,7 +454,10 @@ class SharedEvaluator:
             "selection": {
                 "metric": "with_class_score",
                 "criterion": self.class_criterion,
+                "criterion_name": Criterion.WITH_CLASS.value,
                 "value": with_class,
+                "confidence_threshold": self.confidence_threshold,
+                "iou_threshold": _OPERATING_IOU,
             },
         }
         if adapter_figures:

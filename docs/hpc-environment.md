@@ -40,7 +40,9 @@ the lockfile in one stage and installs from it with `--no-index` in the runtime
 stage. Build and run it locally with Podman:
 
 ```sh
-podman build -f container/Containerfile -t polyx-v100:local .
+podman build -f container/Containerfile \
+  --build-arg POLYX_SOURCE_SHA="$(git rev-parse HEAD)" \
+  -t polyx-v100:local .
 podman run --rm --device nvidia.com/gpu=all polyx-v100:local
 ```
 
@@ -54,6 +56,7 @@ login node, where the build context contains a generated `wheelhouse/`:
 
 ```sh
 python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
+git rev-parse HEAD > source_sha.txt
 apptainer build polyx-v100.sif container/hpc.def
 apptainer exec --nv polyx-v100.sif python -m polyx.hpc.check_env
 ```

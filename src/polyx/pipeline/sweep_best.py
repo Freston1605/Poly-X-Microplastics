@@ -25,19 +25,20 @@ from typing import Any
 
 import yaml
 
+from polyx.core.i18n import _
 from polyx.pipeline.artifacts import write_json
 
 
 def main(argv: list[str] | None = None) -> int:
     """Read the finished multirun, write the best artifact and report it."""
     parser = argparse.ArgumentParser(
-        description="Write sweep_best.json from a finished Optuna multirun"
+        description=_("Write sweep_best.json from a finished Optuna multirun")
     )
-    parser.add_argument("--output-dir", required=True, help="the sweep root")
+    parser.add_argument("--output-dir", required=True, help=_("the sweep root"))
     parser.add_argument(
         "--storage",
         default="",
-        help="study storage URL or SQLite path (default: the work layout path)",
+        help=_("study storage URL or SQLite path (default: the work layout path)"),
     )
     parser.add_argument("--study-name", default="polyx-optuna")
     args = parser.parse_args(argv)
@@ -55,7 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     storage = _storage(args.storage, args.study_name, root)
     study = _load_study(args.study_name, storage)
     best_params = dict(results.get("best_params") or {})
-    best_directory = _find_best_directory(root / "trials", best_params)
+    best_number = study.best_trial.number if study is not None else None
+    best_directory = _find_best_directory(root / "trials", best_params, best_number)
     criterion = _criterion(best_directory)
     artifact: dict[str, Any] = {
         "study_name": args.study_name,
@@ -99,9 +101,24 @@ def _load_study(study_name: str, storage: str) -> Any:
         return None
 
 
-def _find_best_directory(trials: Path, best_params: dict[str, Any]) -> Path | None:
-    """The per-trial execution directory whose protocol matches the winner."""
-    if not trials.is_dir() or not best_params:
+def _find_best_directory(
+    trials: Path, best_params: dict[str, Any], best_number: int | None = None
+) -> Path | None:
+    """The winning trial's execution directory, by trial id or by parameters."""
+    if not trials.is_dir():
+        return None
+    index_path = trials / "index.json"
+    if best_number is not None and index_path.is_file():
+        try:
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            names = index.get(str(best_number)) or []
+            if names:
+                candidate = trials / str(names[-1])
+                if candidate.is_dir():
+                    return candidate
+        except (OSError, json.JSONDecodeError, AttributeError):
+            pass
+    if not best_params:
         return None
     for directory in sorted(trials.glob("trial_*")):
         config_path = directory / "config.yaml"

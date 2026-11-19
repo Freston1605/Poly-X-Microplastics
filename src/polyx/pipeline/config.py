@@ -80,6 +80,9 @@ class Protocol:
     epochs: int = 150
     batch: int = 8
     image_size: int = 1280
+    #: Confidence threshold for validation predictions and for the operating
+    #: point the shared evaluator scores. Recorded in every metrics artifact.
+    confidence: float = 0.25
     optimizer: str = "SGD"
     learning_rate: float = 0.01
     momentum: float = 0.937
@@ -167,12 +170,16 @@ def _build_protocol(raw: dict) -> Protocol:
     probability = float(raw.get("flip_lr_probability", 0.5))
     if not 0.0 <= probability <= 1.0:
         raise ValueError("protocol.flip_lr_probability must be within [0, 1]")
+    confidence = float(raw.get("confidence", 0.25))
+    if not 0.0 <= confidence <= 1.0:
+        raise ValueError("protocol.confidence must be within [0, 1]")
     return Protocol(
         split=str(raw["split"]),
         seed=int(raw["seed"]),
         epochs=int(raw["epochs"]),
         batch=int(raw["batch"]),
         image_size=int(raw["image_size"]),
+        confidence=confidence,
         optimizer=str(raw["optimizer"]),
         learning_rate=float(raw["learning_rate"]),
         momentum=float(raw["momentum"]),

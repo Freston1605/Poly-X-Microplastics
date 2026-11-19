@@ -7,11 +7,15 @@ resolved configuration, provenance, checkpoints, metrics, report and logs.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from polyx.core.i18n import _
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,30 @@ def write_json(data: dict, path: Path) -> None:
     Path(path).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def write_json_atomic(data: dict, path: Path) -> None:
+    """Publish a JSON artifact in one rename, never as a half-written file.
+
+    The progress snapshot is the resume contract. A killed process must leave
+    either the previous complete snapshot or the new one, never truncated
+    JSON that only looks like a valid checkpoint pointer.
+    """
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
+    descriptor, temporary = tempfile.mkstemp(
+        dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
+
+
 def append_log(path: Path, message: str) -> None:
     """Append one plain-text log line."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -108,25 +136,25 @@ def write_report(
 ) -> None:
     """Human-readable summary; every figure keeps the criterion beside it."""
     lines = [
-        "# Training execution report",
+        f"# {_('Training execution report')}",
         "",
-        f"- Family: {config['family']['name']}",
-        f"- Backend: {config['backend']['name']}",
-        f"- Selection metric: {metrics['selection']['metric']}",
+        f"- {_('Family')}: {config['family']['name']}",
+        f"- {_('Backend')}: {config['backend']['name']}",
+        f"- {_('Selection metric')}: {metrics['selection']['metric']}",
         "",
-        "## Figures",
+        f"## {_('Figures')}",
         "",
     ]
     for name, figure in metrics["figures"].items():
         lines.append(f"- {name}: {figure['value']:.6f} — {figure['criterion']}")
     if metrics.get("per_class"):
-        lines.extend(["", "## Per class", ""])
+        lines.extend(["", f"## {_('Per class')}", ""])
         for class_name, class_figures in metrics["per_class"].items():
             for figure_name, figure in class_figures.items():
                 lines.append(
                     f"- {class_name} / {figure_name}: {figure['value']:.6f} — {figure['criterion']}"
                 )
-    lines.extend(["", "## Early stopping", ""])
+    lines.extend(["", f"## {_('Early stopping')}", ""])
     stopping = training_state["early_stopping"]
     lines.extend(
         f"- {key}: {stopping[key]}"
