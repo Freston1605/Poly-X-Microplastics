@@ -1,9 +1,10 @@
 # Root configuration of one headless training execution.
 #
 # Later tickets add Optuna and SLURM composition by overriding `backend` and
-# `sweeper`; the protocol section itself never changes shape. `data_yaml` and
-# `output_dir` are required overrides so an execution can never silently use a
-# developer's local paths.
+# `sweeper`; the protocol section itself never changes shape. `output_dir` and
+# either `data_yaml` (a training execution) or `coco_import` (a dataset import)
+# are required overrides so an execution can never silently use a developer's
+# local paths.
 
 defaults:
   - protocol: default
@@ -11,8 +12,13 @@ defaults:
   - family: yolo_detection
   - _self_
 
-data_yaml: ???
-output_dir: ???
+data_yaml: ""
+output_dir: ""
 dataset_name: polyx
+# When set, the command imports, audits and stores a CVAT COCO export as the
+# canonical segmentation training dataset instead of running an execution.
+coco_import: ""
+# Versioned tool outputs land here; empty resolves to the user data dir.
+dataset_root: ""
 # Continue an interrupted execution from the last checkpoint in output_dir.
 resume: false

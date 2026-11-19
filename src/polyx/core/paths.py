@@ -36,6 +36,12 @@ RUNS_DIR = USER_DATA_DIR / "runs"
 RUNS_TRAIN_DIR = USER_DATA_DIR / "runs_train"
 DATASET_CORRECTIONS_DIR = USER_DATA_DIR / "dataset_correcciones"
 
+# The canonical segmentation training dataset is a tool output in its own
+# right (ADR-0009): CVAT COCO masks land here, never in a detection run folder.
+# ADR-0002 keeps those folders box-only, so this path deliberately does not sit
+# under RUNS_DIR or RUNS_TRAIN_DIR.
+SEGMENTATION_DATASETS_DIR = USER_DATA_DIR / "segmentation_datasets"
+
 DEFAULT_MODEL = MODELS_DIR / "bestdetectormedium.pt"
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")

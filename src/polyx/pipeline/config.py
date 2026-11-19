@@ -17,6 +17,8 @@ from typing import Any, cast
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
+from polyx.core.paths import SEGMENTATION_DATASETS_DIR
+
 CONF_DIR = Path(__file__).resolve().parent / "conf"
 
 
@@ -79,7 +81,12 @@ class Family:
 
 @dataclass
 class ExecutionConfig:
-    """A fully resolved, validated training execution."""
+    """A fully resolved training execution or a COCO dataset import.
+
+    When ``coco_import`` is set the command imports and audits a CVAT COCO
+    export as the canonical segmentation training dataset; ``data_yaml`` is
+    then unused. Otherwise the fields describe one headless training execution.
+    """
 
     data_yaml: Path
     output_dir: Path
@@ -88,6 +95,8 @@ class ExecutionConfig:
     family: Family
     dataset_name: str = "polyx"
     resume: bool = False
+    coco_import: Path | None = None
+    dataset_root: Path = SEGMENTATION_DATASETS_DIR
 
 
 def _build_protocol(raw: dict) -> Protocol:
@@ -119,13 +128,21 @@ def _build_protocol(raw: dict) -> Protocol:
 
 def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
     """Validate a resolved config tree into the object the engine consumes."""
-    if not raw.get("data_yaml") or not raw.get("output_dir"):
-        raise ValueError("data_yaml and output_dir are required configuration overrides")
+    output_dir = str(raw.get("output_dir") or "")
+    if not output_dir:
+        raise ValueError("output_dir is a required configuration override")
+    data_yaml = str(raw.get("data_yaml") or "")
+    coco_import = str(raw.get("coco_import") or "")
+    if data_yaml and coco_import:
+        raise ValueError("set exactly one of data_yaml or coco_import")
+    if not data_yaml and not coco_import:
+        raise ValueError("data_yaml or coco_import is a required configuration override")
     backend_raw = raw.get("backend") or {}
     family_raw = raw.get("family") or {}
+    dataset_root = str(raw.get("dataset_root") or "")
     return ExecutionConfig(
-        data_yaml=Path(str(raw["data_yaml"])).expanduser().resolve(),
-        output_dir=Path(str(raw["output_dir"])).expanduser().resolve(),
+        data_yaml=Path(data_yaml).expanduser().resolve() if data_yaml else Path(),
+        output_dir=Path(output_dir).expanduser().resolve(),
         protocol=_build_protocol(raw.get("protocol") or {}),
         backend=Backend(
             name=str(backend_raw.get("name", "local")),
@@ -139,6 +156,10 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
         ),
         dataset_name=str(raw.get("dataset_name", "polyx")),
         resume=bool(raw.get("resume", False)),
+        coco_import=Path(coco_import).expanduser().resolve() if coco_import else None,
+        dataset_root=(
+            Path(dataset_root).expanduser().resolve() if dataset_root else SEGMENTATION_DATASETS_DIR
+        ),
     )
 
 
@@ -155,6 +176,8 @@ def config_to_dict(config: ExecutionConfig) -> dict[str, Any]:
     data: dict[str, Any] = asdict(config)
     data["data_yaml"] = str(config.data_yaml)
     data["output_dir"] = str(config.output_dir)
+    data["coco_import"] = str(config.coco_import) if config.coco_import else ""
+    data["dataset_root"] = str(config.dataset_root)
     return data
 
 
