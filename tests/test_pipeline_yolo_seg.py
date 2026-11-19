@@ -159,7 +159,11 @@ class _FakeTrainer:
         self.current_epoch = 0
 
     def fit(self, module: object, ckpt_path: object = None) -> None:
-        for epoch in range(self.max_epochs):
+        module.trainer = self
+        start_epoch = 0
+        if ckpt_path is not None:
+            start_epoch = int(Path(ckpt_path).read_text(encoding="utf-8").split(":")[-1]) + 1
+        for epoch in range(start_epoch, self.max_epochs):
             self.current_epoch = epoch
             module._epoch = epoch
             module.on_validation_epoch_end()
@@ -168,6 +172,12 @@ class _FakeTrainer:
             self.current_epoch = epoch + 1
             if self.should_stop:
                 break
+
+    def save_checkpoint(self, path: object) -> None:
+        """Stand-in for Lightning's checkpoint writer; names the epoch it holds."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"lightning-checkpoint:{self.current_epoch}", encoding="utf-8")
 
 
 class _FakeCallback:

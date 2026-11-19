@@ -156,7 +156,10 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
     coco_import = str(raw.get("coco_import") or "")
     coco_dataset = str(raw.get("coco_dataset") or "")
     sources = [bool(data_yaml), bool(coco_import), bool(coco_dataset)]
-    if sum(sources) > 1:
+    # An import is exclusive; a campaign job may carry both training sources so
+    # one multirun can serve detection and segmentation families, and the
+    # family's task decides which source it consumes.
+    if coco_import and (data_yaml or coco_dataset):
         raise ValueError("set exactly one of data_yaml, coco_import or coco_dataset")
     if not any(sources):
         raise ValueError(
@@ -168,15 +171,21 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
     task = str(family_raw.get("task", "detect"))
     if task not in _TASKS:
         raise ValueError(f"unknown family task: {task}")
-    if coco_dataset and task != "segment":
-        raise ValueError(
-            "a COCO mask dataset requires a segmentation family; set "
-            "family=yolo_segmentation or family=mask_rcnn instead of a detection family"
-        )
-    if data_yaml and task != "detect":
-        raise ValueError(
-            "a segmentation family needs a COCO mask dataset; set coco_dataset instead of data_yaml"
-        )
+    if not coco_import:
+        if coco_dataset and not data_yaml and task != "segment":
+            raise ValueError(
+                "a COCO mask dataset requires a segmentation family; set "
+                "family=yolo_segmentation or family=mask_rcnn instead of a detection family"
+            )
+        if data_yaml and not coco_dataset and task != "detect":
+            raise ValueError(
+                "a segmentation family needs a COCO mask dataset; set coco_dataset "
+                "instead of data_yaml"
+            )
+        if task == "detect" and not data_yaml:
+            raise ValueError("a detection family needs a YOLO box dataset; set data_yaml")
+        if task == "segment" and not coco_dataset:
+            raise ValueError("a segmentation family needs a COCO mask dataset; set coco_dataset")
     dataset_root = str(raw.get("dataset_root") or "")
     scratch_dir = str(raw.get("scratch_dir") or "")
     return ExecutionConfig(

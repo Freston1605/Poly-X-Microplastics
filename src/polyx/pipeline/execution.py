@@ -113,6 +113,9 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             {
                 "epoch_completed": result.epoch,
                 "last_checkpoint": str(result.checkpoint),
+                "resume_checkpoint": (
+                    str(result.resume_checkpoint) if result.resume_checkpoint else None
+                ),
                 "best_checkpoint": (
                     str(stopping.best_checkpoint) if stopping.best_checkpoint else None
                 ),
@@ -160,7 +163,11 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         "git": commit_git(ROOT),
         "dataset_hashes": prepared.hashes,
         "dataset_audit": asdict(audit),
-        "data_yaml": str(config.data_yaml) if config.data_yaml is not None else "",
+        "data_yaml": (
+            str(config.data_yaml)
+            if prepared.source_kind == "yolo_boxes" and config.data_yaml is not None
+            else ""
+        ),
         "dataset_source": {
             "kind": prepared.source_kind,
             "path": str(prepared.source_path),

@@ -69,9 +69,15 @@ backends; only the backend composition changes.
 - Adding a family means adding one adapter under the same contract; no change
   to the loop, evaluator or artifact layout is needed.
 - Protocol parity is a file comparison: the resolved protocol in the artifacts
-  is the exact object the adapter received.
+  is the same mapping every adapter received.
 - FP16 AMP is requested through the protocol and recorded in the training
   state. On a machine without a supported accelerator the setting remains a
   request; the GPU smoke job is the acceptance check for the real AMP pass.
-- The first adapter is detection-only. COCO mask datasets and the remaining
-  families arrive in later tickets without changing this decision.
+- The first adapter was detection-only. The COCO mask dataset and the YOLO-seg
+  and Mask R-CNN adapters arrived in later tickets without changing this
+  decision; they use the same loop, evaluator and artifact layout.
+- An interrupted execution resumes from a real Lightning checkpoint
+  (`checkpoints/lightning/last.ckpt`), which restores weights, optimizer,
+  scheduler and epoch progress. A family-native `.pt` export is kept for
+  compatibility and best-weight restoration but is never passed to
+  `Trainer.fit` as a checkpoint.

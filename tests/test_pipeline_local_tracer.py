@@ -122,12 +122,12 @@ class _FakeTrainer:
         self.current_epoch = 0
 
     def fit(self, module: object, ckpt_path: object = None) -> None:
-        # A resumed fit starts at the epoch after the last saved checkpoint,
-        # exactly as Lightning does when it is given ``ckpt_path``.
+        # A resumed fit starts at the epoch after the last saved lightweight
+        # checkpoint, exactly as Lightning does with its own ``ckpt_path``.
+        module.trainer = self
         start_epoch = 0
         if ckpt_path is not None:
-            stem = Path(ckpt_path).stem
-            start_epoch = int(stem.rsplit("_", 1)[-1]) + 1
+            start_epoch = int(Path(ckpt_path).read_text(encoding="utf-8").split(":")[-1]) + 1
         self.current_epoch = start_epoch
         for completed, epoch in enumerate(range(start_epoch, self.max_epochs), start=1):
             self.current_epoch = epoch
@@ -142,6 +142,12 @@ class _FakeTrainer:
                 # A time limit or preemption: the per-epoch checkpoint and the
                 # progress snapshot are already on disk, the final state is not.
                 raise RuntimeError("simulated preemption after the epoch checkpoint")
+
+    def save_checkpoint(self, path: object) -> None:
+        """Stand-in for Lightning's checkpoint writer; names the epoch it holds."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"lightning-checkpoint:{self.current_epoch}", encoding="utf-8")
 
 
 class _FakeCallback:
@@ -383,6 +389,7 @@ def test_interrupted_execution_resumes_from_the_last_checkpoint(
     assert not (output / "training_state.json").exists()
     first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
     first_last = (output / "checkpoints" / "epoch_001.pt").read_bytes()
+    assert Path(progress["resume_checkpoint"]).is_file()
 
     _install_fakes(
         monkeypatch,

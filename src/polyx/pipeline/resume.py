@@ -3,9 +3,12 @@
 A preemption or a time limit can stop a SLURM job after a checkpoint has been
 written but before the execution has finished. The engine refreshes this small
 file after every epoch so a later invocation with ``resume=true`` can continue
-from the last saved epoch without rerunning completed work. The protocol that
-produced the snapshot is stored with it: resuming a different protocol would
-mix methodologies and is refused.
+from the last saved epoch without rerunning completed work. It names two
+checkpoints: ``last_checkpoint`` is the family-native export used for
+best-weight restoration, and ``resume_checkpoint`` is the real Lightning
+checkpoint whose weights, optimizer, scheduler and epoch progress continue the
+loop. The protocol that produced the snapshot is stored with it: resuming a
+different protocol would mix methodologies and is refused.
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ class ResumeState:
 
     epochs_completed: int
     last_checkpoint: Path | None
+    resume_checkpoint: Path | None
     best_score: float | None
     best_epoch: int
     best_checkpoint: Path | None
@@ -41,10 +45,12 @@ class ResumeState:
             raise RuntimeError(f"unreadable progress snapshot {path}: {exc}") from exc
         try:
             checkpoint = raw["last_checkpoint"]
+            resume_checkpoint = raw.get("resume_checkpoint")
             best_checkpoint = raw.get("best_checkpoint")
             return cls(
                 epochs_completed=int(raw["epochs_completed"]),
                 last_checkpoint=Path(checkpoint) if checkpoint else None,
+                resume_checkpoint=Path(resume_checkpoint) if resume_checkpoint else None,
                 best_score=raw.get("best_score"),
                 best_epoch=int(raw["best_epoch"]),
                 best_checkpoint=Path(best_checkpoint) if best_checkpoint else None,

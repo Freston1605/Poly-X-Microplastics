@@ -119,6 +119,27 @@ def test_same_command_composes_the_slurm_backend() -> None:
     assert config.protocol.epochs == 1
 
 
+def test_campaign_submission_requests_one_gpu_on_the_normal_tier() -> None:
+    text = (ROOT / "cluster" / "submit_campaign.sh").read_text(encoding="utf-8")
+
+    assert "--gres=gpu:1" in text
+    assert "--qos=" in text
+    assert "POLYX_HPC_QOS" in text
+    assert "normal" in text
+    assert "--account=" in text
+    assert "sbatch" in text
+
+
+def test_campaign_job_runs_one_multirun_and_syncs_each_family() -> None:
+    text = (ROOT / "cluster" / "campaign_job.sh").read_text(encoding="utf-8")
+
+    assert "polyx.pipeline.campaign_app --multirun" in text
+    assert "family=yolo_detection,yolo_segmentation,mask_rcnn" in text
+    assert "backend=slurm" in text
+    assert "sync_back --campaign" in text
+    assert "POLYX_RESUME" in text
+
+
 # ── Small-artifact sync-back ──
 
 
@@ -160,6 +181,78 @@ def test_sync_back_refuses_an_oversized_artifact_instead_of_silently_skipping_it
 
     with pytest.raises(SyncError, match="too large"):
         sync_back(run, tmp_path / "local", max_bytes=1024)
+
+
+def test_sync_back_copies_the_best_checkpoint_at_model_scale(tmp_path: Path) -> None:
+    """The kept checkpoint is an expected artifact, not an oversized surprise."""
+    from polyx.hpc.sync_back import sync_back
+    from polyx.pipeline.artifacts import ArtifactLayout, artifact_manifest
+
+    run = tmp_path / "run"
+    layout = ArtifactLayout(run)
+    layout.create()
+    for name in ("config.yaml", "metrics.json", "report.md"):
+        (run / name).write_text(name, encoding="utf-8")
+    # Larger than the small-artifact cap, as real YOLO and Mask R-CNN
+    # checkpoints are, but inside the checkpoint cap.
+    (layout.best_checkpoint).write_bytes(b"w" * 2_000_000)
+    assert set(artifact_manifest(layout)) >= {"metrics", "best_checkpoint"}
+
+    copied = sync_back(run, tmp_path / "local")
+
+    assert Path("checkpoints/best.pt") in copied
+    assert (tmp_path / "local" / "checkpoints" / "best.pt").is_file()
+    # The per-epoch series still never leaves the cluster.
+    assert not (tmp_path / "local" / "checkpoints" / "epoch_000.pt").exists()
+
+
+def test_sync_back_refuses_a_checkpoint_above_the_checkpoint_cap(tmp_path: Path) -> None:
+    """A runaway checkpoint is an error, not a truncated copy."""
+    from polyx.hpc.sync_back import SyncError, sync_back
+    from polyx.pipeline.artifacts import ArtifactLayout
+
+    run = tmp_path / "run"
+    layout = ArtifactLayout(run)
+    layout.create()
+    (layout.metrics).write_text("{}", encoding="utf-8")
+    layout.best_checkpoint.write_bytes(b"w" * 4096)
+
+    with pytest.raises(SyncError, match="too large"):
+        sync_back(run, tmp_path / "local", checkpoint_max_bytes=1024)
+
+
+def test_campaign_sync_copies_every_family_into_its_own_directory(tmp_path: Path) -> None:
+    """One campaign root, one synced directory per family, artifacts only."""
+    from polyx.hpc.sync_back import sync_campaign
+    from polyx.pipeline.artifacts import ArtifactLayout
+
+    root = tmp_path / "campaign"
+    families = ("yolo_detection", "yolo_segmentation", "mask_rcnn")
+    for family in families:
+        run = root / family
+        layout = ArtifactLayout(run)
+        layout.create()
+        (run / "config.yaml").write_text(f"family:\n  name: {family}\n", encoding="utf-8")
+        (layout.metrics).write_text('{"selection": {}}', encoding="utf-8")
+        (layout.report).write_text("# report\n", encoding="utf-8")
+        (run / "resolved_protocol.yaml").write_text("epochs: 1\n", encoding="utf-8")
+        layout.best_checkpoint.write_bytes(b"c" * 2_000_000)
+        (run / "checkpoints" / "epoch_000.pt").write_bytes(b"x" * 10)
+
+    summary = sync_campaign(root, tmp_path / "local")
+
+    assert set(summary) == set(families)
+    for family in families:
+        destination = tmp_path / "local" / family
+        for relative in (
+            "config.yaml",
+            "resolved_protocol.yaml",
+            "metrics.json",
+            "report.md",
+            "checkpoints/best.pt",
+        ):
+            assert (destination / relative).is_file(), f"{family}: {relative}"
+        assert not (destination / "checkpoints" / "epoch_000.pt").exists()
 
 
 # ── Publication acknowledgement ──
@@ -210,10 +303,33 @@ def test_smoke_procedure_is_exact_and_marked_pending() -> None:
         assert phrase in text, f"smoke procedure misses: {phrase}"
 
 
+def test_hpc_workflow_document_matches_the_commands_and_queue_usage() -> None:
+    """The published workflow names the shipped commands, tiers and status."""
+    text = (ROOT / "docs" / "hpc.md").read_text(encoding="utf-8")
+
+    for phrase in (
+        "polyx.pipeline.campaign_app --multirun",
+        "polyx.hpc.sync_back --campaign",
+        "family=yolo_detection,yolo_segmentation,mask_rcnn",
+        "short",
+        "normal",
+        "--gres=gpu:1",
+        "resume=true",
+        "Pending",
+    ):
+        assert phrase in text, f"workflow document misses: {phrase}"
+    # The companion pages are linked rather than duplicated.
+    for page in ("hpc-training-pipeline.md", "hpc-environment.md", "hpc-submission.md"):
+        assert page in text, f"workflow document does not link {page}"
+
+
 def test_no_credentials_usernames_or_personal_paths_are_tracked() -> None:
     files = (
         "cluster/submit_smoke.sh",
         "cluster/smoke_job.sh",
+        "cluster/submit_campaign.sh",
+        "cluster/campaign_job.sh",
+        "docs/hpc.md",
         "docs/hpc-submission.md",
         "docs/hpc-environment.example.env",
         "src/polyx/hpc/layout.py",
