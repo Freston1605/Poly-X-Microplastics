@@ -110,12 +110,18 @@ class Backend:
 
 @dataclass
 class Family:
-    """Which adapter executes the protocol."""
+    """Which adapter executes the protocol.
+
+    ``run_name`` is the directory this execution occupies inside a campaign
+    root. It defaults to the family name; two detection variants (say v8-n and
+    v11-n) coexist in one campaign by declaring different run names.
+    """
 
     name: str = "yolo_detection"
     framework: str = "ultralytics"
     weights: str = "yolov8n.pt"
     task: str = "detect"
+    run_name: str = ""
 
 
 @dataclass
@@ -188,6 +194,14 @@ def _build_protocol(raw: dict) -> Protocol:
     )
 
 
+def _run_name(raw: dict) -> str:
+    """The single directory-component name one campaign execution occupies."""
+    candidate = str(raw.get("run_name") or raw.get("name") or "run").strip()
+    if candidate in {".", ".."} or "/" in candidate or "\\" in candidate:
+        raise ValueError(f"family.run_name must be one directory name, got {candidate!r}")
+    return candidate
+
+
 def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
     """Validate a resolved config tree into the object the engine consumes."""
     output_dir = str(raw.get("output_dir") or "")
@@ -242,6 +256,7 @@ def execution_config_from_raw(raw: dict[str, Any]) -> ExecutionConfig:
             framework=str(family_raw.get("framework", "ultralytics")),
             weights=str(family_raw.get("weights", "yolov8n.pt")),
             task=task,
+            run_name=_run_name(family_raw),
         ),
         dataset_name=str(raw.get("dataset_name", "polyx")),
         resume=bool(raw.get("resume", False)),

@@ -32,9 +32,10 @@ the execution failed; the printed error names the reason.
 
 A campaign is one Hydra multirun whose jobs are the model families. Each job
 composes the same protocol and writes its own execution under
-`<campaign_root>/<family>/`; the family is the only variable. Both training
-source overrides are supplied because the detection family consumes the YOLO
-box dataset and the segmentation families consume the canonical COCO dataset:
+`<campaign_root>/<family.run_name>/` (the family name by default); the model is
+the only variable. Both training source overrides are supplied because the
+detection family consumes the YOLO box dataset and the segmentation families
+consume the canonical COCO dataset:
 
 ```bash
 python -m polyx.pipeline.campaign_app --multirun \

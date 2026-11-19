@@ -88,20 +88,33 @@ python -m polyx.pipeline.campaign_app --multirun \
 python -m polyx.hpc.sync_back --campaign "$CAMPAIGN_ROOT" "$SYNC_ROOT"
 ```
 
-The same command runs locally with the local backend for debugging; drop
-`backend=slurm` and the environment variables. The project gate proves the
-local multirun with real Hydra and real Lightning in
+Each family writes under `<campaign_root>/<family.run_name>`, which defaults to
+the family name. To put two detection variants in one campaign, add family
+configs that share `name: yolo_detection` but declare different `run_name` and
+`weights`, and list them in the multirun; each variant gets its own directory
+and its own metrics. The same command runs locally with the local backend for
+debugging; drop `backend=slurm` and the environment variables. The project gate
+proves the local multirun with real Hydra and real Lightning in
 `tests/test_pipeline_campaign.py`.
 
 ### Resuming a preempted campaign
 
 Set `POLYX_CAMPAIGN_ROOT` to the previous campaign root and `POLYX_RESUME=true`,
-then submit again. Each family resumes from its own progress snapshot and real
-Lightning checkpoint (`checkpoints/lightning/last.ckpt`); completed epochs are
-not rerun. A family whose execution already finished is rerun from its last
-state, so a campaign root is reused only while any family still needs epochs.
-The engine refuses to resume without a snapshot, with a different protocol, or
-with a snapshot that has no Lightning checkpoint.
+then submit again. The job passes `resume=true` to every family and each family
+decides for itself:
+
+- a family with a `progress.json` resumes from its Lightning checkpoint
+  (`checkpoints/lightning/last.ckpt`); completed epochs are not rerun;
+- a family whose `training_state.json` already exists for the same protocol is
+  **skipped**, so a finished execution's metrics are never recomputed or
+  overwritten;
+- a family that never started runs normally, because there is no snapshot to
+  resume;
+- a root that holds an execution for a different protocol is refused; start a
+  new campaign root instead.
+
+The engine still refuses a resume without a snapshot, or with a snapshot that
+has no Lightning checkpoint.
 
 ```sh
 POLYX_CAMPAIGN_ROOT="$POLYX_HPC_WORK/results/campaign-20261118-101500" \

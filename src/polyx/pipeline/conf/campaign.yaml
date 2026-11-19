@@ -33,6 +33,6 @@ hydra:
     # required root is missing the job still fails with the campaign's own
     # message instead of writing anything into the repository.
     dir: ${campaign_root}
-    subdir: hydra/${family.name}
+    subdir: hydra/${family.run_name}
   job:
     chdir: false

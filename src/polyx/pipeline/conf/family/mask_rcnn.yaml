@@ -3,6 +3,7 @@
 # shared evaluator and artifact layout apply. `weights` names a torchvision
 # detection factory; `none` builds an untrained model for offline debugging.
 name: mask_rcnn
+run_name: mask_rcnn
 framework: torchvision
 weights: maskrcnn_resnet50_fpn_v2
 task: segment
