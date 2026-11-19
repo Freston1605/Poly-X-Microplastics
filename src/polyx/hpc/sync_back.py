@@ -84,13 +84,15 @@ def sync_campaign(
         if not config_file.is_file():
             continue
         try:
-            config = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
+            # The saved family metadata is not trusted as a destination; this
+            # only proves the execution record is readable YAML.
+            yaml.safe_load(config_file.read_text(encoding="utf-8"))
         except (OSError, yaml.YAMLError) as exc:
             raise SyncError(f"unreadable campaign configuration {config_file}: {exc}") from exc
-        declaration = config.get("family") or {}
-        # run_name is the per-execution campaign directory, so two variants of
-        # the same adapter must not collapse onto one synced family name.
-        family = str(declaration.get("run_name") or declaration.get("name") or run.name)
+        # The immediate child directory name is the destination component.
+        # Saved metadata cannot escape the sync root, and two variants of the
+        # same adapter never collapse onto one directory.
+        family = run.name
         synced[family] = sync_back(
             run,
             destination / family,

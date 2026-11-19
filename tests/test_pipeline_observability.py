@@ -15,6 +15,6 @@ def test_a_failed_command_logs_an_error_event_with_a_traceback() -> None:
     log = Path(os.environ["POLYX_LOG_DIR"]) / "pipeline.jsonl"
     assert log.is_file()
     text = log.read_text(encoding="utf-8")
-    assert '"event": "pipeline.command_error"' in text
+    assert '"event": "pipeline.error"' in text
     assert '"level": "ERROR"' in text
     assert "ValueError" in text

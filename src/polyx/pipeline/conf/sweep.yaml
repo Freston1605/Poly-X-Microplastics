@@ -25,6 +25,8 @@ weights_manifest: ""
 # Checkpoint resume inside each trial is independent of study resume: a study
 # always reuses its SQLite file when the same name and storage are supplied.
 resume: false
+# Injected by PolyxOptunaSweeper with the real study trial number.
+sweep_trial_id: 0
 
 hydra:
   # Create the SQLite study's directory before the sweeper opens the file.

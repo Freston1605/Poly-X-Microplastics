@@ -30,6 +30,11 @@ from polyx.core.quality.metrics import match_image
 _IOU_THRESHOLDS = [0.50 + 0.05 * index for index in range(10)]
 #: One match rule for every family. Recorded beside every score.
 _OPERATING_IOU = 0.50
+#: COCO's per-image, per-category detection cap. Predictions below a very low
+#: floor are still collected so AP can rank them; the operating point filters
+#: at the protocol's confidence instead.
+PREDICTION_FLOOR = 0.001
+_MAX_DETECTIONS = 100
 
 
 def _box_iou(first: list[float], second: list[float]) -> float:
@@ -129,6 +134,24 @@ def _ranked_matches(
     return matches
 
 
+def _apply_detection_cap(predictions: list[dict]) -> list[dict]:
+    """Keep COCO's top 100 predictions per image and category.
+
+    The cap is part of the reference protocol: a category with hundreds of
+    low-score boxes per plate must not be scored differently from a detector
+    that stops at 100. Ground truth is not capped.
+    """
+    by_image: dict[int, list[dict]] = defaultdict(list)
+    for prediction in predictions:
+        by_image[int(prediction.get("image_id", -1))].append(prediction)
+    capped: list[dict] = []
+    for items in by_image.values():
+        capped.extend(
+            sorted(items, key=lambda item: -float(item.get("score", 0.0)))[:_MAX_DETECTIONS]
+        )
+    return capped
+
+
 def _ap_at_iou(
     predictions: list[dict], ground_truth: list[dict], threshold: float, task: str
 ) -> float:
@@ -137,12 +160,13 @@ def _ap_at_iou(
     Interpolation matters: a late low-score false positive must not erase the
     precision already achieved at a lower recall. Summing precision only at
     the ranks where a match happened, as an earlier version did, produced a
-    number that was neither COCO AP nor thresholded F1.
+    number that was neither COCO AP nor thresholded F1. The per-image,
+    per-category 100-detection cap is applied before ranking.
     """
     total = len(ground_truth)
     if not total:
         return 0.0
-    matches = _ranked_matches(predictions, ground_truth, threshold, task)
+    matches = _ranked_matches(_apply_detection_cap(predictions), ground_truth, threshold, task)
     recalls: list[float] = []
     precisions: list[float] = []
     hits = 0
@@ -200,11 +224,13 @@ def _operating_score(
     category: int | None = None,
 ) -> Score:
     """Score one fixed operating point with the project's one F1 definition."""
-    selected_predictions = predictions
+    selected_predictions = [
+        item for item in predictions if float(item.get("score", 0.0)) >= confidence_threshold
+    ]
     selected_truths = ground_truth
     if category is not None:
         selected_predictions = [
-            item for item in predictions if int(item["category_id"]) == category
+            item for item in selected_predictions if int(item["category_id"]) == category
         ]
         selected_truths = [item for item in ground_truth if int(item["category_id"]) == category]
     by_image: dict[int, tuple[list[Instance], list[Instance]]] = defaultdict(lambda: ([], []))

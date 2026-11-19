@@ -263,6 +263,14 @@ def test_the_campaign_refuses_mismatched_or_synthetic_cohorts(
         validate_campaign_cohort(data_yaml, store, "val")
     renamed.with_name("other_plate.png").rename(renamed)
 
+    # Same name but different pixels is also a different cohort.
+    mask_image = store / "images" / "val" / "plate_v1.png"
+    original = mask_image.read_bytes()
+    mask_image.write_bytes(original + b"\0")
+    with pytest.raises(ValueError, match="different content"):
+        validate_campaign_cohort(data_yaml, store, "val")
+    mask_image.write_bytes(original)
+
     # A synthetic declaration must be explicit, never inferred from 'val'.
     declaration = data_yaml.read_text(encoding="utf-8").replace("domain: real", "domain: synthetic")
     data_yaml.write_text(declaration, encoding="utf-8")

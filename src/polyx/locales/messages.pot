@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 12:57-0300\n"
+"POT-Creation-Date: 2026-11-19 14:38-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6051,31 +6051,31 @@ msgstr ""
 msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:139
+#: src/polyx/pipeline/artifacts.py:144
 msgid "Training execution report"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:141
+#: src/polyx/pipeline/artifacts.py:146
 msgid "Family"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:142
+#: src/polyx/pipeline/artifacts.py:147
 msgid "Backend"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:143
+#: src/polyx/pipeline/artifacts.py:148
 msgid "Selection metric"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:145
+#: src/polyx/pipeline/artifacts.py:150
 msgid "Figures"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:157
+#: src/polyx/pipeline/artifacts.py:162
 msgid "Early stopping"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:151
+#: src/polyx/pipeline/artifacts.py:156
 msgid "Per class"
 msgstr ""
 
@@ -6118,15 +6118,31 @@ msgstr ""
 msgid "Audit"
 msgstr ""
 
-#: src/polyx/pipeline/sweep_best.py:35
+#: src/polyx/pipeline/seg_conversion.py:129
+#, python-format
+msgid ""
+"a COCO mask annotation must have exactly one polygon ring to stay one training instance; "
+"annotation %(id)s has %(count)d. Split the particle into separate annotations in the annotation "
+"tool, or export a single exterior polygon."
+msgstr ""
+
+#: src/polyx/pipeline/seg_conversion.py:141
+#, python-format
+msgid ""
+"image %(image)s has annotations %(first)s and %(second)s with the same class and box; the pinned"
+" YOLO loader would collapse them into one target. Merge or remove the duplicate in the "
+"annotation tool."
+msgstr ""
+
+#: src/polyx/pipeline/sweep_best.py:34
 msgid "Write sweep_best.json from a finished Optuna multirun"
 msgstr ""
 
-#: src/polyx/pipeline/sweep_best.py:37
+#: src/polyx/pipeline/sweep_best.py:36
 msgid "the sweep root"
 msgstr ""
 
-#: src/polyx/pipeline/sweep_best.py:41
+#: src/polyx/pipeline/sweep_best.py:40
 msgid "study storage URL or SQLite path (default: the work layout path)"
 msgstr ""
 

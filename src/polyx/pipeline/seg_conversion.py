@@ -23,6 +23,7 @@ from typing import Any
 
 import yaml
 
+from polyx.core.i18n import _
 from polyx.core.labels import label_path_for, write_polygon_lines
 from polyx.core.provenance import sha256_file
 from polyx.pipeline.dataset import (
@@ -119,17 +120,37 @@ def _write_split(
         # Positions, not canonical annotation ids, are the label file's order.
         ordered = sorted(annotations.get(int(image["id"]), []), key=lambda item: item["id"])
         polygons: list[tuple[int, list[tuple[float, float]]]] = []
+        seen: dict[tuple[int, tuple[float, ...]], int] = {}
         for annotation in ordered:
             class_id = indices[int(annotation["category_id"])]
             rings = _rings(annotation)
             if len(rings) != 1:
                 raise ValueError(
-                    "a COCO mask annotation must have exactly one polygon ring to "
-                    "stay one training instance; annotation "
-                    f"{annotation.get('id', '?')} has {len(rings)}. Split the "
-                    "particle into separate annotations in the annotation tool, "
-                    "or export a single exterior polygon."
+                    _(
+                        "a COCO mask annotation must have exactly one polygon ring to "
+                        "stay one training instance; annotation %(id)s has %(count)d. "
+                        "Split the particle into separate annotations in the "
+                        "annotation tool, or export a single exterior polygon."
+                    )
+                    % {"id": annotation.get("id", "?"), "count": len(rings)}
                 )
+            bbox = tuple(round(float(value), 6) for value in annotation.get("bbox", []))
+            key = (class_id, bbox)
+            if key in seen:
+                raise ValueError(
+                    _(
+                        "image %(image)s has annotations %(first)s and %(second)s "
+                        "with the same class and box; the pinned YOLO loader would "
+                        "collapse them into one target. Merge or remove the duplicate "
+                        "in the annotation tool."
+                    )
+                    % {
+                        "image": image["file_name"],
+                        "first": seen[key],
+                        "second": annotation.get("id", "?"),
+                    }
+                )
+            seen[key] = int(annotation.get("id", -1))
             polygons.append((class_id, rings[0]))
         label_path = label_path_for(images_dir / f"{stem}{suffix}")
         write_polygon_lines(

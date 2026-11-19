@@ -29,6 +29,12 @@ source of complexity.
 with-class score. The search space is protocol-only, the study is a resumable
 SQLite file on work, and no cross-process pruning is attempted.**
 
+`PolyxOptunaSweeper` injects the actual study trial number into each Hydra job.
+Each trial records that id, its parameters and execution path before training;
+resubmission recovers the checkpoint (or explicitly retries the same
+parameters). The resolved study name and storage are persisted once and reused
+by the export, which resolves the winner strictly by `study.best_trial.number`.
+
 `conf/sweep.yaml` sets `direction: maximize`, a `TPESampler` seeded from
 `protocol.seed`, `n_jobs: 1`, a small verification trial count and a declared
 `hydra.sweeper.params` space containing only protocol hyperparameters (learning

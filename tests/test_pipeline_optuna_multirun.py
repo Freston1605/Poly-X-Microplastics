@@ -155,6 +155,79 @@ def test_a_preempted_trial_does_not_reuse_a_completed_trial_directory(
     assert str(last_number) in index
 
 
+def test_each_trial_records_its_study_id_and_the_study_identity(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    work_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The record names the trial and the exact study used for export."""
+    output = work_env / "experiments" / "identity"
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
+    _run_multirun(monkeypatch, output, tiny_dataset, n_trials=2)
+
+    study = yaml.safe_load((output / "sweep_config.yaml").read_text(encoding="utf-8"))
+    assert study["study_name"] == "polyx-optuna"
+    assert study["storage"].endswith("studies/polyx-optuna.db")
+    for directory in sorted((output / "trials").glob("trial_*")):
+        record = json.loads((directory / "record.json").read_text(encoding="utf-8"))
+        assert record["trial_id"] == int(directory.name.removeprefix("trial_"))
+        assert record["status"] == "completed"
+        assert record["execution"] == str(directory)
+
+
+def test_a_trial_with_progress_is_reused_by_its_id(tmp_path: Path) -> None:
+    """A recorded trial with a checkpoint resumes in the same directory."""
+    from polyx.pipeline.sweep_app import _trial_output_dir
+
+    trial = tmp_path / "trials" / "trial_003"
+    trial.mkdir(parents=True)
+    (trial / "progress.json").write_text("{}", encoding="utf-8")
+    assert _trial_output_dir(tmp_path, 3) == trial
+
+
+def test_export_resolves_the_winner_by_trial_number_not_parameters(
+    tmp_path: Path,
+) -> None:
+    """Two directories with the same config still resolve by study id."""
+    from polyx.pipeline.sweep_best import _find_best_directory
+
+    trials = tmp_path / "trials"
+    winner = trials / "trial_001"
+    duplicate = trials / "trial_099"
+    winner.mkdir(parents=True)
+    duplicate.mkdir(parents=True)
+    (trials / "index.json").write_text(
+        json.dumps({"1": ["trial_099", "trial_001"], "99": ["trial_099"]}),
+        encoding="utf-8",
+    )
+    assert _find_best_directory(trials, 1) == winner
+
+
+def test_export_reports_a_missing_winner_instead_of_guessing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A missing winner directory fails; it never falls back to parameters."""
+    from polyx.pipeline import sweep_best
+
+    root = tmp_path / "sweep-root"
+    (root / "sweep").mkdir(parents=True)
+    (root / "sweep" / "optimization_results.yaml").write_text(
+        "best_value: 1.0\nbest_params: {}\n", encoding="utf-8"
+    )
+    storage = f"sqlite:///{tmp_path / 'study.db'}"
+    import optuna
+
+    study = optuna.create_study(study_name="polyx-optuna", storage=storage, direction="maximize")
+    study.ask()
+    study.tell(0, 1.0)
+    (root / "sweep_config.yaml").write_text(
+        f"study_name: polyx-optuna\nstorage: {storage}\n", encoding="utf-8"
+    )
+    assert sweep_best.main(["--output-dir", str(root)]) == 1
+    assert "missing" in capsys.readouterr().err
+
+
 def test_a_resumed_multirun_reuses_the_study_and_never_overwrites_a_trial(
     tmp_path: Path,
     tiny_dataset: Path,

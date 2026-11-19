@@ -50,6 +50,13 @@ The check is the container's default command. On a machine without a GPU it
 prints that CUDA is unavailable and exits non-zero; that is the correct, honest
 result, not a broken build.
 
+The build stamps the exact commit into the image. Verify it before trusting a
+training run: `podman run --rm --entrypoint cat polyx-v100:local /opt/polyx/SOURCE_SHA`
+must print the same value as `git rev-parse HEAD`. Training provenance uses
+`POLYX_SOURCE_SHA` when the image has no `.git` directory. The Apptainer build
+is a separate cluster-side check; it consumes `source_sha.txt` through
+`%files` and is not claimed as verified locally.
+
 `container/hpc.def` is the Apptainer definition for the cluster. It starts from
 the same pinned digest and installs from the same wheelhouse. Build it on a
 login node, where the build context contains a generated `wheelhouse/`:

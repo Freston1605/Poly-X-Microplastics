@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import sys
 from pathlib import Path
@@ -40,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help=_("study storage URL or SQLite path (default: the work layout path)"),
     )
-    parser.add_argument("--study-name", default="polyx-optuna")
+    parser.add_argument("--study-name", default=None)
     args = parser.parse_args(argv)
 
     root = Path(args.output_dir).expanduser().resolve()
@@ -53,33 +52,57 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {results_path} has no best_value", file=sys.stderr)
         return 1
 
-    storage = _storage(args.storage, args.study_name, root)
-    study = _load_study(args.study_name, storage)
-    best_params = dict(results.get("best_params") or {})
-    best_number = study.best_trial.number if study is not None else None
-    best_directory = _find_best_directory(root / "trials", best_params, best_number)
+    record = _read_study_record(root)
+    study_name = args.study_name or record.get("study_name") or "polyx-optuna"
+    storage = args.storage or record.get("storage") or _storage("", study_name, root)
+    study = _load_study(study_name, storage)
+    if study is None:
+        print(f"ERROR: cannot load study {study_name!r} at {storage}", file=sys.stderr)
+        return 1
+    best_number = int(study.best_trial.number)
+    best_directory = _find_best_directory(root / "trials", best_number)
+    if best_directory is None:
+        print(
+            f"ERROR: the winner is study trial {best_number} but its artifact is "
+            f"missing under {root / 'trials'}",
+            file=sys.stderr,
+        )
+        return 1
+    best_params = dict(study.best_trial.params)
     criterion = _criterion(best_directory)
     artifact: dict[str, Any] = {
-        "study_name": args.study_name,
+        "study_name": study_name,
         "storage": storage,
-        "direction": str(study.direction.name.lower()) if study is not None else "maximize",
+        "direction": str(study.direction.name.lower()),
         "metric": "with_class_score",
         "criterion": criterion,
-        "best_trial": int(study.best_trial.number) if study is not None else -1,
-        "best_value": float(results["best_value"]),
+        "best_trial": best_number,
+        "best_value": float(study.best_trial.value),
         "best_params": best_params,
-        "total_trials": len(study.trials) if study is not None else 0,
+        "total_trials": len(study.trials),
         "pruner": "none",
+        "best_output_dir": str(best_directory),
     }
-    artifact["best_output_dir"] = str(best_directory) if best_directory is not None else ""
     write_json(artifact, root / "sweep_best.json")
 
-    print(f"STUDY: {args.study_name}")
+    print(f"STUDY: {study_name}")
     print(f"STORAGE: {storage}")
     print(f"BEST_VALUE: {artifact['best_value']:.6f}")
     print(f"BEST_PARAMS: {best_params}")
     print(f"ARTIFACT: {root / 'sweep_best.json'}")
     return 0
+
+
+def _read_study_record(root: Path) -> dict[str, Any]:
+    """The study identity the sweep persisted before its first trial."""
+    path = root / "sweep_config.yaml"
+    if not path.is_file():
+        return {}
+    try:
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def _storage(configured: str, study_name: str, root: Path) -> str:
@@ -101,14 +124,12 @@ def _load_study(study_name: str, storage: str) -> Any:
         return None
 
 
-def _find_best_directory(
-    trials: Path, best_params: dict[str, Any], best_number: int | None = None
-) -> Path | None:
-    """The winning trial's execution directory, by trial id or by parameters."""
+def _find_best_directory(trials: Path, best_number: int) -> Path | None:
+    """The winner's execution directory, strictly by study trial number."""
     if not trials.is_dir():
         return None
     index_path = trials / "index.json"
-    if best_number is not None and index_path.is_file():
+    if index_path.is_file():
         try:
             index = json.loads(index_path.read_text(encoding="utf-8"))
             names = index.get(str(best_number)) or []
@@ -118,27 +139,8 @@ def _find_best_directory(
                     return candidate
         except (OSError, json.JSONDecodeError, AttributeError):
             pass
-    if not best_params:
-        return None
-    for directory in sorted(trials.glob("trial_*")):
-        config_path = directory / "config.yaml"
-        if not config_path.is_file():
-            continue
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        protocol = config.get("protocol") or {}
-        if all(
-            _matches(protocol.get(key.split(".", 1)[1]), value)
-            for key, value in best_params.items()
-        ):
-            return directory
-    return None
-
-
-def _matches(observed: Any, expected: Any) -> bool:
-    """Trial parameters round-trip through YAML; compare numbers by value."""
-    if isinstance(expected, (int, float)) and isinstance(observed, (int, float)):
-        return math.isclose(float(observed), float(expected), rel_tol=1e-9, abs_tol=1e-9)
-    return observed == expected
+    candidate = trials / f"trial_{best_number:03d}"
+    return candidate if candidate.is_dir() else None
 
 
 def _criterion(directory: Path | None) -> str:

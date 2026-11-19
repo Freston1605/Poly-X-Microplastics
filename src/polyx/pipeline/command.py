@@ -73,7 +73,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001 - the command reports any failure as exit 1
         event_error(
             logger_for("pipeline"),
-            "pipeline.command_error",
+            "pipeline.error",
             exc,
             command="sweep" if sweep else "execution",
         )

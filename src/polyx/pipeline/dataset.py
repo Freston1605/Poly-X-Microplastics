@@ -97,24 +97,49 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
             f"{coco_dataset / 'dataset.json'} must declare info.domain: real "
             "for a benchmark campaign"
         )
-    signature: dict[str, list[str]] = {}
+    boxes: dict[str, tuple[str, str]] = {}
+    masks: dict[str, tuple[str, str]] = {}
     for name in ("train", "val", "test"):
-        boxes = sorted(path.name for path in split_images(data_yaml, name))
-        masks = sorted(
-            Path(str(image["file_name"])).name for image in split_coco_images(coco, name)
-        )
-        if boxes != masks:
-            raise ValueError(
-                f"the {name} cohorts differ between {data_yaml} and {coco_dataset}: "
-                f"boxes={boxes} masks={masks}"
-            )
-        if boxes:
-            signature[name] = boxes
-    if split not in signature:
+        for path in split_images(data_yaml, name):
+            if path.name in boxes:
+                raise ValueError(
+                    f"the box dataset reuses the image name {path.name!r} across folds; "
+                    "basenames must be unique for a cohort comparison"
+                )
+            boxes[path.name] = (name, sha256_file(path))
+        for image in split_coco_images(coco, name):
+            path = coco_dataset / str(image["file_name"])
+            if path.name in masks:
+                raise ValueError(
+                    f"the mask dataset reuses the image name {path.name!r} across folds; "
+                    "basenames must be unique for a cohort comparison"
+                )
+            masks[path.name] = (name, sha256_file(path))
+    if set(boxes) != set(masks):
+        missing_boxes = sorted(set(masks) - set(boxes))
+        missing_masks = sorted(set(boxes) - set(masks))
         raise ValueError(
-            f"the benchmark split '{split}' has no images in either dataset; "
-            f"available splits: {sorted(signature)}"
+            f"the cohorts differ between {data_yaml} and {coco_dataset}: "
+            f"only-box={missing_masks} only-mask={missing_boxes}"
         )
+    for name in boxes:
+        box_fold, box_hash = boxes[name]
+        mask_fold, mask_hash = masks[name]
+        if box_fold != mask_fold:
+            raise ValueError(
+                f"image {name!r} is in the {box_fold} fold of the box dataset and "
+                f"the {mask_fold} fold of the mask dataset"
+            )
+        if box_hash != mask_hash:
+            raise ValueError(
+                f"image {name!r} has different content in the box and mask datasets "
+                f"({box_hash[:12]} != {mask_hash[:12]})"
+            )
+    if not any(fold == split for fold, _hash in boxes.values()):
+        raise ValueError(f"the benchmark split '{split}' has no images in either dataset")
+    signature = {
+        name: {"split": fold, "sha256": digest} for name, (fold, digest) in sorted(boxes.items())
+    }
     return {"split": split, "images": signature, "domain": "real"}
 
 

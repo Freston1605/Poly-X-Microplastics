@@ -5,30 +5,30 @@ and records the returned number as the study value. It is the shared evaluator's
 with-class score from :func:`run_execution`, the same number the one-process
 driver returns through ``polyx-pipeline --sweep``.
 
-Each trial writes a normal execution under ``<output_dir>/trials/trial_<N>``.
-The number comes from the study trial, not from Hydra's job index: a resumed
-multirun starts its job index at zero again, so the job index would overwrite
-the previous invocation's first trial directory. A trial interrupted by a
-time limit is left ``RUNNING`` in Optuna; matching the sampled parameters
-against the running trials identifies the new one even when an old zombie is
-still in the study. A trial index records every directory that was written so
-the best-artifact step can find the winner unambiguously. One trial at a time
-is the configured contract.
+``PolyxOptunaSweeper`` injects the real study trial number as
+``sweep_trial_id``. That is the only accepted identity: parameters and Hydra's
+resettable job index are ambiguous after a preemption. Each trial persists a
+record before training; a resubmission with the same trial id resumes the
+recorded execution when it has a progress snapshot, or explicitly retries the
+same parameters when it does not. The resolved study name and storage are
+written once and reused by ``sweep_best``.
 """
 
 from __future__ import annotations
 
 import json
-import math
+import shutil
 from pathlib import Path
 from typing import Any
 
-import optuna
 from hydra import main
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
-from polyx.pipeline.artifacts import write_json_atomic
+from polyx.pipeline.artifacts import write_json_atomic, write_yaml
+from polyx.pipeline.optuna_sweeper import install_trial_id_passthrough
+
+install_trial_id_passthrough()
 
 
 @main(config_path="conf", config_name="sweep", version_base="1.3")
@@ -39,11 +39,64 @@ def objective(cfg: DictConfig) -> float:
 
     raw = OmegaConf.to_container(cfg, resolve=True)
     assert isinstance(raw, dict)
-    output = _trial_output_dir(raw)
+    root = Path(str(raw["output_dir"]))
+    trial_id = int(raw["sweep_trial_id"])
+    study = _study_record()
+    _persist_study(root, study)
+    output = _trial_output_dir(root, trial_id)
+    record = {
+        "trial_id": trial_id,
+        "parameters": _trial_parameters(raw),
+        "execution": str(output),
+        "status": "running",
+        **study,
+    }
+    write_json_atomic(record, output / "record.json")
     raw["output_dir"] = str(output)
+    if (output / "progress.json").is_file():
+        raw["resume"] = True
     summary = run_execution(execution_config_from_raw(raw))
-    _register_trial(output, _trial_number(raw))
+    write_json_atomic({**record, "status": "completed"}, output / "record.json")
+    _register_trial(output, trial_id)
     return float(summary["selection"]["value"])
+
+
+def _study_record() -> dict[str, Any]:
+    """The study identity resolved by Hydra once for this sweep root."""
+    sweeper = HydraConfig.get().sweeper
+    return {
+        "study_name": str(sweeper.get("study_name") or "polyx-optuna"),
+        "storage": str(sweeper.get("storage") or ""),
+        "direction": str(sweeper.get("direction") or "maximize"),
+        "params": dict(sweeper.get("params") or {}),
+    }
+
+
+def _persist_study(root: Path, study: dict[str, Any]) -> None:
+    """Write the study identity once; a different study in the same root fails."""
+    path = root / "sweep_config.yaml"
+    if path.is_file():
+        import yaml
+
+        existing = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if (
+            existing.get("study_name") != study["study_name"]
+            or existing.get("storage") != study["storage"]
+        ):
+            raise RuntimeError(
+                f"{root} already belongs to study {existing.get('study_name')!r} at "
+                f"{existing.get('storage')!r}; use a new sweep root"
+            )
+        return
+    write_yaml(study, path)
+
+
+def _trial_parameters(raw: dict) -> dict[str, Any]:
+    """The protocol values this trial actually received."""
+    protocol = raw.get("protocol") or {}
+    if not isinstance(protocol, dict):
+        return {}
+    return {f"protocol.{key}": value for key, value in protocol.items()}
 
 
 def _index_path(root: Path) -> Path:
@@ -67,90 +120,27 @@ def _read_index(root: Path) -> dict[str, list[str]]:
     }
 
 
-def _register_trial(output: Path, number: int | None) -> None:
+def _register_trial(output: Path, trial_id: int) -> None:
     """Record this execution's directory against its study trial number."""
     root = output.parent.parent
     index = _read_index(root)
-    key = str(number) if number is not None else f"job_{HydraConfig.get().job.num}"
-    entries = index.setdefault(key, [])
-    name = output.name
-    if name not in entries:
-        entries.append(name)
+    entries = index.setdefault(str(trial_id), [])
+    if output.name not in entries:
+        entries.append(output.name)
     write_json_atomic(index, _index_path(root))
 
 
-def _numbers_match(observed: Any, expected: Any) -> bool:
-    """Trial parameters round-trip through Hydra; compare numbers by value."""
-    if isinstance(expected, (int, float)) and isinstance(observed, (int, float)):
-        return math.isclose(float(observed), float(expected), rel_tol=1e-9, abs_tol=1e-9)
-    return observed == expected
-
-
-def _sampled_params(raw: dict) -> dict[str, Any]:
-    """The protocol values this trial's declared space could have suggested."""
-    sweeper = HydraConfig.get().sweeper
-    declared = sweeper.get("params") or {}
-    protocol = raw.get("protocol") or {}
-    if not isinstance(protocol, dict):
-        return {}
-    sampled: dict[str, Any] = {}
-    for key in declared:
-        name = str(key)
-        if not name.startswith("protocol."):
-            continue
-        field = name.split(".", 1)[1]
-        if field in protocol:
-            sampled[name] = protocol[field]
-    return sampled
-
-
-def _trial_number(raw: dict) -> int | None:
-    """The study trial this job is executing, not Hydra's resettable job id."""
-    sweeper = HydraConfig.get().sweeper
-    storage = sweeper.get("storage")
-    study_name = sweeper.get("study_name")
-    if not storage or not study_name:
-        return None
-    try:
-        study = optuna.load_study(study_name=str(study_name), storage=str(storage))
-    except Exception:  # noqa: BLE001 - a fresh study may not exist yet
-        return None
-    running = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.RUNNING]
-    if not running:
-        return None
-    sampled = _sampled_params(raw)
-    matching = [
-        trial
-        for trial in running
-        if all(
-            name in trial.params and _numbers_match(trial.params[name], value)
-            for name, value in sampled.items()
-        )
-    ]
-    # The current trial is the newest one, whether an interrupted zombie with
-    # the same parameters exists or not.
-    pool = matching or running
-    return max(int(trial.number) for trial in pool)
-
-
-def _trial_output_dir(raw: dict) -> Path:
-    """The unique execution directory of this trial under the sweep root."""
-    root = Path(str(raw["output_dir"]))
-    job_index = int(HydraConfig.get().job.num)
-    number = _trial_number(raw)
-    label = f"trial_{number:03d}" if number is not None else f"job_{job_index:03d}"
-    directory = root / "trials" / label
-    index = _read_index(root)
-    if directory.name in index.get(str(number) if number is not None else f"job_{job_index}", []):
-        directory = root / "trials" / f"{label}_job{job_index:03d}"
-    if (directory / "config.yaml").is_file():
-        # Never overwrite an earlier trial's artifacts, even if the index was
-        # lost or the job was restarted outside Hydra.
-        directory = (
-            root
-            / "trials"
-            / f"{label}_{job_index:03d}_{len(list(directory.parent.glob(label + '*')))}"
-        )
+def _trial_output_dir(root: Path, trial_id: int) -> Path:
+    """The stable execution directory for one study trial id."""
+    directory = root / "trials" / f"trial_{trial_id:03d}"
+    if (directory / "progress.json").is_file():
+        return directory
+    if directory.exists():
+        # A record without a progress snapshot cannot be resumed; retrying the
+        # same parameters in a clean directory is explicit, not an overwrite of
+        # usable work.
+        shutil.rmtree(directory)
+    directory.mkdir(parents=True, exist_ok=True)
     return directory
 
 

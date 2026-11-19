@@ -53,10 +53,11 @@ campaign, and their artifacts sync into separate directories.
 A campaign job carries both sources; the family's task decides which one it
 uses. A single-execution invocation still refuses the wrong source for the
 family, so a segmenter cannot silently train on boxes. Before any job starts,
-the campaign checks that the two sources contain the same image basenames in
-the same folds and that both explicitly declare real-domain imagery. Different
-plate sets, or a validation fold that is not declared real, are refused rather
-than presented as a fair comparison.
+the campaign checks that the two sources contain the same image names in the
+same folds with byte-identical content, and that both explicitly declare
+real-domain imagery. A same-name image with different pixels, a different plate
+set or a validation fold that is not declared real is refused rather than
+presented as a fair comparison.
 
 ## Weights
 
@@ -129,9 +130,11 @@ decides for itself:
 
 - a family with a `progress.json` resumes from its Lightning checkpoint
   (`checkpoints/lightning/checkpoint_NNN.ckpt`); completed epochs are not rerun;
-- a family whose `training_state.json` already exists for the same protocol is
+- a family whose `completion.json` already exists for the same protocol is
   **skipped**, so a finished execution's metrics are never recomputed or
-  overwritten;
+  overwritten. The record is written atomically and last, after metrics,
+  checkpoint, provenance and report; a final epoch with missing artifacts is
+  published, not retrained;
 - a family that never started runs normally, because there is no snapshot to
   resume;
 - a root that holds an execution for a different protocol is refused; start a

@@ -135,11 +135,9 @@ def build_tiny_dataset(root: Path) -> Path:
     )
     for split in ("train", "val"):
         for image in (root / "images" / split).glob("*.png"):
-            # split_dataset writes 60x40 images; rewrite them at 80x80 so the
-            # prediction boxes de-normalise to whole pixel coordinates.
-            ok, buffer = cv2.imencode(".png", np.full((80, 80, 3), 0, dtype=np.uint8))
-            assert ok
-            image.write_bytes(buffer.tobytes())
+            # Use the COCO mask fixture's 64x48 pixels byte-for-byte, so a
+            # campaign can verify image content, not just names.
+            write_image(image, width=64, height=48)
     return root / "data.yaml"
 
 

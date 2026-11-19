@@ -8,6 +8,7 @@ adapter owns only the framework-specific fit.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import asdict
 from pathlib import Path
@@ -31,6 +32,38 @@ from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.training import EarlyStoppingState
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    """Read one JSON artifact written by this engine."""
+    try:
+        loaded = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"cannot read artifact {path}: {exc}") from exc
+    if not isinstance(loaded, dict):
+        raise RuntimeError(f"artifact {path} is not a JSON object")
+    return loaded
+
+
+def _completion_record(
+    config: ExecutionConfig,
+    *,
+    selected_epoch: int,
+    selection: dict[str, Any],
+    checkpoint: Path,
+    epochs_completed: int,
+) -> dict[str, Any]:
+    """The last artifact written, naming the execution as finished."""
+    return {
+        "status": "completed",
+        "protocol": protocol_to_dict(config),
+        "family": asdict(config.family),
+        "backend": asdict(config.backend),
+        "selected_epoch": selected_epoch,
+        "selection": selection,
+        "checkpoint": str(checkpoint),
+        "epochs_completed": epochs_completed,
+    }
+
+
 def run_execution(config: ExecutionConfig) -> dict[str, Any]:
     """Run one execution and return a small summary of its artifacts."""
     layout = ArtifactLayout(config.output_dir)
@@ -40,6 +73,17 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         if resume_state.protocol != protocol_to_dict(config):
             raise RuntimeError("protocol changed since the progress snapshot was written")
     layout.create()
+    if resume_state is not None and layout.completion.is_file():
+        # A completed execution is never rebuilt; the completion record is the
+        # one authority.
+        metrics = _read_json(layout.metrics)
+        return {
+            "output_dir": layout.root,
+            "checkpoint": Path(str(_read_json(layout.completion)["checkpoint"])),
+            "selection": metrics["selection"],
+            "metrics": metrics,
+            "training_state": _read_json(layout.training_state),
+        }
 
     write_yaml(config_to_dict(config), layout.config)
     write_yaml(protocol_to_dict(config), layout.resolved_protocol)
@@ -109,6 +153,30 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         resume_state.last_checkpoint if resume_state is not None else None
     )
 
+    git = commit_git(ROOT)
+    # A container has no source checkout: the build embeds the commit as
+    # POLYX_SOURCE_SHA. Keep the repository answer when one is available.
+    image_commit = os.environ.get("POLYX_SOURCE_SHA", "").strip()
+    if not git.get("commit") and image_commit:
+        git = {**git, "commit": image_commit, "source": "image"}
+    provenance: dict[str, Any] = {
+        "git": git,
+        "dataset_hashes": prepared.hashes,
+        "dataset_audit": audit_as_dict(audit),
+        "data_yaml": (
+            str(config.data_yaml)
+            if prepared.source_kind == "yolo_boxes" and config.data_yaml is not None
+            else ""
+        ),
+        "dataset_source": {
+            "kind": prepared.source_kind,
+            "path": str(prepared.source_path),
+        },
+        "dataset_name": config.dataset_name,
+    }
+    if prepared.conversion is not None:
+        provenance["conversion"] = prepared.conversion
+
     def on_epoch(result: EpochResult) -> bool:
         nonlocal first_checkpoint
         if first_checkpoint is None:
@@ -148,6 +216,70 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         write_json_atomic(progress, layout.progress)
         return decision.stop
 
+    def publish(
+        final_metrics: dict[str, Any],
+        training_state: dict[str, Any],
+        best_artifact: Path,
+        epochs_completed: int,
+    ) -> dict[str, Any]:
+        """Write every required artifact, then the completion record last."""
+        write_json(final_metrics, layout.metrics)
+        write_json(training_state, layout.training_state)
+        write_json(provenance, layout.provenance)
+        write_report(layout.report, final_metrics, training_state, config_to_dict(config))
+        write_json_atomic(
+            _completion_record(
+                config,
+                selected_epoch=int(final_metrics.get("selected_epoch", -1)),
+                selection=final_metrics["selection"],
+                checkpoint=best_artifact,
+                epochs_completed=epochs_completed,
+            ),
+            layout.completion,
+        )
+        append_log(
+            layout.training_log,
+            f"done best={best_artifact} selection={final_metrics['selection']['value']:.6f}",
+        )
+        return {
+            "output_dir": layout.root,
+            "checkpoint": best_artifact,
+            "selection": final_metrics["selection"],
+            "metrics": final_metrics,
+            "training_state": training_state,
+        }
+
+    training_done = resume_state is not None and (
+        resume_state.epochs_completed >= config.protocol.epochs or resume_state.stopped_early
+    )
+    if training_done and not layout.completion.is_file():
+        # The final epoch is already on disk. Finish publishing what is
+        # missing instead of retraining or skipping the execution.
+        if stopping.best_checkpoint is None:
+            raise RuntimeError("the progress snapshot has no best checkpoint to publish")
+        best_artifact = stopping.restore(layout.best_checkpoint)
+        if layout.metrics.is_file():
+            final_metrics = _read_json(layout.metrics)
+        else:
+            if resume_state.best_metrics is None:
+                raise RuntimeError("the progress snapshot has no best metrics to publish")
+            final_metrics = dict(resume_state.best_metrics)
+        final_metrics.setdefault("selected_epoch", resume_state.best_epoch)
+        if layout.training_state.is_file():
+            training_state = _read_json(layout.training_state)
+        else:
+            training_state = {
+                "protocol": protocol_to_dict(config),
+                "family": asdict(config.family),
+                "backend": asdict(config.backend),
+                "amp": asdict(config.protocol.amp),
+                "epochs_completed": resume_state.epochs_completed,
+                "early_stopping": stopping.to_dict(resume_state.epochs_completed),
+                "best_checkpoint": str(best_artifact),
+                "recovered_publication": True,
+            }
+        return publish(final_metrics, training_state, best_artifact, resume_state.epochs_completed)
+
     adapter = build_adapter(config.family)
     fit = adapter.fit(config, layout.root, prepared, on_epoch, resume=resume_state)
 
@@ -162,7 +294,6 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             best["predictions"], adapter_figures=best["adapter_figures"]
         )
     final_metrics["selected_epoch"] = best["epoch"]
-    write_json(final_metrics, layout.metrics)
 
     training_state: dict[str, Any] = {
         "protocol": protocol_to_dict(config),
@@ -187,42 +318,4 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         training_state["resumed_from"] = (
             str(resume_state.last_checkpoint) if resume_state.last_checkpoint else None
         )
-    write_json(training_state, layout.training_state)
-
-    git = commit_git(ROOT)
-    # A container has no source checkout: the build embeds the commit as
-    # POLYX_SOURCE_SHA. Keep the repository answer when one is available.
-    image_commit = os.environ.get("POLYX_SOURCE_SHA", "").strip()
-    if not git.get("commit") and image_commit:
-        git = {**git, "commit": image_commit, "source": "image"}
-    provenance: dict[str, Any] = {
-        "git": git,
-        "dataset_hashes": prepared.hashes,
-        "dataset_audit": audit_as_dict(audit),
-        "data_yaml": (
-            str(config.data_yaml)
-            if prepared.source_kind == "yolo_boxes" and config.data_yaml is not None
-            else ""
-        ),
-        "dataset_source": {
-            "kind": prepared.source_kind,
-            "path": str(prepared.source_path),
-        },
-        "dataset_name": config.dataset_name,
-    }
-    if prepared.conversion is not None:
-        provenance["conversion"] = prepared.conversion
-    write_json(provenance, layout.provenance)
-    write_report(layout.report, final_metrics, training_state, config_to_dict(config))
-    append_log(
-        layout.training_log,
-        f"done best={best_artifact} selection={final_metrics['selection']['value']:.6f}",
-    )
-
-    return {
-        "output_dir": layout.root,
-        "checkpoint": best_artifact,
-        "selection": final_metrics["selection"],
-        "metrics": final_metrics,
-        "training_state": training_state,
-    }
+    return publish(final_metrics, training_state, best_artifact, fit.epochs_completed)

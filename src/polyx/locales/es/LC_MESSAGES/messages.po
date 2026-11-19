@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 12:57-0300\n"
+"POT-Creation-Date: 2026-11-19 14:38-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6611,31 +6611,31 @@ msgstr "define POLYX_WEIGHTS_DIR y POLYX_WEIGHTS_MANIFEST antes de preparar los 
 msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
 msgstr "faltan los pesos fijados o no se pudieron verificar; prepáralos con --url en un nodo con red"
 
-#: src/polyx/pipeline/artifacts.py:139
+#: src/polyx/pipeline/artifacts.py:144
 msgid "Training execution report"
 msgstr "Informe de ejecución del entrenamiento"
 
-#: src/polyx/pipeline/artifacts.py:141
+#: src/polyx/pipeline/artifacts.py:146
 msgid "Family"
 msgstr "Familia"
 
-#: src/polyx/pipeline/artifacts.py:142
+#: src/polyx/pipeline/artifacts.py:147
 msgid "Backend"
 msgstr "Backend"
 
-#: src/polyx/pipeline/artifacts.py:143
+#: src/polyx/pipeline/artifacts.py:148
 msgid "Selection metric"
 msgstr "Métrica de selección"
 
-#: src/polyx/pipeline/artifacts.py:145
+#: src/polyx/pipeline/artifacts.py:150
 msgid "Figures"
 msgstr "Figuras"
 
-#: src/polyx/pipeline/artifacts.py:157
+#: src/polyx/pipeline/artifacts.py:162
 msgid "Early stopping"
 msgstr "Parada anticipada"
 
-#: src/polyx/pipeline/artifacts.py:151
+#: src/polyx/pipeline/artifacts.py:156
 msgid "Per class"
 msgstr "Por clase"
 
@@ -6681,15 +6681,37 @@ msgstr "Primer lote estratificado"
 msgid "Audit"
 msgstr "Auditoría"
 
-#: src/polyx/pipeline/sweep_best.py:35
+#: src/polyx/pipeline/seg_conversion.py:129
+#, python-format
+msgid ""
+"a COCO mask annotation must have exactly one polygon ring to stay one training instance; "
+"annotation %(id)s has %(count)d. Split the particle into separate annotations in the annotation "
+"tool, or export a single exterior polygon."
+msgstr ""
+"una anotación de máscara COCO debe tener exactamente un anillo de polígono para seguir siendo "
+"una instancia de entrenamiento; la anotación %(id)s tiene %(count)d. Separa la partícula en "
+"anotaciones distintas en la herramienta de anotación, o exporta un único polígono exterior."
+
+#: src/polyx/pipeline/seg_conversion.py:141
+#, python-format
+msgid ""
+"image %(image)s has annotations %(first)s and %(second)s with the same class and box; the pinned"
+" YOLO loader would collapse them into one target. Merge or remove the duplicate in the "
+"annotation tool."
+msgstr ""
+"la imagen %(image)s tiene las anotaciones %(first)s y %(second)s con la misma clase y caja; el "
+"cargador YOLO fijado las colapsaría en un solo objetivo. Fusiona o elimina la duplicada en la "
+"herramienta de anotación."
+
+#: src/polyx/pipeline/sweep_best.py:34
 msgid "Write sweep_best.json from a finished Optuna multirun"
 msgstr "Escribir sweep_best.json a partir de un multirun terminado de Optuna"
 
-#: src/polyx/pipeline/sweep_best.py:37
+#: src/polyx/pipeline/sweep_best.py:36
 msgid "the sweep root"
 msgstr "la raíz de la búsqueda"
 
-#: src/polyx/pipeline/sweep_best.py:41
+#: src/polyx/pipeline/sweep_best.py:40
 msgid "study storage URL or SQLite path (default: the work layout path)"
 msgstr "URL de almacenamiento del estudio o ruta SQLite (predeterminada: la ruta de work)"
 

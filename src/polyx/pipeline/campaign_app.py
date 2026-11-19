@@ -53,7 +53,11 @@ def _selection_from(layout: ArtifactLayout, state: dict) -> float:
     try:
         metrics = json.loads(layout.metrics.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return float(state["early_stopping"].get("best_score") or 0.0)
+        return float(
+            (state.get("early_stopping") or {}).get("best_score")
+            or (state.get("selection") or {}).get("value")
+            or 0.0
+        )
     return float(metrics.get("selection", {}).get("value", 0.0))
 
 
@@ -66,8 +70,8 @@ def _resume_decision(config: ExecutionConfig) -> tuple[str, dict]:
     campaign was submitted with ``resume=true``.
     """
     layout = ArtifactLayout(config.output_dir)
-    if layout.training_state.is_file():
-        state = json.loads(layout.training_state.read_text(encoding="utf-8"))
+    if layout.completion.is_file():
+        state = json.loads(layout.completion.read_text(encoding="utf-8"))
         if state.get("protocol") != protocol_to_dict(config):
             raise RuntimeError(
                 f"{config.output_dir} already holds an execution for a different "
@@ -75,6 +79,8 @@ def _resume_decision(config: ExecutionConfig) -> tuple[str, dict]:
             )
         return "finished", state
     if layout.progress.is_file():
+        # A completed final epoch without a completion record is still resumed:
+        # the engine finishes publishing the missing artifacts before retraining.
         return "resume", {}
     return "start", {}
 

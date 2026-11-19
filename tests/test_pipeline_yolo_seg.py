@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 import yaml
 
 from tests.conftest import write_image
@@ -117,6 +118,14 @@ class _FakeSegResult:
         self.names = dict(enumerate(NAMES))
 
 
+class _FakeNetwork(torch.nn.Module):
+    """Picklable stand-in for a network saved into a validation snapshot."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.zeros(1))
+
+
 class _FakeYOLO:
     """Ultralytics stand-in: one per-image prediction set per validation call."""
 
@@ -127,7 +136,7 @@ class _FakeYOLO:
     def __init__(self, weights: object) -> None:
         self.weights = str(weights)
         self.names = dict(enumerate(NAMES))
-        self.model = _FakeYOLO.network or types.SimpleNamespace(parameters=lambda: iter(()))
+        self.model = _FakeYOLO.network or _FakeNetwork()
         _FakeYOLO.instances.append(self)
 
     def predict(self, **_kwargs: object) -> list[_FakeSegResult]:
@@ -201,30 +210,27 @@ def _install_fakes(
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
 
 
+class _TinySegNet(torch.nn.Module):
+    """A real, picklable network with an Ultralytics-shaped ``loss``."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.scale = torch.nn.Parameter(torch.ones(1))
+        self.seen_batches = 0
+        self.mask_shapes: list[tuple[int, ...]] = []
+
+    def loss(self, batch: object) -> tuple[object, None]:
+        self.seen_batches += 1
+        masks = batch.get("masks")  # type: ignore[union-attr]
+        self.mask_shapes.append(tuple(masks.shape))
+        images = batch["img"]  # type: ignore[index]
+        zero = (self.scale * torch.ones(1)).sum() + images.float().sum()
+        return zero * 0.0, None
+
+
 def _tiny_seg_net() -> object:
-    """A real ``torch`` network with an Ultralytics-shaped ``loss``.
-
-    It records what the converted dataset handed it, so the test can assert
-    that the family received polygon masks rather than boxes.
-    """
-    import torch
-
-    class _Net(torch.nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
-            self.scale = torch.nn.Parameter(torch.ones(1))
-            self.seen_batches = 0
-            self.mask_shapes: list[tuple[int, ...]] = []
-
-        def loss(self, batch: object) -> tuple[object, None]:
-            self.seen_batches += 1
-            masks = batch.get("masks")  # type: ignore[union-attr]
-            self.mask_shapes.append(tuple(masks.shape))
-            images = batch["img"]  # type: ignore[index]
-            zero = (self.scale * torch.ones(1)).sum() + images.float().sum()
-            return zero * 0.0, None
-
-    return _Net()
+    """A real ``torch`` network that records the batches it received."""
+    return _TinySegNet()
 
 
 def _install_real_lightning_fakes(
@@ -296,6 +302,28 @@ def _imported_store(tmp_path: Path) -> Path:
     return store
 
 
+def test_duplicate_class_and_box_are_rejected_before_conversion(
+    tmp_path: Path,
+) -> None:
+    """Two annotations the loader would collapse cannot become two targets."""
+    from polyx.pipeline.seg_conversion import convert_coco_dataset
+
+    store = _imported_store(tmp_path)
+    dataset = _read(store / "dataset.json")
+    first, second = dataset["annotations"][:2]
+    second["image_id"] = first["image_id"]
+    second["category_id"] = first["category_id"]
+    second["bbox"] = list(first["bbox"])
+    second["segmentation"] = [list(first["segmentation"][0])]
+    (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"(same class and box|misma clase y caja)") as caught:
+        convert_coco_dataset(store, tmp_path / "scratch-duplicate")
+    message = str(caught.value)
+    assert str(first["id"]) in message and str(second["id"]) in message
+    assert dataset["images"][0]["file_name"] in message
+
+
 def test_multipart_masks_are_rejected_instead_of_becoming_two_targets(
     tmp_path: Path,
 ) -> None:
@@ -311,7 +339,9 @@ def test_multipart_masks_are_rejected_instead_of_becoming_two_targets(
     ]
     (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="exactly one polygon ring"):
+    with pytest.raises(
+        ValueError, match=r"(exactly one polygon ring|exactamente un anillo de polígono)"
+    ):
         convert_coco_dataset(store, tmp_path / "scratch-multipart")
 
 

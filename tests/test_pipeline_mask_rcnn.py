@@ -322,6 +322,7 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
         "provenance.json",
         "training_state.json",
         "progress.json",
+        "completion.json",
     }
 
     # Mask R-CNN consumes the canonical COCO JSON directly: no second
@@ -460,20 +461,24 @@ def test_benchmark_augmentation_is_the_true_common_subset(
 
 
 def test_tiny_instances_use_yolos_own_side_threshold() -> None:
-    """The torchvision sibling drops the same boxes the YOLO loader drops."""
+    """The sibling drops a 2.0 px side and keeps 2.1 px, as the loader does."""
     from polyx.pipeline.adapters import _filter_tiny_instances
 
-    original = [[1.0, 1.0, 4.0, 4.0], [10.0, 10.0, 30.0, 30.0]]
-    # If the image is resized 4x, the first box grows to 12 px and survives;
-    # when resized 0.5x it becomes 1.5 px and is dropped, as in YOLO.
+    boxes = [
+        [0.0, 0.0, 2.0, 2.0],
+        [10.0, 10.0, 12.1, 12.1],
+        [20.0, 10.0, 40.0, 30.0],
+    ]
     kept, _, labels = _filter_tiny_instances(
-        original,
-        [np.zeros((4, 4), dtype=bool), np.zeros((4, 4), dtype=bool)],
-        [0, 1],
-        measured_boxes=[[0.5, 0.5, 2.0, 2.0], [5.0, 5.0, 15.0, 15.0]],
+        boxes,
+        [np.zeros((4, 4), dtype=bool) for _ in boxes],
+        [0, 1, 2],
+        image_width=64,
+        image_height=48,
+        image_size=64,
     )
-    assert labels == [1]
-    assert kept == [[10.0, 10.0, 30.0, 30.0]]
+    assert labels == [1, 2]
+    assert kept == [boxes[1], boxes[2]]
 
 
 def test_the_two_families_apply_the_same_effective_hsv_and_flip(

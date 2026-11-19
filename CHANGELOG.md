@@ -27,6 +27,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Fixed
+- **Follow-up HPC review fixes.** Checkpoint validation and `best.pt` now use
+  the live weights without carrying a staged checkpoint's EMA; COCO AP has the
+  reference per-image/category 100-detection cap while F1 applies the configured
+  confidence threshold. Campaigns verify byte-identical image content and fold
+  membership, use the pinned loader's own tiny-target rule, and refuse
+  annotations the loader would collapse. Completion is recorded atomically
+  after every artifact, sweeps pass the real Optuna trial id and persist the
+  study identity for a strict winner lookup, and sync-back uses the child
+  directory name. The OCI runtime creates the provenance directory, and
+  container builds stamp the exact source SHA.
 - **HPC pipeline review fixes.** YOLO validation now scores a fresh snapshot
   model instead of fusing and freezing the live training network, so training
   continues past the first epoch; GPU result tensors are converted to CPU

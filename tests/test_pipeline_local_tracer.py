@@ -18,6 +18,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 import yaml
 
 from polyx.core.provenance import sha256_file
@@ -27,11 +28,11 @@ NAMES = {0: "PET", 1: "PP", 2: "LDPE"}
 
 
 def _boxes_prediction() -> list[dict]:
-    """Two correct boxes on each tiny 80x80 image (class ids 0 and 1)."""
+    """Correct boxes on the tiny 64x48 images, in validation order."""
     return [
-        {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.9},
-        {"image_id": 0, "category_id": 1, "bbox": [50.0, 20.0, 20.0, 20.0], "score": 0.8},
-        {"image_id": 1, "category_id": 2, "bbox": [20.0, 50.0, 20.0, 20.0], "score": 0.85},
+        {"image_id": 0, "category_id": 0, "bbox": [16.0, 12.0, 16.0, 12.0], "score": 0.9},
+        {"image_id": 0, "category_id": 1, "bbox": [40.0, 12.0, 16.0, 12.0], "score": 0.8},
+        {"image_id": 1, "category_id": 2, "bbox": [16.0, 30.0, 16.0, 12.0], "score": 0.85},
     ]
 
 
@@ -75,6 +76,14 @@ class _FakeResult:
         self.box = self.boxes
 
 
+class _FakeNetwork(torch.nn.Module):
+    """Picklable stand-in for the Ultralytics network saved in a snapshot."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.zeros(1))
+
+
 class _FakeYOLO:
     """Ultralytics stand-in: one prediction set per validation call."""
 
@@ -84,7 +93,7 @@ class _FakeYOLO:
     def __init__(self, weights: object) -> None:
         self.weights = str(weights)
         self.names = dict(NAMES)
-        self.model = types.SimpleNamespace(parameters=lambda: iter(()))
+        self.model = _FakeNetwork()
         _FakeYOLO.instances.append(self)
 
     def predict(self, **_kwargs: object) -> list[_FakeResult]:
@@ -173,6 +182,34 @@ def _install_fakes(
     ultralytics.YOLO = _FakeYOLO
     monkeypatch.setitem(sys.modules, "lightning", lightning)
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
+
+
+def test_resume_finishes_publishing_after_metrics_before_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A completed epoch with missing report is published, never retrained."""
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    output = tmp_path / "executions" / "publication"
+    overrides = [
+        f"data_yaml={tiny_dataset_path(tmp_path)}",
+        f"output_dir={output}",
+        "protocol.epochs=1",
+    ]
+    assert _command(*overrides) == 0
+    metrics_before = (output / "metrics.json").read_bytes()
+    (output / "report.md").unlink()
+    (output / "completion.json").unlink()
+
+    assert _command(*overrides, "resume=true") == 0
+    assert (output / "completion.json").is_file()
+    assert (output / "report.md").is_file()
+    assert (output / "metrics.json").read_bytes() == metrics_before
+    assert "recovered_publication" not in _read(output / "training_state.json")
+
+
+def tiny_dataset_path(tmp_path: Path) -> Path:
+    """The shared fixture path used by the publication test."""
+    return build_tiny_dataset(tmp_path / "dataset")
 
 
 def _read(path: Path) -> dict:

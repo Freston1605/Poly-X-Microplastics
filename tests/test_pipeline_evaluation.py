@@ -27,23 +27,43 @@ def _prediction(box: list[float], score: float, category: int = 0) -> dict:
     return {"image_id": 0, "category_id": category, "bbox": box, "score": score}
 
 
-def test_with_class_selection_is_operating_point_f1_not_map() -> None:
-    """Late low-score false positives barely move AP but wreck fixed F1."""
+def test_below_threshold_predictions_do_not_change_f1() -> None:
+    """AP keeps the ranked tail; the operating point applies its threshold."""
     evaluator = SharedEvaluator(_ground_truth(), split="val")
-    good = evaluator.evaluate(
-        [_prediction([0, 10, 20, 20], 0.9), _prediction([40, 10, 20, 20], 0.9)]
-    )
-    noisy = evaluator.evaluate(
-        [_prediction([0, 10, 20, 20], 0.9), _prediction([40, 10, 20, 20], 0.9)]
-        + [_prediction([5, 50, 10, 10], 0.1) for _ in range(10)]
-    )
-    # The ranking metric stays high; the fixed-threshold score collapses.
-    assert noisy["figures"]["mAP50-95"]["value"] > 0.9
+    clean = [_prediction([0, 10, 20, 20], 0.9), _prediction([40, 10, 20, 20], 0.9)]
+    good = evaluator.evaluate(clean)
+    noisy = evaluator.evaluate(clean + [_prediction([5, 50, 10, 10], 0.1) for _ in range(10)])
     assert good["selection"]["value"] == 1.0
-    assert noisy["selection"]["value"] < 0.3
+    assert noisy["selection"]["value"] == 1.0
     assert noisy["selection"]["criterion_name"] == "with_class"
     assert noisy["selection"]["confidence_threshold"] == 0.25
     assert noisy["selection"]["iou_threshold"] == 0.5
+
+
+def test_above_threshold_false_positives_lower_f1() -> None:
+    """The threshold is applied, not ignored: confident errors count."""
+    evaluator = SharedEvaluator(_ground_truth(), split="val")
+    noisy = evaluator.evaluate(
+        [_prediction([0, 10, 20, 20], 0.9), _prediction([40, 10, 20, 20], 0.9)]
+        + [_prediction([5, 50, 10, 10], 0.9) for _ in range(10)]
+    )
+    assert noisy["selection"]["value"] < 0.3
+
+
+def test_ap_and_f1_can_rank_models_differently() -> None:
+    """A confident model wins AP; a precise-at-0.5 model wins operating F1."""
+    evaluator = SharedEvaluator(_ground_truth(), split="val")
+    precise_at_05 = evaluator.evaluate(
+        [_prediction([4, 10, 20, 20], 0.9), _prediction([44, 10, 20, 20], 0.9)]
+    )
+    confident_ap = evaluator.evaluate(
+        [_prediction([0, 10, 20, 20], 0.9), _prediction([40, 10, 20, 20], 0.9)]
+        + [_prediction([5, 50, 10, 10], 0.9) for _ in range(5)]
+    )
+    assert precise_at_05["selection"]["value"] > confident_ap["selection"]["value"]
+    assert (
+        precise_at_05["figures"]["mAP50-95"]["value"] < confident_ap["figures"]["mAP50-95"]["value"]
+    )
 
 
 def test_coco_ap_interpolates_precision_across_recall() -> None:
@@ -60,6 +80,38 @@ def test_coco_ap_interpolates_precision_across_recall() -> None:
     assert 0.83 < ap < 0.84
     assert ap > (1.0 + 2 / 3) / 3  # the old sum-at-hits arithmetic
     assert result["selection"]["value"] < 1.0
+
+
+def test_coco_ap_caps_the_first_true_positive_at_rank_101() -> None:
+    """One hundred higher-scored false positives push the TP out of COCO AP."""
+    evaluator = SharedEvaluator(_ground_truth(1), split="val")
+    result = evaluator.evaluate(
+        [_prediction([5, 50, 10, 10], 0.9) for _ in range(100)]
+        + [_prediction([0, 10, 20, 20], 0.1)]
+    )
+    assert result["figures"]["mAP50"]["value"] == 0.0
+
+
+def test_coco_ap_caps_per_image_not_across_the_batch() -> None:
+    """A crowded plate cannot hide the true positive on another image."""
+    ground_truth = _ground_truth(1)
+    ground_truth["images"].append({"id": 1, "width": 100, "height": 100})
+    ground_truth["annotations"].append(
+        {
+            "id": 99,
+            "image_id": 1,
+            "category_id": 0,
+            "bbox": [0, 10, 20, 20],
+            "area": 400,
+            "iscrowd": 0,
+        }
+    )
+    evaluator = SharedEvaluator(ground_truth, split="val")
+    predictions = [_prediction([5, 50, 10, 10], 0.9) for _ in range(100)] + [
+        {"image_id": 1, "category_id": 0, "bbox": [0, 10, 20, 20], "score": 0.9}
+    ]
+    result = evaluator.evaluate(predictions)
+    assert result["figures"]["mAP50"]["value"] > 0.0
 
 
 def test_wrong_polymer_is_not_a_true_positive() -> None:

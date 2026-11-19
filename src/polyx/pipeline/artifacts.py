@@ -51,6 +51,11 @@ class ArtifactLayout:
         return self.root / "progress.json"
 
     @property
+    def completion(self) -> Path:
+        """Atomic completion record, written after every required artifact."""
+        return self.root / "completion.json"
+
+    @property
     def metrics(self) -> Path:
         return self.root / "metrics.json"
 

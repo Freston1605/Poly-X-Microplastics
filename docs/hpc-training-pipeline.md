@@ -118,12 +118,19 @@ resolved_protocol.yaml # the protocol exactly as the adapter consumed it
 provenance.json        # git commit, dataset hashes, audit, dataset source, conversion
 training_state.json    # adapter state, AMP precision, early-stopping decisions
 metrics.json           # named figures, per-class figures, selection criterion
+progress.json          # atomic per-epoch resume snapshot
 report.md              # human-readable summary, criteria included
 logs/training.log      # plain-text execution log
-checkpoints/best.pt    # best weights, selected by the with-class score
-checkpoints/epoch_NNN.pt # one family-native export per epoch
+checkpoints/best.pt    # best live weights, selected by with-class F1
+checkpoints/epoch_NNN.pt # live-weight export per epoch (no staged EMA)
 checkpoints/lightning/checkpoint_NNN.ckpt # immutable per-epoch Lightning state
+completion.json        # written last, only after every required artifact exists
 ```
+
+`completion.json` is the completion authority. A campaign skips a family only
+when it exists under the same protocol; a family with a progress snapshot but
+no completion resumes, and a final epoch already on disk is published rather
+than retrained.
 
 `provenance.json` always names the dataset source (`yolo_boxes` or
 `coco_instances`). A YOLO-seg execution also records its job-time conversion:
@@ -150,9 +157,11 @@ The figures are the same shape for both families:
   one kept as `best.pt`. The threshold and IoU rule are recorded beside it.
 - `localisation_score` — the same operating-point F1 with the class ignored,
   reported beside the selection score.
-- `mAP50` and `mAP50-95` — COCO interpolated average precision, class-aware.
-  These rank predictions by confidence; they are reported separately and never
-  used to select a checkpoint or to drive Optuna.
+- `mAP50` and `mAP50-95` — COCO interpolated average precision, class-aware,
+  with the reference per-image/per-category 100-detection cap. Predictions are
+  collected at a low floor so AP can rank the tail; only the operating point
+  applies `protocol.confidence`. AP is reported separately and never used to
+  select a checkpoint or to drive Optuna.
 - `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
   best mask IoU per ground-truth instance and the mask mAP figures.
 
@@ -209,8 +218,16 @@ reuses the cache and a different dataset cannot pick up stale labels. Each
 COCO annotation must have exactly one polygon ring: YOLO-seg would otherwise
 turn a multi-part particle into several training instances while Mask R-CNN
 keeps it as one. Such an export is refused before training, with an actionable
-error asking for one annotation per part or a single exterior polygon. Label
-destinations come from the project's label codec, not from a re-derived path.
+error asking for one annotation per part or a single exterior polygon. Two
+distinct annotations with the same class and box are refused with the image and
+annotation ids, because the pinned YOLO loader would collapse them into one
+target. Label destinations come from the project's label codec, not from a
+re-derived path.
+
+The Mask R-CNN sibling applies the pinned loader's own `LetterBox` resize,
+clipping and `box_candidates` rule to decide which instances to keep. A 2.0 px
+side is dropped and 2.1 px is kept, exactly as in YOLO, so one family does not
+train on instances the other discarded.
 
 ```bash
 polyx-pipeline \
@@ -307,10 +324,14 @@ is never used for resume. If a progress snapshot has no Lightning checkpoint
 (one written before this behaviour existed), the execution refuses to resume
 instead of silently restarting the epoch loop.
 
-Validation loads a fresh inference wrapper from that epoch's immutable native
-checkpoint. Ultralytics' predictor fuses and freezes the network it is handed,
-so scoring with the live training module would break the next backward pass;
-the two-epoch real-framework test guards this.
+Both the native export and `best.pt` are written from the live Lightning
+network, without the staged checkpoint's `ema` entry: Ultralytics prefers an
+`ema` key over `model` when loading, so re-saving the staged file would validate
+and keep weights that never trained in this run. Validation loads a fresh
+inference wrapper from that live-weight snapshot. Ultralytics' predictor fuses
+and freezes the network it is handed, so scoring with the live training module
+would break the next backward pass; the two-epoch real-framework test guards
+this.
 
 On a machine without a GPU, Lightning substitutes `bf16-mixed` for the requested
 `16-mixed`. `training_state.json` records `amp_requested` (`16-mixed`) next to
@@ -341,12 +362,18 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
 - The study file derives from `hydra.sweeper.study_name`, so overriding only the
   name also moves the SQLite file; `sweep_best` resolves the same path. It is
   never on scratch, and a resumed multirun extends the same study.
-- Each trial writes a normal execution under
-  `<output_dir>/trials/trial_<number>`. The number is matched from the study's
-  running trials and the sampled parameters, not from Hydra's resettable job
-  index; a preemption leaves a `RUNNING` zombie, and the next submission picks
-  the new trial. `<output_dir>/trials/index.json` maps trial numbers to the
-  exact directories written, so `sweep_best` never has to guess by parameters.
+- `PolyxOptunaSweeper` injects the actual study trial number into each job as
+  `sweep_trial_id`; identity never comes from parameters or Hydra's resettable
+  job index. Each trial writes a `record.json` with its id, parameters and
+  execution path before training. A resubmission with the same id resumes the
+  recorded checkpoint when a progress snapshot exists, and otherwise explicitly
+  retries the same parameters in a clean directory.
+- The resolved study name and storage are written once to
+  `<output_dir>/sweep_config.yaml` and reused by `sweep_best`.
+  `<output_dir>/trials/index.json` maps trial numbers to the exact directories
+  written; the export resolves the winner strictly by
+  `study.best_trial.number` and fails if that artifact is missing instead of
+  matching parameters.
 - The search space lives in `hydra.sweeper.params` and may only touch protocol
   hyperparameters; split, seed, augmentation subset and the evaluator are fixed.
   The sampler is a TPE seeded from the protocol, direction `maximize` and no

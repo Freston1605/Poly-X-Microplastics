@@ -83,4 +83,9 @@ backends; only the backend composition changes.
   (`checkpoints/lightning/checkpoint_NNN.ckpt`), which restores weights, optimizer,
   scheduler and epoch progress. A family-native `.pt` export is kept for
   compatibility and best-weight restoration but is never passed to
-  `Trainer.fit` as a checkpoint.
+  `Trainer.fit` as a checkpoint. The export and the validation snapshot are
+  written from the live Lightning network without a staged `ema` entry, so the
+  metric and `best.pt` describe the weights that actually trained.
+- Completion is a separate atomic record written after metrics, checkpoint,
+  provenance and report. A final epoch left without that record is published,
+  not retrained or skipped.

@@ -283,6 +283,26 @@ def test_sync_back_refuses_a_checkpoint_above_the_checkpoint_cap(tmp_path: Path)
         sync_back(run, tmp_path / "local", checkpoint_max_bytes=1024)
 
 
+def test_saved_run_name_cannot_direct_a_copy_outside_the_sync_root(tmp_path: Path) -> None:
+    """Destination components come from the child directory, not saved metadata."""
+    from polyx.hpc.sync_back import sync_campaign
+    from polyx.pipeline.artifacts import ArtifactLayout
+
+    root = tmp_path / "campaign"
+    run = root / "safe_name"
+    layout = ArtifactLayout(run)
+    layout.create()
+    (run / "config.yaml").write_text(
+        "family:\n  name: yolo_detection\n  run_name: ../../escape\n", encoding="utf-8"
+    )
+    (layout.metrics).write_text('{"selection": {}}', encoding="utf-8")
+
+    summary = sync_campaign(root, tmp_path / "local")
+    assert set(summary) == {"safe_name"}
+    assert (tmp_path / "local" / "safe_name" / "metrics.json").is_file()
+    assert not (tmp_path / "escape").exists()
+
+
 def test_campaign_sync_copies_every_family_into_its_own_directory(tmp_path: Path) -> None:
     """One campaign root, one synced directory per family, artifacts only."""
     from polyx.hpc.sync_back import sync_campaign

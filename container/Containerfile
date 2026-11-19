@@ -45,6 +45,7 @@ COPY --from=wheelhouse /src/tools ./tools
 RUN uv venv /opt/venv \
  && uv pip install --no-index --find-links /opt/wheelhouse -r /opt/wheelhouse/requirements.txt \
  && uv pip install --no-deps . \
+ && mkdir -p /opt/polyx \
  && printf '%s\n' "${POLYX_SOURCE_SHA}" > /opt/polyx/SOURCE_SHA \
  && rm -rf /tmp/uv-cache /root/.cache /opt/wheelhouse/*.whl
 

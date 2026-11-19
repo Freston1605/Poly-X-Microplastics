@@ -16,13 +16,13 @@ the headless command never loads a GPU stack.
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from polyx.core.editing import MIN_SIDE_PX
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
@@ -44,10 +44,10 @@ from polyx.pipeline.dataset import (
     split_directory,
     split_images,
 )
-from polyx.pipeline.evaluation import rasterize_segmentation
+from polyx.pipeline.evaluation import PREDICTION_FLOOR, rasterize_segmentation
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset
-from polyx.pipeline.weights import ARCHITECTURE_SUFFIXES, resolve_weights
+from polyx.pipeline.weights import resolve_weights
 
 EpochCallback = Callable[["EpochResult"], bool]
 
@@ -484,6 +484,11 @@ def _torchvision_detector(
     model.roi_heads.box_predictor = FastRCNNPredictor(box_features, classes)
     mask_features = model.roi_heads.mask_predictor.conv5_mask.in_channels
     model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, classes)
+    # Keep the ranked tail for AP, like the YOLO adapter; the shared evaluator
+    # applies the protocol's confidence threshold only to the operating point.
+    # The 100-detection cap is part of the same collection policy.
+    model.roi_heads.score_thresh = PREDICTION_FLOOR
+    model.roi_heads.detections_per_img = 100
     return model
 
 
@@ -550,12 +555,17 @@ class _CocoMaskTorchvisionDataset:
             labels.append(category + 1)
 
         rgb, masks, boxes = _augment(rgb, masks, boxes, self.augmentation, self.protocol)
-        # Ultralytics filters boxes after resizing to the protocol's input
-        # size. Measure the same geometry here so a benchmark never trains one
-        # family on instances the other one dropped.
-        scale = self.protocol.image_size / max(1, height, width)
-        resized = [[value * scale for value in box] for box in boxes]
-        boxes, masks, labels = _filter_tiny_instances(boxes, masks, labels, measured_boxes=resized)
+        # Ultralytics filters boxes after its LetterBox resize. Run the same
+        # loader transform here so a benchmark never trains one family on an
+        # instance the other one dropped.
+        boxes, masks, labels = _filter_tiny_instances(
+            boxes,
+            masks,
+            labels,
+            image_width=width,
+            image_height=height,
+            image_size=self.protocol.image_size,
+        )
         tensor = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1))).float() / 255.0
         areas = [max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1]) for box in boxes]
         target = {
@@ -628,37 +638,90 @@ def _image_target_pairs(batch: list[tuple[Any, dict[str, Any]]]) -> tuple[list[A
     return images, targets
 
 
+def _loader_keep_mask(
+    boxes: list[list[float]],
+    image_width: int,
+    image_height: int,
+    image_size: int,
+) -> np.ndarray:
+    """Return the boxes the pinned YOLO loader keeps after its resize.
+
+    The torchvision sibling must drop exactly the instances YOLO drops. Rather
+    than approximating the loader with a scale factor, this runs the same
+    ``LetterBox`` and ``RandomPerspective.box_candidates`` classes the pinned
+    Ultralytics loader uses, with the benchmark's zero geometric augmentation.
+    Rounding, stride padding and clipping therefore match the loader.
+    """
+    if not boxes:
+        return np.zeros((0,), dtype=bool)
+    from ultralytics.data.augment import LetterBox, RandomPerspective
+    from ultralytics.utils.instance import Instances
+
+    array = np.asarray(boxes, dtype=np.float32).reshape(-1, 4)
+    labels: dict[str, Any] = {
+        "img": np.zeros((image_height, image_width, 3), dtype=np.uint8),
+        "cls": np.zeros((len(array), 1), dtype=np.float32),
+        "instances": Instances(
+            bboxes=array,
+            segments=np.zeros((len(array), 0, 2), dtype=np.float32),
+            bbox_format="xyxy",
+            normalized=False,
+        ),
+    }
+    labels = LetterBox(new_shape=(image_size, image_size))(labels)
+    letterboxed = np.asarray(labels["instances"].bboxes, dtype=np.float32).copy()
+    clipped = letterboxed.copy()
+    clipped[:, [0, 2]] = clipped[:, [0, 2]].clip(0, image_size)
+    clipped[:, [1, 3]] = clipped[:, [1, 3]].clip(0, image_size)
+    perspective = RandomPerspective(
+        degrees=0.0,
+        translate=0.0,
+        scale=0.0,
+        shear=0.0,
+        perspective=0.0,
+    )
+    return np.asarray(
+        perspective.box_candidates(box1=letterboxed.T, box2=clipped.T, area_thr=0.10),
+        dtype=bool,
+    )
+
+
 def _filter_tiny_instances(
     boxes: list[list[float]],
     masks: list[np.ndarray],
     labels: list[int],
     *,
-    measured_boxes: list[list[float]] | None = None,
+    image_width: int,
+    image_height: int,
+    image_size: int,
 ) -> tuple[list[list[float]], list[np.ndarray], list[int]]:
-    """Apply the YOLO loader's small-box rule to the torchvision sibling.
+    """Apply the pinned loader's retention rule to the torchvision sibling.
 
-    Ultralytics' random-perspective loader drops boxes whose resized side is
-    not greater than ``MIN_SIDE_PX``. The benchmark declares no geometric
-    transforms, but that filter still applies after the resize; without the
-    same rule the two families would train on different instance sets and the
-    model would no longer be the only variable. The thresholds mirror
-    Ultralytics' ``box_candidates`` (wh > 2, aspect < 100).
+    The model must be the only variable: one family cannot train on instances
+    the other discarded. The kept set comes from the loader's own resize and
+    clipping, not from a second approximation of that arithmetic.
     """
-    kept_boxes: list[list[float]] = []
-    kept_masks: list[np.ndarray] = []
-    kept_labels: list[int] = []
-    geometry = measured_boxes if measured_boxes is not None else boxes
-    for box, measured, mask, label in zip(boxes, geometry, masks, labels, strict=True):
-        width = measured[2] - measured[0]
-        height = measured[3] - measured[1]
-        if width <= MIN_SIDE_PX or height <= MIN_SIDE_PX:
-            continue
-        if max(width, height) / max(1e-12, min(width, height)) >= 100.0:
-            continue
-        kept_boxes.append(box)
-        kept_masks.append(mask)
-        kept_labels.append(label)
+    keep = _loader_keep_mask(boxes, image_width, image_height, image_size)
+    kept_boxes = [box for box, keep_one in zip(boxes, keep, strict=True) if keep_one]
+    kept_masks = [mask for mask, keep_one in zip(masks, keep, strict=True) if keep_one]
+    kept_labels = [label for label, keep_one in zip(labels, keep, strict=True) if keep_one]
     return kept_boxes, kept_masks, kept_labels
+
+
+def _save_live_checkpoint(network: Any, path: Path) -> None:
+    """Export the network that actually trained, never a staged checkpoint EMA.
+
+    An Ultralytics checkpoint may carry an ``ema`` entry, and its loader prefers
+    that entry over ``model``. Re-saving the staged checkpoint would therefore
+    validate (and keep as ``best.pt``) weights from before this epoch. The live
+    network is deep-copied and written without an ``ema`` key, so every consumer
+    loads exactly the weights the Lightning loop trained.
+    """
+    import torch
+
+    payload = {"model": deepcopy(network)}
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    torch.save(payload, path)
 
 
 def _validation_predictions(
@@ -673,8 +736,9 @@ def _validation_predictions(
     Ultralytics' predictor fuses and freezes the network it is handed. Giving
     it Lightning's live network makes the next backward pass fail, so each
     epoch validates a separate wrapper created from the immutable checkpoint
-    written immediately before this call. The copy is loaded from disk, so it
-    shares no parameters with the model being trained.
+    written immediately before this call. The checkpoint has no staged ``ema``
+    entry: it names the live weights, so the copy validated here is the model
+    that actually trained.
     """
     from ultralytics import YOLO
 
@@ -684,7 +748,9 @@ def _validation_predictions(
         source=[str(image) for image in images],
         imgsz=config.protocol.image_size,
         batch=config.protocol.batch,
-        conf=config.protocol.confidence,
+        # Keep the ranked tail for AP; the shared evaluator applies the
+        # operating point's confidence threshold only to F1.
+        conf=PREDICTION_FLOOR,
         device=device,
         verbose=False,
     )
@@ -740,7 +806,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             weights_dir=config.weights_dir,
             manifest=config.weights_manifest,
         )
-        architecture_only = Path(config.family.weights).suffix.lower() in ARCHITECTURE_SUFFIXES
         model = YOLO(str(resolved_weights.path) if resolved_weights.path else config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
         # dataset decides the class count, so the Ultralytics network is rebuilt
@@ -824,15 +889,9 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             def on_train_epoch_end(self) -> None:
                 epoch = int(getattr(self, "current_epoch", 0))
                 self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
-                if architecture_only:
-                    # An architecture declaration has no Ultralytics checkpoint
-                    # dictionary to merge; export the network itself so the
-                    # artifact still exists and can be loaded back.
-                    import torch
-
-                    torch.save({"model": model.model}, self.checkpoint_path)
-                else:
-                    model.save(str(self.checkpoint_path))
+                # Export the live Lightning network, not the staged checkpoint's
+                # EMA. Both validation and `best.pt` read this artifact.
+                _save_live_checkpoint(self.net, self.checkpoint_path)
                 # Validation runs on a fresh model loaded from this immutable
                 # snapshot. Ultralytics fuses and freezes whatever network it
                 # predicts with, so using the live training module would break

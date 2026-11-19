@@ -178,13 +178,13 @@ def _suggest(trial: optuna.trial.Trial, name: str, declaration: dict[str, Any]) 
 
 
 def _trial_config(
-    base: ExecutionConfig, params: dict[str, Any], output_dir: Path
+    base: ExecutionConfig, params: dict[str, Any], output_dir: Path, *, resume: bool = False
 ) -> ExecutionConfig:
     """One trial changes only declared protocol values and its output folder."""
     protocol = deepcopy(base.protocol)
     for key, value in params.items():
         setattr(protocol, key.split(".", 1)[1], value)
-    return replace(base, protocol=protocol, output_dir=output_dir, resume=False)
+    return replace(base, protocol=protocol, output_dir=output_dir, resume=resume)
 
 
 def _sweep_config_view(config: SweepConfig) -> dict[str, Any]:
@@ -237,22 +237,34 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
     )
     write_yaml(_sweep_config_view(config), layout.sweep_config)
 
-    start = len(study.trials)
-    for index in range(config.n_trials):
+    for _index in range(config.n_trials):
         trial = study.ask()
         suggestions = {
             name: _suggest(trial, name, rule) for name, rule in config.search_space.items()
         }
-        trial_dir = layout.root / "trials" / f"trial_{start + index:03d}"
+        trial_dir = layout.root / "trials" / f"trial_{trial.number:03d}"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+        record = {
+            "trial_id": trial.number,
+            "parameters": suggestions,
+            "execution": str(trial_dir),
+            "status": "running",
+            "study_name": config.study_name,
+            "storage": config.storage,
+        }
+        write_json(record, trial_dir / "record.json")
+        resume = (trial_dir / "progress.json").is_file()
         try:
             score = float(
-                run_execution(_trial_config(config.execution, suggestions, trial_dir))["selection"][
-                    "value"
-                ]
+                run_execution(
+                    _trial_config(config.execution, suggestions, trial_dir, resume=resume)
+                )["selection"]["value"]
             )
         except Exception:
+            write_json({**record, "status": "failed"}, trial_dir / "record.json")
             study.tell(trial, state=optuna.trial.TrialState.FAIL)
             raise
+        write_json({**record, "status": "completed"}, trial_dir / "record.json")
         study.tell(trial, score)
 
     completed = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.COMPLETE]
