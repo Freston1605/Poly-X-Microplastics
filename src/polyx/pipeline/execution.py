@@ -163,7 +163,11 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         "git": commit_git(ROOT),
         "dataset_hashes": prepared.hashes,
         "dataset_audit": asdict(audit),
-        "data_yaml": str(config.data_yaml) if config.data_yaml is not None else "",
+        "data_yaml": (
+            str(config.data_yaml)
+            if prepared.source_kind == "yolo_boxes" and config.data_yaml is not None
+            else ""
+        ),
         "dataset_source": {
             "kind": prepared.source_kind,
             "path": str(prepared.source_path),

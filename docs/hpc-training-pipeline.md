@@ -2,9 +2,11 @@
 
 The pipeline is a headless path parallel to the shipped GUI Trainer. It does
 not change the Trainer or its native training wrapper. This page describes the
-first slice: one YOLO detection training execution and two segmentation
-executions — YOLO-seg and Mask R-CNN — on the local backend, sharing one
-protocol, one Lightning loop, one evaluator and one artifact layout.
+local backend and the per-family executions: one YOLO detection training
+execution and two segmentation executions — YOLO-seg and Mask R-CNN — sharing
+one protocol, one Lightning loop, one evaluator and one artifact layout. The
+three families can also run as one multirun campaign; the cluster procedure is
+in [hpc.md](hpc.md).
 
 ## Running one execution
 
@@ -26,6 +28,28 @@ selection metric and the criterion it was computed under, then the
 localisation figure and its criterion beside it. A non-zero exit status means
 the execution failed; the printed error names the reason.
 
+## Running a campaign
+
+A campaign is one Hydra multirun whose jobs are the model families. Each job
+composes the same protocol and writes its own execution under
+`<campaign_root>/<family>/`; the family is the only variable. Both training
+source overrides are supplied because the detection family consumes the YOLO
+box dataset and the segmentation families consume the canonical COCO dataset:
+
+```bash
+python -m polyx.pipeline.campaign_app --multirun \
+  campaign_root=/path/to/campaign \
+  data_yaml=/path/to/dataset/data.yaml \
+  coco_dataset=/path/to/segmentation_datasets/first_batch/v1 \
+  family=yolo_detection,yolo_segmentation,mask_rcnn \
+  protocol.epochs=150
+```
+
+The Hydra basic launcher runs the three jobs sequentially inside one process
+and one allocation. Add `backend=slurm` on the cluster; the wrapper, queue
+tiers and sync-back procedure are on [hpc.md](hpc.md). The local campaign is
+proven by `tests/test_pipeline_campaign.py`.
+
 ## Configuration sections
 
 - `protocol` — framework-neutral and consumed unchanged by every adapter.
@@ -44,10 +68,12 @@ the execution failed; the printed error names the reason.
   to `$POLYX_HPC_SCRATCH/polyx/pipeline`, or the system temporary directory
   when the cluster variable is absent. Nothing written there is an artifact.
 
-A detection family only accepts `data_yaml`; a segmentation family only accepts
-`coco_dataset`. The mismatch is refused before any training starts, because a
-segmenter trained on boxes or a detector scored against masks would silently
-produce a meaningless benchmark.
+A detection family consumes only `data_yaml`; a segmentation family consumes
+only `coco_dataset`. A campaign job may declare both, so one multirun can serve
+both kinds of family; a single execution still refuses a missing source, and a
+segmenter can never train on boxes or a detector be scored against masks. The
+mismatch would silently produce a meaningless benchmark, so it is refused
+before any training starts.
 
 `protocol.augmentation_subset` is the only augmentation the benchmark campaign
 allows. Every adapter records in `training_state.json` what it applied and what

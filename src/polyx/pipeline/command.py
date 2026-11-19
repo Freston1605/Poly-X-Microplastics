@@ -12,8 +12,10 @@ family from the imported canonical COCO mask dataset, converted to the family's
 format at job time into scratch. With ``coco_import`` the same command imports
 and audits a CVAT COCO export as the canonical segmentation training dataset
 instead of running an execution. ``--sweep`` runs the small Optuna driver over
-the same config, evaluator and artifact layout; the real campaign uses the
-Hydra sweeper plugin through ``python -m polyx.pipeline.sweep_app --multirun``.
+the same config, evaluator and artifact layout; the real search uses the Hydra
+sweeper plugin through ``python -m polyx.pipeline.sweep_app --multirun``.
+A benchmark campaign across model families is a separate multirun,
+``python -m polyx.pipeline.campaign_app --multirun``.
 """
 
 from __future__ import annotations

@@ -1,0 +1,38 @@
+# Root configuration of one benchmark campaign.
+#
+# A campaign is a Hydra multirun: one job per model family, all under the same
+# protocol and the same datasets. Each job is a normal training execution, so it
+# writes the usual artifact layout under `<campaign_root>/<family>/`. The
+# campaign command runs the jobs sequentially inside one allocation; it never
+# queues a separate job per family.
+defaults:
+  - protocol: default
+  - backend: local
+  - family: yolo_detection
+  - _self_
+
+# Required: the directory that holds one execution per family.
+campaign_root: ""
+# Both training sources may be supplied together, because a detection family
+# consumes the YOLO box dataset and a segmentation family consumes the canonical
+# COCO mask dataset. The family's task decides which one it uses.
+data_yaml: ""
+coco_dataset: ""
+coco_import: ""
+dataset_name: polyx
+dataset_root: ""
+scratch_dir: ""
+# An explicit output_dir overrides `<campaign_root>/<family>`; leave it empty
+# for a campaign so every family gets its own directory.
+output_dir: ""
+resume: false
+
+hydra:
+  sweep:
+    # One job directory per family under `<campaign_root>/hydra/`. When the
+    # required root is missing the job still fails with the campaign's own
+    # message instead of writing anything into the repository.
+    dir: ${campaign_root}
+    subdir: hydra/${family.name}
+  job:
+    chdir: false

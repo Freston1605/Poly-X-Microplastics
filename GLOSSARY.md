@@ -24,6 +24,16 @@ a benchmark. The resolved protocol is written verbatim into each training
 execution's artifacts. _Avoid_: hyperparameters (too narrow — it also fixes
 the split and the evaluator).
 
+## Campaign
+
+One benchmark over several model families under the identical protocol: a single
+Hydra **multirun** whose jobs are the families, launched inside one allocation,
+with one training execution per family under a common campaign root. The model
+family is the only variable; the protocol, datasets and evaluator are shared.
+A campaign is not a **study**: hyperparameter search belongs to Optuna trials,
+not to the campaign itself. The cluster campaign is one SLURM job that runs the
+families sequentially, never an array of jobs.
+
 ## Study
 
 The persistent Optuna optimization problem: one named SQLite file on the work

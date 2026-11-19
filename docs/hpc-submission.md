@@ -3,8 +3,10 @@
 This page covers how the headless training pipeline is submitted to the OCÉANO
 cluster: the work and scratch layout, the short-test smoke job, checkpoint
 resume, sync-back, the administrator checklist and the publication
-acknowledgement. The environment itself — the pinned container, the offline
-wheelhouse, hash verification and the pre-flight check — is described in
+acknowledgement. The campaign as a whole — the three-family multirun, its queue
+tier and its per-family sync-back — is described in [hpc.md](hpc.md). The
+environment itself — the pinned container, the offline wheelhouse, hash
+verification and the pre-flight check — is described in
 [hpc-environment.md](hpc-environment.md). No username, key, credential or
 personal path is stored in this repository.
 
@@ -39,7 +41,19 @@ It requests exactly one GPU with `--gres=gpu:1` and selects the short test
 quality of service with `--qos` (default `short`). Set `POLYX_HPC_QOS` to the
 normal GPU tier for the sequential campaign; use the long tier only for a
 specific job and only after approval. A multirun executes as trials inside one
-allocation, never as an array of queued jobs.
+allocation, never as an array of queued jobs. The campaign has its own
+submission, `cluster/submit_campaign.sh`, which defaults to the normal GPU tier;
+see [hpc.md](hpc.md).
+
+## Campaign submission
+
+`bash cluster/submit_campaign.sh` submits the three-family campaign as one job
+on the normal GPU tier with one GPU and a 24-hour limit. The job body runs
+`python -m polyx.pipeline.campaign_app --multirun` and then syncs every family
+back with `python -m polyx.hpc.sync_back --campaign`. Reuse a campaign root with
+`POLYX_CAMPAIGN_ROOT` and `POLYX_RESUME=true` to continue after a preemption or
+a time limit. The exact commands and the sync-back artifact list are in
+[hpc.md](hpc.md).
 
 ## Administrator checklist — confirm before the first submission
 
@@ -117,10 +131,14 @@ R-CNN run after one epoch and resumes both from a real Lightning checkpoint.
 ## Small-artifact sync-back
 
 Only the agreed manifest is copied: resolved configuration, protocol,
-provenance, training state, progress, metrics, report and logs. Datasets,
-intermediate predictions and the full checkpoint series stay on the cluster; an
-allow-listed artifact above the size cap is an error, not a partial copy. This
-is implemented by `polyx.hpc.sync_back` and invoked by the smoke job.
+provenance, training state, progress, metrics, report and logs, plus the kept
+`best.pt` checkpoint. The per-epoch checkpoint series, the Lightning resume
+checkpoint, datasets and intermediate predictions stay on the cluster. The small
+artifacts share a 1 MB cap and the kept checkpoint has its own larger cap; an
+allow-listed artifact above its cap is an error, not a partial copy. This is
+implemented by `polyx.hpc.sync_back` and invoked by the smoke and campaign jobs;
+`python -m polyx.hpc.sync_back --campaign CAMPAIGN_ROOT LOCAL_ROOT` syncs every
+family into its own directory.
 
 ## Publication acknowledgement
 
