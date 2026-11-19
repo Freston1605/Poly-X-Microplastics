@@ -758,7 +758,7 @@ work/scratch/user-data from `POLYX_HPC_*` (never committed paths),
 agreed small artifacts back to the work filesystem. The job scripts in
 `cluster/` and the definitions in `container/` are documented in
 `docs/hpc.md`, `docs/hpc-environment.md` and `docs/hpc-submission.md`; the
-cluster smoke job and campaign remain pending until OCÉANO access exists.
+cluster smoke job and campaign remain pending until OCEANO access exists.
 
 ---
 
