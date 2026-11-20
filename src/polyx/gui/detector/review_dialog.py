@@ -46,7 +46,7 @@ class ReviewDialog(QDialog):
     def __init__(self, state, parent=None):
         super().__init__(parent)
         self.state = state
-        self.setWindowTitle(_("Detection review — Poly-X"))
+        self.setWindowTitle(_("Detection review — MICRA"))
         self.setModal(False)
         self._current_idx = -1
         self._model_idx = -1
@@ -224,7 +224,7 @@ class ReviewDialog(QDialog):
             "Detection review — %(count)d images",
             count,
         ) % {"count": count}
-        title += _(" (✓%(good)d ✗%(bad)d) — Poly-X") % {"good": good, "bad": bad}
+        title += _(" (✓%(good)d ✗%(bad)d) — MICRA") % {"good": good, "bad": bad}
         self.setWindowTitle(title)
 
     def _on_list_row(self, row: int):

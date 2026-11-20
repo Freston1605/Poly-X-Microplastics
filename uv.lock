@@ -739,6 +739,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "babel" },
+    { name = "packaging" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },
@@ -759,6 +760,7 @@ sam2 = [
 [package.dev-dependencies]
 dev = [
     { name = "babel" },
+    { name = "packaging" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },
@@ -778,6 +780,7 @@ requires-dist = [
     { name = "numpy", specifier = "==1.26.4" },
     { name = "opencv-python-headless", specifier = "==4.10.0.84" },
     { name = "optuna", specifier = "==2.10.1" },
+    { name = "packaging", marker = "extra == 'dev'" },
     { name = "pillow", specifier = "==13.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "psutil", specifier = "==6.0.0" },
@@ -798,6 +801,7 @@ provides-extras = ["dev", "gui", "legacy", "sam2"]
 [package.metadata.requires-dev]
 dev = [
     { name = "babel", specifier = "==2.17.0" },
+    { name = "packaging" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },

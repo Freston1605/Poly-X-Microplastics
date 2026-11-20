@@ -13,7 +13,6 @@ import os
 import sys
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 pytest.importorskip("PySide6")
@@ -27,48 +26,11 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
 
 from PySide6.QtWidgets import QLabel  # noqa: E402
 
-from polyx.core.detect.protocol import Instance as Detection  # noqa: E402
+from tests.report_fixtures import estado_benigno as benign_state  # noqa: E402
 
 AUTHOR = "Cristofher Ferrada"
 MAINTAINER = "Franco Ignacio Valdés Navarro"
 LABORATORY = "Laboratorio de Química Ambiental"
-
-
-def _measured_run(tmp_path: Path):
-    """A completed run with one measured detection, reportable as it stands."""
-    import cv2
-
-    import polyx.core.measure as measure
-    from polyx.core.detection_run import ImageResult, ModelInfo, RunParams, RunResult
-
-    image = np.full((260, 320, 3), 18, np.uint8)
-    cv2.circle(image, (160, 130), 22, (60, 210, 240), -1)
-    image_path = tmp_path / "plate.png"
-    ok, buffer = cv2.imencode(".png", image)
-    assert ok
-    image_path.write_bytes(buffer.tobytes())
-
-    detection = Detection(class_id=0, class_name="PET", conf=0.9, x1=138, y1=108, x2=182, y2=152)
-    measure.apply_to_detection(detection, image, 30.0)
-    detection.number = 1
-
-    return RunResult(
-        run_dir=tmp_path / "run",
-        images=[image_path],
-        models=[ModelInfo(alias="m1", path=Path("fake.pt"))],
-        params=RunParams(),
-        results={
-            0: [
-                ImageResult(
-                    image_path=image_path,
-                    model_idx=0,
-                    predictions=[detection],
-                    gt=[],
-                    has_gt=False,
-                )
-            ]
-        },
-    )
 
 
 def test_the_detector_sidebar_credits_design_maintainer_and_laboratory(qapp, selected_language):
@@ -92,7 +54,7 @@ def test_the_report_footer_credits_design_maintainer_and_laboratory(tmp_path, se
     from polyx.gui.report_html import generate_report
 
     output = tmp_path / "report.html"
-    generate_report(_measured_run(tmp_path), output, sections=["summary"])
+    generate_report(benign_state(tmp_path), output, sections=["summary"])
     html = output.read_text(encoding="utf-8")
 
     footer = html.rsplit("<footer>", 1)[1]

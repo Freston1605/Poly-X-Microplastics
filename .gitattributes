@@ -1,29 +1,24 @@
-# Finales de linea por tipo de archivo.
+# Line endings and binary handling by file type.
 #
-# Existe porque el proyecto se desarrolla en Windows con core.autocrlf=true y
-# se distribuye tambien a macOS. Sin esto, un script de shell puede llegar al
-# Mac con finales CRLF y bash lo rechaza con un error que no se entiende:
+# The project is developed on Linux and Windows with core.autocrlf=true, and a
+# shell script with CRLF reaches bash as a confusing error that looks like a
+# permissions or interpreter problem:
 #
 #     /bin/bash^M: bad interpreter: No such file or directory
 #
-# El sintoma parece un problema de permisos o de Python, y no lo es.
+# Let git decide and normalise to LF inside the repository.
 
-# Por defecto, que git decida y normalice a LF dentro del repositorio.
 * text=auto
 
-# ── Scripts de macOS y Linux: LF SIEMPRE ──
-# No negociable: con CRLF no arrancan.
-*.command  text eol=lf
+# ── POSIX shell: always LF ──
+# Not negotiable: with CRLF they do not start.
 *.sh       text eol=lf
 
-# ── Scripts de Windows: CRLF ──
-# El interprete de .bat trata mal los finales LF en etiquetas y saltos GOTO,
-# y PowerShell aqui se comporta igual de bien con CRLF.
+# ── Windows batch: CRLF ──
+# cmd.exe misreads LF inside labels and GOTO jumps.
 *.bat      text eol=crlf
-*.ps1      text eol=crlf
-*.vbs      text eol=crlf
 
-# ── Binarios: que git no toque nada ──
+# ── Binaries: git leaves the bytes alone ──
 *.pt       binary
 *.onnx     binary
 *.png      binary

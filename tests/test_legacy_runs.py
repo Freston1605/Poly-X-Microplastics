@@ -140,7 +140,7 @@ def test_compact_report_still_reads_a_canonical_folder(tmp_path, selected_langua
     output = generate(run_dir, tmp_path / "report.html")
 
     html = output.read_text(encoding="utf-8")
-    assert "Poly-X run report" in html
+    assert "MICRA run report" in html
     assert "Images:" in html
     assert "Detections:" in html
 

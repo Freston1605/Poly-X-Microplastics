@@ -15,7 +15,7 @@ from polyx.core.i18n import _
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description=_("Evaluate a Poly-X YOLO model (headless)"))
+    p = argparse.ArgumentParser(description=_("Evaluate a MICRA YOLO model (headless)"))
     p.add_argument("--weights", required=True)
     p.add_argument("--data", required=True, dest="data_yaml")
     p.add_argument("--split", default="val")
