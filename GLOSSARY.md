@@ -4,6 +4,91 @@ The project's domain language. Terms here are the ones code, docs and
 conversation should use; when a term is missing or fuzzy, sharpen it here
 first instead of letting a second meaning into the code.
 
+## Run
+
+One execution of a pipeline. The word is generic and is always qualified by
+the pipeline that ran: **detection run** (the canonical engine over a set of
+images), **training run** (one config-driven execution of the headless
+pipeline), **evaluation run** or **validation run**. Some shipped identifiers
+(`RunResult`, `run.json`, `load_run`) keep the unqualified name for historical
+reasons; they are documented legacy, not a second meaning of the term. A
+**training execution** is the concrete folder of artifacts one run produced.
+
+## Protocol
+
+The framework-neutral part of a training configuration: split, seed, epochs,
+batch, image size, optimizer, learning rate, momentum, weight decay, schedule,
+warmup, augmentation subset, AMP and early stopping. Every family adapter
+consumes the resolved protocol unchanged, so the model is the only variable in
+a benchmark. The resolved protocol is written verbatim into each training
+execution's artifacts. _Avoid_: hyperparameters (too narrow — it also fixes
+the split and the evaluator).
+
+## Campaign
+
+One benchmark over several model families under the identical protocol: a single
+Hydra **multirun** whose jobs are the families, launched inside one allocation,
+with one training execution per family under a common campaign root. The model
+family is the only variable; the protocol, datasets and evaluator are shared.
+A campaign is not a **study**: hyperparameter search belongs to Optuna trials,
+not to the campaign itself. The cluster campaign is one SLURM job that runs the
+families sequentially, never an array of jobs.
+
+## Study
+
+The persistent Optuna optimization problem: one named SQLite file on the work
+filesystem, one direction (maximize the with-class score), one seeded sampler
+and the declared protocol-only search space. A study outlives the job that
+created it; a later run with the same name and storage resumes it instead of
+starting a new one. The best trial of a study is saved with the experiment
+artifacts.
+
+## Trial
+
+One suggested configuration inside a study, executed as one normal training
+run. A trial changes only declared protocol hyperparameters; split, seed,
+augmentation subset and evaluator stay fixed. Trials are independent processes,
+so the study does not prune across them — Lightning's early stopping stops an
+individual trial.
+
+## Sweeper
+
+The Hydra plugin (`hydra-optuna-sweeper`) that turns the declared search space
+into trials, runs them one at a time and records the returned objective value
+in the study. `python -m polyx.pipeline.sweep_app --multirun` is the only sweep
+entry point; there is no second in-process loop, so a search cannot declare a
+different objective or space from the one the plugin consumes.
+
+## Objective
+
+The single number a trial returns and Optuna optimizes. In this pipeline it is
+always the shared evaluator's **with-class score** on the real-domain
+validation split, never a family-specific metric, mAP-only figure or
+localisation score. Localisation is reported beside it, not optimized instead
+of it. Decided in ADR-0010.
+
+## Segmentation training dataset
+
+The canonical set of human-annotated masks used to train and benchmark the
+segmentation families of the headless pipeline. It is produced outside Poly-X
+(CVAT by default), imported through the same headless command, audited with the
+existing dataset audit for class distribution and polygon validity, and stored
+as a versioned tool output under the user data dir. It is not a detection run
+artifact — those folders stay box-only under ADR-0002 — and it never contains
+machine-generated masks. Decided in
+[ADR-0009](docs/adr/0009-coco-segmentation-dataset.md).
+
+## COCO mask dataset
+
+A segmentation training dataset in COCO instance-JSON form: `images`,
+`annotations` (each with a polygon `segmentation` and a `category_id`) and
+`categories`. The canonical on-disk mask format of the pipeline: conversion to
+a family's expected format happens at job time into scratch, never into a
+second canonical format. A split is carried as an image-level `split`
+attribute; polygons are required because the project has no RLE codec, so an
+RLE-only export is rejected at import. _Avoid_: mask PNG (that would be a
+derived raster, not the canonical dataset).
+
 ## The triptych
 
 The three saved views of a detection run over one plate: the

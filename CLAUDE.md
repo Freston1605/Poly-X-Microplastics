@@ -443,6 +443,10 @@ runner, which holds `TrainerState` and therefore keeps it alive after the window
 closes; a lambda that captured that window would otherwise run against a
 destroyed widget.
 
+The Labeller binds its delayed status resets to the window as their Qt timer
+context. A pending reset from a rejected box or an autosave is dropped when the
+window is destroyed, rather than updating a deleted status label.
+
 Three rules keep that channel from feeding itself:
 
 - `i18n.set_language(tag, persist=False)` applies a value that came from
@@ -708,6 +712,144 @@ measured one.
 > Image reading and writing with `cv2.imdecode`/`imencode` over
 > `np.fromfile`, not `imread`/`imwrite`: on Windows these fail with paths that
 > carry accents and return `None` without warning.
+
+---
+
+## 🧪 Headless training pipeline (src/polyx/pipeline/)
+
+The pipeline is the headless sibling of the Trainer, not a replacement for it.
+One command is the seam: `polyx-pipeline` (`src/polyx/pipeline/command.py`)
+composes `conf/` with Hydra, validates it into `ExecutionConfig` and either runs
+one execution or imports a COCO mask export. A search is the Hydra multirun
+(`sweep_app.py`), never a flag on this command. The GUI Trainer and its native
+training wrapper are untouched by this path.
+
+- One PyTorch Lightning loop trains every family. `lightning_loop.py` builds
+  the one `Trainer`, its callbacks and the shared module behaviour
+  (`PolyxModule`): optimizer and schedule from the protocol, the with-class
+  score logged as `with_class_score`, the progress record and the native
+  export. The adapters (`adapters.py`) only build a `LightningModule` and a
+  `LightningDataModule`: the Ultralytics ones reuse the YOLO neural module and
+  dataloader; Mask R-CNN is the sibling torchvision adapter under the same
+  contract.
+- Selection and stopping are Lightning's own `ModelCheckpoint` and
+  `EarlyStopping`, both monitoring the one logged score. That gives the two
+  thresholds the benchmark needs without a second implementation: the kept
+  checkpoint is any strictly better score, while patience counts epochs that
+  fail to beat `min_delta`. `save_last=True` keeps `last.ckpt` and the
+  per-epoch files stay immutable; an atomic `CheckpointIO` renames each one
+  into place so a SLURM time limit cannot leave a torn resume point.
+- `protocol` in `conf/protocol/default.yaml` is framework-neutral and consumed
+  unchanged: split, seed, epochs, batch, image size, confidence, optimizer, LR,
+  momentum, weight decay, schedule, warmup, the benchmark augmentation subset,
+  AMP and early stopping.
+- `evaluation.py` is the only scorer. It consumes COCO predictions, names the
+  criterion on every figure and reuses the project's `Criterion`/`Score`:
+  selection is with-class operating-point F1 at `protocol.confidence` and 0.50
+  IoU; localisation is reported beside it. Predictions are collected at a low
+  floor and both families may emit up to 1000 per image, far above the
+  reference cap — applied per image **and category** — so a crowded polymer
+  cannot hide another class's confident detections; only F1 applies the
+  confidence threshold. Polygons use a port of pycocotools' boundary-crossing
+  rasterizer, checked against pycocotools, so a hit COCO counts is not emptied
+  by rounding; a framework that exposes an instance mask at the original
+  resolution (Mask R-CNN) has it scored directly, while YOLO-seg's own boundary
+  polygons are scored as polygons. Those raster masks travel bit-packed
+  (`masks.py`, one bit per pixel) and stay packed between figures, so the split
+  does not hold one boolean array per candidate: a 4K plate holds hundreds of
+  them, and at a byte per pixel that is tens of gigabytes. Unpacking happens per
+  comparison, which is CPU time spent instead of resident memory. Mask R-CNN also
+  pastes its predicted masks in bounded chunks during validation, so the
+  original-resolution tensors are never all live on the GPU at once. AP is a
+  separate ranking figure and never selects a checkpoint or drives Optuna.
+  `mask_iou` is class-aware.
+- `execution.py` owns audit, provenance, publication and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
+  `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
+  `report.md`, `logs/`, `checkpoints/`, `completion.json`). `best.pt` is the
+  kept checkpoint. Saved audit findings are stable codes plus parameters, never
+  translated prose. `training_state.json` is published before the metrics it
+  accompanies and `completion.json` atomically last, after the final log line; a
+  final epoch with missing artifacts is published rather than retrained, using
+  the fit record the progress snapshot carries. Before publishing, the kept
+  checkpoint is validated once more, so `metrics.json` and `best.pt` always
+  describe the same weights — including after a resume whose remaining epochs
+  never improved. A fresh run aimed at an existing execution directory is
+  refused: `resume=true` continues it, a new directory starts clean. `PipelineError` carries a stable code, invariant
+  English template and parameters; the command logs those and translates only
+  at display time.
+- `resume.py` reads the per-epoch progress snapshot; the fit's own record
+  (precision that ran, device, verified weights, augmentation) and the best
+  checkpoint's path travel with it. Lightning writes
+  `checkpoints/lightning/checkpoint_NNN.ckpt` per completed epoch and
+  `last.ckpt`; resuming hands `last.ckpt` to `Trainer.fit`, which restores
+  weights, optimizer, scheduler, epoch progress and both callbacks' state
+  (patience and the kept best). The progress record is the human-readable
+  heartbeat and the guard, not the training authority: the checkpoint decides
+  how many epochs completed. A different protocol or a different dataset
+  fingerprint is refused: relabelled images or an edited COCO export are a
+  different dataset, and the kept weights belong to the bytes that trained
+  them.
+- Both families validate inside Lightning's validation loop, in `validation_step`.
+  YOLO exports the epoch's native snapshot at `on_validation_start` and scores a
+  wrapper loaded from that file: Ultralytics fuses and freezes whatever network
+  it predicts with, so the live module is never handed to the predictor. The
+  export has no staged `ema` key, so the scored bytes are the trained weights;
+  the two-epoch real-framework test guards this. The checkpoint and the
+  published metrics are re-scored from the same file.
+- A campaign first proves that its box and mask sources hold the same image
+  names in the same folds with byte-identical content, and both declare
+  real-domain imagery, so the model is the only variable. COCO masks with more
+  than one polygon ring are refused at conversion rather than becoming several
+  YOLO instances; two annotations are refused when the label line the shared
+  codec serializes for them is identical, which is exactly what the pinned
+  loader deduplicates on. The conversion cache key hashes every image's bytes,
+  not only `dataset.json`, and its version covers the validation rules.
+- COCO instance JSON is the canonical mask format (`coco.py`,
+  `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
+  ground truth; the benchmark reference is human COCO annotations only.
+- `sweep_app.py` is the one Optuna sweep: the Hydra multirun whose jobs are the
+  trials, and `sweep_best.py` writes `sweep_best.json` after it. There is no
+  second driver: `polyx-pipeline` runs one execution or one import, and a
+  search is always the multirun. The study is SQLite on the work filesystem,
+  named from `hydra.sweeper.study_name`; its identity, the declared space and
+  the fixed benchmark fields are persisted once in `sweep_config.yaml`.
+  `sweep_space.py` owns the one allowlist both the config and the plugin check,
+  so split, seed, augmentation subset and the evaluator cannot be swept, and
+  the direction is always maximize. `PolyxOptunaSweeper` injects the actual
+  trial id, and before asking for new trials it recovers every `RUNNING` trial:
+  resume its checkpoint, retry its recorded parameters, or tell the score its
+  finished execution already wrote. Two leases under `trials/.locks/` keep
+  runners apart: `trial_NNN.lock` while a job trains it and
+  `trial_NNN.recovery.lock` while a runner relaunches it. A lease whose owner is
+  gone — a same-host liveness probe, or no `progress.json` activity for
+  `POLYX_LEASE_TTL` when the owner is on another node — is taken over. Every
+  trial writes `record.json` (`sweep_record.py`), and the reader compares the
+  record's study **and database** before trusting an execution: `trial_007`
+  from another sweep root is not this study's result. The export resolves the
+  winner strictly by `study.best_trial.number` and requires its record,
+  `completion.json`, readable metrics and `best.pt`; a partial directory is
+  reported as missing.
+- `weights.py` resolves `family.weights` to a staged file and verifies its
+  SHA-256 against the manifest before a framework sees it; absent or unverified
+  pins fail closed.
+- `campaign_app.py` is the multi-family multirun; `family.run_name` names the
+  per-execution directory, so two detection variants can share one root.
+
+## 🖥 HPC glue (src/polyx/hpc/)
+
+Small, cluster-facing helpers with no framework imports: `layout.py` resolves
+work/scratch/user-data from `POLYX_HPC_*` (never committed paths),
+`hashing.py` reads sha256sum manifests, `weights.py` fetches and verifies them,
+`stage_weights.py` is the pre-job staging step, `environment.py` and
+`check_env.py` prove the pinned V100 stack, and `sync_back.py` copies only the
+agreed small artifacts back to the work filesystem; the destination component
+is the campaign's immediate child directory name, so saved metadata cannot
+escape the sync root. Container builds stamp the source commit into
+`POLYX_SOURCE_SHA`/`SOURCE_SHA`, which provenance uses when there is no `.git`
+in the image. The job scripts in
+`cluster/` and the definitions in `container/` are documented in
+`docs/hpc.md`, `docs/hpc-environment.md` and `docs/hpc-submission.md`; the
+cluster smoke job and campaign remain pending until OCEANO access exists.
 
 ---
 

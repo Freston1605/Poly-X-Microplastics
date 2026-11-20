@@ -37,6 +37,21 @@ dependencies = [
   "matplotlib==3.9.2",
   "PyYAML==6.0.2",
   "psutil==6.0.0",
+  # Headless multi-family pipeline: Hydra composes the framework-neutral
+  # protocol and Lightning is the single training loop shared by every adapter.
+  # Hydra is explicit rather than a transitive dependency of the sweeper, and
+  # both are pinned so the lockfile stays a reproducible scientific stack.
+  "hydra-core==1.3.8",
+  "lightning==2.6.6",
+  # Optuna owns hyperparameter optimization through Hydra's sweeper. The plugin
+  # is pinned to the release that supports Hydra 1.3 and Optuna 2.x; keep all
+  # three pins in sync with requirements.txt and uv.lock.
+  "hydra-optuna-sweeper==1.3.0",
+  "optuna==2.10.1",
+  # Optuna 2.x needs the SQLAlchemy 1.4 schema API and an Alembic that still
+  # supports it; unconstrained resolution picks incompatible newer releases.
+  "sqlalchemy==1.4.54",
+  "alembic==1.13.3",
   # Pins are deliberately strict for a reproducible scientific stack:
   # ultralytics 8.3.x requires numpy<2, and each patch wheel is unit-tested
   # in CI. Loosen only with a test run across the matrix.
@@ -76,6 +91,7 @@ legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
 [project.scripts]
 polyx = "polyx.cli.main:main"
+polyx-pipeline = "polyx.pipeline.command:main"
 polyx-gui = "polyx.gui.__main__:main"
 polyx-download-models = "polyx.cli.download_models:main"
 polyx-train = "polyx.cli.train:main"
@@ -85,6 +101,9 @@ polyx-report = "polyx.cli.report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/polyx"]
+# The pycocotools BSD notice must travel with the code it covers; a wheel is a
+# redistributed work, so the notice ships inside the package.
+force-include = { "NOTICE" = "polyx/NOTICE" }
 # ``*.mo`` is a build artifact and gitignored. Hatchling filters VCS-ignored
 # paths out of a target unless they are declared here, so the hook compiling
 # them next to each ``.po`` is not enough on its own.
@@ -99,7 +118,7 @@ exclude = [
 path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "NOTICE", "SECURITY.md"]
 # Same reason as the wheel: the compiled catalogs are gitignored artifacts.
 artifacts = ["src/polyx/locales/**/*.mo"]
 # Never package a generated development pseudo-locale, even from a dirty tree.

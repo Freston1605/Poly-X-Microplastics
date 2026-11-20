@@ -98,10 +98,53 @@ def split_dataset(
     if classes:
         (root / "classes.txt").write_text("\n".join(names) + "\n", encoding="utf-8")
     if data_yaml:
-        lines = ["path: .", *(f"{split}: images/{split}" for split in splits), "names:"]
+        lines = [
+            "path: .",
+            # A declared domain lets benchmark campaigns prove the cohorts are
+            # real-domain rather than guessing from a folder called 'val'.
+            "domain: real",
+            *(f"{split}: images/{split}" for split in splits),
+            "names:",
+        ]
         lines += [f"  {index}: {name}" for index, name in enumerate(names)]
         (root / "data.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return root
+
+
+def build_tiny_dataset(root: Path) -> Path:
+    """Two train and two val images with box labels, plus a data.yaml.
+
+    The one fixture builder for the headless pipeline suites. Image stems match
+    the COCO mask fixture so a benchmark campaign can prove both sources
+    describe the same real-domain cohort.
+    """
+    labels = {
+        "plate_t1": "0 0.375 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n",
+        "plate_t2": "2 0.375 0.75 0.25 0.25\n",
+        "plate_v1": "0 0.375 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n",
+        "plate_v2": "2 0.375 0.75 0.25 0.25\n",
+    }
+    root = split_dataset(
+        root,
+        {
+            "train": {k: v for k, v in labels.items() if k.startswith("plate_t")},
+            "val": {k: v for k, v in labels.items() if k.startswith("plate_v")},
+        },
+        names=("PET", "PP", "LDPE"),
+        data_yaml=True,
+    )
+    for split in ("train", "val"):
+        for image in (root / "images" / split).glob("*.png"):
+            # Use the COCO mask fixture's 64x48 pixels byte-for-byte, so a
+            # campaign can verify image content, not just names.
+            write_image(image, width=64, height=48)
+    return root / "data.yaml"
+
+
+@pytest.fixture
+def tiny_dataset(tmp_path: Path) -> Path:
+    """The shared tiny YOLO dataset, rooted in one test's temporary directory."""
+    return build_tiny_dataset(tmp_path / "dataset")
 
 
 def destroy_windows(windows, qapp) -> None:

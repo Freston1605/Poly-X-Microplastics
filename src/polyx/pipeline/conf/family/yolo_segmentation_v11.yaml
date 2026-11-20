@@ -1,0 +1,8 @@
+# YOLO v11 segmentation variant of the same adapter. `name` selects the
+# YOLO-seg adapter and `run_name` keeps v8 and v11 artifacts separate in one
+# campaign root. Stage and hash-pin the weights like every other family.
+name: yolo_segmentation
+run_name: yolo_segmentation_v11
+framework: ultralytics
+weights: yolo11n-seg.pt
+task: segment

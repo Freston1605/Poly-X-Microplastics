@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1
+# Pinned OCI definition for the V100 nodes. Both digests are the amd64
+# manifests (the V100 PCIe partition is x86_64); verify an OCI build locally
+# with Podman. Apptainer is not available locally: container/hpc.def is the
+# cluster definition and is built on a login node, never claimed as built here.
+ARG PYTHON_BASE=docker.io/library/python@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87edb4c75654820ca4832ee8cb15
+ARG UV_IMAGE=ghcr.io/astral-sh/uv@sha256:c7db1d63057f268a8b6da8af9077850a60461f98d23db23c676a82089a050c91
+# Stamped by the build command: a container has no .git directory, so the
+# source commit must travel inside the image for training provenance.
+ARG POLYX_SOURCE_SHA=unknown
+
+FROM ${PYTHON_BASE} AS base
+# Global ARGs are not inherited by stages; redeclare before use.
+ARG UV_IMAGE
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_CACHE_DIR=/tmp/uv-cache \
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:/usr/local/bin:$PATH
+COPY --from=${UV_IMAGE} /uv /uvx /usr/local/bin/
+RUN uv --version
+
+# Build stage: download every wheel once, including the CUDA 12.6 framework
+# wheels that still compile the V100 sm_70 kernels (torch==2.7.1+cu126 from the
+# cu126 index), and build the project's own wheel here. This stage has
+# internet; the runtime stage below installs with --no-index only.
+FROM base AS wheelhouse
+WORKDIR /src
+# NOTICE is force-included into the wheel by pyproject.toml, so the build fails
+# without it. LICENSE, README.md and the source tree are what the wheel is
+# built from.
+COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
+COPY src ./src
+COPY tools ./tools
+RUN python tools/hpc/build_wheelhouse.py --wheelhouse /opt/wheelhouse \
+ && rm -rf /tmp/uv-cache /src/.venv /root/.cache
+
+FROM base AS runtime
+ARG POLYX_SOURCE_SHA
+ENV POLYX_SOURCE_SHA=${POLYX_SOURCE_SHA}
+WORKDIR /app
+# Only the wheelhouse travels: the package is installed from its built wheel,
+# never from source, so the node needs no build backend and no network.
+COPY --from=wheelhouse /opt/wheelhouse /opt/wheelhouse
+RUN uv venv /opt/venv \
+ && uv pip install --no-index --find-links /opt/wheelhouse -r /opt/wheelhouse/requirements.txt \
+ && uv pip install --no-index --no-deps /opt/wheelhouse/polyx_microplastics-*.whl \
+ && mkdir -p /opt/polyx \
+ && printf '%s\n' "${POLYX_SOURCE_SHA}" > /opt/polyx/SOURCE_SHA \
+ && rm -rf /tmp/uv-cache /root/.cache /opt/wheelhouse/*.whl
+
+# The environment check is a smoke job on the GPU node, not a build step:
+# there is no GPU in the builder, so running it here would always fail.
+USER 10001:10001
+ENTRYPOINT ["python", "-m", "polyx.hpc.check_env"]

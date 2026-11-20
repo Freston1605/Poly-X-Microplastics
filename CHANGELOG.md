@@ -7,11 +7,98 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Headless, model-agnostic training pipeline (`polyx-pipeline`).** A new
+  parallel path beside the GUI Trainer composes `conf/` with Hydra and trains
+  YOLO v8/v11 detection and segmentation and torchvision Mask R-CNN through one
+  PyTorch Lightning loop under one framework-neutral protocol. It ships a shared
+  COCO evaluator whose figures always name the criterion, best-weight selection
+  by the with-class operating-point F1, resumable progress snapshots and real Lightning
+  checkpoints, a COCO mask import/conversion path (machine masks are never
+  ground truth), an Optuna sweeper multirun with a SQLite study on the work
+  filesystem and a `sweep_best.json` artifact, hash-verified weights resolved
+  before a framework loads them, and SLURM job scripts that stage weights and
+  honour `POLYX_CONTAINER`. The GUI Trainer is unchanged. See `docs/hpc.md`,
+  `docs/hpc-training-pipeline.md`, ADR-0007 to ADR-0010 and the
+  `src/polyx/pipeline/` section in `CLAUDE.md`.
 - Fast `Ruff` CI workflow (`ruff check` + `ruff format --check`) that installs
   the ruff version pinned in `uv.lock` and needs no project dependencies, so a
   lint failure reports in seconds instead of after the gate's suite.
 - `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
   a hook that was never installed locally still fails the PR.
+
+### Changed
+- **The HPC pipeline's training lifecycle is Lightning's, not a second one.**
+  `ModelCheckpoint` keeps the strictly best `with_class_score` and
+  `EarlyStopping` measures patience against `min_delta`, so the two thresholds
+  are the framework's own behaviour instead of a parallel implementation;
+  callback state (patience and the kept best) travels inside the checkpoint and
+  survives a preemption. Both families validate inside Lightning's validation
+  loop, YOLO from the epoch's immutable native export because Ultralytics fuses
+  the network it is handed. Checkpoints are written through an atomic
+  `CheckpointIO`, and publication re-validates the kept checkpoint so
+  `metrics.json` and `best.pt` always describe the same weights.
+  `checkpoints/lightning/last.ckpt` is the resume point; the progress record is
+  the heartbeat and the protocol/dataset guard.
+
+### Fixed
+- **Fourth review of the HPC pipeline (#202).** Both container definitions now
+  build: the project wheel is produced in the wheelhouse where `NOTICE` and the
+  build backend exist, and the runtime installs it with `--no-index --no-deps`
+  instead of building from source, with Apptainer selecting `/opt/venv` before
+  its first install. `polyx-pipeline` no longer carries a second sweep loop:
+  `python -m polyx.pipeline.sweep_app --multirun` is the only sweep entry point,
+  and one allowlist refuses sweep fields outside `protocol.<searchable field>`
+  and any direction other than maximize in both the written study record and
+  the plugin's resolved distributions. A resume now compares a dataset
+  fingerprint as well as the protocol, so relabelled images or an edited COCO
+  export cannot keep the old checkpoint. The kept checkpoint is the strictly
+  best score, so a gain smaller than `min_delta` still replaces `best.pt`.
+  Mask R-CNN validation pastes masks in bounded chunks and stores them
+  bit-packed, and runs one image per step, so a 4K split no longer asks the
+  V100 for tens of gigabytes at once.
+- **Third follow-up HPC review fixes.** A killed Optuna trial is recovered by
+  its own id (resume its checkpoint, retry its parameters, or reconcile a score
+  its finished execution already wrote), one trial at a time through a lease
+  file; the winner export requires the record, completion marker, metrics and
+  best checkpoint. A fresh run refuses a reused execution directory. The
+  progress snapshot carries the fit's precision, device and verified weights so
+  a recovered publication keeps them. Detection candidates are budgeted per
+  class and the reference cap is applied per image and category; polygon masks
+  use a port of pycocotools' rasterizer; Mask R-CNN retention follows the
+  loader's ceil resize and segment resampling; collision checks use the label
+  line the codec actually writes, and the conversion cache version covers the
+  new rule.
+- **Second follow-up HPC review fixes.** Interrupted Optuna trials are
+  relaunched by their persisted id instead of being abandoned for a new trial.
+  Pipeline failures carry invariant codes/parameters and translate only at
+  display; completion is written after the final log line; a fresh run clears a
+  stale marker; and the export requires the winner's metrics. Detection and
+  evaluation now share a 300-prediction collection cap, masks are rasterized at
+  COCO's 5x scale, segmentation uses the loader's segment-derived boxes and
+  0.01 area threshold, colliding serialized polygons are refused, and the
+  conversion cache key includes image bytes.
+- **Follow-up HPC review fixes.** Checkpoint validation and `best.pt` now use
+  the live weights without carrying a staged checkpoint's EMA; COCO AP has the
+  reference per-image/category 100-detection cap while F1 applies the configured
+  confidence threshold. Campaigns verify byte-identical image content and fold
+  membership, use the pinned loader's own tiny-target rule, and refuse
+  annotations the loader would collapse. Completion is recorded atomically
+  after every artifact, sweeps pass the real Optuna trial id and persist the
+  study identity for a strict winner lookup, and sync-back uses the child
+  directory name. The OCI runtime creates the provenance directory, and
+  container builds stamp the exact source SHA.
+- **HPC pipeline review fixes.** YOLO validation now scores a fresh snapshot
+  model instead of fusing and freezing the live training network, so training
+  continues past the first epoch; GPU result tensors are converted to CPU
+  before NumPy. Checkpoint selection and Optuna now reuse the project's
+  with-class operating-point F1 (with recorded confidence and IoU), while COCO
+  AP is reported separately. Per-epoch immutable Lightning checkpoints and
+  atomic progress records keep preempted resumes consistent; preempted Optuna
+  trials no longer overwrite completed trial directories. Campaign jobs cover
+  v8 and v11 detection and segmentation, verify a shared real-domain cohort,
+  keep one instance per COCO mask annotation, and sync variants by `run_name`.
+  Saved audit findings are stable codes, CLI/report prose is translated, and
+  container builds stamp the source commit into provenance.
 
 ### Changed
 - **Per-image calibration index for crops without a visible dish.** A new
@@ -75,6 +162,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PRESETS`, `anchor`), the batch precompute is a named immutable result and
   every section has one uniform builder. Rendered reports are byte-identical.
 - `ruff-pre-commit` bumped to `v0.17.2` to match the locked ruff version.
+
+### Security
+- `hydra-core` 1.3.2 → 1.3.8 and `lightning` 2.5.2 → 2.6.6, clearing the
+  advisories that failed `dependency-review` (GHSA-2cp2-2r3c-7p7r and
+  GHSA-c3wx-c55w-pxjq for Hydra; GHSA-qqmf-gpg7-g8gw, PYSEC-2026-3624 and
+  PYSEC-2026-3972 for Lightning). `hydra-optuna-sweeper` 1.3.0 still requires
+  `hydra-core>=1.1.0.dev7` and `optuna<3.0.0`, so the Optuna 2.10.1 pin is
+  unchanged.
 
 ## [2.0.0] - 2026-10-26
 

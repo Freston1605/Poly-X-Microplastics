@@ -1,0 +1,39 @@
+# Framework-neutral training protocol. Every family adapter consumes these
+# values unchanged; the model is the only variable in a benchmark. Defaults
+# are the ones agreed in the pipeline specification.
+
+split: val
+seed: 42
+epochs: 150
+batch: 8
+image_size: 1280
+# Validation predictions and the shared operating point use one threshold.
+confidence: 0.25
+optimizer: SGD
+learning_rate: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+schedule: cosine
+warmup_epochs: 5
+augmentation_subset:
+  - hsv
+  - flip_lr
+# Family-specific extras are allowed only outside the benchmark; a benchmark
+# execution refuses them so the model stays the only variable.
+exploratory_augmentation: []
+benchmark: true
+# Magnitudes every family applies identically, with Ultralytics' RandomHSV and
+# RandomFlip arithmetic. They are protocol values, not a family's defaults.
+hsv_h: 0.015
+hsv_s: 0.4
+hsv_v: 0.4
+flip_lr_probability: 0.5
+amp:
+  enabled: true
+  dtype: fp16
+early_stopping:
+  monitor: with_class_score
+  mode: max
+  patience: 30
+  min_delta: 0.001
+  restore_best: true

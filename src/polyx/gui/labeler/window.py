@@ -356,7 +356,7 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         if message is None:
             return
         self._set_status(message, T.WARN)
-        QTimer.singleShot(3500, lambda: self._set_status(_("● Ready"), T.OK))
+        QTimer.singleShot(3500, self, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _install_shortcuts(self):
         QShortcut(QKeySequence("Ctrl+S"), self, self._save)
@@ -668,7 +668,7 @@ class LabelerWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self.state.save_current()
         self.state.save_classes_txt()
         self._set_status(_("● Autosaved"), T.INK3)
-        QTimer.singleShot(2500, lambda: self._set_status(_("● Ready"), T.OK))
+        QTimer.singleShot(2500, self, lambda: self._set_status(_("● Ready"), T.OK))
 
     def _set_status(self, text: str, color: str = T.OK):
         self.lbl_status.setText(text)

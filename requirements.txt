@@ -24,3 +24,17 @@ psutil==6.0.0
 # El wheel ya lleva los .mo compilados, asi que en tiempo de ejecucion no hace
 # falta; se instala en desarrollo y CI junto con el resto del entorno.
 Babel==2.17.0
+# Headless multi-family pipeline: Hydra composes the framework-neutral protocol
+# and Lightning is the single training loop shared by every family adapter.
+# Keep these pins in sync with pyproject.toml and uv.lock.
+hydra-core==1.3.8
+lightning==2.6.6
+# Optuna owns hyperparameter optimization through the Hydra sweeper. The plugin
+# release targets Hydra 1.3 and the Optuna 2.x series; keep these pins in sync
+# with pyproject.toml and uv.lock.
+hydra-optuna-sweeper==1.3.0
+optuna==2.10.1
+# Optuna 2.x needs the SQLAlchemy 1.4 schema API and an Alembic release that
+# still supports it; without these pins the SQLite study cannot be created.
+sqlalchemy==1.4.54
+alembic==1.13.3

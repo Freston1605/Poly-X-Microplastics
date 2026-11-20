@@ -1,0 +1,6 @@
+# YOLO detection family, adapted from Ultralytics inside one Lightning loop.
+name: yolo_detection
+run_name: yolo_detection
+framework: ultralytics
+weights: yolov8n.pt
+task: detect

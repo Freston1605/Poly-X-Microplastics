@@ -46,7 +46,11 @@ Two currencies, on purpose:
 Dialects: 5 columns is the GT/manual dialect, 6 columns (``conf`` last) is
 the prediction-record dialect — the extra column is what lets a run's
 labels reopen in the Labeller as pre-annotation while keeping the record
-of each box's confidence.
+of each box's confidence. YOLO-seg polygon lines are written by
+:func:`write_polygon_lines` when the headless pipeline converts the canonical
+COCO mask dataset into a family's expected format at job time; that conversion
+is an ephemeral intermediate, so the codec stays the only owner of the format
+without becoming a second source of truth.
 
 Policies that stay OUTSIDE the codec: when a file may be written at all
 (the Labeller's census honesty — a ``.txt`` exists only for images that
@@ -56,6 +60,7 @@ photo — that would destroy the manual GT; the run folder decides).
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -210,6 +215,50 @@ def write_lines(txt_path: Path, boxes: list[BBox], include_conf: bool = False) -
     """
     txt_path.parent.mkdir(parents=True, exist_ok=True)
     content = "\n".join(format_line(b, include_conf) for b in boxes)
+    txt_path.write_text(content + "\n" if content else "", encoding="utf-8")
+    return txt_path
+
+
+def format_polygon_line(
+    class_id: int,
+    points: Sequence[tuple[float, float]],
+    img_w: int,
+    img_h: int,
+) -> str:
+    """Serialize one YOLO-seg polygon line (``class x1 y1 x2 y2 ...``).
+
+    Coordinates arrive in absolute pixels, the currency of a COCO polygon,
+    and are normalized against the image size the file belongs to. Values are
+    clamped to ``[0, 1]``: the segmentation dataset audit already rejects
+    out-of-bounds polygons, so clamping only absorbs raster rounding.
+    """
+    if img_w <= 0 or img_h <= 0:
+        raise ValueError(f"polygon needs a positive image size, got {img_w}x{img_h}")
+    if len(points) < 3:
+        raise ValueError("a YOLO-seg polygon needs at least three points")
+    coordinates: list[str] = []
+    for x, y in points:
+        coordinates.append(f"{min(1.0, max(0.0, float(x) / img_w)):.6f}")
+        coordinates.append(f"{min(1.0, max(0.0, float(y) / img_h)):.6f}")
+    return " ".join([str(int(class_id)), *coordinates])
+
+
+def write_polygon_lines(
+    txt_path: Path,
+    polygons: Iterable[tuple[int, Sequence[tuple[float, float]]]],
+    img_w: int,
+    img_h: int,
+) -> Path:
+    """Write YOLO-seg polygon lines for one image, one line per instance.
+
+    The segmentation adapter calls this when it converts the canonical COCO
+    dataset into the family's expected label files at job time. An empty
+    iterable writes an empty file, exactly like :func:`write_lines`.
+    """
+    txt_path.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join(
+        format_polygon_line(class_id, points, img_w, img_h) for class_id, points in polygons
+    )
     txt_path.write_text(content + "\n" if content else "", encoding="utf-8")
     return txt_path
 

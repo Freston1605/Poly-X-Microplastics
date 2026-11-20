@@ -11,10 +11,12 @@ Pure Python (no Qt) → testable headless."""
 
 from __future__ import annotations
 
+import math
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from polyx.core.i18n import _
 from polyx.core.labels import find_label_file, read_boxes
@@ -30,6 +32,10 @@ class Finding:
     level: str  # ok | warn | error
     title: str
     detail: str = ""
+    #: Stable machine identity for saved artifacts. The prose is translated at
+    #: display time; only the code and its parameters survive serialization.
+    code: str = ""
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -42,8 +48,21 @@ class DatasetAudit:
     )  # class -> median normalised area
     ok: bool = True  # False if there is any Finding at error level
 
-    def add(self, level: str, title: str, detail: str = ""):
-        self.findings.append(Finding(level, title, detail))
+    def add(
+        self,
+        level: str,
+        title: str,
+        detail: str = "",
+        *,
+        code: str = "",
+        parameters: dict[str, Any] | None = None,
+    ) -> None:
+        """Record one finding with a stable machine code and its parameters.
+
+        ``title`` and ``detail`` are translated for people reading the report;
+        only ``code`` and ``parameters`` are written to scientific artifacts.
+        """
+        self.findings.append(Finding(level, title, detail, code=code, parameters=parameters or {}))
         if level == LEVEL_ERROR:
             self.ok = False
 
@@ -157,27 +176,56 @@ class _Auditor:
     ``cls_name`` as arguments. Each check is now a method reading ``self.*``.
     """
 
-    def __init__(self, yaml_path: Path):
-        self.yaml_path = yaml_path
+    def __init__(self, yaml_path: Path | None = None):
+        self.yaml_path = yaml_path or Path()
         self.audit = DatasetAudit()
         self.data: dict = {}
-        self.yaml_dir: Path = yaml_path.parent
-        self.root: Path = yaml_path.parent
-        self.scans: dict = {}
-        self.tr: dict = {}
-        self.vl: dict = {}
+        self.yaml_dir: Path = self.yaml_path.parent if yaml_path is not None else Path()
+        self.root: Path = self.yaml_dir
+        self.scans: dict[str, dict[str, Any]] = {}
+        self.tr: dict[str, Any] = {}
+        self.vl: dict[str, Any] = {}
+        self.source = "yolo"
+
+    @classmethod
+    def from_scans(cls, scans: dict[str, dict[str, Any]], class_names: list[str]) -> _Auditor:
+        """An auditor over label scans built from another label source.
+
+        The COCO-mask entry point builds the same per-split scan dictionaries a
+        YOLO dataset produces, then hands them to the same check methods. It is
+        an alternate *input* to the auditor, not a second validator.
+        """
+        auditor = cls()
+        auditor.source = "coco"
+        auditor.audit = DatasetAudit(class_names=list(class_names))
+        auditor.scans = scans
+        auditor.tr = scans["train"]
+        auditor.vl = scans["val"]
+        return auditor
 
     # ── orchestration ──
     def run(self) -> DatasetAudit:
         audit = self.audit
         if not self.yaml_path.exists():
-            audit.add(LEVEL_ERROR, _("data.yaml not found"), str(self.yaml_path))
+            audit.add(
+                LEVEL_ERROR,
+                _("data.yaml not found"),
+                str(self.yaml_path),
+                code="data_yaml_missing",
+                parameters={"path": str(self.yaml_path)},
+            )
             return audit
 
         try:
             self.data = _load_yaml(self.yaml_path)
         except Exception as e:  # noqa: BLE001
-            audit.add(LEVEL_ERROR, _("Could not read data.yaml"), str(e))
+            audit.add(
+                LEVEL_ERROR,
+                _("Could not read data.yaml"),
+                str(e),
+                code="data_yaml_unreadable",
+                parameters={"path": str(self.yaml_path)},
+            )
             return audit
 
         self.yaml_dir = self.yaml_path.parent
@@ -192,15 +240,20 @@ class _Auditor:
 
         self._resolve_names()
         self._scan_all_splits()
+        return self.run_checks()
+
+    def run_checks(self) -> DatasetAudit:
+        """The checks shared by YOLO scans and COCO-mask scans."""
         self._check_structure()
         self._check_class_coverage()
         self._check_imbalance()
         self._check_dominance()
         self._check_size_similarity()
         self._check_mechanical()
+        self._check_polygons()
         self._check_val_size()
         self._finalize()
-        return audit
+        return self.audit
 
     # ── helpers ──
     def _cls_name(self, cid: int) -> str:
@@ -233,6 +286,8 @@ class _Auditor:
                         "to train and measure metrics."
                     )
                     % {"split": split},
+                    code="split_missing",
+                    parameters={"split": split},
                 )
             elif split_value and (resolved is None or not resolved.exists()):
                 lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
@@ -245,6 +300,8 @@ class _Auditor:
                         "folder or PC: fix the paths in the data.yaml (or use relative paths)."
                     )
                     % {"path": resolved},
+                    code="split_path_missing",
+                    parameters={"split": split, "path": str(resolved)},
                 )
             imgs = _iter_images(resolved, yaml_dir, root)
             scans[split] = _scan_split(imgs)
@@ -264,18 +321,36 @@ class _Auditor:
     def _check_structure(self) -> None:
         audit, tr, vl = self.audit, self.tr, self.vl
         if not audit.class_names:
-            audit.add(LEVEL_ERROR, _("No classes defined"), _("The data.yaml has no 'names' key."))
+            audit.add(
+                LEVEL_ERROR,
+                _("No classes defined"),
+                _("The data.yaml has no 'names' key."),
+                code="classes_missing",
+            )
         if tr["n_imgs"] == 0 and tr.get("path_exists"):
             audit.add(
                 LEVEL_ERROR,
                 _("Empty train"),
                 _("The train folder exists but contains no images."),
+                code="train_empty",
             )
         if vl["n_imgs"] == 0 and vl.get("path_exists"):
             audit.add(
                 LEVEL_ERROR,
                 _("Empty val"),
                 _("The val folder exists but contains no images → metrics cannot be measured."),
+                code="val_empty",
+            )
+        if self.source == "coco" and tr["n_imgs"] > 0 and vl["n_imgs"] == 0:
+            audit.add(
+                LEVEL_WARN,
+                _("No validation split in the COCO export"),
+                _(
+                    "Every mask was imported into train because no image carries a split "
+                    "marker. Mark the validation images before training: class coverage and "
+                    "metrics cannot be audited without them."
+                ),
+                code="coco_val_split_missing",
             )
 
     def _check_class_coverage(self) -> None:
@@ -294,6 +369,8 @@ class _Auditor:
                     "measure their performance (it will give you a false sense of success). "
                     "Add images of these classes to the validation split."
                 ),
+                code="classes_missing_in_val",
+                parameters={"classes": sorted(self._cls_name(c) for c in missing_in_val)},
             )
         if len(val_classes) == 1 and len(train_classes) > 1:
             audit.add(
@@ -304,6 +381,11 @@ class _Auditor:
                     "The validation set contains a single class even though the model "
                     "learns several. Multiclass metrics are not valid."
                 ),
+                code="single_class_val",
+                parameters={
+                    "class": self._cls_name(next(iter(val_classes))),
+                    "train_classes": sorted(self._cls_name(c) for c in train_classes),
+                },
             )
 
     def _check_imbalance(self) -> None:
@@ -329,6 +411,8 @@ class _Auditor:
                         "bottom_count": mn,
                         "ratio": mx / mn,
                     },
+                    code="class_imbalance",
+                    parameters={"top": top, "bottom": bot, "ratio": mx / mn},
                 )
 
     def _check_dominance(self) -> None:
@@ -348,6 +432,12 @@ class _Auditor:
                         % {
                             "percent": top_n / total * 100,
                             "image": top_img,
+                        },
+                        code="class_dominated_by_image",
+                        parameters={
+                            "class": self._cls_name(c),
+                            "image": top_img,
+                            "share": top_n / total,
                         },
                     )
 
@@ -370,6 +460,8 @@ class _Auditor:
                                 "them apart by colour/texture. If they also look alike, "
                                 "expect confusion between the two."
                             ),
+                            code="similar_class_sizes",
+                            parameters={"first": na, "second": nb, "ratio": ratio},
                         )
 
     def _check_mechanical(self) -> None:
@@ -381,6 +473,8 @@ class _Auditor:
                     _("Degenerate boxes in %(split)s: %(count)d")
                     % {"split": split, "count": sc["degenerate"]},
                     _("Boxes with width/height ~0. Check the annotation."),
+                    code="degenerate_boxes",
+                    parameters={"split": split, "count": sc["degenerate"]},
                 )
             if sc["out_range"]:
                 audit.add(
@@ -388,6 +482,8 @@ class _Auditor:
                     _("Coordinates outside [0,1] in %(split)s: %(count)d")
                     % {"split": split, "count": sc["out_range"]},
                     _("Badly normalised labels; YOLO will interpret them wrongly."),
+                    code="out_of_range_boxes",
+                    parameters={"split": split, "count": sc["out_range"]},
                 )
             if sc["duplicates"]:
                 audit.add(
@@ -395,6 +491,8 @@ class _Auditor:
                     _("Duplicate boxes in %(split)s: %(count)d")
                     % {"split": split, "count": sc["duplicates"]},
                     _("The same box repeated within one file."),
+                    code="duplicate_boxes",
+                    parameters={"split": split, "count": sc["duplicates"]},
                 )
             if sc["no_label"]:
                 audit.add(
@@ -405,6 +503,8 @@ class _Auditor:
                         "They will be trained as background (no objects). Confirm this is "
                         "intentional."
                     ),
+                    code="images_without_labels",
+                    parameters={"split": split, "count": sc["no_label"]},
                 )
         malformed = sum(scan["malformed"] for scan in self.scans.values())
         if malformed:
@@ -415,6 +515,69 @@ class _Auditor:
                     "Those lines were skipped. A YOLO-seg polygon line is valid YOLO "
                     "but not a detection box, so the audit counts boxes only."
                 ),
+                code="non_box_label_lines",
+                parameters={"count": malformed},
+            )
+
+    def _check_polygons(self) -> None:
+        """Degenerate or structurally invalid mask polygons reject a dataset.
+
+        Only COCO-mask scans carry these counters; YOLO box scans keep them at
+        zero, so the shared check runs harmlessly for both label sources.
+        """
+        audit = self.audit
+        for split, scan in self.scans.items():
+            invalid = int(scan.get("invalid_polygons", 0))
+            degenerate = int(scan.get("degenerate_polygons", 0))
+            unknown = int(scan.get("unknown_categories", 0))
+            if invalid:
+                audit.add(
+                    LEVEL_ERROR,
+                    _("Invalid mask polygons in %(split)s: %(count)d")
+                    % {"split": split, "count": invalid},
+                    _(
+                        "A mask polygon needs at least three finite, in-bounds points and "
+                        "an even coordinate count. RLE segmentation is not a polygon; "
+                        "export polygons from the annotation tool."
+                    ),
+                    code="invalid_mask_polygons",
+                    parameters={"split": split, "count": invalid},
+                )
+            if degenerate:
+                audit.add(
+                    LEVEL_ERROR,
+                    _("Degenerate mask polygons in %(split)s: %(count)d")
+                    % {"split": split, "count": degenerate},
+                    _(
+                        "These polygons enclose zero area (collinear or repeated points) "
+                        "and cannot be used as segmentation ground truth."
+                    ),
+                    code="degenerate_mask_polygons",
+                    parameters={"split": split, "count": degenerate},
+                )
+            if unknown:
+                audit.add(
+                    LEVEL_ERROR,
+                    _("Annotations with an unknown category in %(split)s: %(count)d")
+                    % {"split": split, "count": unknown},
+                    _(
+                        "Every mask must reference a category declared in the export's "
+                        "categories list."
+                    ),
+                    code="unknown_mask_category",
+                    parameters={"split": split, "count": unknown},
+                )
+        orphans = sum(int(scan.get("orphan_annotations", 0)) for scan in self.scans.values())
+        if orphans:
+            audit.add(
+                LEVEL_ERROR,
+                _("Annotations with an unknown image: %(count)d") % {"count": orphans},
+                _(
+                    "These masks reference an image that is not declared in the export's "
+                    "images list."
+                ),
+                code="orphan_mask_image",
+                parameters={"count": orphans},
             )
 
     def _check_val_size(self) -> None:
@@ -424,6 +587,8 @@ class _Auditor:
                 LEVEL_WARN,
                 _("Very small validation set (%(count)d images)") % {"count": vl["n_imgs"]},
                 _("With so few images the metrics are unstable. Aim for ≥ 10-20."),
+                code="small_validation_set",
+                parameters={"count": vl["n_imgs"]},
             )
 
     def _finalize(self) -> None:
@@ -433,9 +598,204 @@ class _Auditor:
                 LEVEL_OK,
                 _("No dataset problems detected"),
                 _("Class distribution, validation and format all look correct."),
+                code="no_problems",
             )
 
 
 # ──────────────────────────────────────────────────────────────────
 def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     return _Auditor(Path(yaml_path)).run()
+
+
+# ── COCO mask polygons ─────────────────────────────────────────────────────
+# The canonical segmentation ground truth is an external CVAT COCO export.
+# The geometry rules below feed the same auditor as the YOLO box path: one
+# validator, one DatasetAudit result, two label sources.
+
+_MIN_POLYGON_AREA = 1e-6  # px²; a zero-area ring is not a mask
+
+#: Split names a COCO export may carry as an image-level attribute. Without a
+#: marker an image belongs to train, which the audit reports as a warning.
+_SPLIT_ALIASES = {
+    "train": "train",
+    "training": "train",
+    "val": "val",
+    "valid": "val",
+    "validation": "val",
+    "test": "test",
+    "testing": "test",
+}
+
+
+def polygon_area(points: list[tuple[float, float]]) -> float:
+    """Absolute shoelace area of one polygon, in pixel squared."""
+    total = 0.0
+    count = len(points)
+    for index in range(count):
+        x1, y1 = points[index]
+        x2, y2 = points[(index + 1) % count]
+        total += x1 * y2 - x2 * y1
+    return abs(total) / 2.0
+
+
+def validate_polygon(
+    segmentation: Any, width: int, height: int
+) -> tuple[list[list[tuple[float, float]]], int, int]:
+    """Validate a COCO ``segmentation`` field.
+
+    Returns ``(polygons, invalid_count, degenerate_count)``. A dictionary
+    (RLE) is invalid because the project has no RLE codec and the annotation
+    tool is asked to export polygons; a flat coordinate list must hold at
+    least three finite, in-bounds points and enclose a non-zero area.
+    """
+    if not isinstance(segmentation, (list, tuple)) or not segmentation:
+        return [], 1, 0
+    polygons: list[list[tuple[float, float]]] = []
+    invalid = degenerate = 0
+    for ring in segmentation:
+        if not isinstance(ring, (list, tuple)):
+            invalid += 1
+            continue
+        numbers = list(ring)
+        if (
+            len(numbers) < 6
+            or len(numbers) % 2 != 0
+            or any(not isinstance(value, (int, float)) for value in numbers)
+            or any(not math.isfinite(float(value)) for value in numbers)
+        ):
+            invalid += 1
+            continue
+        points = [
+            (float(numbers[index]), float(numbers[index + 1]))
+            for index in range(0, len(numbers), 2)
+        ]
+        if any(x < 0 or x > width or y < 0 or y > height for x, y in points):
+            invalid += 1
+            continue
+        if len(set(points)) < 3 or polygon_area(points) <= _MIN_POLYGON_AREA:
+            degenerate += 1
+            continue
+        polygons.append(points)
+    return polygons, invalid, degenerate
+
+
+def coco_image_split(image: dict[str, Any]) -> str:
+    """The normalised split marker of one COCO image, ``train`` by default.
+
+    Public because the segmentation execution filters the canonical dataset by
+    the same rule the import audit counted: one owner for the convention.
+    """
+    value: Any = image.get("split")
+    attributes = image.get("attributes")
+    if value is None and isinstance(attributes, dict):
+        value = attributes.get("split")
+    elif value is None and isinstance(attributes, list):
+        for item in attributes:
+            if isinstance(item, dict) and str(item.get("name", "")).lower() == "split":
+                value = item.get("value")
+                break
+    if value is None or not str(value).strip():
+        return "train"
+    return _SPLIT_ALIASES.get(str(value).strip().lower(), str(value).strip().lower())
+
+
+def _empty_coco_scan() -> dict[str, Any]:
+    """A scan with the keys the box checks read, plus polygon counters."""
+    return {
+        "per_class": defaultdict(int),
+        "areas": defaultdict(list),
+        "per_class_per_img": defaultdict(lambda: defaultdict(int)),
+        "degenerate": 0,
+        "out_range": 0,
+        "duplicates": 0,
+        "empty": 0,
+        "no_label": 0,
+        "malformed": 0,
+        "n_imgs": 0,
+        "path_exists": False,
+        "invalid_polygons": 0,
+        "degenerate_polygons": 0,
+        "unknown_categories": 0,
+        "orphan_annotations": 0,
+    }
+
+
+def audit_coco_masks(coco: dict[str, Any]) -> DatasetAudit:
+    """Audit the polygons of a COCO instance dataset with the shared checks.
+
+    The split is read from an image-level ``split`` attribute (CVAT metadata
+    or ``attributes``); an image without one belongs to train. COCO category
+    ids are arbitrary (CVAT starts at 1), so they are mapped to the sorted
+    positions the auditor indexes class names by.
+    """
+    images: dict[int, dict[str, Any]] = {}
+    for item in coco.get("images", []):
+        images[int(item["id"])] = item
+    category_names = {int(item["id"]): str(item["name"]) for item in coco.get("categories", [])}
+    ordered_ids = sorted(category_names)
+    id_to_index = {category_id: index for index, category_id in enumerate(ordered_ids)}
+    class_names = [category_names[category_id] for category_id in ordered_ids]
+
+    scans: dict[str, dict[str, Any]] = {
+        split: _empty_coco_scan() for split in ("train", "val", "test")
+    }
+    image_split: dict[int, str] = {}
+    for image_id, item in images.items():
+        split = coco_image_split(item)
+        image_split[image_id] = split
+        scan = scans.setdefault(split, _empty_coco_scan())
+        scan["n_imgs"] += 1
+        scan["path_exists"] = True
+
+    for annotation in coco.get("annotations", []):
+        try:
+            image_id = int(annotation["image_id"])
+        except (KeyError, TypeError, ValueError):
+            scans["train"]["orphan_annotations"] += 1
+            continue
+        image = images.get(image_id)
+        if image is None:
+            # An annotation that belongs to no image cannot be audited per
+            # split; it is an error of the export, not a mask to repair.
+            scans["train"]["orphan_annotations"] += 1
+            continue
+        scan = scans[image_split[image_id]]
+        try:
+            class_id = id_to_index.get(int(annotation["category_id"]))
+        except (KeyError, TypeError, ValueError):
+            class_id = None
+        if class_id is None:
+            scan["unknown_categories"] += 1
+            continue
+        width, height = int(image["width"]), int(image["height"])
+        polygons, invalid, degenerate = validate_polygon(
+            annotation.get("segmentation"), width, height
+        )
+        scan["invalid_polygons"] += invalid
+        scan["degenerate_polygons"] += degenerate
+        image_area = max(width * height, 1)
+        for points in polygons:
+            area = polygon_area(points) / image_area
+            scan["per_class"][class_id] += 1
+            scan["areas"][class_id].append(area)
+            scan["per_class_per_img"][class_id][str(image_id)] += 1
+        if not polygons and not invalid and not degenerate:
+            scan["empty"] += 1
+
+    for scan in scans.values():
+        scan["per_class"] = dict(scan["per_class"])
+        scan["areas"] = dict(scan["areas"])
+        scan["per_class_per_img"] = {
+            key: dict(value) for key, value in scan["per_class_per_img"].items()
+        }
+
+    auditor = _Auditor.from_scans(scans, class_names)
+    audit = auditor.audit
+    for split, scan in scans.items():
+        audit.per_class[split] = {
+            auditor._cls_name(class_id): count for class_id, count in scan["per_class"].items()
+        }
+        for class_id, areas in scan["areas"].items():
+            if areas:
+                audit.box_area_median[auditor._cls_name(class_id)] = statistics.median(areas)
+    return auditor.run_checks()
