@@ -1,9 +1,8 @@
 """What changes between Windows, macOS and Linux, in a single place.
 
-Poly-X was born on Windows and took that for granted in eleven spots of the
-code: ``os.startfile`` to open a folder or a report, ``cmd /c start`` to
-launch the updater, and ``device="0"`` (CUDA) as the default device. None of
-the three exists on a Mac.
+Poly-X was born on Windows and took that for granted in a couple of spots of
+the code: ``os.startfile`` to open a folder or a report, and ``device="0"``
+(CUDA) as the default device. Neither exists on a Mac.
 
 Those differences are concentrated here so the rest of the program does not
 have to know which system it is running on. The alternative -- an
@@ -296,7 +295,7 @@ def description_device(device: str) -> str:
     return device or "—"
 
 
-# ── Updater ──
+# ── Window identity ──
 def set_identity_app(app_id: str) -> bool:
     """Declares to the system that this process is Poly-X, not Python.
 
@@ -327,57 +326,6 @@ def set_identity_app(app_id: str) -> bool:
     except (AttributeError, OSError):
         # Windows Server without a complete shell32, or an old version. It is not
         # a reason not to start: only the taskbar icon is lost.
-        return False
-
-
-# The script that applies the update differs per system because it
-# has to talk to each one's package manager and shell. The
-# name is resolved here so `updates.py` and `launcher.py` do not repeat it.
-
-
-def name_updater() -> str:
-    if IS_WINDOWS:
-        return "actualizar.bat"
-    if IS_MAC:
-        return "actualizar_macOS.command"
-    return "actualizar_linux.sh"
-
-
-def launch_updater(path_2: str | Path) -> bool:
-    """Starts the updater in its own window and returns control.
-
-    In a separate window on purpose: the updater overwrites the program
-    files, including the one that launched it, so Poly-X must be able to
-    close while it keeps running.
-    """
-    path_2 = Path(path_2)
-    if not path_2.exists():
-        return False
-    try:
-        if IS_WINDOWS:
-            # 'start' with an empty title: without that "" the first quoted
-            # argument is taken as the window title and the script
-            # never gets to run.
-            subprocess.Popen(  # noqa: S603
-                ["cmd", "/c", "start", "", str(path_2)],  # noqa: S607
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-            return True
-        if IS_MAC:
-            # Terminal.app so the user can see the download progress.
-            # Running it in the background would leave the application apparently
-            # hung for several minutes without saying anything.
-            subprocess.Popen(  # noqa: S603
-                ["open", "-a", "Terminal", str(path_2)],  # noqa: S607
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return True
-        subprocess.Popen(  # noqa: S603
-            ["/bin/bash", str(path_2)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        return True
-    except (OSError, subprocess.SubprocessError):
         return False
 
 

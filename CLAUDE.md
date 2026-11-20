@@ -43,29 +43,21 @@ It integrates the whole pipeline: **training → labelling → detection → pap
 
 ### The root and its contract
 
-The root deliberately mixes two surfaces with different audiences:
+The repository has one supported surface and one frozen artifact:
 
-- **End-user surface** (the double-click surface seen right after the ZIP
-  download): everything under `install/` — `SETUP.bat`, `iniciar_polyx.bat`,
-  `Poly-X.vbs`, the updaters (`actualizar.{bat,ps1}`,
-  `actualizar_macOS.command`, `actualizar_linux.sh`), the uninstaller and the
-  packagers (`empaquetar_*.bat`, `migrar_instalacion.ps1`), plus `setup.sh`,
-  `run.sh` and `polyx.desktop` for Linux. The assumption "they live in
-  install/" is wired in: `polyx.core.platform.name_updater()` plus
-  `polyx.gui.updates` build `ROOT/install/name_updater()`, `Poly-X.vbs`
-  self-locates two levels up (project root), `SETUP.bat` resolves `SRC` as
-  its parent, and `empaquetar_para_llevar.bat` builds the offline package
-  from `src\`, `docs\` and `tools\manual\` and copies the install scripts
-  flat into the bundle root. Moving them again means updating all of that and
-  the cross-references between the scripts themselves.
 - **Developer surface** (`src/`, `tests/`, `tools/`, `docs/`):
   `tools/audit` (report fixture capture), `tools/i18n` (the gettext
   extract/update/compile/audit/pseudo workflow), `tools/manual`
-  (the manual chain), `tools/packaging` (PyInstaller), `tools/check.py` (the
-  local gate: translation audit, suite, ruff and ty) and `tools/update_goldens.py`
-  (characterization goldens). The compiled manual lives in `docs/manual/` and
-  IS versioned: a fresh ZIP download opens it offline. The PDFs stay ignored
-  (regenerable from `tools/manual`).
+  (the manual chain), `tools/check.py` (the local gate: translation audit,
+  suite, ruff and ty) and `tools/update_goldens.py` (characterization
+  goldens). `tools/data` holds the dataset tooling, including the Windows
+  packager `empaquetar_dataset_para_drive.bat`: it packages a dataset, not
+  the software.
+- **Frozen user manual**: `docs/manual/` is versioned so a checkout opens it
+  offline, but it predates the MICRA rewrite and still describes the retired
+  installers. It is out of scope until after the paper and is not
+  regenerated; the README is authoritative where the two disagree. The PDFs
+  stay ignored (regenerable from `tools/manual`).
 - **Local research work**: `manuscript-workspace/` is not versioned — it is
   a draft-testing workspace, material of the paper that the README keeps
   out of the repository on purpose.
@@ -112,7 +104,6 @@ src/                      # Source code (installable package)
         ├── widgets.py    # LogoBadge, HLine, custom widgets
         ├── preferencias.py  # Preferences dialog (theme, motion, language)
         ├── pdf_export.py # HTML → PDF
-        ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
         ├── report/      # HTML report: render → sections → figures → batch/machine/markup/samples/particle/registry
         │   ├── __init__.py   # public surface: generate_report + section catalog
@@ -148,7 +139,6 @@ tools/                    # Development tooling (not packaged)
 ├── audit/                # Report fixture capture
 ├── i18n/                 # gettext workflow: extract, update, compile, audit, pseudo
 ├── manual/               # Manual chain (capture, generate, text ES/EN)
-├── packaging/            # PyInstaller (polyx.spec, build.py)
 └── data/                 # Dataset split tooling (manifest + make_splits)
 
 docs/                     # Documentation
@@ -156,20 +146,11 @@ docs/                     # Documentation
 ├── assets/               # manual_screenshots/ (es, en, web, win)
 ├── architecture_review_segmentation.md  # architecture review (segmentation)
 ├── diagnostico_sigterm.md               # SIGTERM diagnostics + memory telemetry
-├── recetas_jq.md                        # operator runbook: JSONL logs + jq recipes
-└── (LEEME_macOS.md at the root)
-
-install/                  # End-user surface (double click)
-├── SETUP.bat, iniciar_polyx.bat, Poly-X.vbs   # Windows
-├── actualizar.{bat,ps1}, desinstalar.ps1, migrar_instalacion.ps1
-├── empaquetar_*.bat
-├── Lanzar_macOS.command, actualizar_macOS.command, ...  # macOS
-├── setup.sh, run.sh, actualizar_linux.sh, polyx.desktop  # Linux
-└── lanzar_polyx.py       # Qt-free shim
+└── recetas_jq.md                        # operator runbook: JSONL logs + jq recipes
 
 legacy/                   # Previous versions (reference, not touched)
 
-models/                   # YOLO .pt weights (dev; in installs they go to user data)
+models/                   # YOLO .pt weights (dev; the user data dir holds the real ones)
 runs/, runs_train/        # LEGACY (pre-ADR-0001): runs now live in the user data dir
 data/                     # Labelled YOLO dataset (gitignored); split tools in tools/data/
 
@@ -218,19 +199,12 @@ data/                     # Labelled YOLO dataset (gitignored); split tools in t
 | Before (Windows only) | Now |
 |---|---|
 | `os.startfile` (11 sites) | `open_in_system()` → `startfile` / `open` / `xdg-open` |
-| `cmd /c start` | `launch_updater()` |
 | `device = "0"` (fixed CUDA) | `available_device()` |
-| hardcoded `actualizar.bat` | `name_updater()` |
 
-> **Intel Macs:** PyTorch stopped publishing x86_64 wheels for macOS with version 2.3;
-> the installer pins **2.2.2**, the last one that exists. No MPS (it requires Apple
-> Silicon), so it runs on CPU.
-
-> **`.gitattributes` is not cosmetic:** it forces LF on `*.command` and `*.sh`. With
-> `core.autocrlf=true` on Windows and without it, the script reaches the Mac with CRLF
-> and bash rejects it with `/bin/bash^M: bad interpreter`, a symptom that looks nothing
-> like its cause. The `.command` files ship with mode `100755`: without the executable
-> bit, double-clicking in Finder does nothing.
+> **`.gitattributes` is not cosmetic:** it forces LF on `*.sh`, so a shell
+> script written on Windows does not reach Linux or the cluster with CRLF and
+> fail with `/bin/bash^M: bad interpreter`, a symptom that looks nothing like
+> its cause.
 
 ---
 
@@ -492,39 +466,24 @@ are also untranslated.
 `python tools/i18n/cli.py pseudo` generates `qps_ploc`, a development-only
 catalog whose translations are bracketed and accented. Select it with
 `POLYX_LOCALE=qps_ploc` to see which strings were never extracted and where the
-layout truncates. It is gitignored, excluded from the wheel and the frozen
-application, and it is not part of the gate.
+layout truncates. It is gitignored, excluded from the wheel, and it is not part
+of the gate.
 
 ---
 
 ## 🚀 Installation and usage
 
-### 🪟 Windows
-
-```batch
-SETUP.bat            :: first time — creates .venv, detects GPU, installs everything
-iniciar_polyx.bat    :: daily use
-actualizar.bat       :: pull the latest from GitHub
-```
-
-### 🍎 macOS
+The only supported setup is a source checkout with the locked environment
+(ADR-0011): Linux x86_64 is Tier 1, Windows is best effort, macOS is
+unsupported. A compute node runs the Apptainer image instead.
 
 ```bash
-Lanzar_macOS.command       # installs the 1st time, launches afterwards
-crear_icono_macOS.command  # creates Poly-X.app: opens without a Terminal window
-actualizar_macOS.command   # pull the latest from GitHub
-construir_app_macOS.command  # package Poly-X.app (optional)
+uv sync --locked --extra gui   # the sole setup step
+uv run polyx-gui               # or: uv run polyx --help
 ```
 
-**Right** click → Open the first time (Gatekeeper blocks scripts
-downloaded without Apple's signature).
-
-The installer and launcher are in **a single file** on purpose: on macOS each
-`.command` requires its own security approval the first time, and separating them
-would mean going through that prompt twice — the second time, with the program
-already installed, is when it most looks like something broke.
-
-Open the **Launcher** → pick a module.
+Open the **Launcher** → pick a module. Nothing updates itself: a collaborator
+re-runs `uv sync --locked` or pulls a new image digest.
 
 ---
 
@@ -532,7 +491,7 @@ Open the **Launcher** → pick a module.
 
 ### 🏠 Launcher (Module 1)
 Main menu: four cards (Detector, Trainer, Labeller, Viewer), theme picker,
-update checker (`polyx.gui.updates`), manual/report openers, preferences.
+manual/README openers, preferences.
 
 ---
 
@@ -940,8 +899,8 @@ edges.
 > with Feret/geodesic over 6.638 particles: **median aspect 1.58, maximum 8.7,
 > and 1.1 % of fibres**. The material is mostly compact fragments.
 
-Cost 5.9 ms per particle. Only cv2 and numpy: `scipy` is **not** in
-`requirements.txt` —it arrives as a transitive dependency of ultralytics— and
+Cost 5.9 ms per particle. Only cv2 and numpy: `scipy` is **not a declared
+dependency** —it arrives as a transitive dependency of ultralytics— and
 relying on it would break the install the day ultralytics stops shipping it.
 
 ### Tiling (src/polyx/core/detect/tiling.py)

@@ -195,8 +195,7 @@ def _isolate_theme_saves(tmp_path, monkeypatch):
     ``polyx.core.preferences``. Point that file at the test's ``tmp_path``
     and restore the active palette afterwards, so the suite is hermetic. The
     theme part is lazy: a test module that never imported the theme does not
-    acquire a PySide6 dependency, so headless suites such as the install
-    smoke tests stay headless.
+    acquire a PySide6 dependency, so a headless suite stays headless.
     """
     from polyx.core import preferences
 
@@ -241,7 +240,7 @@ def pytest_unconfigure(config):
     interpreter shutdown (``QWidget::~QWidget`` -> shiboken ``dict_dealloc``).
     pytest has printed its summary by the time ``unconfigure`` runs, so flush
     and leave with the status recorded at session finish. A run that never
-    imported Qt (the headless install smoke tests) keeps the normal shutdown.
+    imported Qt keeps the normal shutdown.
     """
     if "PySide6.QtWidgets" not in sys.modules:
         return
@@ -250,19 +249,6 @@ def pytest_unconfigure(config):
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(_SESSION_EXIT_STATUS)
-
-
-@pytest.fixture
-def no_update_check(monkeypatch):
-    """Keep the launcher's background GitHub check out of a test.
-
-    ``LauncherWindow`` schedules a check about 1.2 s after it is built; it
-    reaches the network and starts a thread that can outlive a window the case
-    destroyed. A test that builds a launcher requests this fixture. A module
-    that builds one in most of its cases may wrap it in an autouse fixture of
-    its own, which requests this one instead of re-implementing it.
-    """
-    monkeypatch.setattr("polyx.gui.launcher.SearchUpdates.lookfor", lambda self: None)
 
 
 @pytest.fixture

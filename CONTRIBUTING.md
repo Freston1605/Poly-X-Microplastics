@@ -41,8 +41,7 @@ Two workflows run on **every PR** and on every push to `main`:
   change files instead of reporting them. They stay in the configuration for
   local use.
 - **`ci.yml`** — the pipeline, which is the gate plus the checks around it:
-  1. Checks `uv.lock` is current and smoke-tests the installer scripts before
-     any dependency sync.
+  1. Checks `uv.lock` is current before any dependency sync.
   2. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
      `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`) and syncs the locked
      environment (`uv sync --locked --extra gui`) on Python 3.11.
@@ -129,8 +128,8 @@ that nobody updates is just an old action.
 Before pushing, run the same checks locally:
 
 ```bash
-uv run ruff check src/ tests/ tools/ install/
-uv run ruff format --check src/ tests/ tools/ install/
+uv run ruff check src/ tests/ tools/
+uv run ruff format --check src/ tests/ tools/
 uv run ty check src/polyx/core src/polyx/cli
 ```
 
@@ -198,8 +197,8 @@ python -m pytest -q          # inside the project .venv
      `numpy>=2` breaks ultralytics 8.3.40 validation (they removed `np.trapz`),
      and bumping `PySide6` can change Qt dialog behaviour. `Run the gate` prints
      the command that failed; reproduce it with `python tools/check.py`. A ruff
-     failure is that step too: run `uv run ruff check src/ tests/ tools/ install/`
-     and `uv run ruff format --check src/ tests/ tools/ install/`, fix with
+     failure is that step too: run `uv run ruff check src/ tests/ tools/`
+     and `uv run ruff format --check src/ tests/ tools/`, fix with
      `ruff check --fix` / `ruff format`, and leave unrelated files alone. The
      `Type check (GUI)` step is advisory and never fails the build.
    - `CI` → `test` → the failing test is printed with its assertion. The suite
@@ -279,10 +278,9 @@ python tools/i18n/cli.py pseudo    # generate the development pseudo-locale
    editor can open. Fill every `msgstr`; keep every `%(name)s` placeholder and
    use the catalog's plural forms. A translator does not need Python.
 4. **Compile.** `compile` writes the `.mo` files the runtime reads. They are
-   gitignored build artifacts: the wheel compiles them in a build hook and the
-   frozen application adds them as data files. A development checkout also
-   compiles a missing catalog on demand into a temporary cache, so a fresh
-   clone is not silently English-only.
+   gitignored build artifacts: the wheel compiles them in a build hook. A
+   development checkout also compiles a missing catalog on demand into a
+   temporary cache, so a fresh clone is not silently English-only.
 5. **Test.** `python tools/check.py` runs the translation audit, the suite,
    ruff and ty. The audit is also the `i18n-audit` pre-commit hook, so the
    same failure appears before the commit leaves your machine.
@@ -302,8 +300,8 @@ POLYX_LOCALE=qps_ploc python -m polyx.gui
 
 Every translated string appears bracketed and accented; an English sentence on
 screen is a string that bypassed the translation call. The pseudo-locale is
-development-only: it is gitignored, excluded from the wheel and the frozen
-application, and it is not part of any gate.
+development-only: it is gitignored, excluded from the wheel, and it is not
+part of any gate.
 
 Adding a language is adding a directory: create
 `src/polyx/locales/<tag>/LC_MESSAGES/messages.po` with an empty catalog, run

@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
-for %%I in ("%~dp0..") do cd /d "%%~fI"
+for %%I in ("%~dp0..\..") do cd /d "%%~fI"
 
 echo ============================================================
 echo   Poly-X - Empaquetar dataset para Google Drive
@@ -56,14 +56,17 @@ echo   1) Sube PolyX_dataset.zip a tu Google Drive
 echo      (arrastralo en drive.google.com).
 echo.
 echo   2) En el PC del profesor, baja el codigo con Git:
-echo        git clone https://github.com/CrissFerrada/Poly-X-Microplastics
+echo        git clone https://github.com/Freston1605/micra
 echo.
 echo   3) Descarga PolyX_dataset.zip del Drive y extraelo DENTRO de la
 echo      carpeta del proyecto, de modo que quede:
-echo        Poly-X-Microplastics\data\images
-echo        Poly-X-Microplastics\data\labels
+echo        micra\data\images
+echo        micra\data\labels
 echo.
-echo   4) Ejecuta SETUP.bat y luego iniciar_polyx.bat.
+echo   4) En esa carpeta ejecuta:
+echo        uv sync --locked --extra gui
+echo      y luego abre la interfaz con:
+echo        uv run polyx-gui
 echo      El dataset.yaml usa rutas relativas, asi que el Entrenador
 echo      encuentra el dataset solo, sin editar nada.
 echo.

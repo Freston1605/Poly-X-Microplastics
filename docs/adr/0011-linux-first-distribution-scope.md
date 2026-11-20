@@ -128,8 +128,10 @@ needs. Its costs are concrete:
   `CONTRIBUTING.md` drop `install/` from the ruff paths; `tests/test_install.py`,
   `tests/test_updater_observability.py` and the updater assertions in
   `tests/test_platform.py` and `tests/test_gui_package.py` go with the code.
-- `install/update.py` and `src/polyx/gui/updates.py` disappear, and with them
-  the two remaining hardcoded references to the upstream repository. The
+  The launcher's README button opens `README.md`, since `LEEME.txt` is gone.
+- `install/update.py`, `src/polyx/gui/updates.py`, `platform.name_updater()`
+  and `platform.launch_updater()` disappear, and with them the two remaining
+  hardcoded references to the upstream repository. The
   remaining `CrissFerrada/...` URLs in `pyproject.toml`, `README.md`,
   `CLAUDE.md`, the manual generators and `download_models.py` move to the MICRA
   repository. `SECURITY.md` already names the fork; `docs/agents/issue-tracker.md`

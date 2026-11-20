@@ -330,7 +330,7 @@ class TrainPage(TrainerPage):
             if cb is None and hb is None:
                 msg = _(
                     "PyTorch %(version)s was installed <b>WITHOUT CUDA/ROCm</b> — it will "
-                    "train on CPU (very slow). Reinstall with SETUP.bat detecting the GPU."
+                    "train on CPU (very slow). Reinstall the CUDA wheel (see README.md)."
                 ) % {"version": tv}
             elif hb is not None and cb is None:
                 msg = _(

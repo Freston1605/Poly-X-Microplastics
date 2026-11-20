@@ -147,8 +147,8 @@ def _commands(
         commands.append([str(python), "-m", "pytest", "-q", *xdist_args, *pytest_args])
     commands.extend(
         [
-            [str(python), "-m", "ruff", "check", "src", "tests", "tools", "install"],
-            [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools", "install"],
+            [str(python), "-m", "ruff", "check", "src", "tests", "tools"],
+            [str(python), "-m", "ruff", "format", "--check", "src", "tests", "tools"],
             [str(python), "-m", "ty", "check", "src/polyx/core", "src/polyx/cli"],
         ]
     )

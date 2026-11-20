@@ -79,9 +79,10 @@ for ticket #199, not a claim made here.
 `tools/hpc/build_wheelhouse.py` exports the pinned requirements from `uv.lock`,
 downloads every wheel once on a networked machine, builds the project's own
 wheel here, and writes a `SHA256SUMS` manifest plus a ready-to-use
-`requirements.txt`. Building the project wheel on this side is what keeps the
-node offline: the runtime image has no source tree, no build backend and no
-index, and installs the package from the wheel like any other dependency. The
+`requirements.txt` inside the wheelhouse. Building the project wheel on this
+side is what keeps the node offline: the runtime image has no source tree, no
+build backend and no index, and installs the package from the wheel like any
+other dependency. The
 wheel build also needs `NOTICE`, which `pyproject.toml` force-includes for the
 pycocotools licence; omitting it fails the build with
 `Forced include not found`.
