@@ -42,7 +42,10 @@ SOURCE_TREES = (
     "container",
     "cluster",
 )
-DOCUMENT_TREES = ("docs/agents",)
+DOCUMENT_TREES = ("docs",)
+#: History records the retired names on purpose: the decisions, the frozen
+#: vocabulary and the specifications that predate the deletion.
+HISTORY_TREES = (Path("docs/adr"), Path("docs/specs"))
 DOCUMENTS = (
     "README.md",
     "CLAUDE.md",
@@ -57,9 +60,9 @@ FILES = ("pyproject.toml", ".pre-commit-config.yaml", ".gitattributes", ".gitign
 #: would find only the needles.
 SELF = Path(__file__).resolve()
 
-#: Frozen with the manual: they generate the document README keeps on disk and
-#: out of scope, so their installer chapters are not living references.
-FROZEN_GENERATORS = Path("tools/manual")
+#: Frozen with the manual: the generators produce the document README keeps on
+#: disk and out of scope, so their installer chapters are not living references.
+FROZEN_TREES = (Path("tools/manual"), Path("docs/manual"))
 
 #: Compiled catalogs and assets; not prose a person reads.
 BINARY_SUFFIXES = frozenset({".mo", ".png", ".ico", ".pt", ".pdf", ".jpg", ".jpeg", ".zip"})
@@ -105,12 +108,17 @@ def findings(text: str) -> list[str]:
     return [name for name in RETIRED if name in found]
 
 
+def _under(relative: Path, trees: tuple[Path, ...]) -> bool:
+    """True when ``relative`` is inside one of ``trees``."""
+    return any(relative == tree or tree in relative.parents for tree in trees)
+
+
 def _scanned(path: Path) -> bool:
     """True when a file belongs to a living surface the scan must read."""
     relative = path.relative_to(ROOT)
     if path.resolve() == SELF:
         return False
-    if relative == FROZEN_GENERATORS or FROZEN_GENERATORS in relative.parents:
+    if _under(relative, (*FROZEN_TREES, *HISTORY_TREES)):
         return False
     if "__pycache__" in relative.parts:
         return False
@@ -166,6 +174,7 @@ def test_the_scan_covers_every_living_surface() -> None:
         assert document in scanned, f"{document} was not scanned"
     for name in ("src/polyx/gui/launcher.py", "tests/test_identity.py", "pyproject.toml"):
         assert name in scanned, f"{name} was not scanned"
+    assert any(name.startswith("docs/") for name in scanned), "docs/ was not scanned"
 
 
 def test_the_scanner_catches_each_retired_name() -> None:
