@@ -164,9 +164,11 @@ jobs:
           print-hash: true
 
   release:
-    # Deliberately not `needs: publish`: desktop delivery must not depend on
-    # PyPI credentials or availability (#203). A failed upload must not cost a
-    # ready desktop security release.
+    # Deliberately not `needs: publish` (#203): desktop delivery must not depend
+    # on PyPI credentials or availability. The release is still complete — it
+    # attaches the wheel and sdist produced by `build` plus the desktop ZIP, so
+    # a failed upload cannot publish a release with files missing. A red
+    # `publish` job remains visible on the same tag run.
     needs: [desktop, build]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04

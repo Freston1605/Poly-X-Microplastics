@@ -75,6 +75,18 @@ def test_checksum_names_the_archive_and_matches_its_bytes(release):
     assert digest == hashlib.sha256(archive.read_bytes()).hexdigest()
 
 
+def test_a_top_level_entry_named_like_local_state_is_never_included(tmp_path: Path):
+    from tools.packaging.desktop_release import _include
+
+    source = tmp_path / "source"
+    (source / "src" / "polyx" / "core" / "data").mkdir(parents=True)
+    (source / "runs").write_text("content", encoding="utf-8")
+    (source / "src" / "polyx" / "core" / "data" / "__init__.py").write_text("", encoding="utf-8")
+
+    assert _include(source / "runs", source) is False
+    assert _include(source / "src" / "polyx" / "core" / "data" / "__init__.py", source) is True
+
+
 def test_the_real_tree_builds_and_the_zip_opens(tmp_path: Path):
     archive, checksum = build(_REPO, tmp_path, "polyx-desktop")
 

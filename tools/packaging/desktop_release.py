@@ -66,7 +66,7 @@ EXCLUDED_SUFFIXES = (".pyc", ".pyo", ".log", ".pdf")
 def _include(path: Path, root: Path) -> bool:
     """Whether ``path`` belongs in the ZIP, judged by its path under ``root``."""
     relative = path.relative_to(root)
-    if relative.parts[0] in TOP_LEVEL_EXCLUDED and len(relative.parts) > 1:
+    if relative.parts[0] in TOP_LEVEL_EXCLUDED:
         return False
     if any(part in ANY_DEPTH_EXCLUDED for part in relative.parts[:-1]):
         return False

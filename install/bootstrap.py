@@ -241,8 +241,9 @@ def enforce_pillow(venv_py: Path, requirements: Path) -> bool:
     """Leave the environment on the pinned Pillow, or report that it is not.
 
     A stale Pillow is exactly what a security release exists to replace, so a
-    mismatch is repaired once and then verified; ``False`` means the install
-    must not be described as patched.
+    mismatch is repaired through the same ``-r requirements.txt`` path the
+    first install used — same index context, same wheel policy — and then
+    verified. ``False`` means the install must not be described as patched.
     """
     expected = pinned_version(SECURITY_PACKAGE, requirements)
     if expected is None:
@@ -252,7 +253,7 @@ def enforce_pillow(venv_py: Path, requirements: Path) -> bool:
         _say(f"[OK] {SECURITY_PACKAGE} {expected} verificado.")
         return True
     _say(f"[INFO] {SECURITY_PACKAGE} {installed or 'ausente'} -> {expected}; reinstalando...")
-    _run([str(venv_py), "-m", "pip", "install", "--upgrade", f"{SECURITY_PACKAGE}=={expected}"])
+    _run([str(venv_py), "-m", "pip", "install", "-r", str(requirements)])
     if _installed_pillow(venv_py) == expected:
         _say(f"[OK] {SECURITY_PACKAGE} {expected} instalado.")
         return True

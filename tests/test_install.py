@@ -41,14 +41,21 @@ def test_the_installer_reports_the_pillow_it_actually_left_installed(tmp_path: P
         tmp_path,
         "import pathlib, sys\n"
         "state = pathlib.Path(__file__).with_suffix('.state')\n"
+        "log = pathlib.Path(__file__).with_suffix('.argv')\n"
         "if '-c' in sys.argv:\n"
         "    print(state.read_text() if state.exists() else '12.3.0')\n"
         "else:\n"
+        "    log.write_text(' '.join(sys.argv[1:]))\n"
         "    state.write_text('13.0.0')\n",
     )
 
     assert bootstrap.enforce_pillow(fake, REPO / "requirements.txt") is True
     assert fake.with_suffix(".state").read_text(encoding="utf-8") == "13.0.0"
+    # The repair resolves through the same requirements file as the first
+    # install, so it cannot pick a different build for the same pin.
+    repair = fake.with_suffix(".argv").read_text(encoding="utf-8")
+    assert "-r" in repair.split()
+    assert str(REPO / "requirements.txt") in repair
 
 
 def test_a_pillow_that_cannot_be_replaced_is_reported_as_a_failure(tmp_path: Path) -> None:
