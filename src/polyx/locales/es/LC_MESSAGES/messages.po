@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-20 10:16-0500\n"
+"POT-Creation-Date: 2026-11-20 10:24-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1142,20 +1142,20 @@ msgid "MICRA · Microplastics suite"
 msgstr "MICRA · Suite de microplásticos"
 
 #: src/polyx/gui/marca.py:67
-msgid "Poly-X · Detector"
-msgstr "Poly-X · Detector"
+msgid "MICRA · Detector"
+msgstr "MICRA · Detector"
 
 #: src/polyx/gui/marca.py:73
-msgid "Poly-X · Trainer"
-msgstr "Poly-X · Entrenador"
+msgid "MICRA · Trainer"
+msgstr "MICRA · Entrenador"
 
 #: src/polyx/gui/marca.py:79
-msgid "Poly-X · Labeler"
-msgstr "Poly-X · Etiquetador"
+msgid "MICRA · Labeler"
+msgstr "MICRA · Etiquetador"
 
 #: src/polyx/gui/marca.py:85
-msgid "Poly-X · Viewer"
-msgstr "Poly-X · Visor"
+msgid "MICRA · Viewer"
+msgstr "MICRA · Visor"
 
 #: src/polyx/gui/preferencias.py:220
 msgid "Animate the microscope panel"
@@ -4556,11 +4556,11 @@ msgstr ""
 "que sí va por dentro es el geodésico, en magenta, y se usa cuando la partícula es delgada y está"
 " doblada.</p>"
 
-#: src/polyx/gui/trainer/hw.py:330
+#: src/polyx/gui/trainer/hw.py:331
 msgid "Neither torch nor nvidia-smi/rocm-smi finds a compatible GPU (CUDA/ROCm)."
 msgstr "Ni torch ni nvidia-smi/rocm-smi encuentran una GPU compatible (CUDA/ROCm)."
 
-#: src/polyx/gui/trainer/hw.py:529
+#: src/polyx/gui/trainer/hw.py:530
 msgid ""
 "VRAM is not enough even for the minimum case; training will probably run out of memory. Consider"
 " a smaller model."
@@ -4572,7 +4572,7 @@ msgstr ""
 msgid "not importable"
 msgstr "no importable"
 
-#: src/polyx/gui/trainer/hw.py:559
+#: src/polyx/gui/trainer/hw.py:560
 #, python-format
 msgid ""
 "batch capped at %(batch)d: above that, gains are marginal and a large batch averages gradients "
@@ -4612,13 +4612,13 @@ msgstr ""
 
 #: src/polyx/gui/trainer/hw.py:316
 msgid ""
-"Apple Silicon detected but torch does not expose MPS. Reinstall PyTorch from the Poly-X "
-"installer."
+"Apple Silicon detected but torch does not expose MPS. Recreate the locked environment with uv "
+"sync --locked --extra gui, or run the container image."
 msgstr ""
-"Apple Silicon detectado pero torch no expone MPS. Reinstala PyTorch desde el instalador de "
-"Poly-X."
+"Se detectó Apple Silicon pero torch no expone MPS. Recrea el entorno bloqueado con uv sync "
+"--locked --extra gui o usa la imagen del contenedor."
 
-#: src/polyx/gui/trainer/hw.py:539
+#: src/polyx/gui/trainer/hw.py:540
 #, python-format
 msgid ""
 "imgsz capped at %(imgsz)d px because the images are %(native)d px on the long side: beyond that "
@@ -4627,7 +4627,7 @@ msgstr ""
 "imgsz topado en %(imgsz)d px porque las imágenes miden %(native)d px de lado: más allá solo se "
 "interpola y se gasta VRAM sin añadir señal."
 
-#: src/polyx/gui/trainer/hw.py:581
+#: src/polyx/gui/trainer/hw.py:582
 #, python-format
 msgid ""
 "The dataset (~%(gb).1f GB) does not fit comfortably in RAM: cache on disk instead, so as not to "
@@ -4649,7 +4649,7 @@ msgstr "sin CUDA"
 msgid "without ROCm"
 msgstr "sin ROCm"
 
-#: src/polyx/gui/trainer/hw.py:517
+#: src/polyx/gui/trainer/hw.py:518
 #, python-format
 msgid ""
 "Batch %(request)s did not fit even at the minimum resolution: batch was lowered to %(batch)d so "
@@ -7038,4 +7038,11 @@ msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en
 
 #~ msgid "Manual_PolyX.html not found"
 #~ msgstr "Manual_PolyX.html no encontrado"
+
+#~ msgid ""
+#~ "Apple Silicon detected but torch does not expose"
+#~ " MPS. Reinstall PyTorch from the Poly-X installer."
+#~ msgstr ""
+#~ "Apple Silicon detectado pero torch no expone MPS."
+#~ " Reinstala PyTorch desde el instalador de Poly-X."
 
