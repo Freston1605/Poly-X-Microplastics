@@ -109,7 +109,10 @@ def test_one_constant_is_the_python_source_of_the_repository() -> None:
     assert REPO_SLUG == CANONICAL_SLUG
     assert REPO_URL == CANONICAL_URL
 
-    assert download_models.DEFAULT_URL.startswith(f"{REPO_URL}/releases/")
+    assert not hasattr(download_models, "DEFAULT_URL"), (
+        "no default weight URL until a release exists: a missing URL must be an "
+        "explicit error, not a 404"
+    )
 
     source = Path(download_models.__file__).read_text(encoding="utf-8")
     assert UPSTREAM not in source
