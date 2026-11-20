@@ -716,8 +716,9 @@ measured one.
 The pipeline is the headless sibling of the Trainer, not a replacement for it.
 One command is the seam: `polyx-pipeline` (`src/polyx/pipeline/command.py`)
 composes `conf/` with Hydra, validates it into `ExecutionConfig` and either runs
-one execution, imports a COCO mask export or runs an Optuna sweep. The GUI
-Trainer and its native training wrapper are untouched by this path.
+one execution or imports a COCO mask export. A search is the Hydra multirun
+(`sweep_app.py`), never a flag on this command. The GUI Trainer and its native
+training wrapper are untouched by this path.
 
 - One PyTorch Lightning loop (`adapters.py`) trains every family. The
   Ultralytics adapters reuse the YOLO neural module and dataloader; Mask R-CNN
@@ -738,9 +739,10 @@ Trainer and its native training wrapper are untouched by this path.
   by rounding; a framework that exposes an instance mask at the original
   resolution (Mask R-CNN) has it scored directly, while YOLO-seg's own boundary
   polygons are scored as polygons. Those raster masks travel bit-packed
-  (`masks.py`, one bit per pixel) and are unpacked only while a figure is
-  computed: a validation split of 4K plates holds hundreds of candidates per
-  image, and a boolean array each would be tens of gigabytes. Mask R-CNN also
+  (`masks.py`, one bit per pixel) and stay packed between figures, so the split
+  does not hold one boolean array per candidate: a 4K plate holds hundreds of
+  them, and at a byte per pixel that is tens of gigabytes. Unpacking happens per
+  comparison, which is CPU time spent instead of resident memory. Mask R-CNN also
   pastes its predicted masks in bounded chunks during validation, so the
   original-resolution tensors are never all live on the GPU at once. AP is a
   separate ranking figure and never selects a checkpoint or drives Optuna.

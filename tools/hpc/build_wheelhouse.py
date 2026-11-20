@@ -124,7 +124,7 @@ def make_plan(requirements_text: str, wheelhouse: Path) -> Plan:
         # force-include in pyproject.toml makes mandatory.
         ("uv", "build", "--wheel", "--out-dir", str(wheelhouse)),
         ("write", str(wheelhouse / "requirements.txt"), "locked pins + cu126 wheels"),
-        ("write", str(wheelhouse / "SHA256SUMS"), "digest of every downloaded wheel"),
+        ("write", str(wheelhouse / "SHA256SUMS"), "digest of every wheel in the directory"),
     )
     return Plan(
         wheelhouse=wheelhouse,
@@ -155,7 +155,8 @@ def _write_index(plan: Plan) -> None:
     plan.wheelhouse.mkdir(parents=True, exist_ok=True)
     header = [
         "# Generated from uv.lock by tools/hpc/build_wheelhouse.py; do not edit.",
-        "# The CUDA 12.6 wheels are the only packages not taken from the lockfile index.",
+        "# Every pin comes from the lockfile except the two CUDA 12.6 wheels, which",
+        "# replace its default-index torch/torchvision pins.",
         "# The project's own wheel sits beside this file and is installed separately:",
         "#   uv pip install --no-index --no-deps polyx_microplastics-*.whl",
         "# Install offline with: uv pip install --no-index --find-links <dir> -r <dir>/requirements.txt",

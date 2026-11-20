@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:36-0500\n"
+"POT-Creation-Date: 2026-11-19 20:57-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6199,7 +6199,7 @@ msgid ""
 "directory"
 msgstr ""
 
-#: src/polyx/pipeline/optuna_sweeper.py:153
+#: src/polyx/pipeline/optuna_sweeper.py:160
 #, python-format
 msgid "recovery of interrupted trials failed (%(count)d); the study was not extended"
 msgstr ""

@@ -15,9 +15,14 @@ from dataclasses import dataclass
 import numpy as np
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class PackedMask:
-    """One boolean image, bit-packed; ``shape`` is the unpacked ``(h, w)``."""
+    """One boolean image, bit-packed; ``shape`` is the unpacked ``(h, w)``.
+
+    ``eq=False`` on purpose: a generated ``__eq__`` would compare the two numpy
+    arrays pixel by pixel and raise instead of answering, so these objects are
+    compared by identity and never hashed.
+    """
 
     bits: np.ndarray
     shape: tuple[int, int]

@@ -67,6 +67,13 @@ class ResumeState:
             fit = raw.get("fit")
             if fit is not None and not isinstance(fit, dict):
                 raise TypeError("fit must be a mapping")
+            fingerprint = raw.get("dataset_fingerprint")
+            if not isinstance(fingerprint, str) or not fingerprint:
+                raise ValueError(
+                    "the progress snapshot predates the dataset identity record, so the "
+                    "dataset behind this checkpoint cannot be verified; start a new output "
+                    "directory instead of resuming over it"
+                )
             return cls(
                 epochs_completed=int(raw["epochs_completed"]),
                 last_checkpoint=Path(checkpoint) if checkpoint else None,
@@ -77,7 +84,7 @@ class ResumeState:
                 non_improving=int(raw.get("non_improving", 0)),
                 stopped_early=bool(raw.get("stopped_early", False)),
                 protocol=dict(raw["protocol"]),
-                dataset_fingerprint=str(raw["dataset_fingerprint"]),
+                dataset_fingerprint=fingerprint,
                 patience_reference=raw.get("patience_reference"),
                 best_metrics=best_metrics,
                 fit=fit,

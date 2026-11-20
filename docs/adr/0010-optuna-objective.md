@@ -1,6 +1,6 @@
 # ADR-0010: Optuna optimizes the shared with-class score
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-11-20 by #202)
 - **Date:** 2026-11-18
 - **Landed in:** #200
 
@@ -61,7 +61,7 @@ metric name and criterion are written as `sweep_best.json` next to the
 experiment's other artifacts; `sweep_config.yaml` records the resolved space
 and the fields held fixed.
 
-No pruner is configured and the driver passes `NopPruner`: there is no
+No pruner is configured and the sweeper passes `NopPruner`: there is no
 cross-process pruning. Lightning's early stopping (ADR-0007) handles stopping
 inside each trial on the same with-class score. This is a deliberate omission,
 not a missing setting.

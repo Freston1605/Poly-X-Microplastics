@@ -351,3 +351,33 @@ def test_ambiguous_input_is_refused(tmp_path: Path, capsys: pytest.CaptureFixtur
 
     assert code == 1
     assert "exactly one" in capsys.readouterr().err.lower()
+
+
+def test_the_dataset_fingerprint_tracks_edited_annotations_not_the_import(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A relabelled export is a different dataset, whatever the manifest says.
+
+    The manifest records what was imported. If provenance trusted it for
+    `dataset.json`, an edited export would resume against the old checkpoint
+    with a fingerprint that claims nothing changed.
+    """
+    from polyx.pipeline.dataset import coco_store_hashes
+
+    export = _build_export(tmp_path / "export")
+    dataset_root = tmp_path / "user_data" / "segmentation_datasets"
+    assert _command(*_overrides(export, dataset_root, tmp_path / "executions" / "import")) == 0
+    store = dataset_root / "first_batch" / "v1"
+    before = coco_store_hashes(store)
+
+    coco = _read(store / "dataset.json")
+    coco["annotations"][0]["category_id"] = (int(coco["annotations"][0]["category_id"]) + 1) % 3
+    (store / "dataset.json").write_text(json.dumps(coco), encoding="utf-8")
+
+    after = coco_store_hashes(store)
+    manifest = _read(store / "manifest.json")
+    assert manifest["dataset_hashes"]["dataset.json"] != after["dataset.json"]
+    assert after["dataset.json"] != before["dataset.json"]
+    assert after["images/train/plate_t1.png"] == before["images/train/plate_t1.png"], (
+        "the images did not change and must not be re-reported"
+    )

@@ -349,19 +349,31 @@ def coco_store_ground_truth(coco: dict[str, Any], split: str) -> dict[str, Any]:
 
 
 def coco_store_hashes(store: Path, coco: dict[str, Any] | None = None) -> dict[str, str]:
-    """SHA-256 of the canonical dataset, preferring the import manifest's own."""
+    """SHA-256 of the canonical dataset: the JSON and images as they are on disk.
+
+    ``dataset.json`` is always measured from the file. The import manifest's
+    recorded digests describe the bytes that were imported, so trusting them for
+    the annotations would let an edited export — relabelled, added or removed
+    instances — keep a fingerprint claiming nothing changed. The manifest is
+    still the fallback for an entry whose file is no longer where it said.
+    """
     store = Path(store)
     manifest_path = store / "manifest.json"
+    recorded: dict[str, str] = {}
     if manifest_path.is_file():
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             manifest = {}
-        recorded = manifest.get("dataset_hashes") if isinstance(manifest, dict) else None
-        if isinstance(recorded, dict) and recorded:
-            return {str(key): str(value) for key, value in recorded.items()}
+        if isinstance(manifest, dict):
+            hashes = manifest.get("dataset_hashes")
+            if isinstance(hashes, dict):
+                recorded = {str(key): str(value) for key, value in hashes.items()}
     dataset = read_coco_store(store) if coco is None else coco
-    result = {"dataset.json": sha256_file(store / "dataset.json")}
+    result = dict(recorded)
+    dataset_json = store / "dataset.json"
+    if dataset_json.is_file():
+        result["dataset.json"] = sha256_file(dataset_json)
     for image in dataset.get("images", []):
         relative = str(image.get("file_name", ""))
         path = store / relative

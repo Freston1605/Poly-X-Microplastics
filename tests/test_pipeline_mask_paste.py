@@ -30,9 +30,11 @@ class _PastingTransform:
         self.sizes.append(count)
         masks = torch.zeros((count, 1, self.height, self.width))
         masks[:, 0, 2:10, 3:11] = 1.0
+        # torchvision's paste also resizes the boxes back to the original image.
+        boxes = detection["boxes"] * 2.0
         return [
             {
-                "boxes": detection["boxes"],
+                "boxes": boxes,
                 "labels": detection["labels"],
                 "scores": detection["scores"],
                 "masks": masks,
@@ -71,8 +73,10 @@ def test_the_paste_is_bounded_to_the_chunk_and_keeps_the_order() -> None:
     expected[2:10, 3:11] = True
     assert np.array_equal(masks[0].unpack(), expected)
 
-    # Boxes, labels and scores keep their rank order across the chunks.
-    assert torch.equal(pasted["boxes"], detection["boxes"])
+    # Boxes keep their rank order across the chunks and stay in the frame the
+    # paste produced: taking them off the un-pasted detection would leave every
+    # box in the model's letterboxed input geometry.
+    assert torch.equal(pasted["boxes"], detection["boxes"] * 2.0)
     assert torch.equal(pasted["labels"], detection["labels"])
     assert torch.allclose(pasted["scores"], detection["scores"])
 

@@ -35,7 +35,11 @@ from polyx.pipeline.sweep_record import (
     release_trial_lease,
     trial_directory,
 )
-from polyx.pipeline.sweep_space import validate_direction, validate_search_space
+from polyx.pipeline.sweep_space import (
+    validate_direction,
+    validate_sampled_parameters,
+    validate_search_space,
+)
 
 
 class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
@@ -54,6 +58,9 @@ class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
         validate_search_space(search_space_distributions)
         validate_direction(self.direction)
         overrides = super()._configure_trials(trials, search_space_distributions, fixed_params)
+        # A `custom_search_space` callback runs inside the parent call and can
+        # suggest names no declared distribution carried.
+        validate_sampled_parameters(trials)
         return [
             (*override, f"sweep_trial_id={trial.number}")
             for trial, override in zip(trials, overrides, strict=True)

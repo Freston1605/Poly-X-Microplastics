@@ -583,28 +583,49 @@ def _install_chunked_mask_postprocess(model: Any) -> None:
         ):
             total = len(detection["boxes"])
             masks: list[PackedMask] = []
+            boxes: list[Any] = []
+            labels: list[Any] = []
+            scores: list[Any] = []
             for start in range(0, total, MASK_PASTE_CHUNK):
                 chunk = {
                     key: value[start : start + MASK_PASTE_CHUNK] for key, value in detection.items()
                 }
                 pasted = original([chunk], [image_size], [original_size])[0]
+                # The paste also resizes the boxes back to the original image.
+                # Taking them from this call keeps boxes and masks in one frame;
+                # reading them off ``detection`` would leave every box in the
+                # model's letterboxed input geometry.
+                boxes.append(pasted["boxes"])
+                labels.append(pasted["labels"])
+                scores.append(pasted["scores"])
                 masks.extend(
                     PackedMask.pack(_tensor_to_numpy(mask) >= 0.5) for mask in pasted["masks"]
                 )
                 # Release this chunk's full-resolution tensors before the next
                 # one is built; they are the memory this wrapper exists to bound.
                 del chunk, pasted
-            pasted_images.append(
-                {
-                    "boxes": detection["boxes"],
-                    "labels": detection["labels"],
-                    "scores": detection["scores"],
-                    "masks": masks,
-                }
-            )
+            merged: dict[str, Any] = {
+                "boxes": _concatenate(boxes),
+                "labels": _concatenate(labels),
+                "scores": _concatenate(scores),
+                "masks": masks,
+            }
+            for key, value in detection.items():
+                # Any framework key this wrapper does not touch passes through.
+                merged.setdefault(key, value)
+            pasted_images.append(merged)
         return pasted_images
 
     transform.postprocess = postprocess
+
+
+def _concatenate(parts: list[Any]) -> Any:
+    """One tensor from the chunks' pieces; the empty list when no chunk ran."""
+    if not parts or not hasattr(parts[0], "shape"):
+        return parts
+    import torch
+
+    return torch.cat(parts, dim=0)
 
 
 class _CocoMaskTorchvisionDataset:

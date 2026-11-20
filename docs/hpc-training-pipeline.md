@@ -415,9 +415,9 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
   node) is taken over once it has shown no activity — no `progress.json` write
   — for `POLYX_LEASE_TTL` (an hour by default), so a killed job cannot block
   resumption. A directory belongs to a study only when its record names that
-  study **and** that database; both sweep
-  drivers publish the same `record.json` through one writer, and a trial whose
-  number Optuna never sampled has no parameters to retry and is left untouched.
+  study **and** that database; every trial publishes the same `record.json`
+  through one writer, and a trial whose number Optuna never sampled has no
+  parameters to retry and is left untouched.
 - The resolved study name and storage are written once to
   `<output_dir>/sweep_config.yaml` and reused by `sweep_best`. The export
   resolves the winner strictly by `study.best_trial.number` and requires the
@@ -437,8 +437,9 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
   and trial directory.
 
 `python -m polyx.pipeline.sweep_app --multirun` is the only sweep entry point,
-locally and on the cluster: the same command with `backend=slurm` is the job the
-submission script runs. `sweep_space.py` refuses any declared name outside
+locally and on the cluster; a sweep is submitted by a job script of your own that
+runs exactly that command, since `cluster/` ships the smoke and campaign jobs
+only. `sweep_space.py` refuses any declared name outside
 `protocol.<searchable field>` and any direction other than `maximize`, so split,
 seed, augmentation subset and the evaluator cannot enter the search space. The
 plugin path is proven by `tests/test_pipeline_optuna_multirun.py`, including

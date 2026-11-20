@@ -1,11 +1,10 @@
-"""The real Hydra Optuna sweeper multirun, through the supported command.
+"""The real Hydra Optuna sweeper multirun, the only sweep path.
 
-The in-process driver is convenient for a fast local check, but the path the
-spec names is the plugin: Hydra launches one job per sampled trial, the study
-lives in SQLite on the work filesystem, and each trial writes a normal
-execution. These tests drive that path with real Hydra and Optuna; only the
-model frameworks are doubles. A post-multirun step folds the plugin's result
-into ``sweep_best.json``.
+Hydra launches one job per sampled trial, the study lives in SQLite on the work
+filesystem, and each trial writes a normal execution. These tests drive that
+path with real Hydra and Optuna; only the model frameworks are doubles. The
+fixed-field guard and a post-multirun step that folds the plugin's result into
+``sweep_best.json`` are covered here too.
 """
 
 from __future__ import annotations
@@ -42,22 +41,22 @@ def _run_multirun(
     output: Path,
     data_yaml: Path,
     *,
-    n_trials: int,
+    n_trials: int | None = None,
+    extra: tuple[str, ...] = (),
 ) -> None:
     from polyx.pipeline import sweep_app
 
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "sweep_app",
-            "--multirun",
-            f"output_dir={output}",
-            f"data_yaml={data_yaml}",
-            "protocol.epochs=1",
-            f"hydra.sweeper.n_trials={n_trials}",
-        ],
-    )
+    argv = [
+        "sweep_app",
+        "--multirun",
+        f"output_dir={output}",
+        f"data_yaml={data_yaml}",
+        "protocol.epochs=1",
+        *extra,
+    ]
+    if n_trials is not None:
+        argv.append(f"hydra.sweeper.n_trials={n_trials}")
+    monkeypatch.setattr(sys, "argv", argv)
     sweep_app.objective()
 
 
@@ -538,29 +537,6 @@ def test_a_lease_from_another_node_is_judged_by_activity(
     release_trial_lease(stolen)
 
 
-def _run_multirun_with(
-    monkeypatch: pytest.MonkeyPatch,
-    output: Path,
-    data_yaml: Path,
-    *extra: str,
-) -> None:
-    from polyx.pipeline import sweep_app
-
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "sweep_app",
-            "--multirun",
-            f"output_dir={output}",
-            f"data_yaml={data_yaml}",
-            "protocol.epochs=1",
-            *extra,
-        ],
-    )
-    sweep_app.objective()
-
-
 @pytest.mark.parametrize(
     ("override", "message"),
     [
@@ -596,7 +572,7 @@ def test_a_sweep_cannot_search_the_fixed_benchmark_fields(
     _install_fakes(monkeypatch, [_boxes_prediction()])
 
     with pytest.raises(BaseException):  # noqa: B017 - Hydra converts the failure
-        _run_multirun_with(monkeypatch, output, tiny_dataset, override)
+        _run_multirun(monkeypatch, output, tiny_dataset, extra=(override,))
 
     captured = capsys.readouterr()
     assert message in captured.err + captured.out

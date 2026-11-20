@@ -1,6 +1,6 @@
 # ADR-0007: One Lightning loop for every model family
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-11-20 by #202)
 - **Date:** 2026-11-18
 - **Landed in:** #194
 

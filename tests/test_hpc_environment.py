@@ -283,7 +283,7 @@ def test_existing_weight_is_reverified_before_it_is_trusted(tmp_path: Path) -> N
 # ── Wheelhouse plan (no network) ──
 
 
-def test_wheelhouse_plan_uses_cuda_index_and_no_index_install() -> None:
+def test_wheelhouse_plan_uses_the_cuda_index_and_never_installs() -> None:
     from tools.hpc import build_wheelhouse
 
     requirements = "\n".join(

@@ -45,6 +45,19 @@ def validate_search_space(names: Iterable[str]) -> None:
             )
 
 
+def validate_sampled_parameters(trials: Iterable[Any]) -> None:
+    """Refuse a parameter a trial actually sampled outside the allowlist.
+
+    ``validate_search_space`` sees the declared distributions. The plugin's
+    ``custom_search_space`` callback is invoked afterwards and may suggest any
+    name directly (``trial.suggest_categorical("protocol.split", ...)``), so the
+    trial's own sampled parameters are the last place the rule can be enforced
+    before a job is launched.
+    """
+    for trial in trials:
+        validate_search_space(getattr(trial, "params", None) or {})
+
+
 def validate_direction(value: Any) -> str:
     """Return the normalized direction, refusing anything but maximize."""
     name = getattr(value, "name", value)
