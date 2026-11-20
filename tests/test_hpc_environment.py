@@ -380,7 +380,7 @@ def test_container_definitions_install_the_project_wheel_offline() -> None:
     # NOTICE is force-included into the wheel, so the build stage must ship it.
     assert "NOTICE ./" in containerfile
     for text in (containerfile, definition):
-        assert "polyx_microplastics-*.whl" in text, "the project wheel is not installed"
+        assert "micra-*.whl" in text, "the project wheel is not installed"
         assert "--no-index --no-deps /opt/wheelhouse" in text or (
             "--no-index --no-deps /opt/polyx/wheelhouse" in text
         )

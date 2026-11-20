@@ -108,7 +108,7 @@ def _manual(p: QPainter) -> None:
 
 
 def _text(p: QPainter) -> None:
-    """Sheet with lines: the `LEEME`."""
+    """Sheet with lines: a text document."""
     p.drawRoundedRect(QRectF(5.0, 3.2, 14.0, 17.6), 1.8, 1.8)
     for y in (8.0, 11.4, 14.8):
         p.drawLine(QPointF(8.2, y), QPointF(15.8, y))

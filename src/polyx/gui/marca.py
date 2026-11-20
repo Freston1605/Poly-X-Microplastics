@@ -58,31 +58,31 @@ MODULES: dict[str, dict] = {
     "launcher": {
         "icono": None,  # uses assets/polyx.ico, the usual brand
         "color": "#0969da",
-        "titulo": N_("Poly-X · Microplastics suite"),
+        "titulo": N_("MICRA · Microplastics suite"),
         "id": _APP_ID,
     },
     "detector": {
         "icono": "detector",
         "color": "#0969da",
-        "titulo": N_("Poly-X · Detector"),
+        "titulo": N_("MICRA · Detector"),
         "id": f"{_APP_ID}.Detector",
     },
     "entrenador": {
         "icono": "entrenador",
         "color": "#1a7f5f",
-        "titulo": N_("Poly-X · Trainer"),
+        "titulo": N_("MICRA · Trainer"),
         "id": f"{_APP_ID}.Entrenador",
     },
     "etiquetador": {
         "icono": "etiquetador",
         "color": "#b07400",
-        "titulo": N_("Poly-X · Labeler"),
+        "titulo": N_("MICRA · Labeler"),
         "id": f"{_APP_ID}.Etiquetador",
     },
     "visor": {
         "icono": "visor",
         "color": "#6639ba",
-        "titulo": N_("Poly-X · Viewer"),
+        "titulo": N_("MICRA · Viewer"),
         "id": f"{_APP_ID}.Visor",
     },
 }
@@ -178,7 +178,7 @@ def identify(app, module: str) -> None:
     """
     cfg = MODULES.get(module, MODULES["launcher"])
     platform.set_identity_app(cfg["id"])
-    app.setApplicationName("Poly-X")
+    app.setApplicationName("MICRA")
     title = cfg["titulo"]
     app.setApplicationDisplayName(_(title))
     app.setOrganizationName("Cristofher Ferrada")

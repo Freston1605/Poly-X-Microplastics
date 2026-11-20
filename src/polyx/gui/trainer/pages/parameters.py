@@ -416,8 +416,8 @@ class ParametersPage(TrainerPage):
                 _(
                     "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) "
                     "<b>but PyTorch cannot use it.</b><br>"
-                    "<span style='font-size:9pt'>%(detail)s Reinstall PyTorch with CUDA "
-                    "(SETUP.bat) — until then it trains on CPU.</span>"
+                    "<span style='font-size:9pt'>%(detail)s Reinstall PyTorch with the "
+                    "CUDA wheel (see README.md) — until then it trains on CPU.</span>"
                 )
                 % {
                     "name": info.name,

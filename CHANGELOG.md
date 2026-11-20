@@ -1,7 +1,7 @@
 # Changelog
 
-All notable changes to Poly-X are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
+All notable changes to MICRA (formerly Poly-X) are documented here. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
@@ -25,20 +25,33 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lint failure reports in seconds instead of after the gate's suite.
 - `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
   a hook that was never installed locally still fails the PR.
+- **Release checklist (`docs/RELEASE_CHECKLIST.md`).** The irreversible steps in
+  order — version bump, changelog, tag on `main`, PyPI pre-release `2.1.0a1`,
+  weight upload with `SHA256SUMS`, Zenodo archival, `CITATION.cff` with the DOI
+  and `gh attestation verify` — with the pre-release rule stated once.
 
 ### Changed
-- **Desktop releases replace the in-place updater, and Pillow moves to
-  13.0.0 (#203).** Every desktop release now attaches
-  `polyx-desktop-<tag>.zip` and its SHA-256 checksum beside the wheel and sdist,
-  built from the tagged tree by `tools/packaging/desktop_release.py`. Desktop
-  publication does not depend on PyPI. The Launcher's button and the
-  `actualizar.*` scripts open the fork's Releases page and install nothing:
-  an upgrade is a verified side-by-side install that leaves the old copy and
-  its `.venv` usable. `polyx.gui.updates` is gone, because a branch-head SHA
-  cannot say whether an installed dependency set is patched. Pillow is pinned
-  to 13.0.0 in `pyproject.toml`, `requirements.txt` and `uv.lock`; the torch
-  pair is unchanged in this release and the automatic verification protocol
-  remains #153/#161.
+- **Pillow moves to 13.0.0 (#203).** The security pin is raised in
+  `pyproject.toml` and `uv.lock`; the torch pair is unchanged. The desktop ZIP
+  channel that #203 introduced is retired by ADR-0011, so the fix reaches a
+  checkout through `uv sync` and a cluster through the rebuilt image.
+- **Weight downloads require the published digest.** `download()` takes
+  `expected_sha256` as a required keyword argument, and `micra
+  download-models` refuses without `--sha256` and `--url` before touching the
+  filesystem or the network, naming the missing flag and saying why. No default
+  URL ships until a Zenodo record or GitHub release exists, so the absence of
+  weights is an explicit error instead of a 404. The HPC fetcher binds each
+  manifest digest into the downloader, so the manifest stays the source of the
+  hash.
+- **The distribution is `micra` and the identity is truthful.** The wheel is
+  named `micra`, `requires-python` is `>=3.11,<3.13` because the locked PySide6
+  and numpy do not install on newer interpreters, the package URLs point at
+  `Freston1605/micra`, and one `polyx.repository` constant feeds
+  `download_models`. `[project].maintainers` records the maintainer without an
+  address, the `LICENSE` keeps the original copyright and adds the
+  modifications line, and `SECURITY.md` reports only through GitHub's private
+  advisory form. The Detector credit and the HTML report footer name the
+  original design, the maintainer and the laboratory. See ADR-0011.
 - **The HPC pipeline's training lifecycle is Lightning's, not a second one.**
   `ModelCheckpoint` keeps the strictly best `with_class_score` and
   `EarlyStopping` measures patience against `min_delta`, so the two thresholds
@@ -51,6 +64,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `metrics.json` and `best.pt` always describe the same weights.
   `checkpoints/lightning/last.ckpt` is the resume point; the progress record is
   the heartbeat and the protocol/dataset guard.
+
+### Removed
+- **The consumer-distribution track (#212, ADR-0011).** `install/` (the
+  installers, the auto-updater, the uninstaller, the migrator and the
+  portable/macOS bundles), `requirements.txt`, the PyInstaller spec under
+  `tools/packaging/`, `LEEME.txt` and `LEEME_macOS.md` are gone, along with the
+  GUI update notice (`polyx.gui.updates`), `platform.name_updater()` and
+  `platform.launch_updater()`. `empaquetar_dataset_para_drive.bat` moved to
+  `tools/data/` because it packages a dataset, not the software. CI no longer
+  smoke-tests the installers, and ruff no longer scans `install/`. The frozen
+  manual stays on disk, out of scope and not regenerated, and every console
+  script — the `polyx-*` aliases included — remains.
 
 ### Fixed
 - **Fourth review of the HPC pipeline (#202).** Both container definitions now

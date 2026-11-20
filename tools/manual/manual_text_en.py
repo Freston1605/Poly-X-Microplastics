@@ -2,7 +2,13 @@
 
 Content only: the engine that turns it into HTML lives in generate_manual.py.
 Section ids match the Spanish file so both manuals share anchors and figures.
+
+The repository address travels as ``@REPO_URL@`` / ``@REPO_SLUG@`` and the
+engine substitutes the package constant (ADR-0011), so the manual text cannot
+name a second owner.
 """
+
+from polyx.repository import REPO_SLUG, REPO_URL
 
 TITULO_DOC = "Poly-X Manual — Microplastics detection suite"
 DESCRIPCION = (
@@ -28,8 +34,8 @@ PALABRA_ESQUEMA = "Diagram"
 
 PIE = (
     "<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
-    "Repository: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
-    "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
+    f"Repository: <a href='{REPO_URL}'>"
+    f"{REPO_SLUG}</a> · "
     "Contact: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
     "Interface screenshots are regenerated against the installed program, so this "
     "manual shows the version in front of you and not an earlier one."
@@ -360,7 +366,7 @@ some of the program's dialogs use it.</p>
 </li>
 
 <li id="w-descargar"><span class="t">Download Poly-X from GitHub</span>
-<p>Open <a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a>.
+<p>Open <a href="@REPO_URL@">@REPO_SLUG@</a>.
 No account or sign-in is needed: the repository is public.</p>
 
 [[fig:web/w01_github_repo|The repository page. The green <b>Code</b> button sits at the top right
@@ -376,7 +382,7 @@ entry: <b>Download ZIP</b>.</p>
   <span class="et">If you would rather use Git</span>
   <p>If you already have Git installed, this is equivalent and makes updating
   easier:</p>
-  <pre><code><span class="p">git clone https://github.com/CrissFerrada/Poly-X-Microplastics.git</span></code></pre>
+  <pre><code><span class="p">git clone @REPO_URL@.git</span></code></pre>
 </div>
 </li>
 
@@ -549,7 +555,7 @@ selector at the top right switches the language of the whole program.]]
 
 <li><span class="t">Download Poly-X from GitHub</span>
 <p>Identical to Windows: open
-<a href="https://github.com/CrissFerrada/Poly-X-Microplastics">the repository</a>,
+<a href="@REPO_URL@">the repository</a>,
 green <b>Code</b> button → <b>Download ZIP</b>. Safari unzips the archive on its
 own when the download finishes; if it does not, double-click the file.</p>
 </li>
@@ -1750,7 +1756,7 @@ use-only installation does not need it.</p>
 <p><b>Cristofher Ferrada</b><br>
 Environmental Chemistry Laboratory · Pontificia Universidad Católica de Valparaíso<br>
 <a href="mailto:cristofher.ferrada@pucv.cl">cristofher.ferrada@pucv.cl</a><br>
-<a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a></p>
+<a href="@REPO_URL@">@REPO_SLUG@</a></p>
 """,
     },
 ]

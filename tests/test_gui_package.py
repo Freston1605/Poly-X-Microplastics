@@ -42,9 +42,9 @@ PAQUETE_GUI = RAIZ / "src" / "polyx" / "gui"
 # lo que se compara, asi que ``PySide6.QtWidgets`` cae en ``PySide6``.
 ENLACES_QT = ("PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2")
 
-# Los ocho modulos acoplados a Qt que T02 movio a polyx.gui. Si falta alguno,
-# los escaneos AST de abajo quedarian huecos y pasarian por no tener nada
-# que mirar.
+# The seven Qt-coupled modules that T02 moved to polyx.gui. If one is
+# missing, the AST scans below would be hollow and pass for having nothing
+# to look at.
 MODULOS_MOVIDOS = (
     "theme",
     "iconos",
@@ -234,7 +234,7 @@ def test_fuera_de_gui_no_importa_qt(ruta: Path):
 
 # ── 3. "la GUI depende del motor, no de los shims" ──
 def test_el_escaneo_interno_cubre_los_modulos_movidos():
-    """Guardia contra un escaneo vacio: los ocho modulos movidos se miran."""
+    """Guard against an empty scan: the seven moved modules are looked at."""
     escaneados = {ruta.as_posix() for ruta in _fuentes_de_gui()}
     faltan = [
         f"polyx/gui/{modulo}.py"
@@ -276,12 +276,11 @@ def test_el_paquete_de_reexport_del_core_ha_desaparecido():
 
 # ── 5. El punto de entrada historico sigue viviendo ──
 def test_el_launcher_historico_reenvia_al_launcher_real():
-    """``python -m polyx.launcher`` llama al launcher de polyx.gui.
+    """``python -m polyx.launcher`` calls the launcher in polyx.gui.
 
-    Poly-X.vbs, iniciar_polyx.bat, Lanzar_macOS.command,
-    crear_icono_macOS.command, lanzar_polyx.py y el bundle de PyInstaller
-    invocan ese entry point; si el shim no reenviara ``main``, la app
-    arrancaria en blanco.
+    The historic entry point stays documented for notes and shortcuts that
+    still name it; if the shim did not forward ``main``, the app would start
+    blank.
     """
     import polyx.gui.launcher as launcher_real
     import polyx.launcher as shim_launcher

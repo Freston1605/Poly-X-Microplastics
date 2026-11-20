@@ -1,50 +1,65 @@
-# Poly-X — Microplastics detection suite
+# MICRA — Microplastic Identification, Counting and Recognition Application
 
 > **Automated detection and classification of microplastics (PET, PP, LDPE)
 > by Nile Red fluorescence under UV light (254 nm), using YOLO v8/v11 models.**
 
-**Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV · 2026
-**Version:** 2.0.0 · **Windows 10/11, macOS and Linux (Ubuntu tested in CI)** · Python 3.11 or 3.12
+**Status: pre-alpha** · Linux supported · Windows best effort · macOS unsupported
+**Python 3.11–3.12** · formerly **Poly-X**
+
+MICRA is a research instrument, not a product: it is used by the maintainer and
+named collaborators, it carries no general-public support promise, and the
+supported surface is the one CI exercises. See [Support](#support).
 
 ---
 
 ## Installation
 
-### From PyPI (headless engines + CLIs)
+### Support
+
+| Tier | Platform | What is tested |
+|---|---|---|
+| 1 | Linux x86_64 | the full suite, headless and offscreen Qt, on Python 3.11 and 3.12 |
+| 2 | Windows 10/11 | nothing in CI; the code is portable and `uv sync` is expected to work |
+| 3 | macOS | nothing; no launcher, bundle or platform claim ships |
+
+Support means the triple in the row is exercised. A Tier 2 setup that works on
+your machine is welcome, but it is not a promise.
+
+### On a cluster (the paper path)
+
+Training runs in the Apptainer image built from the offline wheelhouse. It
+carries the CUDA 12.6 build that still compiles the V100 kernels and installs
+nothing from the network on a compute node:
 
 ```bash
-pip install polyx-microplastics            # core + CLIs: polyx-train, polyx-detect, polyx-eval, polyx-report, polyx-pipeline
-pip install polyx-microplastics[gui]       # + the Qt GUI (Launcher, Detector, Trainer, Labeller, Viewer)
-polyx-download-models                      # fetch the default .pt weights into the user data dir
+python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
+git rev-parse HEAD > source_sha.txt
+apptainer build micra.sif container/hpc.def
+apptainer exec --nv micra.sif python -m polyx.hpc.check_env
 ```
 
-Requires **Python 3.11 or 3.12**. The headless engines and report generation work
-without Qt; the GUI needs PySide6, which the `[gui]` extra pulls in. Model
-weights are not bundled (~50 MB) and are fetched by `polyx-download-models`.
+See `docs/hpc-environment.md` and `docs/hpc.md`. The image installs the same
+wheel, so it exposes both `micra` and the legacy `polyx` commands.
 
-### From source (desktop app, Windows/macOS/Linux)
-
-Download the repository, then run `install/SETUP.bat` (Windows),
-`install/Lanzar_macOS.command` (macOS) or `bash install/setup.sh` (Linux).
-They create the virtual environment, install the pinned stack and, on
-Windows/macOS, offer a Desktop shortcut (Linux drops a `polyx.desktop`
-entry in `~/.local/share/applications`). Full step-by-step instructions
-(with photographs) are in `docs/manual/Manual_PolyX.html`.
-
-### Development (uv)
-
-The project ships a `uv.lock` for reproducible developer environments:
+### On a lab machine
 
 ```bash
-uv sync --extra gui --extra dev          # creates/updates .venv from the lock
-uv run pytest -q                         # run the suite
-uv run polyx-train --help
+uv sync --locked --extra gui      # creates/updates .venv from uv.lock
+uv run micra --help               # command list
+uv run micra gui                  # launcher; needs the gui extra
 ```
 
-`uv sync` resolves the **CPU** torch wheel (2.7.1) from the default index,
-which is what CI uses. If you train on a GPU, install the CUDA wheel on top
-with `SETUP.bat` (Windows) or the matching `--index-url` (see `requirements.txt`),
-or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu128`.
+`uv sync` resolves the **CPU** torch wheel (2.7.1) from the default index, which
+is what CI uses. For a local GPU, install the matching wheel on top:
+
+```bash
+uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+```
+
+Model weights are not bundled. Nothing is published yet, so
+`micra download-models` has no source to fetch from: copy a `.pt` file into the
+`models/` folder of the user data directory (`~/.local/share/polyx/models` on
+Linux; `POLYX_HOME` overrides).
 
 ---
 
@@ -57,7 +72,7 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
 | 3 | 🎯 **Trainer** | ✅ Working | YOLO v8/v11 training with live curves |
 | 4 | 🏷 **Labeller** | ✅ Working | Interactive YOLO annotation with automatic pre-labelling |
 | 5 | 📐 **Viewer** | ✅ Working | Single-image inspection, calibration and particle-by-particle review |
-| 6 | 🧪 **Pipeline** | ✅ Working | Headless family-agnostic training: `polyx-pipeline` (one execution, COCO import) and the Hydra multiruns `sweep_app`, `sweep_best`, `campaign_app` |
+| 6 | 🧪 **Pipeline** | ✅ Working | Headless family-agnostic training: `micra pipeline` (one execution, COCO import) and the Hydra multiruns `sweep_app`, `sweep_best`, `campaign_app` |
 
 ---
 
@@ -146,7 +161,7 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
   keeps `best.pt` according to the mAP of the full validation set, and in a
   mixed dataset that number is dominated by the doped laboratory plates (in the
   Loa dataset, 1,191 laboratory boxes against 47 of real sediment). When
-  training ends, Poly-X evaluates every checkpoint against **real sediment
+  training ends, MICRA evaluates every checkpoint against **real sediment
   only** and keeps the winner apart. `best.pt` is preserved untouched
 
 ### 🏷 Labeller
@@ -261,7 +276,7 @@ straight into every size.
 For crops where the dish is not visible, the plate cannot be measured. Supply
 an English per-image index instead: `calibration_index.csv` with the headers
 `image,um_per_px`, keyed by image basename. Run with
-`polyx-detect --calibrate index --calibration-index calibration_index.csv` (the
+`micra detect --calibrate index --calibration-index calibration_index.csv` (the
 flag alone also selects index mode); each photo then uses **its own** scale. A
 photo with no row is reported with `image_not_in_index` and stays uncalibrated
 rather than silently inheriting a batch-wide value. Image basenames must be
@@ -392,238 +407,52 @@ frame, if the motion bothers you or the machine is struggling.
 
 ## Requirements
 
-| Component | Windows | macOS |
-|---|---|---|
-| System | 10 / 11 | 11 Big Sur or later |
-| Python | **3.11.x** (not 3.12+) | 3.9 or later |
-| RAM | 8 GB minimum | 8 GB minimum |
-| Acceleration | NVIDIA GPU optional (20–30× faster for training). The installer picks the CUDA build that matches the card | **Apple Silicon:** built-in GPU via MPS. **Intel:** CPU only |
+| Component | Minimum |
+|---|---|
+| Python | 3.11 or 3.12 (3.13 and later are not supported yet) |
+| RAM | 8 GB |
+| GPU | optional; an NVIDIA card makes training 20–30× faster |
+| Dependencies | `PySide6 6.7`, `Ultralytics 8.3`, `OpenCV 4.10`, `NumPy 1.26`, `Matplotlib 3.9`, pinned in `uv.lock` |
 
-Main dependencies: `PySide6 6.7`, `Ultralytics 8.3`, `OpenCV 4.10`, `NumPy 1.26`,
-`Matplotlib 3.9`
-
-> **Intel Macs:** PyTorch stopped shipping builds for Intel processors from 2.3
-> onwards, so the installer pins **2.2.2**, the last release with x86_64 support.
-> It works correctly, but without GPU acceleration: expect about 1 minute per photo
-> on tiled batches.
+The GUI needs Qt and therefore the `gui` extra; the headless commands do not.
 
 ---
-
-## Installation
-
-Clone or download the repository, then follow the instructions for your system.
-
-### 🪟 Windows
-
-Run once:
-
-```bat
-SETUP.bat
-```
-
-It creates `.venv`, detects the GPU and installs PyTorch, Ultralytics and
-PySide6. Nothing else has to be installed by hand.
-
-In full, the installer:
-
-1. **Asks where to install Poly-X** (press ENTER to install into the same
-   folder, or type another path).
-2. Detects Python 3.11 and creates the `.venv` environment.
-3. Detects the GPU and downloads PyTorch with **the CUDA version matching that
-   card**. RTX 50xx cards (Blackwell, `sm_120`) need CUDA 12.8: with the CUDA
-   11.8 wheels `torch.cuda.is_available()` returns `True` and the failure only
-   shows up when training starts, as *"no kernel image is available for
-   execution on the device"*.
-4. Installs the remaining dependencies, verifies that everything imports and
-   **checks that PyTorch ships kernels for your specific GPU**.
-5. Registers the installed version, so the launcher can warn about new ones.
-6. **Looks for earlier Poly-X installations** on the machine. If it finds any,
-   it shows what data they hold, migrates it to the new one and sends the old
-   folder to the **Recycle Bin** (see below, under Updating).
-7. Offers to **create a "Poly-X" Desktop shortcut** and **tells you how to
-   start it**.
-
-### 🍎 macOS
-
-**Right-click** `Lanzar_macOS.command` → **Open** → **Open**.
-
-That single file does both jobs: the first run installs everything (10–15 min),
-later runs just start the app. There is deliberately no separate installer — on
-macOS every `.command` file needs its own security approval the first time, and
-keeping it to one file means that only happens once.
-
-The installer detects whether the Mac is Apple Silicon or Intel, picks the matching
-PyTorch build, verifies that everything imports, and offers to create a Desktop
-shortcut.
-
-> #### ⚠️ "cannot be opened because it is from an unidentified developer"
->
-> **This is expected and does not mean anything is broken.** macOS blocks any
-> downloaded script that is not signed with an Apple developer account (USD 99/year).
->
-> **Fix:** **right-click** → **Open** → confirm **Open**. Only needed the first time;
-> a normal double-click works afterwards. If it still refuses, in Terminal:
-> `xattr -d com.apple.quarantine install/Lanzar_macOS.command`
-
-Full details in **[LEEME_macOS.md](LEEME_macOS.md)**.
-
----
-
-### Opening without a console window (Windows)
-
-Double-click **`install/Poly-X.vbs`**: it opens the Launcher directly,
-with no black window. It resolves its own location, so it works from any folder —
-just download the repository and double-click, no path editing needed.
-
-To keep it at hand, right-click `Poly-X.vbs` → *Send to* → *Desktop (create
-shortcut)*, and give it the `assets\polyx.ico` icon.
-
-`iniciar_polyx.bat` does the same but showing the console, useful for seeing
-error messages if something fails at startup.
-
-> **Important:** the trained models (`*.pt`) are **not** included in the GitHub
-> download because of their size. Copy your `.pt` file into the `models\` folder
-> to use the Detector and the Viewer.
-
-> Requires **Python 3.11.x** (not 3.12+). If you do not have it, download it from
-> [python.org/downloads/release/python-3119](https://www.python.org/downloads/release/python-3119/)
-> ticking *"Add Python to PATH"*.
 
 ## Usage
 
-Double-click the **Poly-X** Desktop shortcut, or `iniciar_polyx.bat` (Windows) /
-`Lanzar_macOS.command` (macOS).
-
-That opens the **Launcher** → pick a module. Or straight from a terminal:
-
-```bat
-REM Windows
-.venv\Scripts\python.exe -m polyx.launcher
-.venv\Scripts\python.exe -m polyx.gui.detector
-.venv\Scripts\python.exe -m polyx.gui.trainer
-.venv\Scripts\python.exe -m polyx.gui.etiquetador
-.venv\Scripts\python.exe -m polyx.gui.visor
-```
-
 ```bash
-# macOS
-.venv/bin/python -m polyx.launcher
-.venv/bin/python -m polyx.gui.detector
-.venv/bin/python -m polyx.gui.trainer
-.venv/bin/python -m polyx.gui.etiquetador
-.venv/bin/python -m polyx.gui.visor
+uv run micra                # command list
+uv run micra gui            # launcher; pick a module
+uv run micra train --help   # headless training
 ```
 
----
-
-## Updating
-
-Desktop releases are published on the fork's Releases page:
-[`Freston1605/Poly-X-Microplastics/releases`](https://github.com/Freston1605/Poly-X-Microplastics/releases).
-Each tagged release attaches `polyx-desktop-<tag>.zip` and its `.sha256`
-checksum beside the wheel and sdist.
-
-The launcher's **Releases** button and the `actualizar.*` scripts open that page.
-They install nothing: a release is a fresh download, not a patch applied to the
-running copy.
-
-### Which file to download
-
-- **Upgrading an existing installation** — download the ZIP, check the checksum
-  (below), extract it and run it **alongside** the old copy: `install/SETUP.bat`
-  on Windows, `install/Lanzar_macOS.command` on macOS. The old installation and
-  its `.venv` stay where they are and keep working, so a failed upgrade does not
-  interrupt your work.
-- **Your data is not inside the ZIP.** Models, runs, datasets and preferences live
-  in the per-user data directory, so the new copy reads them without copying
-  anything. Pre-canonical runs are left untouched for an older Poly-X version.
-
-### What a release fixes
-
-A release states in its notes which dependencies it actually replaces, and the
-installer refuses to finish if the pinned security dependency is not the one on
-disk. This first release moves **Pillow to 13.0.0** for Windows, Linux, Apple
-Silicon and Intel Macs.
-
-It does **not** update PyTorch: the pair stays at 2.7.1 / 0.22.1, so the
-PyTorch advisories are still open after installing it. The patched pair ships as
-its own release, with its own matrix of validated CPU, CUDA and MPS targets;
-acceleration is advertised only where it has been tested on real hardware.
-
-### Checking the download
-
-```bash
-# Linux / macOS
-shasum -a 256 polyx-desktop-<tag>.zip    # compare with the .sha256 file
-# Windows
-certutil -hashfile polyx-desktop-<tag>.zip SHA256
-```
-
-A checksum detects a damaged or mismatched download. It does not prove *who*
-published the file; signing and attestation are tracked in #153.
-
-### Automatic update notice
-
-There is no in-place updater. The launcher no longer polls a branch head: a
-commit SHA cannot say whether the dependency set a user installed is patched,
-so the old notice was replaced by the Releases button.
-
-### If the machine already had Poly-X
-
-`SETUP.bat` looks for other installations at the end of the process. If it finds
-any, it shows what they contain — models, trainings, detections, datasets, with
-their sizes — and asks for confirmation before touching anything.
-
-The order is **copy → verify → remove**, never the other way around:
-
-- The data the new installation does not have are copied. **No existing file is
-  overwritten.**
-- If anything fails while copying, the old folder is left intact and a warning
-  is shown.
-- Only if everything went well does the old folder go to the **Recycle Bin**. It
-  is not deleted: if something is missing, it can be restored.
-
-Folders containing `.git` are always skipped: a development repository is not an
-old installation, and removing it would take unversioned work with it.
+The GUI modules can also be opened directly with `python -m polyx.gui.launcher`,
+`polyx.gui.detector`, `polyx.gui.trainer`, `polyx.gui.labeler` and
+`polyx.gui.viewer`.
 
 ---
 
 ## Project layout
 
 ```
-polyx/
-├── launcher.py          # Main menu
-├── core/                # Shared modules (theme, yolo_wrap, metrics, report_html,
-│                        #   calibracion, morfologia, procedencia, i18n, plataforma)
-├── detector/            # Module 2: batch analysis (9 pages)
-├── trainer/             # Module 3: YOLO training (9 pages)
-├── etiquetador/         # Module 4: interactive annotation
-└── visor/               # Module 5: inspection + µm/px calibration
-models/                  # Trained .pt weights
-runs/                    # Results of each run
-data/                    # YOLO dataset (images/ + labels/) — not in git
-tests/                   # Test suite for measurement, calibration and portability
-
-install/                # 🪟/🍎/🐧 end-user scripts (installer, launchers, releases link)
-├── SETUP.bat           # 🪟 Installer
-├── iniciar_polyx.bat   # 🪟 Launcher (with console)
-├── Poly-X.vbs          # 🪟 Launcher (no console)
-├── actualizar.bat      # 🪟 Opens the Releases page
-├── actualizar.ps1
-├── Lanzar_macOS.command    # 🍎 Installer + launcher
-├── actualizar_macOS.command # 🍎 Opens the Releases page
-├── crear_icono_macOS.command # 🍎 Icon without a Terminal window
-├── construir_app_macOS.command # 🍎 Build Poly-X.app (optional)
-├── desinstalar.ps1     # 🪟 Uninstaller (searches the whole disk)
-├── migrar_instalacion.ps1
-├── empaquetar_para_llevar.bat
-└── empaquetar_dataset_para_drive.bat
-tools/packaging/desktop_release.py  # builds the release ZIP + SHA-256
+src/polyx/
+├── cli/                 # micra / polyx command line: train, detect, eval, report, pipeline
+├── core/                # Qt-free shared code: paths, platform, labels, detection run, editing
+├── gui/                 # Qt shell: launcher, detector, trainer, labeler, viewer, report
+├── hpc/                 # cluster entry points: check_env, weights, job staging
+├── pipeline/            # Hydra/Lightning training pipeline and its configs
+├── locales/             # gettext catalogs (es)
+└── assets/
+tests/                   # the suite; measurement and calibration are pinned numerically
+tools/                   # check runner, i18n workflow, manual generator, HPC wheelhouse
+container/               # Containerfile and Apptainer definition
+cluster/                 # SLURM submission scripts
+docs/                    # ADRs, HPC guides, manual
 ```
 
-Everything that differs between systems — opening folders, launching the updater,
-picking the compute device — lives in `src/polyx/core/platform.py` rather than being
-scattered across the code.
+Everything that differs between systems — opening folders, picking the compute
+device, the user data location — lives in `src/polyx/core/platform.py` rather
+than being scattered across the code.
 
 ---
 
@@ -650,15 +479,15 @@ produce ends up in a table of the paper and a well-meant change can shift them
 all without anything warning you.
 
 ```bash
-.venv\Scripts\python.exe -m pytest tests/ -q
+uv run pytest -q
 ```
 
 43 tests against **synthetic shapes of known size**, depending on no human
 annotation whatsoever. Each one also pins down the *why* of a design decision, so
 that if someone tries a variant that was already discarded, the suite says so.
 
-`pytest` is only needed for development and is **not in `requirements.txt`**: an
-installation meant for use does not need it.
+`pytest` is a development dependency and is not installed with the runtime
+stack.
 
 ---
 
@@ -678,30 +507,11 @@ installation meant for use does not need it.
 
 ## User manual
 
-`docs/manual/Manual_PolyX.en.html` (English) and
-`docs/manual/Manual_PolyX.html` (Spanish) are the full
-manual: step-by-step installation from GitHub with real photographs of every
-step — on Windows and macOS — all four modules screen by screen, how size is
-measured, the report, the shortcuts and troubleshooting. They are versioned
-and open on a double-click, so a repo download carries the manual offline:
-every image is embedded. Alongside them,
-`Manual_PolyX.en.pdf` and `Manual_PolyX.pdf` for printing or emailing;
-those are generated and not versioned.
-
-To regenerate it against the current interface:
-
-```bash
-# 1. interface screenshots, one pass per language
-.venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/es
-POLYX_LOCALE=en .venv\Scripts\python.exe tools\manual\capture_manual.py --salida docs/assets/manual_screenshots/en
-
-# 2. the manual, both languages and their PDFs
-.venv\Scripts\python.exe tools\manual\generate_manual.py --pdf
-```
-
-The text lives in `tools/manual/manual_text_es.py` and
-`tools/manual/manual_text_en.py`; the engine — template, stylesheet and
-figure numbering — in `tools/manual/generate_manual.py`.
+The generated manual in `docs/manual/` predates the pre-alpha rewrite and still
+describes the retired installers. It is out of scope until after the paper: it is
+not regenerated in the meantime, and this README is authoritative wherever the
+two disagree. The interface walkthroughs remain useful as a screen-by-screen
+reference.
 
 ---
 
@@ -714,13 +524,20 @@ are not out yet.
 
 ---
 
-## Licence and contact
+## Origin and credit
 
-**Cristofher Ferrada** — PhD (c) in Chemistry, Pontificia Universidad Católica de
-Valparaíso, 2026.
+MICRA is a derivative of **Poly-X**, created by **Cristofher Ferrada** at the
+Pontificia Universidad Católica de Valparaíso. The original project is at
+[CrissFerrada/Poly-X-Microplastics](https://github.com/CrissFerrada/Poly-X-Microplastics);
+its authorship and the MIT licence are preserved.
 
-Environmental Chemistry Laboratory · Pontificia Universidad Católica de
-Valparaíso
-[cristofher.ferrada@pucv.cl](mailto:cristofher.ferrada@pucv.cl)
+This repository is maintained by **Franco Ignacio Valdés Navarro** in the
+**Laboratorio de Química Ambiental, Instituto de Química, Pontificia Universidad
+Católica de Valparaíso**, as the laboratory's continuation of the work.
 
-Repository: https://github.com/CrissFerrada/Poly-X-Microplastics
+## Licence
+
+MIT for the code; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Model weights are
+published under CC BY 4.0 once a release exists.
+
+Repository: https://github.com/Freston1605/micra

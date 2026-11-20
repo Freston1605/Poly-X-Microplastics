@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-20 01:00-0500\n"
+"POT-Creation-Date: 2026-11-20 10:24-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -141,7 +141,7 @@ msgid "COMPACT REPORT: %(path)s"
 msgstr "INFORME COMPACTO: %(path)s"
 
 #: src/polyx/cli/detect.py:282 src/polyx/cli/detect.py:302 src/polyx/cli/detect.py:306
-#: src/polyx/cli/download_models.py:98 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
+#: src/polyx/cli/download_models.py:129 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
 #: src/polyx/cli/report.py:78 src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
@@ -172,37 +172,45 @@ msgstr "INFORME COMPLETO: %(path)s"
 msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
 
-#: src/polyx/cli/download_models.py:82
-msgid "Download Poly-X model weights"
-msgstr "Descarga los pesos de los modelos de Poly-X"
-
 #: src/polyx/cli/download_models.py:83
+msgid "Download MICRA model weights"
+msgstr "Descarga los pesos de los modelos de MICRA"
+
+#: src/polyx/cli/download_models.py:84
 msgid "output filename"
 msgstr "nombre del fichero de salida"
 
-#: src/polyx/cli/download_models.py:84
-msgid "download URL"
-msgstr "URL de descarga"
-
 #: src/polyx/cli/download_models.py:85
-msgid "expected SHA-256 (optional)"
-msgstr "SHA-256 esperado (opcional)"
+msgid "download URL from the release or Zenodo"
+msgstr "URL de descarga de la versión publicada o de Zenodo"
 
-#: src/polyx/cli/download_models.py:86
+#: src/polyx/cli/download_models.py:89
+msgid "expected SHA-256, as published with the release"
+msgstr "SHA-256 esperado, tal como se publicó con la versión"
+
+#: src/polyx/cli/download_models.py:91
 msgid "overwrite existing"
 msgstr "sobrescribe el existente"
 
-#: src/polyx/cli/download_models.py:94
+#: src/polyx/cli/download_models.py:99
+msgid ""
+"ERROR: --sha256 is required: model weights execute code when loaded, so only a download that "
+"matches the digest published with the release is accepted."
+msgstr ""
+"ERROR: se requiere --sha256: los pesos del modelo ejecutan código al cargarse, así que solo se "
+"acepta una descarga que coincida con el SHA-256 publicado con la versión."
+
+#: src/polyx/cli/download_models.py:125
 #, python-format
 msgid "Downloading %(url)s -> %(path)s"
 msgstr "Descargando %(url)s -> %(path)s"
 
-#: src/polyx/cli/download_models.py:100
+#: src/polyx/cli/download_models.py:131
 #, python-format
 msgid "Saved: %(path)s"
 msgstr "Guardado: %(path)s"
 
-#: src/polyx/cli/download_models.py:40
+#: src/polyx/cli/download_models.py:35
 #, python-format
 msgid ""
 "\r"
@@ -211,7 +219,7 @@ msgstr ""
 "\r"
 "[%(bar)s] %(pct)3d%%  %(done)6.1f/%(total)6.1f MB"
 
-#: src/polyx/cli/download_models.py:44
+#: src/polyx/cli/download_models.py:39
 #, python-format
 msgid ""
 "\r"
@@ -220,24 +228,33 @@ msgstr ""
 "\r"
 "Descargado %(done)6.1f MB"
 
-#: src/polyx/cli/download_models.py:91
+#: src/polyx/cli/download_models.py:107
+#, python-format
+msgid ""
+"ERROR: --url is required: no weights are published yet, so pass the release or Zenodo URL that "
+"carries the file. Releases will appear at %(releases)s."
+msgstr ""
+"ERROR: se requiere --url: todavía no hay pesos publicados, así que indica la URL de la versión o"
+" de Zenodo que contiene el fichero. Las versiones aparecerán en %(releases)s."
+
+#: src/polyx/cli/download_models.py:122
 #, python-format
 msgid "Already present: %(path)s"
 msgstr "Ya existe: %(path)s"
 
-#: src/polyx/cli/download_models.py:71
+#: src/polyx/cli/download_models.py:72
 #, python-format
 msgid "SHA-256 mismatch: got %(got)s, expected %(expected)s"
 msgstr "SHA-256 no coincide: se obtuvo %(got)s, se esperaba %(expected)s"
 
-#: src/polyx/cli/download_models.py:77
+#: src/polyx/cli/download_models.py:78
 #, python-format
 msgid "Download failed: %(error)s"
 msgstr "Falló la descarga: %(error)s"
 
 #: src/polyx/cli/eval.py:18
-msgid "Evaluate a Poly-X YOLO model (headless)"
-msgstr "Evalúa un modelo YOLO de Poly-X (sin interfaz)"
+msgid "Evaluate a MICRA YOLO model (headless)"
+msgstr "Evalúa un modelo YOLO de MICRA (sin interfaz)"
 
 #: src/polyx/cli/eval.py:53 src/polyx/cli/report.py:80
 #, python-format
@@ -249,52 +266,62 @@ msgstr "ESCRITO: %(path)s"
 msgid "mAP50: %(value)s"
 msgstr "mAP50: %(value)s"
 
-#: src/polyx/cli/main.py:27
-msgid "Poly-X command line."
-msgstr "Línea de comandos de Poly-X."
+#: src/polyx/cli/main.py:35
+msgid "MICRA command line."
+msgstr "Línea de comandos de MICRA."
 
-#: src/polyx/cli/main.py:29
+#: src/polyx/cli/main.py:37
 msgid "Usage:"
 msgstr "Uso:"
 
-#: src/polyx/cli/main.py:58
+#: src/polyx/cli/main.py:69
 msgid "Commands:"
 msgstr "Comandos:"
 
-#: src/polyx/cli/main.py:62
-msgid "Run 'polyx <command> --help' for command-specific options."
-msgstr "Ejecuta 'polyx <comando> --help' para ver las opciones de cada comando."
+#: src/polyx/cli/main.py:74
+#, python-format
+msgid "Run '%(program)s <command> --help' for command-specific options."
+msgstr "Ejecuta '%(program)s <comando> --help' para ver las opciones de cada comando."
 
-#: src/polyx/cli/main.py:80
-msgid "Run 'polyx --help' for the list of commands."
-msgstr "Ejecuta 'polyx --help' para ver la lista de comandos."
-
-#: src/polyx/cli/main.py:79
+#: src/polyx/cli/main.py:93
 #, python-format
 msgid "Unknown command: %(command)s"
 msgstr "Comando desconocido: %(command)s"
 
-#: src/polyx/cli/main.py:30 src/polyx/cli/main.py:31
+#: src/polyx/cli/main.py:95
+#, python-format
+msgid "Run '%(program)s --help' for the list of commands."
+msgstr "Ejecuta '%(program)s --help' para ver la lista de comandos."
+
+#: src/polyx/cli/main.py:38
+msgid "show this help"
+msgstr "mostrar esta ayuda"
+
+#: src/polyx/cli/main.py:39
 msgid "launch the GUI"
 msgstr "abrir la interfaz gráfica"
 
-#: src/polyx/cli/main.py:32
+#: src/polyx/cli/main.py:40
 msgid "headless training"
 msgstr "entrenamiento sin interfaz"
 
-#: src/polyx/cli/main.py:33
+#: src/polyx/cli/main.py:41
 msgid "headless detection"
 msgstr "detección sin interfaz"
 
-#: src/polyx/cli/main.py:34
+#: src/polyx/cli/main.py:42
 msgid "headless evaluation"
 msgstr "evaluación sin interfaz"
 
-#: src/polyx/cli/main.py:35
+#: src/polyx/cli/main.py:43
 msgid "compact HTML report"
 msgstr "informe HTML compacto"
 
-#: src/polyx/cli/main.py:36
+#: src/polyx/cli/main.py:44
+msgid "headless pipeline, sweep or campaign"
+msgstr "pipeline sin interfaz, barrido o campaña"
+
+#: src/polyx/cli/main.py:45
 msgid "download weights"
 msgstr "descargar los pesos"
 
@@ -312,8 +339,8 @@ msgid "Cannot open the run: %(error)s"
 msgstr "No se pudo abrir la ejecución: %(error)s"
 
 #: src/polyx/cli/train.py:18
-msgid "Train a Poly-X YOLO model (headless)"
-msgstr "Entrena un modelo YOLO de Poly-X (sin interfaz)"
+msgid "Train a MICRA YOLO model (headless)"
+msgstr "Entrena un modelo YOLO de MICRA (sin interfaz)"
 
 #: src/polyx/cli/train.py:63
 #, python-format
@@ -330,44 +357,44 @@ msgstr "época %(epoch)s: %(metrics)s"
 msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
 msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
 
-#: src/polyx/core/platform.py:272
+#: src/polyx/core/platform.py:271
 msgid "Device (0/cpu):"
 msgstr "Device (0/cpu):"
 
-#: src/polyx/core/platform.py:271
+#: src/polyx/core/platform.py:270
 msgid "Device (0/rocm/cpu):"
 msgstr "Dispositivo (0/rocm/cpu):"
 
-#: src/polyx/core/platform.py:285
+#: src/polyx/core/platform.py:284
 msgid "Mac integrated GPU (Metal Performance Shaders)"
 msgstr "GPU integrada del Mac (Metal Performance Shaders)"
 
-#: src/polyx/core/platform.py:287
+#: src/polyx/core/platform.py:286
 msgid "processor (CPU)"
 msgstr "procesador (CPU)"
 
-#: src/polyx/core/platform.py:293
+#: src/polyx/core/platform.py:292
 msgid "AMD GPU (ROCm)"
 msgstr "GPU AMD (ROCm)"
 
-#: src/polyx/core/platform.py:295
+#: src/polyx/core/platform.py:294
 msgid "NVIDIA GPU (CUDA)"
 msgstr "GPU NVIDIA (CUDA)"
 
-#: src/polyx/core/platform.py:268
+#: src/polyx/core/platform.py:267
 msgid "Device (mps/cpu):"
 msgstr "Dispositivo (mps/cpu):"
 
-#: src/polyx/core/platform.py:268
+#: src/polyx/core/platform.py:267
 msgid "Device (cpu):"
 msgstr "Dispositivo (cpu):"
 
-#: src/polyx/core/platform.py:291
+#: src/polyx/core/platform.py:290
 #, python-format
 msgid "NVIDIA GPU #%(index)s (CUDA)"
 msgstr "GPU NVIDIA #%(index)s (CUDA)"
 
-#: src/polyx/core/platform.py:290
+#: src/polyx/core/platform.py:289
 #, python-format
 msgid "AMD GPU #%(index)s (ROCm)"
 msgstr "GPU AMD #%(index)s (ROCm)"
@@ -397,8 +424,8 @@ msgstr ""
 "vocabulary.md."
 
 #: src/polyx/core/report_simple.py:68 src/polyx/core/report_simple.py:73
-msgid "Poly-X run report"
-msgstr "Informe de ejecución de Poly-X"
+msgid "MICRA run report"
+msgstr "Informe de ejecución de MICRA"
 
 #: src/polyx/core/report_simple.py:74
 msgid "Run dir:"
@@ -964,47 +991,39 @@ msgstr "Falsos Negativos"
 msgid "Misclassified"
 msgstr "Mal Clasificados"
 
-#: src/polyx/gui/launcher.py:203 src/polyx/gui/launcher.py:278
+#: src/polyx/gui/launcher.py:202 src/polyx/gui/launcher.py:277
 msgid "Open  →"
 msgstr "Abrir  →"
 
-#: src/polyx/gui/launcher.py:272
+#: src/polyx/gui/launcher.py:271
 msgid "Opening…"
 msgstr "Abriendo…"
 
-#: src/polyx/gui/launcher.py:357 src/polyx/gui/preferencias.py:144 src/polyx/gui/preferencias.py:168
+#: src/polyx/gui/launcher.py:356 src/polyx/gui/preferencias.py:144 src/polyx/gui/preferencias.py:168
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: src/polyx/gui/launcher.py:359
+#: src/polyx/gui/launcher.py:358
 msgid "Theme, language and motion"
 msgstr "Tema, idioma y movimiento"
 
-#: src/polyx/gui/launcher.py:369 src/polyx/gui/launcher.py:564
-msgid "Releases"
-msgstr "Releases"
-
-#: src/polyx/gui/launcher.py:378
-msgid "Open the releases page for a new version"
-msgstr "Abrir la página de versiones para buscar una nueva"
-
-#: src/polyx/gui/launcher.py:400
+#: src/polyx/gui/launcher.py:385
 msgid "● ANALYSIS PLATFORM"
 msgstr "● PLATAFORMA DE ANÁLISIS"
 
-#: src/polyx/gui/launcher.py:409 src/polyx/gui/launcher.py:610
-msgid "Poly-X"
-msgstr "Poly-X"
+#: src/polyx/gui/launcher.py:394 src/polyx/gui/launcher.py:569
+msgid "MICRA"
+msgstr "MICRA"
 
-#: src/polyx/gui/launcher.py:411
+#: src/polyx/gui/launcher.py:396
 msgid "analytics"
 msgstr "analytics"
 
-#: src/polyx/gui/launcher.py:418
+#: src/polyx/gui/launcher.py:403
 msgid "Detection and classification platform for microplastics"
 msgstr "Plataforma de detección y clasificación de microplásticos"
 
-#: src/polyx/gui/launcher.py:423
+#: src/polyx/gui/launcher.py:408
 msgid ""
 "Automated detection of PET, PP and LDPE by Nile Red fluorescence (254 nm) and machine learning. "
 "Training, labeling, detection and reporting in a single workflow."
@@ -1012,54 +1031,50 @@ msgstr ""
 "Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) e inteligencia "
 "artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo."
 
-#: src/polyx/gui/launcher.py:433
+#: src/polyx/gui/launcher.py:418
 msgid "Designed and developed by <b>Cristofher Ferrada</b> · PhD (c) in Chemistry, 2026"
 msgstr "Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026"
 
-#: src/polyx/gui/launcher.py:457
+#: src/polyx/gui/launcher.py:442
 msgid "MODULES"
 msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:332
 #: src/polyx/gui/labeler/window.py:359 src/polyx/gui/labeler/window.py:671
-#: src/polyx/gui/launcher.py:532 src/polyx/gui/trainer/window.py:172
+#: src/polyx/gui/launcher.py:517 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:620
 msgid "● Ready"
 msgstr "● Listo"
 
-#: src/polyx/gui/launcher.py:540
+#: src/polyx/gui/launcher.py:525
 msgid "README"
 msgstr "LÉAME"
 
-#: src/polyx/gui/launcher.py:545
-msgid "User manual"
-msgstr "Manual de usuario"
-
-#: src/polyx/gui/launcher.py:347
+#: src/polyx/gui/launcher.py:346
 msgid "Microplastics analytics suite"
 msgstr "Suite de análisis de microplásticos"
 
-#: src/polyx/gui/launcher.py:446
+#: src/polyx/gui/launcher.py:431
 msgid "Polymers"
 msgstr "Polímeros"
 
-#: src/polyx/gui/launcher.py:447
+#: src/polyx/gui/launcher.py:432
 msgid "Nile Red fluorescence"
 msgstr "fluorescencia Nile Red"
 
-#: src/polyx/gui/launcher.py:449
+#: src/polyx/gui/launcher.py:434
 msgid "measurement"
 msgstr "medición"
 
-#: src/polyx/gui/launcher.py:449
+#: src/polyx/gui/launcher.py:434
 msgid "per-pixel calibration"
 msgstr "calibración por píxel"
 
-#: src/polyx/gui/launcher.py:470
+#: src/polyx/gui/launcher.py:455
 msgid "Detector"
 msgstr "Detector"
 
-#: src/polyx/gui/launcher.py:471
+#: src/polyx/gui/launcher.py:456
 msgid ""
 "Analyzes images with a trained .pt model. Produces annotated output, a CSV of centroids and "
 "diameters, global metrics and an HTML detection report."
@@ -1067,11 +1082,11 @@ msgstr ""
 "Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, CSV con centroides y "
 "diámetros, métricas globales e informe HTML de detección."
 
-#: src/polyx/gui/launcher.py:485
+#: src/polyx/gui/launcher.py:470
 msgid "Trainer"
 msgstr "Entrenador"
 
-#: src/polyx/gui/launcher.py:486
+#: src/polyx/gui/launcher.py:471
 msgid ""
 "Trains YOLO v8 / v11 models. Live curves, automatic quality recommendations and comparison "
 "against earlier runs."
@@ -1079,11 +1094,11 @@ msgstr ""
 "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas de calidad y "
 "comparación con runs anteriores."
 
-#: src/polyx/gui/labeler/window.py:133 src/polyx/gui/launcher.py:500
+#: src/polyx/gui/labeler/window.py:133 src/polyx/gui/launcher.py:485
 msgid "Labeler"
 msgstr "Etiquetador"
 
-#: src/polyx/gui/launcher.py:501
+#: src/polyx/gui/launcher.py:486
 #, python-format
 msgid ""
 "Annotates images in YOLO format. Supports pre-annotation with an existing model plus keyboard "
@@ -1092,11 +1107,11 @@ msgstr ""
 "Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo existente y atajos de "
 "teclado, ahorra ~80 % del tiempo manual."
 
-#: src/polyx/gui/launcher.py:515 src/polyx/gui/viewer/window.py:264
+#: src/polyx/gui/launcher.py:500 src/polyx/gui/viewer/window.py:264
 msgid "Viewer"
 msgstr "Visor"
 
-#: src/polyx/gui/launcher.py:516
+#: src/polyx/gui/launcher.py:501
 msgid ""
 "Inspects one image at a time with interactive μm/pixel calibration (line or circle) and precise "
 "per-particle measurement."
@@ -1104,52 +1119,43 @@ msgstr ""
 "Inspección de una imagen a la vez con calibración interactiva μm/píxel (línea o círculo) y "
 "medición precisa por partícula."
 
-#: src/polyx/gui/launcher.py:536
+#: src/polyx/gui/launcher.py:521
 #, python-format
-msgid "© Cristofher Ferrada · Poly-X v%(version)s"
-msgstr "© Cristofher Ferrada · Poly-X v%(version)s"
+msgid "© Cristofher Ferrada · MICRA v%(version)s"
+msgstr "© Cristofher Ferrada · MICRA v%(version)s"
 
-#: src/polyx/gui/launcher.py:598
-msgid "Manual_PolyX.html not found"
-msgstr "Manual_PolyX.html no encontrado"
+#: src/polyx/gui/launcher.py:566
+msgid "README.md not found"
+msgstr "README.md no encontrado"
 
-#: src/polyx/gui/launcher.py:605
-msgid "LEEME.txt not found"
-msgstr "LEEME.txt no encontrado"
-
-#: src/polyx/gui/launcher.py:193
+#: src/polyx/gui/launcher.py:192
 msgid "MODULE"
 msgstr "MÓDULO"
 
-#: src/polyx/gui/launcher.py:565
-#, python-format
-msgid "Could not open the releases page: %(url)s"
-msgstr "No se pudo abrir la página de versiones: %(url)s"
-
-#: src/polyx/gui/launcher.py:589
+#: src/polyx/gui/launcher.py:559
 #, python-format
 msgid "Could not open the module %(module)s"
 msgstr "No se pudo abrir el módulo %(module)s"
 
 #: src/polyx/gui/marca.py:61
-msgid "Poly-X · Microplastics suite"
-msgstr "Poly-X · Suite de microplásticos"
+msgid "MICRA · Microplastics suite"
+msgstr "MICRA · Suite de microplásticos"
 
 #: src/polyx/gui/marca.py:67
-msgid "Poly-X · Detector"
-msgstr "Poly-X · Detector"
+msgid "MICRA · Detector"
+msgstr "MICRA · Detector"
 
 #: src/polyx/gui/marca.py:73
-msgid "Poly-X · Trainer"
-msgstr "Poly-X · Entrenador"
+msgid "MICRA · Trainer"
+msgstr "MICRA · Entrenador"
 
 #: src/polyx/gui/marca.py:79
-msgid "Poly-X · Labeler"
-msgstr "Poly-X · Etiquetador"
+msgid "MICRA · Labeler"
+msgstr "MICRA · Etiquetador"
 
 #: src/polyx/gui/marca.py:85
-msgid "Poly-X · Viewer"
-msgstr "Poly-X · Visor"
+msgid "MICRA · Viewer"
+msgstr "MICRA · Visor"
 
 #: src/polyx/gui/preferencias.py:220
 msgid "Animate the microscope panel"
@@ -1209,8 +1215,8 @@ msgid "Light"
 msgstr "Claro"
 
 #: src/polyx/gui/detector/review_dialog.py:49
-msgid "Detection review — Poly-X"
-msgstr "Revisión de detecciones — Poly-X"
+msgid "Detection review — MICRA"
+msgstr "Revisión de detecciones — MICRA"
 
 #: src/polyx/gui/detector/pages/gt_manual.py:503 src/polyx/gui/detector/review_dialog.py:74
 msgid "Fit (F)"
@@ -1268,8 +1274,8 @@ msgstr[1] "Revisión de detecciones — %(count)d imágenes"
 
 #: src/polyx/gui/detector/review_dialog.py:227
 #, python-format
-msgid " (✓%(good)d ✗%(bad)d) — Poly-X"
-msgstr " (✓%(good)d ✗%(bad)d) — Poly-X"
+msgid " (✓%(good)d ✗%(bad)d) — MICRA"
+msgstr " (✓%(good)d ✗%(bad)d) — MICRA"
 
 #: src/polyx/gui/detector/review_dialog.py:250
 msgid "unreviewed"
@@ -1406,15 +1412,15 @@ msgstr "Comparar"
 msgid "Report"
 msgstr "Reporte"
 
-#: src/polyx/gui/detector/window.py:167 src/polyx/gui/trainer/window.py:177
+#: src/polyx/gui/detector/window.py:169
 msgid ""
-"Designed by\n"
-"Cristofher Ferrada\n"
-"2026"
+"Original design by Cristofher Ferrada\n"
+"Maintained by Franco Ignacio Valdés Navarro\n"
+"Laboratorio de Química Ambiental · PUCV"
 msgstr ""
-"Diseñado por\n"
-"Cristofher Ferrada\n"
-"2026"
+"Diseño original de Cristofher Ferrada\n"
+"Mantenido por Franco Ignacio Valdés Navarro\n"
+"Laboratorio de Química Ambiental · PUCV"
 
 #: src/polyx/gui/detector/window.py:142
 msgid "Detector v2"
@@ -3439,10 +3445,18 @@ msgid "Contents"
 msgstr "Índice"
 
 #: src/polyx/gui/report/registry.py:117
-msgid "Generated by Poly-X"
-msgstr "Generado por Poly-X"
+msgid "Original design: Cristofher Ferrada · Maintained by Franco Ignacio Valdés Navarro"
+msgstr "Diseño original: Cristofher Ferrada · Mantenido por Franco Ignacio Valdés Navarro"
 
 #: src/polyx/gui/report/registry.py:118
+msgid "Laboratorio de Química Ambiental · Instituto de Química · PUCV"
+msgstr "Laboratorio de Química Ambiental · Instituto de Química · PUCV"
+
+#: src/polyx/gui/report/registry.py:118
+msgid "Generated by MICRA"
+msgstr "Generado por MICRA"
+
+#: src/polyx/gui/report/registry.py:119
 msgid "Microplastics detection suite by Nile Red fluorescence (254 nm) and AI (YOLO v8/v11)."
 msgstr "Suite de detección de microplásticos por fluorescencia Nile Red (254 nm) e IA (YOLO v8/v11)."
 
@@ -4542,11 +4556,11 @@ msgstr ""
 "que sí va por dentro es el geodésico, en magenta, y se usa cuando la partícula es delgada y está"
 " doblada.</p>"
 
-#: src/polyx/gui/trainer/hw.py:330
+#: src/polyx/gui/trainer/hw.py:331
 msgid "Neither torch nor nvidia-smi/rocm-smi finds a compatible GPU (CUDA/ROCm)."
 msgstr "Ni torch ni nvidia-smi/rocm-smi encuentran una GPU compatible (CUDA/ROCm)."
 
-#: src/polyx/gui/trainer/hw.py:529
+#: src/polyx/gui/trainer/hw.py:530
 msgid ""
 "VRAM is not enough even for the minimum case; training will probably run out of memory. Consider"
 " a smaller model."
@@ -4558,7 +4572,7 @@ msgstr ""
 msgid "not importable"
 msgstr "no importable"
 
-#: src/polyx/gui/trainer/hw.py:559
+#: src/polyx/gui/trainer/hw.py:560
 #, python-format
 msgid ""
 "batch capped at %(batch)d: above that, gains are marginal and a large batch averages gradients "
@@ -4598,13 +4612,13 @@ msgstr ""
 
 #: src/polyx/gui/trainer/hw.py:316
 msgid ""
-"Apple Silicon detected but torch does not expose MPS. Reinstall PyTorch from the Poly-X "
-"installer."
+"Apple Silicon detected but torch does not expose MPS. Recreate the locked environment with uv "
+"sync --locked --extra gui, or run the container image."
 msgstr ""
-"Apple Silicon detectado pero torch no expone MPS. Reinstala PyTorch desde el instalador de "
-"Poly-X."
+"Se detectó Apple Silicon pero torch no expone MPS. Recrea el entorno bloqueado con uv sync "
+"--locked --extra gui o usa la imagen del contenedor."
 
-#: src/polyx/gui/trainer/hw.py:539
+#: src/polyx/gui/trainer/hw.py:540
 #, python-format
 msgid ""
 "imgsz capped at %(imgsz)d px because the images are %(native)d px on the long side: beyond that "
@@ -4613,7 +4627,7 @@ msgstr ""
 "imgsz topado en %(imgsz)d px porque las imágenes miden %(native)d px de lado: más allá solo se "
 "interpola y se gasta VRAM sin añadir señal."
 
-#: src/polyx/gui/trainer/hw.py:581
+#: src/polyx/gui/trainer/hw.py:582
 #, python-format
 msgid ""
 "The dataset (~%(gb).1f GB) does not fit comfortably in RAM: cache on disk instead, so as not to "
@@ -4635,7 +4649,7 @@ msgstr "sin CUDA"
 msgid "without ROCm"
 msgstr "sin ROCm"
 
-#: src/polyx/gui/trainer/hw.py:517
+#: src/polyx/gui/trainer/hw.py:518
 #, python-format
 msgid ""
 "Batch %(request)s did not fit even at the minimum resolution: batch was lowered to %(batch)d so "
@@ -4828,6 +4842,16 @@ msgstr "● Entrenando…"
 #: src/polyx/gui/trainer/window.py:112
 msgid "● Error"
 msgstr "● Error"
+
+#: src/polyx/gui/trainer/window.py:177
+msgid ""
+"Designed by\n"
+"Cristofher Ferrada\n"
+"2026"
+msgstr ""
+"Diseñado por\n"
+"Cristofher Ferrada\n"
+"2026"
 
 #: src/polyx/gui/trainer/window.py:154
 msgid "YOLO Trainer"
@@ -5744,12 +5768,12 @@ msgstr "<b>GPU detectada:</b> %(name)s · VRAM total: <b>%(total)s</b> · libre:
 #, python-format
 msgid ""
 "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) <b>but PyTorch cannot use "
-"it.</b><br><span style='font-size:9pt'>%(detail)s Reinstall PyTorch with CUDA (SETUP.bat) — "
-"until then it trains on CPU.</span>"
+"it.</b><br><span style='font-size:9pt'>%(detail)s Reinstall PyTorch with the CUDA wheel (see "
+"README.md) — until then it trains on CPU.</span>"
 msgstr ""
 "⚠ <b>%(name)s</b> está presente (%(vram)s, driver %(driver)s) <b>pero PyTorch no la puede "
-"usar.</b><br><span style='font-size:9pt'>%(detail)s Reinstala PyTorch con CUDA (SETUP.bat) — "
-"hasta entonces se entrena por CPU.</span>"
+"usar.</b><br><span style='font-size:9pt'>%(detail)s Reinstala PyTorch con la rueda CUDA (ver "
+"README.md) — hasta entonces se entrena por CPU.</span>"
 
 #: src/polyx/gui/trainer/pages/parameters.py:432
 msgid "✗ No NVIDIA GPU detected. You will train on CPU (it will be VERY slow)."
@@ -5833,8 +5857,8 @@ msgid "2. Curves and figures"
 msgstr "2. Curvas y figuras"
 
 #: src/polyx/gui/trainer/pages/summary.py:179
-msgid "© Cristofher Ferrada · Poly-X · Autogenerated report."
-msgstr "© Cristofher Ferrada · Poly-X · Reporte autogenerado."
+msgid "© Cristofher Ferrada · MICRA · Autogenerated report."
+msgstr "© Cristofher Ferrada · MICRA · Reporte autogenerado."
 
 #: src/polyx/gui/trainer/pages/summary.py:215
 msgid "Run selection"
@@ -5990,10 +6014,10 @@ msgstr "torch %(version)s (%(backend)s %(build)s)"
 #, python-format
 msgid ""
 "PyTorch %(version)s was installed <b>WITHOUT CUDA/ROCm</b> — it will train on CPU (very slow). "
-"Reinstall with SETUP.bat detecting the GPU."
+"Reinstall the CUDA wheel (see README.md)."
 msgstr ""
 "PyTorch %(version)s fue instalado <b>SIN CUDA/ROCm</b> — entrenará en CPU (muy lento). Reinstala"
-" con SETUP.bat detectando GPU."
+" la rueda CUDA (ver README.md)."
 
 #: src/polyx/gui/trainer/pages/train.py:336
 #, python-format
@@ -6974,6 +6998,12 @@ msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en
 #~ msgid "explicit index CSV mapping image names to µm/px"
 #~ msgstr "CSV de índice explícito que asigna nombres de imagen a µm/px"
 
+#~ msgid "download URL"
+#~ msgstr "URL de descarga"
+
+#~ msgid "expected SHA-256 (optional)"
+#~ msgstr "SHA-256 esperado (opcional)"
+
 #~ msgid "Update"
 #~ msgstr "Actualizar"
 
@@ -6999,4 +7029,20 @@ msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en
 
 #~ msgid "Could not launch %(name)s. Run it by hand from the installation folder."
 #~ msgstr "No se pudo lanzar %(name)s. Ejecútalo a mano desde la carpeta de instalación."
+
+#~ msgid "Poly-X"
+#~ msgstr "Poly-X"
+
+#~ msgid "User manual"
+#~ msgstr "Manual de usuario"
+
+#~ msgid "Manual_PolyX.html not found"
+#~ msgstr "Manual_PolyX.html no encontrado"
+
+#~ msgid ""
+#~ "Apple Silicon detected but torch does not expose"
+#~ " MPS. Reinstall PyTorch from the Poly-X installer."
+#~ msgstr ""
+#~ "Apple Silicon detectado pero torch no expone MPS."
+#~ " Reinstala PyTorch desde el instalador de Poly-X."
 

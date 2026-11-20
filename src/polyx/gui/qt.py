@@ -1,4 +1,4 @@
-"""Guarded Qt import for the Poly-X GUI layer.
+"""Guarded Qt import for the MICRA GUI layer.
 
 PySide6 lives behind the ``[gui]`` packaging extra so headless consumers
 (data pipelines, CI, library imports of ``polyx.core``) do not pay for Qt.
@@ -12,8 +12,8 @@ from importlib.util import find_spec
 from types import ModuleType
 
 _INSTALL_HINT = (
-    "PySide6 is required to run the Poly-X GUI. Install it with:\n"
-    "    pip install polyx-microplastics[gui]\n"
+    "PySide6 is required to run the MICRA GUI. Install it with:\n"
+    "    pip install micra[gui]\n"
     "(or `pip install PySide6==6.7.2` in a development checkout)."
 )
 

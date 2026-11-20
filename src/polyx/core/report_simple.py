@@ -65,12 +65,12 @@ def generate(run_dir: Path, output: Path | None = None) -> Path:
     out = output or (run_dir / "report.html")
     parts = [
         f"<!DOCTYPE html><html lang='{language()}'><head><meta charset='utf-8'>",
-        f"<title>{_('Poly-X run report')}</title>",
+        f"<title>{_('MICRA run report')}</title>",
         "<style>body{font-family:sans-serif;margin:2rem;} table{border-collapse:collapse;} "  # noqa: ISC004
         "td,th{border:1px solid #ccc;padding:4px 8px;} img{max-width:320px;}</style>",
         "</head><body>",
     ]
-    parts.append(f"<h1>{_('Poly-X run report')}</h1>")
+    parts.append(f"<h1>{_('MICRA run report')}</h1>")
     parts.append(f"<p><b>{_('Run dir:')}</b> {html.escape(str(run_dir))}</p>")
     parts.append(
         f"<p><b>{_('Status:')}</b> {html.escape(str(canonical.get('status') or '?'))}"

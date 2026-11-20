@@ -19,16 +19,22 @@ from pathlib import Path
 from polyx.hpc.hashing import HashError, parse_manifest, verify_file
 
 #: The weight path reuses the CLI's streaming downloader; the hash decision is
-#: made here so the CLI's optional ``--sha256`` flag cannot weaken this path.
+#: made here so the downloader itself can stay a two-argument call, and the
+#: digest it is given always comes from this manifest rather than a flag.
 WeightHashError = HashError
 
 Downloader = Callable[[str, Path], None]
 
 
-def _default_downloader(url: str, destination: Path) -> None:
-    from polyx.cli.download_models import download
+def _verified_downloader(expected_sha256: str) -> Downloader:
+    """The CLI downloader bound to one manifest digest."""
 
-    download(url, destination)
+    def fetch(url: str, destination: Path) -> None:
+        from polyx.cli.download_models import download
+
+        download(url, destination, expected_sha256=expected_sha256)
+
+    return fetch
 
 
 def fetch_weights(
@@ -47,13 +53,13 @@ def fetch_weights(
     if not entries:
         raise WeightHashError(f"{manifest}: no weights are pinned; refusing an unverified download")
 
-    fetch = downloader or _default_downloader
     target = Path(destination)
     target.mkdir(parents=True, exist_ok=True)
     results: list[Path] = []
     base = base_url.rstrip("/")
 
     for name, expected in entries.items():
+        fetch = downloader or _verified_downloader(expected)
         final = target / name
         pending = target / f"{name}.part"
         if final.is_file():

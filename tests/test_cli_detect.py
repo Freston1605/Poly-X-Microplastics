@@ -570,8 +570,8 @@ def test_without_a_manual_scale_the_run_is_uncalibrated(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     ("language", "title", "images", "detections"),
     [
-        ("es", "Informe de ejecución de Poly-X", "Imágenes: 2", "Detecciones: 4"),
-        ("en", "Poly-X run report", "Images: 2", "Detections: 4"),
+        ("es", "Informe de ejecución de MICRA", "Imágenes: 2", "Detecciones: 4"),
+        ("en", "MICRA run report", "Images: 2", "Detections: 4"),
     ],
 )
 def test_compact_report_reads_the_canonical_folder_first(

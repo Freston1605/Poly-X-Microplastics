@@ -79,9 +79,10 @@ for ticket #199, not a claim made here.
 `tools/hpc/build_wheelhouse.py` exports the pinned requirements from `uv.lock`,
 downloads every wheel once on a networked machine, builds the project's own
 wheel here, and writes a `SHA256SUMS` manifest plus a ready-to-use
-`requirements.txt`. Building the project wheel on this side is what keeps the
-node offline: the runtime image has no source tree, no build backend and no
-index, and installs the package from the wheel like any other dependency. The
+`requirements.txt` inside the wheelhouse. Building the project wheel on this
+side is what keeps the node offline: the runtime image has no source tree, no
+build backend and no index, and installs the package from the wheel like any
+other dependency. The
 wheel build also needs `NOTICE`, which `pyproject.toml` force-includes for the
 pycocotools licence; omitting it fails the build with
 `Forced include not found`.
@@ -99,7 +100,7 @@ uv venv /work/polyx/.venv
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links wheelhouse -r wheelhouse/requirements.txt
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
-  --no-index --no-deps wheelhouse/polyx_microplastics-*.whl
+  --no-index --no-deps wheelhouse/micra-*.whl
 ```
 
 Verify a copied wheelhouse before using it:
@@ -133,8 +134,9 @@ python -c 'from pathlib import Path; from polyx.hpc.weights import fetch_weights
 fetch_weights(Path("weights.sha256"), Path("weights"), base_url=__import__("os").environ["POLYX_WEIGHTS_URL"])'
 ```
 
-`polyx-download-models --sha256 <digest>` remains available for interactive
-use.
+`micra download-models --url <release-url> --sha256 <digest>` remains available
+for interactive use; both flags are required, so a missing source is an explicit
+error rather than a 404.
 
 ### How the training path uses the manifest
 
@@ -200,7 +202,7 @@ VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links /work/polyx/wheelhouse \
   -r /work/polyx/wheelhouse/requirements.txt
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
-  --no-index --no-deps /work/polyx/wheelhouse/polyx_microplastics-*.whl
+  --no-index --no-deps /work/polyx/wheelhouse/micra-*.whl
 /work/polyx/.venv/bin/python -m polyx.hpc.check_env
 ```
 

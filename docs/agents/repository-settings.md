@@ -29,7 +29,7 @@ that would have fixed it.
 | Required status checks | the six checks of the merge contract (below), strict up-to-date on | Default-branch ruleset |
 
 Every call below needs a token with **admin** on
-`Freston1605/Poly-X-Microplastics`. A 403 means the token lacks admin. Read
+`Freston1605/micra`. A 403 means the token lacks admin. Read
 every setting back before concluding anything: `vulnerability-alerts` also
 answers 404 when the alerts are off, so a 404 is not always a permission
 problem.
@@ -40,6 +40,13 @@ problem.
 a public button: anyone who can push a branch can push a tag and spend a
 version number that cannot be reused. The ruleset makes the button
 maintainer-only.
+
+**PyPI publication is deferred.** ADR-0011 keeps MICRA's channels to a source
+checkout and a container image until the cluster smoke passes. The publisher
+described below exists for the eventual pre-release rehearsal (`2.1.0a1`, which
+`pip` skips without `--pre`), not for a current channel: a tag today would
+publish an untested package whose name is not yet reserved, so do not create
+one.
 
 | Field | Value |
 | --- | --- |
@@ -62,7 +69,7 @@ again, which the same ruleset refuses to non-maintainers. `creation` and
 `deletion` alone leave that door open.
 
 ```bash
-gh api repos/Freston1605/Poly-X-Microplastics/rulesets \
+gh api repos/Freston1605/micra/rulesets \
   --jq '.[] | {id, name, target, enforcement}'
 ```
 
@@ -79,7 +86,7 @@ nothing and is one more thing to keep in step):
 
 ```bash
 gh api --method POST \
-  repos/Freston1605/Poly-X-Microplastics/rulesets \
+  repos/Freston1605/micra/rulesets \
   --input - <<'JSON'
 {
   "name": "Protect release tags",
@@ -114,7 +121,7 @@ allowed by tag, which is why this repository calls its own gate by path
 police.
 
 ```bash
-gh api repos/Freston1605/Poly-X-Microplastics/actions/permissions
+gh api repos/Freston1605/micra/actions/permissions
 # {"enabled":true,"allowed_actions":"all","sha_pinning_required":true}
 ```
 
@@ -122,7 +129,7 @@ gh api repos/Freston1605/Poly-X-Microplastics/actions/permissions
 changes. Read it first if the repository has custom `allowed_actions`:
 
 ```bash
-gh api --method PUT repos/Freston1605/Poly-X-Microplastics/actions/permissions \
+gh api --method PUT repos/Freston1605/micra/actions/permissions \
   -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
 ```
 
@@ -138,9 +145,9 @@ something the repository cannot accept.
 
 ```bash
 gh api --method PUT \
-  repos/Freston1605/Poly-X-Microplastics/private-vulnerability-reporting \
+  repos/Freston1605/micra/private-vulnerability-reporting \
   -F enabled=true
-gh api repos/Freston1605/Poly-X-Microplastics/private-vulnerability-reporting
+gh api repos/Freston1605/micra/private-vulnerability-reporting
 # {"enabled":true}
 ```
 
@@ -152,17 +159,17 @@ a pull request that raises the pin toward the first fixed release, and for the
 Python ecosystem that only happens when the pin is satisfiable by the uv
 version Dependabot bundles — otherwise the job fails before it proposes
 anything (see "Security updates are only on when the uv pin is satisfiable").
-Because the pins live in two places — `pyproject.toml` and the frozen
-`requirements.txt` — treat any such pull request as a starting point, not a
-merge-ready change: both manifests and `uv lock` have to move together.
+Because the pins live in two places — `pyproject.toml` and the resolved
+`uv.lock` — treat any such pull request as a starting point, not a
+merge-ready change: both have to move together.
 
 The routine bump of the scientific stack stays manual, with the full gate: it
 is a different path from a security update, and nothing here automates it.
 
 ```bash
-gh api --method PUT repos/Freston1605/Poly-X-Microplastics/vulnerability-alerts
-gh api --method PUT repos/Freston1605/Poly-X-Microplastics/automated-security-fixes
-gh api repos/Freston1605/Poly-X-Microplastics/automated-security-fixes
+gh api --method PUT repos/Freston1605/micra/vulnerability-alerts
+gh api --method PUT repos/Freston1605/micra/automated-security-fixes
+gh api repos/Freston1605/micra/automated-security-fixes
 # {"enabled":true,"paused":false}
 ```
 
@@ -210,7 +217,7 @@ completed with conclusion `success`, reached `uv lock`, and carries no
 says which step failed:
 
 ```bash
-R=Freston1605/Poly-X-Microplastics
+R=Freston1605/micra
 run=$(gh run list -R "$R" --workflow "Dependabot Updates" --limit 1 \
   --json databaseId --jq '.[0].databaseId // empty') || exit 1
 [ -n "$run" ] || { echo 'no Dependabot update run yet' >&2; exit 1; }
@@ -287,7 +294,7 @@ conditional job here, `dependency-review`, is conditional on the event being
 ### Reading it back
 
 ```bash
-R=Freston1605/Poly-X-Microplastics
+R=Freston1605/micra
 gh api repos/$R/rulesets/25976878 --jq '
   .rules[] | select(.type == "required_status_checks") | .parameters'
 # {"strict_required_status_checks_policy":true,"do_not_enforce_on_create":false,
@@ -305,7 +312,7 @@ hand-written body drops whichever ones it forgets. Rewriting only the one
 array keeps them byte-identical:
 
 ```bash
-R=Freston1605/Poly-X-Microplastics
+R=Freston1605/micra
 gh api repos/$R/rulesets/25976878 \
   | jq '{name, target, enforcement, conditions, bypass_actors,
       rules: [.rules[]
@@ -332,7 +339,7 @@ exactly the names GitHub matches.
 
 In order:
 
-1. `gh api repos/Freston1605/Poly-X-Microplastics --jq .permissions.admin` —
+1. `gh api repos/Freston1605/micra --jq .permissions.admin` —
    confirm you are an admin. Everything below is a no-op without it.
 2. Enable Actions on the fork (GitHub disables workflows on forks of public
    repositories; no setting below turns them on). Then set
@@ -350,7 +357,7 @@ In order:
    not evidence that the value is what you sent.
 
 ```bash
-R=Freston1605/Poly-X-Microplastics
+R=Freston1605/micra
 gh api repos/$R/actions/permissions
 gh api repos/$R/rulesets --jq '.[] | {id, name, target, enforcement}'
 gh api repos/$R/rulesets/<tag-ruleset-id> --jq '.bypass_actors'

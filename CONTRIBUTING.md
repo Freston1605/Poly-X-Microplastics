@@ -1,4 +1,20 @@
-# Contributing to Poly-X
+# Contributing to MICRA
+
+MICRA (*Microplastic Identification, Counting and Recognition Application*) is
+the laboratory's continuation of Poly-X; the distribution is `micra` and the
+repository is `Freston1605/micra`, while the import package stays `polyx` until
+the post-paper rename.
+See [ADR-0011](docs/adr/0011-linux-first-distribution-scope.md) and
+[`GLOSSARY.md`](GLOSSARY.md).
+
+## Scope and distribution channels
+
+The supported platform is Linux x86_64, exercised by CI; Windows is best effort
+and macOS is unsupported. **A new distribution channel — PyPI beyond the
+deferred pre-release rehearsal, conda, Homebrew, a bundled installer or an
+auto-updater — requires a new ADR.** Scope does not grow one channel at a time
+by convenience: the decision and its retirements are recorded, so a later
+contributor can see why the surface is what it is.
 
 ## What the CI does
 
@@ -25,8 +41,7 @@ Two workflows run on **every PR** and on every push to `main`:
   change files instead of reporting them. They stay in the configuration for
   local use.
 - **`ci.yml`** — the pipeline, which is the gate plus the checks around it:
-  1. Checks `uv.lock` is current and smoke-tests the installer scripts before
-     any dependency sync.
+  1. Checks `uv.lock` is current before any dependency sync.
   2. Installs the Qt libraries needed without a display (`libegl1`, `libgl1`,
      `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`) and syncs the locked
      environment (`uv sync --locked --extra gui`) on Python 3.11.
@@ -85,8 +100,12 @@ actionlint .github/workflows/*.yml   # with shellcheck on PATH
 uvx zizmor==1.32.0 .github/workflows/
 ```
 
-`publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
-tags via Trusted Publishing. A tag run starts with a job named `ci` that calls
+`publish.yml` is separate and does not run per PR: it is wired to publish to
+PyPI on `v*` tags via Trusted Publishing, but ADR-0011 defers publication until
+the paper's artifact is archived, so the channel is prepared and rehearsed
+rather than open; the ordered steps live in
+[`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). A tag run starts with
+a job named `ci` that calls
 `ci.yml` through `workflow_call` as `$/.github/workflows/ci.yml`, GitHub's
 self-repository form, so the call resolves to this repository at the running
 commit. That is the same pipeline every PR runs — which is why "gate" names the
@@ -101,7 +120,9 @@ the wheel, the pseudo-locale is not); **a tag proves the distribution**: the
 wheel installs into a clean environment with uv, every CLI console script
 starts, and the GUI imports. A manual run of `publish.yml` from the Actions UI
 is a rehearsal: it runs the whole pipeline, including the installed-wheel
-smoke, then builds the distributions and uploads nothing to PyPI.
+smoke, then builds the distributions and uploads nothing to PyPI. The ordered
+steps that cannot be undone — the tag, the PyPI version, the weight digest, the
+DOI — live in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 Every `uses:` is pinned to a commit SHA with its release in a comment, and
 `.github/dependabot.yml` opens one grouped PR a week for patch and minor action
@@ -111,8 +132,8 @@ that nobody updates is just an old action.
 Before pushing, run the same checks locally:
 
 ```bash
-uv run ruff check src/ tests/ tools/ install/
-uv run ruff format --check src/ tests/ tools/ install/
+uv run ruff check src/ tests/ tools/
+uv run ruff format --check src/ tests/ tools/
 uv run ty check src/polyx/core src/polyx/cli
 ```
 
@@ -180,8 +201,8 @@ python -m pytest -q          # inside the project .venv
      `numpy>=2` breaks ultralytics 8.3.40 validation (they removed `np.trapz`),
      and bumping `PySide6` can change Qt dialog behaviour. `Run the gate` prints
      the command that failed; reproduce it with `python tools/check.py`. A ruff
-     failure is that step too: run `uv run ruff check src/ tests/ tools/ install/`
-     and `uv run ruff format --check src/ tests/ tools/ install/`, fix with
+     failure is that step too: run `uv run ruff check src/ tests/ tools/`
+     and `uv run ruff format --check src/ tests/ tools/`, fix with
      `ruff check --fix` / `ruff format`, and leave unrelated files alone. The
      `Type check (GUI)` step is advisory and never fails the build.
    - `CI` → `test` → the failing test is printed with its assertion. The suite
@@ -261,10 +282,9 @@ python tools/i18n/cli.py pseudo    # generate the development pseudo-locale
    editor can open. Fill every `msgstr`; keep every `%(name)s` placeholder and
    use the catalog's plural forms. A translator does not need Python.
 4. **Compile.** `compile` writes the `.mo` files the runtime reads. They are
-   gitignored build artifacts: the wheel compiles them in a build hook and the
-   frozen application adds them as data files. A development checkout also
-   compiles a missing catalog on demand into a temporary cache, so a fresh
-   clone is not silently English-only.
+   gitignored build artifacts: the wheel compiles them in a build hook. A
+   development checkout also compiles a missing catalog on demand into a
+   temporary cache, so a fresh clone is not silently English-only.
 5. **Test.** `python tools/check.py` runs the translation audit, the suite,
    ruff and ty. The audit is also the `i18n-audit` pre-commit hook, so the
    same failure appears before the commit leaves your machine.
@@ -284,8 +304,8 @@ POLYX_LOCALE=qps_ploc python -m polyx.gui
 
 Every translated string appears bracketed and accented; an English sentence on
 screen is a string that bypassed the translation call. The pseudo-locale is
-development-only: it is gitignored, excluded from the wheel and the frozen
-application, and it is not part of any gate.
+development-only: it is gitignored, excluded from the wheel, and it is not
+part of any gate.
 
 Adding a language is adding a directory: create
 `src/polyx/locales/<tag>/LC_MESSAGES/messages.po` with an empty catalog, run

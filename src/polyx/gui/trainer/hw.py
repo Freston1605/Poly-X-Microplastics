@@ -314,8 +314,9 @@ def detect_gpu() -> GPUInfo:
                 )
                 if intel
                 else _(
-                    "Apple Silicon detected but torch does not expose MPS. Reinstall "
-                    "PyTorch from the Poly-X installer."
+                    "Apple Silicon detected but torch does not expose MPS. Recreate the "
+                    "locked environment with uv sync --locked --extra gui, or run the "
+                    "container image."
                 )
             ),
         )

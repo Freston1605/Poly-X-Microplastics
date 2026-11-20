@@ -1,10 +1,8 @@
 """Compatibility: historic entry point ``python -m polyx.launcher``.
 
-This module exists only so that the historic entry point and the
-external installation scripts that invoke ``python -m polyx.launcher``
-(Poly-X.vbs, iniciar_polyx.bat, Lanzar_macOS.command,
-crear_icono_macOS.command, lanzar_polyx.py and the PyInstaller bundle)
-keep working without editing them.
+This module exists only so that notes, shortcuts and muscle memory that
+invoke ``python -m polyx.launcher`` keep working while ``python -m
+polyx.gui`` is the current entry point.
 
 All the Qt work lives inside :mod:`polyx.gui.launcher`; this shim does
 not import Qt directly (the import below brings in the real module,

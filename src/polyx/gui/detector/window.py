@@ -163,8 +163,15 @@ class DetectorWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         self.lbl_status.setStyleSheet(f"color: {T.OK_TX}; font-size: 9pt; padding: 4px 8px;")
         sb.addWidget(self.lbl_status)
 
-        # Authorship credit
-        author = QLabel(_("Designed by\nCristofher Ferrada\n2026"))
+        # Authorship credit: the design is the author's, the continuation is the
+        # maintainer's, and the work belongs to the laboratory.
+        author = QLabel(
+            _(
+                "Original design by Cristofher Ferrada\n"
+                "Maintained by Franco Ignacio Valdés Navarro\n"
+                "Laboratorio de Química Ambiental · PUCV"
+            )
+        )
         author.setAlignment(Qt.AlignCenter)
         author.setStyleSheet(
             f"color: {T.INK3}; font-size: 8.5pt; padding: 8px; "

@@ -9,22 +9,40 @@ from installed distribution metadata, compares them with the ones
 
 It cannot pass vacuously: an empty declaration, an empty install or a
 distribution that is not installed at all is a failure, not a skip.
+
+The module is also the seam where the installed distribution's metadata is
+compared with the declaration, so ``Requires-Python`` is checked here for the
+same reason: ``pip`` reads the wheel, not ``pyproject.toml``.
 """
 
 from __future__ import annotations
 
-from importlib.metadata import EntryPoint, distribution
+import sys
+from importlib.metadata import EntryPoint, distribution, metadata
 
+from packaging.specifiers import SpecifierSet
+
+from polyx.cli.main import main as dispatcher
 from tests.test_pre_commit_config import pyproject
 
-DISTRIBUTION = "polyx-microplastics"
+DISTRIBUTION = "micra"
 GROUP = "console_scripts"
+COMMAND_NAMES = ("micra", "polyx")
 
 
 def declared_scripts(pyproject: dict) -> dict[str, str]:
     """The console scripts ``[project.scripts]`` declares, name to target."""
     scripts = pyproject.get("project", {}).get("scripts", {})
     return {str(name): str(target) for name, target in scripts.items()}
+
+
+def installed_scripts() -> dict[str, str]:
+    """The console scripts this install exposes, name to target."""
+    return {
+        entry.name: entry.value
+        for entry in distribution(DISTRIBUTION).entry_points
+        if entry.group == GROUP
+    }
 
 
 def parity_problems(declared: dict[str, str], installed: dict[str, str]) -> list[str]:
@@ -75,20 +93,58 @@ def resolve_problems(scripts: dict[str, str], load=_load_target) -> list[str]:
 
 def test_every_console_script_is_installed_and_resolves():
     declared = declared_scripts(pyproject())
-    installed = {
-        entry.name: entry.value
-        for entry in distribution(DISTRIBUTION).entry_points
-        if entry.group == GROUP
-    }
+    installed = installed_scripts()
 
     assert not parity_problems(declared, installed)
     assert not resolve_problems(installed)
 
 
+def test_both_command_names_reach_the_same_dispatcher():
+    """``micra`` is the product name; ``polyx`` is the alias old scripts type."""
+    declared = declared_scripts(pyproject())
+    installed = installed_scripts()
+
+    for name in COMMAND_NAMES:
+        assert name in declared, f"pyproject.toml does not declare {name}"
+        assert name in installed, f"{DISTRIBUTION} does not install {name}"
+    assert declared["micra"] == declared["polyx"], "the two names declare different targets"
+    assert installed["micra"] == installed["polyx"], "the two names dispatch differently"
+
+    micra = _load_target("micra", installed["micra"])
+    polyx = _load_target("polyx", installed["polyx"])
+    assert micra is polyx, "micra and polyx do not resolve to one dispatcher"
+
+
+def test_the_dispatcher_prints_the_pipeline_usage(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["micra"])
+
+    status = dispatcher(["pipeline", "--help"])
+
+    assert status == 0
+    assert "micra pipeline" in capsys.readouterr().out
+
+
+def test_the_dispatcher_rejects_an_unknown_command(capsys):
+    status = dispatcher(["teleport"])
+
+    assert status == 2
+    assert "teleport" in capsys.readouterr().err
+
+
+def test_the_installed_python_range_matches_the_declaration():
+    declared = pyproject()["project"]["requires-python"]
+    installed = metadata(DISTRIBUTION).get("Requires-Python")
+
+    assert installed, f"{DISTRIBUTION} does not declare Requires-Python"
+    # as PEP 440 specifier sets: the wheel may reorder or re-space the same
+    # clauses, which is not a different claim.
+    assert SpecifierSet(installed) == SpecifierSet(declared)
+
+
 def test_an_empty_side_fails_instead_of_passing_vacuously():
     assert parity_problems({}, {}) == [
         "pyproject.toml declares no console scripts",
-        "polyx-microplastics installs no console scripts",
+        "micra installs no console scripts",
     ]
 
 

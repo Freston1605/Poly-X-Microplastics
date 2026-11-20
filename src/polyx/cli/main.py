@@ -1,4 +1,4 @@
-"""Unified ``polyx`` command-line entry point.
+"""Unified MICRA command-line entry point (``micra``, legacy ``polyx``).
 
 Dispatches each command to its module. The GUI path imports Qt lazily, so the
 headless commands keep working without the ``gui`` extra.
@@ -7,6 +7,7 @@ headless commands keep working without the ``gui`` extra.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from polyx.core.i18n import _
 
@@ -16,24 +17,32 @@ _COMMANDS = {
     "detect": "polyx.cli.detect",
     "eval": "polyx.cli.eval",
     "report": "polyx.cli.report",
+    "pipeline": "polyx.pipeline.command",
     "download-models": "polyx.cli.download_models",
 }
 
 
-def _usage() -> str:
+def _program_name() -> str:
+    """The name the user typed: ``micra`` or the legacy ``polyx``."""
+    stem = Path(sys.argv[0]).stem
+    return stem if stem in ("micra", "polyx") else "micra"
+
+
+def _usage(prog: str) -> str:
     """The help screen, translated when it is printed."""
     return "\n".join(
         [
-            _("Poly-X command line."),
+            _("MICRA command line."),
             "",
             _("Usage:"),
-            f"    polyx                      # {_('launch the GUI')}",
-            f"    polyx gui                  # {_('launch the GUI')}",
-            f"    polyx train ...            # {_('headless training')}",
-            f"    polyx detect ...           # {_('headless detection')}",
-            f"    polyx eval ...             # {_('headless evaluation')}",
-            f"    polyx report ...           # {_('compact HTML report')}",
-            f"    polyx download-models ...  # {_('download weights')}",
+            f"    {prog}                      # {_('show this help')}",
+            f"    {prog} gui                  # {_('launch the GUI')}",
+            f"    {prog} train ...            # {_('headless training')}",
+            f"    {prog} detect ...           # {_('headless detection')}",
+            f"    {prog} eval ...             # {_('headless evaluation')}",
+            f"    {prog} report ...           # {_('compact HTML report')}",
+            f"    {prog} pipeline ...         # {_('headless pipeline, sweep or campaign')}",
+            f"    {prog} download-models ...  # {_('download weights')}",
         ]
     )
 
@@ -52,14 +61,19 @@ def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
+    prog = _program_name()
+
     if not argv or argv[0] in ("-h", "--help"):
-        print(_usage())
+        print(_usage(prog))
         print()
         print(_("Commands:"))
         for name in _COMMANDS:
             print(f"  {name}")
         print()
-        print(_("Run 'polyx <command> --help' for command-specific options."))
+        print(
+            _("Run '%(program)s <command> --help' for command-specific options.")
+            % {"program": prog}
+        )
         return 0
 
     cmd = argv[0]
@@ -71,13 +85,16 @@ def main(argv: list[str] | None = None) -> int:
 
             mod = importlib.import_module(_COMMANDS[rest[0]])
             return mod.main(["--help"])
-        print(_usage())
+        print(_usage(prog))
         return 0
 
     if cmd not in _COMMANDS:
         # Backwards-friendly: unknown first token -> try GUI? No, error.
         print(_("Unknown command: %(command)s") % {"command": cmd}, file=sys.stderr)
-        print(_("Run 'polyx --help' for the list of commands."), file=sys.stderr)
+        print(
+            _("Run '%(program)s --help' for the list of commands.") % {"program": prog},
+            file=sys.stderr,
+        )
         return 2
 
     if cmd == "gui":
