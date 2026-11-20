@@ -17,7 +17,18 @@ import optuna
 import pytest
 import yaml
 
-from tests.test_pipeline_local_tracer import _boxes_prediction, _install_fakes
+from tests.test_pipeline_local_tracer import _boxes_prediction
+from tests.test_pipeline_local_tracer import _install_fakes as _install
+
+
+def _install_fakes(monkeypatch: pytest.MonkeyPatch, prediction_sets: list[list[dict]]) -> None:
+    """Script each trial's validation and its publication re-score.
+
+    A trial validates its epoch and then re-scores the kept weights before
+    publishing, so the same scripted outcome serves both passes.
+    """
+    queue = [item for outcome in prediction_sets for item in (outcome, outcome)]
+    _install(monkeypatch, queue)
 
 
 @pytest.fixture

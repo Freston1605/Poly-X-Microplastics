@@ -80,6 +80,24 @@ class ArtifactLayout:
         return self.checkpoints / "best.pt"
 
     @property
+    def lightning_checkpoints(self) -> Path:
+        """Where Lightning writes its own checkpoints and the resume point."""
+        return self.checkpoints / "lightning"
+
+    def native_checkpoint(self, epoch: int) -> Path:
+        """The family-native export of one epoch's weights."""
+        return self.checkpoints / f"epoch_{epoch:03d}.pt"
+
+    @property
+    def publication_snapshot(self) -> Path:
+        """Scratch native export used while re-validating the kept weights.
+
+        A framework that predicts from a file needs one file to point at during
+        the publication validation. It is removed once ``best.pt`` is written.
+        """
+        return self.checkpoints / ".validation.pt"
+
+    @property
     def sweep_config(self) -> Path:
         """Resolved sweeper configuration, including the declared space."""
         return self.root / "sweep_config.yaml"

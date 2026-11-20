@@ -1,20 +1,18 @@
 """The progress snapshot that makes one execution resumable.
 
 A preemption or a time limit can stop a SLURM job after a checkpoint has been
-written but before the execution has finished. The engine refreshes this small
-file after every epoch so a later invocation with ``resume=true`` can continue
-from the last saved epoch without rerunning completed work. It names two
-checkpoints: ``last_checkpoint`` is the family-native export used for
-best-weight restoration, and ``resume_checkpoint`` is the real Lightning
-checkpoint whose weights, optimizer, scheduler and epoch progress continue the
-loop. The best epoch's evaluated figures travel with the snapshot, so a resumed
-execution that never improves can still report the best epoch it inherited
-instead of scoring an empty prediction list. The protocol that produced the
-snapshot is stored with it: resuming a different protocol would mix
-methodologies and is refused. The dataset fingerprint travels with it for the
-same reason: relabelled images or an edited COCO export are a different
-dataset, and the checkpoint and the best figures belong to the bytes that
-trained them.
+written but before the execution has finished. Lightning writes the checkpoint
+itself and restores everything it needs from it: weights, optimizer, scheduler,
+epoch progress and the state of the early-stopping and checkpoint callbacks.
+This small file adds the facts Lightning does not carry: the protocol and the
+dataset fingerprint the run belongs to, the fit it resolved (precision, device,
+verified weights), and the path of the best checkpoint the loop kept.
+
+The protocol that produced the snapshot is stored with it: resuming a different
+protocol would mix methodologies and is refused. The dataset fingerprint
+travels with it for the same reason: relabelled images or an edited COCO export
+are a different dataset, and the checkpoint belongs to the bytes that trained
+it.
 """
 
 from __future__ import annotations
@@ -32,22 +30,21 @@ class ResumeState:
     """Observable state read from a progress snapshot."""
 
     epochs_completed: int
-    last_checkpoint: Path | None
     resume_checkpoint: Path | None
     best_score: float | None
-    best_epoch: int
-    best_checkpoint: Path | None
-    non_improving: int
     stopped_early: bool
     protocol: dict[str, Any]
     #: Digest of every dataset file the interrupted execution trained on.
     dataset_fingerprint: str
-    patience_reference: float | None = None
-    best_metrics: dict[str, Any] | None = None
     #: The fit resolved by the interrupted execution (precision, device,
     #: verified weights, augmentation), carried so a recovered publication
     #: does not have to invent them.
     fit: dict[str, Any] | None = None
+    #: Non-improving validation epochs the early-stopping callback counted.
+    wait_count: int = 0
+    #: The epoch that set the kept checkpoint, and that checkpoint's path.
+    best_epoch: int = -1
+    best_lightning_checkpoint: Path | None = None
 
     @classmethod
     def load(cls, path: Path) -> ResumeState:
@@ -58,12 +55,7 @@ class ResumeState:
         except (OSError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"unreadable progress snapshot {path}: {exc}") from exc
         try:
-            checkpoint = raw["last_checkpoint"]
             resume_checkpoint = raw.get("resume_checkpoint")
-            best_checkpoint = raw.get("best_checkpoint")
-            best_metrics = raw.get("best_metrics")
-            if best_metrics is not None and not isinstance(best_metrics, dict):
-                raise TypeError("best_metrics must be a mapping")
             fit = raw.get("fit")
             if fit is not None and not isinstance(fit, dict):
                 raise TypeError("fit must be a mapping")
@@ -76,18 +68,19 @@ class ResumeState:
                 )
             return cls(
                 epochs_completed=int(raw["epochs_completed"]),
-                last_checkpoint=Path(checkpoint) if checkpoint else None,
                 resume_checkpoint=Path(resume_checkpoint) if resume_checkpoint else None,
                 best_score=raw.get("best_score"),
-                best_epoch=int(raw["best_epoch"]),
-                best_checkpoint=Path(best_checkpoint) if best_checkpoint else None,
-                non_improving=int(raw.get("non_improving", 0)),
                 stopped_early=bool(raw.get("stopped_early", False)),
                 protocol=dict(raw["protocol"]),
                 dataset_fingerprint=fingerprint,
-                patience_reference=raw.get("patience_reference"),
-                best_metrics=best_metrics,
                 fit=fit,
+                wait_count=int((raw.get("early_stopping") or {}).get("wait_count", 0)),
+                best_epoch=int(raw.get("best_epoch", -1)),
+                best_lightning_checkpoint=(
+                    Path(raw["best_lightning_checkpoint"])
+                    if raw.get("best_lightning_checkpoint")
+                    else None
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeError(f"invalid progress snapshot {path}: {exc}") from exc

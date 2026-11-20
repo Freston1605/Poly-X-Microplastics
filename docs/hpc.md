@@ -129,7 +129,8 @@ then submit again. The job passes `resume=true` to every family and each family
 decides for itself:
 
 - a family with a `progress.json` resumes from its Lightning checkpoint
-  (`checkpoints/lightning/checkpoint_NNN.ckpt`); completed epochs are not rerun;
+  (`checkpoints/lightning/last.ckpt`, which also restores the early-stopping
+  and checkpoint callbacks' state); completed epochs are not rerun;
 - a family whose `completion.json` already exists for the same protocol is
   **skipped**, so a finished execution's metrics are never recomputed or
   overwritten. The record is written atomically and last, after metrics,

@@ -61,7 +61,7 @@ def test_detection_conversion_detaches_cuda_tensors() -> None:
     result = _Result(
         _Boxes([[10, 10, 30, 30]], [0.9], [1]),
     )
-    predictions = coco_predictions_from_results([result])
+    predictions = coco_predictions_from_results([result], [0])
     assert predictions == [
         {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 20.0, 20.0], "score": 0.9}
     ]
@@ -70,14 +70,14 @@ def test_detection_conversion_detaches_cuda_tensors() -> None:
 def test_empty_cuda_boxes_convert_without_an_array_error() -> None:
     """Even an empty detection result holds CUDA tensors in the pinned stack."""
     result = _Result(_Boxes(np.zeros((0, 4)), np.zeros((0,)), np.zeros((0,), dtype=int)))
-    assert coco_predictions_from_results([result]) == []
+    assert coco_predictions_from_results([result], [0]) == []
 
 
 def test_segmentation_conversion_detaches_boxes_and_polygons() -> None:
     """Mask polygons can be CUDA tensors too."""
     polygon = [[10, 10], [30, 10], [30, 30], [10, 30]]
     result = _Result(_Boxes([[10, 10, 30, 30]], [0.8], [2]), _Masks([polygon]))
-    predictions = coco_segmentation_predictions_from_results([result])
+    predictions = coco_segmentation_predictions_from_results([result], [0])
     assert predictions[0]["category_id"] == 2
     assert predictions[0]["segmentation"] == [[10.0, 10.0, 30.0, 10.0, 30.0, 30.0, 10.0, 30.0]]
 
@@ -85,4 +85,4 @@ def test_segmentation_conversion_detaches_boxes_and_polygons() -> None:
 @pytest.mark.parametrize("converter", [coco_predictions_from_results])
 def test_converter_accepts_no_results(converter: object) -> None:
     """A batch with no images produces no predictions."""
-    assert converter([]) == []
+    assert converter([], []) == []

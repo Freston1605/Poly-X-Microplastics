@@ -107,11 +107,14 @@ invents a pass. That is the honest local result, not the cluster smoke test.
 ## Checkpoint resume
 
 Each epoch writes a per-epoch checkpoint under `checkpoints/` on work and
-refreshes `progress.json` with the completed epoch count, the last checkpoint,
-the early-stopping bookkeeping and the resolved protocol. The progress snapshot
-also names the real Lightning checkpoint at
-`checkpoints/lightning/checkpoint_NNN.ckpt`, which is what makes a resumed execution
-continue the optimizer, scheduler and epoch loop rather than restart it. If a
+refreshes `progress.json` with the completed epoch count, the native export,
+the fit record and the resolved protocol. Lightning keeps
+`checkpoints/lightning/last.ckpt` beside the immutable per-epoch
+`checkpoint_NNN.ckpt` files; that file is what makes a resumed execution
+continue the optimizer, scheduler, epoch loop and the callbacks' state
+(patience and the kept best) rather than restart them. Every checkpoint is
+renamed into place after it is written, so a time limit cannot leave a torn
+resume point. If a
 job is preempted or hits its time limit, resubmit with `resume=true`:
 
 ```sh

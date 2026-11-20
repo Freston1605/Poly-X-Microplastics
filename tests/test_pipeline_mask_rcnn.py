@@ -15,7 +15,6 @@ pipeline internals.
 from __future__ import annotations
 
 import json
-import sys
 import types
 from pathlib import Path
 
@@ -134,82 +133,20 @@ def _outputs(detections: list[dict], image: object) -> dict:
     return {"boxes": boxes, "labels": labels, "scores": scores, "masks": stacked}
 
 
-class _FakeLightningModule:
-    def __init__(self) -> None:
-        self._epoch = 0
-
-    @property
-    def current_epoch(self) -> int:
-        return self._epoch
-
-
-class _FakeTrainer:
-    """Runs the validation loop, the epoch hook and the registered callback."""
-
-    interrupt_after: int | None = None
-
-    def __init__(self, **kwargs: object) -> None:
-        self.kwargs = kwargs
-        self.max_epochs = int(kwargs.get("max_epochs", 1))
-        self.precision = str(kwargs.get("precision", "32-true"))
-        self.callbacks = list(kwargs.get("callbacks", []))
-        self.should_stop = False
-        self.current_epoch = 0
-
-    def fit(self, module: object, ckpt_path: object = None) -> None:
-        module.trainer = self
-        start_epoch = 0
-        if ckpt_path is not None:
-            start_epoch = int(Path(ckpt_path).read_text(encoding="utf-8").split(":")[-1]) + 1
-        self.current_epoch = start_epoch
-        for completed, epoch in enumerate(
-            range(start_epoch, self.max_epochs), start=start_epoch + 1
-        ):
-            self.current_epoch = epoch
-            module._epoch = epoch
-            for index, batch in enumerate(module.val_dataloader()):
-                module.validation_step(batch, index)
-            module.on_validation_epoch_end()
-            for callback in self.callbacks:
-                callback.on_validation_epoch_end(self, module)
-            self.current_epoch = epoch + 1
-            if self.should_stop:
-                break
-            if self.interrupt_after is not None and completed >= self.interrupt_after:
-                raise RuntimeError("simulated preemption after the epoch checkpoint")
-
-    def save_checkpoint(self, path: object) -> None:
-        """Stand-in for Lightning's checkpoint writer; names the epoch it holds."""
-        target = Path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(f"lightning-checkpoint:{self.current_epoch}", encoding="utf-8")
-
-
-class _FakeCallback:
-    pass
-
-
 def _install_fakes(
     monkeypatch: pytest.MonkeyPatch,
-    prediction_sets: list[list[list[dict]]],
+    prediction_sets: list[list[dict]],
     *,
     interrupt_after: int | None = None,
 ) -> None:
-    """Fake the framework boundary: Lightning and the torchvision factory."""
+    """Fake the torchvision factory only; Lightning runs for real."""
     _FakeDetector.prediction_sets = list(prediction_sets)
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.factory_calls = []
     _FakeDetector.inference_batch_sizes = []
     _FakeDetector.inference_calls = 0
-    _FakeDetector.fail_on_inference = None
-    _FakeTrainer.interrupt_after = interrupt_after
-    lightning = types.ModuleType("lightning")
-    lightning.LightningModule = _FakeLightningModule
-    lightning.Callback = _FakeCallback
-    lightning.Trainer = _FakeTrainer
-    lightning.seed_everything = lambda seed, **_kw: seed
-    monkeypatch.setitem(sys.modules, "lightning", lightning)
+    _FakeDetector.fail_on_inference = interrupt_after
     _install_torchvision_factory(monkeypatch)
 
 
@@ -231,6 +168,17 @@ def _command(*overrides: str) -> int:
     return main(list(overrides))
 
 
+def _same_state_dict(first: Path, second: Path) -> bool:
+    """Whether two torchvision exports carry the same tensors."""
+    import torch
+
+    left = torch.load(first, map_location="cpu", weights_only=False)["state_dict"]
+    right = torch.load(second, map_location="cpu", weights_only=False)["state_dict"]
+    return left.keys() == right.keys() and all(
+        torch.equal(left[name], right[name]) for name in left
+    )
+
+
 def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -244,7 +192,9 @@ def _train_mask_rcnn(
     label: str = "mask-rcnn",
     epochs: int = 1,
 ) -> tuple[int, Path]:
-    _install_fakes(monkeypatch, prediction_sets)
+    # ``prediction_sets`` describes one validation pass (one entry per image);
+    # every epoch runs one and publication re-scores the kept epoch.
+    _install_fakes(monkeypatch, [*prediction_sets] * (epochs + 1))
     output = tmp_path / "executions" / label
     code = _command(
         f"coco_dataset={store}",
@@ -266,8 +216,9 @@ def _train_yolo_seg(
     epochs: int = 1,
 ) -> tuple[int, Path]:
     from tests.test_pipeline_yolo_seg import _install_fakes as install_yolo
+    from tests.test_pipeline_yolo_seg import _with_publication
 
-    install_yolo(monkeypatch, prediction_sets)
+    install_yolo(monkeypatch, _with_publication(prediction_sets))
     output = tmp_path / "executions" / label
     code = _command(
         f"coco_dataset={store}",
@@ -316,8 +267,10 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
     assert state["family"]["task"] == "segment"
     assert state["epochs_completed"] == 1
     assert state["early_stopping"]["stopped_early"] is False
-    # AMP is a protocol request, recorded identically for every family.
-    assert state["precision"] == "16-mixed"
+    # AMP is a protocol request, recorded identically for every family; the
+    # precision Lightning actually ran may be substituted by the device.
+    assert state["amp_requested"] == "16-mixed"
+    assert state["precision"] in {"16-mixed", "bf16-mixed"}
     assert state["amp_active"] is True
 
     # The canonical COCO store is the only dataset; the run folder holds no
@@ -353,10 +306,8 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
     assert "CRITERION: with-class operating-point F1" in printed
     assert "LOCALISATION: 1.000000" in printed
 
-    from polyx.core.provenance import sha256_file
-
-    assert sha256_file(output / "checkpoints" / "best.pt") == sha256_file(
-        output / "checkpoints" / "epoch_000.pt"
+    assert _same_state_dict(
+        output / "checkpoints" / "best.pt", output / "checkpoints" / "epoch_000.pt"
     )
 
 
@@ -591,7 +542,9 @@ def test_an_exploratory_run_may_declare_mosaic_but_the_benchmark_may_not(
 ) -> None:
     """Family-specific transforms never contaminate the benchmark campaign."""
     store = _imported_store(tmp_path)
-    _install_yolo(monkeypatch, [_perfect_validation()])
+    from tests.test_pipeline_yolo_seg import _with_publication
+
+    _install_yolo(monkeypatch, _with_publication([_perfect_validation()]))
 
     benchmark = _command(
         f"coco_dataset={store}",
@@ -626,7 +579,8 @@ def test_one_epoch_completes_under_the_real_lightning_loop(
 ) -> None:
     """The adapter must be a Lightning module that trains on COCO masks."""
     store = _imported_store(tmp_path)
-    _FakeDetector.prediction_sets = list(_perfect_validation())
+    # One validation pass for the epoch and one for the publication re-score.
+    _FakeDetector.prediction_sets = _perfect_validation() * 2
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _install_torchvision_factory(monkeypatch)
@@ -676,20 +630,22 @@ def test_a_preempted_mask_rcnn_run_resumes_from_the_last_checkpoint(
 
     _install_fakes(
         monkeypatch,
-        _perfect_validation() + _perfect_validation(),
-        interrupt_after=1,
+        # One call per validation image: epoch 0 completes, epoch 1 is cut off.
+        _perfect_validation() * 2 + _perfect_validation()[:1],
+        interrupt_after=3,
     )
     assert _command(*overrides) == 1
 
     progress = _read(output / "progress.json")
     assert progress["epochs_completed"] == 1
-    resumed_from = progress["last_checkpoint"]
+    resumed_from = progress["resume_checkpoint"]
+    assert Path(progress["last_checkpoint"]).is_file()
     assert Path(resumed_from).is_file()
-    assert Path(progress["resume_checkpoint"]).is_file()
     first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
     assert not (output / "training_state.json").exists()
 
-    _install_fakes(monkeypatch, _perfect_validation() + _perfect_validation())
+    # Epoch 1 and the publication re-score.
+    _install_fakes(monkeypatch, _perfect_validation() * 2)
     assert _command(*overrides, "resume=true") == 0
 
     state = _read(output / "training_state.json")

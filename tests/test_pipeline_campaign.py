@@ -55,12 +55,14 @@ def _install_framework_doubles(monkeypatch: pytest.MonkeyPatch) -> None:
     import ultralytics
 
     _FakeYOLO.network = _CampaignNet()
-    # One validation call per YOLO family/variant, one epoch each.
-    _FakeYOLO.prediction_sets = [_perfect_validation() for _ in range(4)]
+    # One validation call per YOLO family/variant and one epoch each, plus a
+    # publication re-score per execution.
+    _FakeYOLO.prediction_sets = [_perfect_validation() for _ in range(8)]
     _FakeYOLO.instances = []
     monkeypatch.setattr(ultralytics, "YOLO", _FakeYOLO)
 
-    _FakeDetector.prediction_sets = list(_perfect_validation())
+    # Two validation images per pass: one epoch plus the publication re-score.
+    _FakeDetector.prediction_sets = _perfect_validation() * 4
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.inference_calls = 0

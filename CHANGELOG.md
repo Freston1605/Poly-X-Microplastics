@@ -26,6 +26,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
   a hook that was never installed locally still fails the PR.
 
+### Changed
+- **The HPC pipeline's training lifecycle is Lightning's, not a second one.**
+  `ModelCheckpoint` keeps the strictly best `with_class_score` and
+  `EarlyStopping` measures patience against `min_delta`, so the two thresholds
+  are the framework's own behaviour instead of a parallel implementation;
+  callback state (patience and the kept best) travels inside the checkpoint and
+  survives a preemption. Both families validate inside Lightning's validation
+  loop, YOLO from the epoch's immutable native export because Ultralytics fuses
+  the network it is handed. Checkpoints are written through an atomic
+  `CheckpointIO`, and publication re-validates the kept checkpoint so
+  `metrics.json` and `best.pt` always describe the same weights.
+  `checkpoints/lightning/last.ckpt` is the resume point; the progress record is
+  the heartbeat and the protocol/dataset guard.
+
 ### Fixed
 - **Fourth review of the HPC pipeline (#202).** Both container definitions now
   build: the project wheel is produced in the wheelhouse where `NOTICE` and the

@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -51,33 +51,10 @@ from polyx.pipeline.evaluation import (
     prediction_budget,
     rasterize_segmentation,
 )
+from polyx.pipeline.lightning_loop import ExecutionRecorder, FamilyRun, PolyxModule
 from polyx.pipeline.masks import PackedMask
-from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset, image_hashes
 from polyx.pipeline.weights import resolve_weights
-
-EpochCallback = Callable[["EpochResult"], bool]
-
-
-@dataclass
-class EpochResult:
-    """What one validation epoch hands back to the shared training engine.
-
-    ``checkpoint`` is the family-native export kept for compatibility and for
-    best-weight restoration; ``resume_checkpoint`` is the real Lightning
-    checkpoint holding the weights, optimizer, scheduler and epoch progress a
-    later invocation needs to continue this execution.
-    """
-
-    epoch: int
-    predictions: list[dict]
-    adapter_figures: dict
-    checkpoint: Path
-    resume_checkpoint: Path | None = None
-    #: What the fit resolved (precision actually run, device, verified weights,
-    #: augmentation). The engine writes it into the progress snapshot, so a
-    #: publication recovered after the last epoch keeps the same record.
-    fit_metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -99,58 +76,6 @@ class PreparedDataset:
     source_kind: str
     source_path: Path
     conversion: dict[str, Any] | None = None
-
-
-@dataclass
-class FitResult:
-    """Observable state of the finished Lightning fit.
-
-    ``precision`` is what Lightning actually ran; ``amp_requested`` is the
-    protocol's request. They differ when Lightning substitutes a precision the
-    device supports (for example bf16-mixed for 16-mixed on CPU), and only the
-    former can honestly drive ``amp_active``.
-    """
-
-    precision: str
-    amp_requested: str
-    epochs_completed: int
-    amp_active: bool
-    device: str
-    framework: str
-    weights: str
-    weights_verified: bool
-    augmentation: dict[str, Any] = field(default_factory=dict)
-
-
-#: Precision strings that mean some form of automatic mixed precision.
-_MIXED_PRECISION = frozenset({"16-mixed", "bf16-mixed", "16-true", "bf16-true"})
-
-
-def _amp_active(precision: str) -> bool:
-    """Whether the precision Lightning reports is a mixed-precision mode."""
-    return precision in _MIXED_PRECISION
-
-
-def _fit_metadata(
-    config: ExecutionConfig,
-    trainer: Any,
-    device: str,
-    requested_precision: str,
-    weights: Any,
-    augmentation: dict[str, Any],
-) -> dict[str, Any]:
-    """The fit state every epoch carries into the progress snapshot."""
-    reported = str(trainer.precision)
-    return {
-        "precision": reported,
-        "amp_requested": requested_precision,
-        "amp_active": _amp_active(reported),
-        "device": device,
-        "framework": config.family.framework,
-        "weights": weights.describe(),
-        "weights_verified": weights.verified,
-        "augmentation": augmentation,
-    }
 
 
 def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
@@ -204,27 +129,6 @@ def _augmentation_report(protocol: Protocol, supported: frozenset[str]) -> dict[
             "flip_lr_probability": protocol.flip_lr_probability,
         },
     }
-
-
-def _lightning_resume_path(resume: ResumeState | None) -> Path | None:
-    """The real Lightning checkpoint a resumed fit must restore from.
-
-    A progress snapshot created before Lightning checkpoints existed has no
-    such path; resuming it with restored weights only would silently restart
-    the epoch loop, so the execution fails loudly instead.
-    """
-    if resume is None:
-        return None
-    checkpoint = resume.resume_checkpoint
-    if checkpoint is None:
-        raise RuntimeError(
-            "the progress snapshot has no Lightning checkpoint; resume cannot "
-            "continue the optimizer and epoch state"
-        )
-    path = Path(checkpoint)
-    if not path.is_file():
-        raise RuntimeError(f"the Lightning checkpoint named by the snapshot is missing: {path}")
-    return path
 
 
 def _ultralytics_cfg(task: str, protocol: Protocol) -> Any:
@@ -305,77 +209,14 @@ def _ultralytics_dataset(data_yaml: Path, cfg: Any, *, mode: str) -> Any:
     )
 
 
-def _build_optimizer(net: Any, protocol: Protocol) -> Any:
-    """Protocol optimizer over the Ultralytics network's parameter groups."""
-    import torch
-
-    groups: dict[str, list[Any]] = {"bias": [], "norm": [], "weight": []}
-    norms = tuple(value for name, value in torch.nn.__dict__.items() if "Norm" in name)
-    for module_name, module in net.named_modules():
-        for param_name, param in module.named_parameters(recurse=False):
-            fullname = f"{module_name}.{param_name}" if module_name else param_name
-            if "bias" in fullname:
-                groups["bias"].append(param)
-            elif isinstance(module, norms):
-                groups["norm"].append(param)
-            else:
-                groups["weight"].append(param)
-
-    name = protocol.optimizer.lower()
-    parameter_groups = [
-        {"params": groups["weight"], "weight_decay": protocol.weight_decay},
-        {"params": groups["norm"], "weight_decay": 0.0},
-        {"params": groups["bias"], "weight_decay": 0.0},
-    ]
-    non_empty = [group for group in parameter_groups if group["params"]]
-    if not non_empty:
-        raise ValueError("the network has no trainable parameters")
-    first = non_empty[0]
-    if name == "sgd":
-        optimizer: Any = torch.optim.SGD(
-            first["params"],
-            lr=protocol.learning_rate,
-            momentum=protocol.momentum,
-            nesterov=True,
-            weight_decay=float(first["weight_decay"]),
-        )
-    elif name in {"adam", "adamw"}:
-        optimizer_class = torch.optim.Adam if name == "adam" else torch.optim.AdamW
-        optimizer = optimizer_class(
-            first["params"],
-            lr=protocol.learning_rate,
-            weight_decay=float(first["weight_decay"]),
-        )
-    else:
-        raise ValueError(f"unsupported optimizer in the protocol: {protocol.optimizer}")
-    for group in non_empty[1:]:
-        optimizer.add_param_group(group)
-    return optimizer
-
-
-def _lr_factor(protocol: Protocol) -> Callable[[int], float]:
-    """Warmup plus the protocol's schedule, as a per-epoch multiplier."""
-    import math
-
-    warmup = max(0, protocol.warmup_epochs)
-    total = max(1, protocol.epochs)
-
-    def factor(epoch: int) -> float:
-        if warmup and epoch < warmup:
-            return (epoch + 1) / warmup
-        progress = min(1.0, max(0.0, (epoch - warmup) / max(1, total - warmup)))
-        if protocol.schedule == "cosine":
-            # Decay to one percent, the same floor Ultralytics' cosine uses.
-            return 0.01 + 0.99 * 0.5 * (1.0 + math.cos(math.pi * progress))
-        if protocol.schedule == "constant":
-            return 1.0
-        raise ValueError(f"unsupported learning-rate schedule: {protocol.schedule}")
-
-    return factor
-
-
 class FamilyAdapter:
-    """Contract every family implements; later families are siblings."""
+    """Contract every family implements; later families are siblings.
+
+    An adapter resolves the dataset and builds the two Lightning pieces the
+    shared loop drives: a module (model, steps, native export) and a data
+    module. It does not own the loop, the optimizer, the schedule, the
+    checkpoint, the stopping rule or the artifact record.
+    """
 
     name = ""
     task = ""
@@ -384,14 +225,13 @@ class FamilyAdapter:
         """Resolve the dataset and audit it, before any artifact is trained."""
         raise NotImplementedError
 
-    def fit(
+    def build(
         self,
         config: ExecutionConfig,
-        run_dir: Path,
         dataset: PreparedDataset,
-        on_epoch: EpochCallback,
-        resume: ResumeState | None = None,
-    ) -> FitResult:
+        recorder: ExecutionRecorder,
+    ) -> FamilyRun:
+        """Build the module and data module the shared Lightning loop drives."""
         raise NotImplementedError
 
 
@@ -443,44 +283,6 @@ class _CocoMaskAdapter(FamilyAdapter):
             source_path=store,
             conversion=conversion.describe(store) if conversion is not None else None,
         )
-
-
-def _build_trainer(config: ExecutionConfig, run_dir: Path) -> tuple[Any, str]:
-    """The one Lightning trainer and the precision that was requested.
-
-    Lightning may substitute a precision the device supports; the caller
-    records ``trainer.precision``, not this request. The monitor forwards a
-    module's stop decision, made from the shared evaluator's score, to the
-    training loop.
-    """
-    from lightning import Callback, Trainer
-
-    class _ProtocolMonitor(Callback):  # type: ignore[misc,valid-type]
-        """Forwards the module's stop decision to the training loop."""
-
-        def on_validation_epoch_end(self, trainer: Any, pl_module: Any) -> None:
-            if getattr(pl_module, "stop_requested", False):
-                trainer.should_stop = True
-
-    protocol = config.protocol
-    precision = "16-mixed" if protocol.amp.enabled and protocol.amp.dtype == "fp16" else "32-true"
-    device = config.backend.device
-    accelerator = "cpu" if device in ("cpu", "mps") else "gpu"
-    trainer = Trainer(
-        max_epochs=protocol.epochs,
-        precision=precision,
-        accelerator=accelerator,
-        devices=1,
-        callbacks=[_ProtocolMonitor()],
-        logger=False,
-        enable_checkpointing=False,
-        enable_progress_bar=False,
-        enable_model_summary=False,
-        num_sanity_val_steps=0,
-        deterministic=True,
-        default_root_dir=str(run_dir),
-    )
-    return trainer, precision
 
 
 def _torchvision_detector(
@@ -959,38 +761,168 @@ def _save_live_checkpoint(network: Any, path: Path) -> None:
     torch.save(payload, path)
 
 
-def _validation_predictions(
-    checkpoint: Path,
-    config: ExecutionConfig,
-    dataset: PreparedDataset,
-    device: str,
-    convert: Callable[[list[Any]], list[dict]],
-) -> list[dict]:
-    """Score a fresh inference model loaded from this epoch's snapshot.
+class _YoloValidationPaths:
+    """The validation split as paths and their stable COCO ids.
 
-    Ultralytics' predictor fuses and freezes the network it is handed. Giving
-    it Lightning's live network makes the next backward pass fail, so each
-    epoch validates a separate wrapper created from the immutable checkpoint
-    written immediately before this call. The checkpoint has no staged ``ema``
-    entry: it names the live weights, so the copy validated here is the model
-    that actually trained.
+    The Lightning loop owns batching and the epoch; the Ultralytics predictor
+    owns letterboxing, NMS and polygon decoding. Passing it the paths keeps the
+    framework's own inference path in charge instead of reimplementing it, and
+    the id travels beside the path so a batch never has to guess its place in
+    the split.
     """
-    from ultralytics import YOLO
 
-    snapshot = YOLO(str(checkpoint))
-    images = split_images(dataset.data_yaml, config.protocol.split)
-    raw = snapshot.predict(
-        source=[str(image) for image in images],
-        imgsz=config.protocol.image_size,
-        batch=config.protocol.batch,
-        # Keep the ranked tail for AP; the shared evaluator applies the
-        # operating point's confidence threshold only to F1.
-        conf=PREDICTION_FLOOR,
-        max_det=prediction_budget(len(dataset.class_names)),
-        device=device,
-        verbose=False,
-    )
-    return convert(list(raw) if isinstance(raw, (list, tuple)) else [raw])
+    def __init__(self, data_yaml: Path, split: str) -> None:
+        self.items = [
+            {"image_id": index, "path": str(path)}
+            for index, path in enumerate(split_images(data_yaml, split))
+        ]
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        return dict(self.items[index])
+
+
+class _YoloDataModule:
+    """The family's data as a LightningDataModule.
+
+    Training reuses the Ultralytics dataset and batch collation. Validation
+    enumerates the split's paths for the Ultralytics predictor, so the same
+    Lightning validation loop drives a YOLO family and a torchvision one.
+    """
+
+    def __init__(self, *, dataset: PreparedDataset, cfg: Any, protocol: Protocol) -> None:
+        super().__init__()
+        self.dataset = dataset
+        self.cfg = cfg
+        self.protocol = protocol
+        self._train_dataset: Any | None = None
+        self._val_dataset: _YoloValidationPaths | None = None
+
+    def setup(self, stage: str | None = None) -> None:
+        if stage in (None, "fit") and self._train_dataset is None:
+            self._train_dataset = _ultralytics_dataset(
+                self.dataset.data_yaml, self.cfg, mode="train"
+            )
+
+    def train_dataloader(self) -> Any:
+        from torch.utils.data import DataLoader
+
+        self.setup("fit")
+        return DataLoader(
+            self._train_dataset,
+            batch_size=self.protocol.batch,
+            shuffle=True,
+            num_workers=0,
+            collate_fn=self._train_dataset.collate_fn,
+        )
+
+    def val_dataloader(self) -> Any:
+        from torch.utils.data import DataLoader
+
+        if self._val_dataset is None:
+            self._val_dataset = _YoloValidationPaths(self.dataset.data_yaml, self.protocol.split)
+        return DataLoader(
+            self._val_dataset,
+            batch_size=self.protocol.batch,
+            shuffle=False,
+            num_workers=0,
+        )
+
+
+class _YoloModule(PolyxModule):
+    """One Ultralytics module trained by the shared Lightning loop.
+
+    Only the torch network is a child module. The Ultralytics wrapper itself
+    subclasses ``nn.Module`` and overrides ``train`` to launch its own trainer,
+    so registering it would turn Lightning's ``model.eval()`` into a full
+    Ultralytics training job.
+    """
+
+    def __init__(
+        self,
+        *,
+        net: Any,
+        convert: Callable[[list[Any], list[int]], list[dict]],
+        image_size: int,
+        class_count: int,
+        device: str,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.net = net
+        self.convert = convert
+        self.image_size = image_size
+        self.class_count = class_count
+        self.device_name = device
+        #: The Ultralytics predictor wrapper is itself an ``nn.Module``. Held
+        #: directly on this module it would become a child, and Lightning's
+        #: ``model.eval()`` would recurse into it and launch the framework's own
+        #: trainer. A plain dict keeps it outside the module tree.
+        self._predictor: dict[str, Any] = {}
+
+    def training_step(self, batch: Any, batch_idx: int) -> Any:
+        # The Ultralytics network computes its own task loss from the batch its
+        # dataloader produced; Lightning owns the step. The Ultralytics loader
+        # yields uint8 images, which its native loop scales to floats first.
+        import torch
+
+        images = batch["img"]
+        if images.dtype == torch.uint8:
+            batch["img"] = images.float() / 255.0
+        else:
+            batch["img"] = images.float()
+        self.net.train()
+        loss, _items = self.net.loss(batch)
+        return loss
+
+    def on_validation_start(self) -> None:
+        """Export this epoch's weights and point the predictor at the export.
+
+        Ultralytics' predictor fuses and freezes the network it is handed, so
+        it never receives the network Lightning is training. The snapshot is
+        written first and predicted from second, which also makes the scored
+        weights and the exported artifact the same bytes.
+        """
+        super().on_validation_start()
+        from ultralytics import YOLO
+
+        if self.fitting():
+            path = self.recorder.layout.native_checkpoint(int(self.current_epoch))
+            self.native_checkpoint_path = path
+        else:
+            path = self.recorder.layout.publication_snapshot
+        self.export_native(path)
+        self._predictor["model"] = YOLO(str(path))
+
+    def validation_step(self, batch: Any, batch_idx: int) -> None:
+        paths = [str(path) for path in batch["path"]]
+        image_ids = [int(image_id) for image_id in batch["image_id"]]
+        raw = self._predictor["model"].predict(
+            source=paths,
+            imgsz=self.image_size,
+            batch=len(paths),
+            # Keep the ranked tail for AP; the shared evaluator applies the
+            # operating point's confidence threshold only to F1.
+            conf=PREDICTION_FLOOR,
+            max_det=prediction_budget(self.class_count),
+            device=self.device_name,
+            verbose=False,
+        )
+        results = list(raw) if isinstance(raw, (list, tuple)) else [raw]
+        self.coco_predictions.extend(self.convert(results, image_ids))
+
+    def export_native(self, path: Path, epoch: int | None = None) -> None:
+        """Write the Ultralytics network that actually trained.
+
+        An Ultralytics checkpoint may carry an ``ema`` entry, and its loader
+        prefers that entry over ``model``. Re-saving a staged checkpoint would
+        therefore validate weights from before this epoch; the live network is
+        deep-copied and written without an ``ema`` key. The payload has no
+        epoch field; the file name is what names the epoch.
+        """
+        _save_live_checkpoint(self.net, path)
 
 
 class _UltralyticsAdapter(_CocoMaskAdapter):
@@ -1014,29 +946,23 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
             source_path=config.data_yaml,
         )
 
-    def _predictions(self, results: list[Any]) -> list[dict]:
+    def _predictions(self, results: list[Any], image_ids: list[int]) -> list[dict]:
         raise NotImplementedError
 
-    def fit(
+    def build(
         self,
         config: ExecutionConfig,
-        run_dir: Path,
         dataset: PreparedDataset,
-        on_epoch: EpochCallback,
-        resume: ResumeState | None = None,
-    ) -> FitResult:
-        from lightning import LightningModule, seed_everything
+        recorder: ExecutionRecorder,
+    ) -> FamilyRun:
+        from lightning import LightningDataModule, LightningModule, seed_everything
         from ultralytics import YOLO
 
         protocol = config.protocol
         device = config.backend.device
         seed_everything(protocol.seed, workers=True)
-        resumed_checkpoint = _lightning_resume_path(resume)
-        # Always start from the family's declared pretrained weights and let
-        # Lightning restore the execution's own checkpoint. An Ultralytics .pt
-        # is not a Lightning checkpoint, so handing it to ``Trainer.fit`` would
-        # fail looking for Lightning's bookkeeping. A pinned weight is resolved
-        # to its verified local file first, so an offline node never downloads.
+        # A pinned weight is resolved to its verified local file first, so an
+        # offline node never downloads.
         resolved_weights = resolve_weights(
             config.family,
             weights_dir=config.weights_dir,
@@ -1044,144 +970,41 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
         )
         model = YOLO(str(resolved_weights.path) if resolved_weights.path else config.family.weights)
         # The pretrained head is sized for its own dataset; the protocol's
-        # dataset decides the class count, so the Ultralytics network is rebuilt
-        # from its yaml and the pretrained weights are transferred into it.
-        model.model = _rebuild_network(model.model, config.family.task, len(dataset.class_names))
-        checkpoint_dir = Path(run_dir) / "checkpoints"
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        resume_dir = checkpoint_dir / "lightning"
-        resume_dir.mkdir(parents=True, exist_ok=True)
-        predict = self._predictions
+        # dataset decides the class count, so the network is rebuilt from its
+        # yaml and the pretrained weights are transferred into it.
+        net = _rebuild_network(model.model, config.family.task, len(dataset.class_names))
+        # The loss and the dataloader read one argument namespace: the
+        # protocol's, with every family-specific augmentation knob off.
+        cfg = _ultralytics_cfg(config.family.task, protocol)
+        net.args = cfg
+        convert = self._predictions
 
-        class _YoloLightningModule(LightningModule):  # type: ignore[misc,valid-type]
-            """One Ultralytics module trained by the Lightning loop."""
+        class _Data(_YoloDataModule, LightningDataModule):  # type: ignore[misc,valid-type]
+            """The family's data module; the loop is shared."""
+
+        datamodule = _Data(dataset=dataset, cfg=cfg, protocol=protocol)
+
+        class _Module(_YoloModule, LightningModule):  # type: ignore[misc,valid-type]
+            """The family's Lightning module; the loop is shared."""
 
             def __init__(self) -> None:
-                super().__init__()
-                # Only the torch network is a child module. The Ultralytics
-                # wrapper subclasses nn.Module and overrides ``train`` to launch
-                # its own trainer, so registering it would turn Lightning's
-                # model.eval() into a full Ultralytics training job.
-                self.net = model.model
-                self.coco_predictions: list[dict] = []
-                self.checkpoint_path = checkpoint_dir / "epoch_000.pt"
-                self._train_dataset: Any | None = None
-                self._cfg: Any | None = None
-                self.stop_requested = False
-
-            def _arguments(self) -> Any:
-                """Build the Ultralytics args once, when training really starts.
-
-                Doing it lazily keeps a fake ``lightning``/``ultralytics`` in a
-                test from importing the real stack, and gives the loss the same
-                arguments the dataloader was built with.
-                """
-                if self._cfg is None:
-                    self._cfg = _ultralytics_cfg(config.family.task, protocol)
-                    self.net.args = self._cfg
-                return self._cfg
-
-            def train_dataloader(self) -> Any:
-                from torch.utils.data import DataLoader
-
-                if self._train_dataset is None:
-                    self._train_dataset = _ultralytics_dataset(
-                        dataset.data_yaml, self._arguments(), mode="train"
-                    )
-                return DataLoader(
-                    self._train_dataset,
-                    batch_size=protocol.batch,
-                    shuffle=True,
-                    num_workers=0,
-                    collate_fn=self._train_dataset.collate_fn,
+                super().__init__(
+                    net=net,
+                    convert=convert,
+                    image_size=protocol.image_size,
+                    class_count=len(dataset.class_names),
+                    device=device,
+                    protocol=protocol,
+                    evaluator=recorder.evaluator,
+                    recorder=recorder,
                 )
 
-            def training_step(self, batch: Any, batch_idx: int) -> Any:
-                # The Ultralytics network computes its own task loss from the
-                # batch its dataloader produced; Lightning owns the step. The
-                # Ultralytics loader yields uint8 images, which its native loop
-                # scales to floats before the forward pass.
-                import torch
-
-                images = batch["img"]
-                if images.dtype == torch.uint8:
-                    batch["img"] = images.float() / 255.0
-                else:
-                    batch["img"] = images.float()
-                self.net.train()
-                loss, _items = self.net.loss(batch)
-                return loss
-
-            def configure_optimizers(self) -> Any:
-                from torch.optim.lr_scheduler import LambdaLR
-
-                optimizer = _build_optimizer(self.net, protocol)
-                scheduler = LambdaLR(optimizer, lr_lambda=_lr_factor(protocol))
-                return {
-                    "optimizer": optimizer,
-                    "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
-                }
-
-            def on_train_epoch_end(self) -> None:
-                epoch = int(getattr(self, "current_epoch", 0))
-                self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
-                # Export the live Lightning network, not the staged checkpoint's
-                # EMA. Both validation and `best.pt` read this artifact.
-                _save_live_checkpoint(self.net, self.checkpoint_path)
-                # Validation runs on a fresh model loaded from this immutable
-                # snapshot. Ultralytics fuses and freezes whatever network it
-                # predicts with, so using the live training module would break
-                # the next backward pass. The shared evaluator remains the only
-                # scorer; no second Ultralytics validation is run.
-                self.coco_predictions = _validation_predictions(
-                    self.checkpoint_path, config, dataset, device, predict
-                )
-                # A real Lightning checkpoint carries the weights, optimizer,
-                # scheduler and epoch progress. One file per epoch is published
-                # before the progress record points at it, so a preemption can
-                # never pair a new checkpoint with an older progress record.
-                resume_checkpoint: Path | None = None
-                current_trainer = getattr(self, "trainer", None)
-                if current_trainer is not None:
-                    resume_checkpoint = resume_dir / f"checkpoint_{epoch:03d}.ckpt"
-                    current_trainer.save_checkpoint(str(resume_checkpoint))
-                # The engine scores this epoch and decides whether to stop.
-                # Setting ``trainer.should_stop`` ends the loop after this
-                # epoch; the registered callback is the same decision for the
-                # validation-driven sibling adapter.
-                result = EpochResult(
-                    epoch=epoch,
-                    predictions=list(self.coco_predictions),
-                    adapter_figures={},
-                    checkpoint=Path(self.checkpoint_path),
-                    resume_checkpoint=resume_checkpoint,
-                    fit_metadata=dict(fit_metadata),
-                )
-                if on_epoch(result):
-                    self.stop_requested = True
-                    if current_trainer is not None:
-                        current_trainer.should_stop = True
-
-        trainer, requested_precision = _build_trainer(config, run_dir)
-        augmentation = _augmentation_report(protocol, self.supported_augmentations)
-        fit_metadata = _fit_metadata(
-            config, trainer, device, requested_precision, resolved_weights, augmentation
-        )
-        fit_kwargs: dict[str, Any] = {}
-        if resumed_checkpoint is not None:
-            fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
-        trainer.fit(_YoloLightningModule(), **fit_kwargs)
-        reported_precision = str(trainer.precision)
-        return FitResult(
-            precision=reported_precision,
-            amp_requested=requested_precision,
-            epochs_completed=int(trainer.current_epoch),
-            amp_active=_amp_active(reported_precision),
+        return FamilyRun(
+            module=_Module(),
+            datamodule=datamodule,
+            weights=resolved_weights,
+            augmentation=_augmentation_report(protocol, self.supported_augmentations),
             device=device,
-            framework=config.family.framework,
-            weights=resolved_weights.describe(),
-            weights_verified=resolved_weights.verified,
-            augmentation=augmentation,
         )
 
 
@@ -1194,8 +1017,8 @@ class YoloDetectionAdapter(_UltralyticsAdapter):
     def prepare(self, config: ExecutionConfig) -> PreparedDataset:
         return self._prepare_boxes(config)
 
-    def _predictions(self, results: list[Any]) -> list[dict]:
-        return coco_predictions_from_results(results)
+    def _predictions(self, results: list[Any], image_ids: list[int]) -> list[dict]:
+        return coco_predictions_from_results(results, image_ids=image_ids)
 
 
 class YoloSegmentationAdapter(_UltralyticsAdapter):
@@ -1207,8 +1030,118 @@ class YoloSegmentationAdapter(_UltralyticsAdapter):
     def prepare(self, config: ExecutionConfig) -> PreparedDataset:
         return self._prepare_masks(config, convert=True)
 
-    def _predictions(self, results: list[Any]) -> list[dict]:
-        return coco_segmentation_predictions_from_results(results)
+    def _predictions(self, results: list[Any], image_ids: list[int]) -> list[dict]:
+        return coco_segmentation_predictions_from_results(results, image_ids=image_ids)
+
+
+class _MaskDataModule:
+    """The COCO mask store as a LightningDataModule.
+
+    torchvision reads the canonical instances directly. Validation runs one
+    image per step because the model pastes every detection's mask at the
+    original resolution: a batch of eight 4K plates would multiply the peak the
+    chunked postprocess exists to bound.
+    """
+
+    def __init__(
+        self,
+        *,
+        store: Path,
+        coco: dict[str, Any],
+        indices: dict[int, int],
+        protocol: Protocol,
+        augmentation: dict[str, Any],
+    ) -> None:
+        super().__init__()
+        self.store = store
+        self.coco = coco
+        self.indices = indices
+        self.protocol = protocol
+        self.augmentation = augmentation
+        self._train_dataset: Any | None = None
+        self._val_dataset: Any | None = None
+
+    def _dataset(self, split: str) -> Any:
+        applied = self.augmentation["applied"] if split == "train" else []
+        return _CocoMaskTorchvisionDataset(
+            self.store, self.coco, split, self.indices, applied, self.protocol
+        )
+
+    def setup(self, stage: str | None = None) -> None:
+        if stage in (None, "fit") and self._train_dataset is None:
+            self._train_dataset = self._dataset("train")
+        if self._val_dataset is None:
+            self._val_dataset = self._dataset(self.protocol.split)
+
+    def train_dataloader(self) -> Any:
+        from torch.utils.data import DataLoader
+
+        self.setup("fit")
+        return DataLoader(
+            self._train_dataset,
+            batch_size=self.protocol.batch,
+            shuffle=True,
+            num_workers=0,
+            collate_fn=_image_target_pairs,
+        )
+
+    def val_dataloader(self) -> Any:
+        from torch.utils.data import DataLoader
+
+        if self._val_dataset is None:
+            self._val_dataset = self._dataset(self.protocol.split)
+        return DataLoader(
+            self._val_dataset,
+            batch_size=1,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=_image_target_pairs,
+        )
+
+
+class _MaskModule(PolyxModule):
+    """One torchvision detector trained by the shared Lightning loop."""
+
+    def __init__(self, *, net: Any, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.net = net
+
+    def training_step(self, batch: Any, batch_idx: int) -> Any:
+        images, targets = batch
+        self.net.train()
+        losses = self.net(images, targets)
+        return sum(losses.values())
+
+    def validation_step(self, batch: Any, batch_idx: int) -> None:
+        import torch
+
+        images, targets = batch
+        self.net.eval()
+        with torch.no_grad():
+            outputs = self.net(images)
+        image_ids = [int(target["image_id"].reshape(-1)[0]) for target in targets]
+        self.coco_predictions.extend(
+            coco_segmentation_predictions_from_torchvision(outputs, image_ids)
+        )
+
+    def on_validation_start(self) -> None:
+        super().on_validation_start()
+        if not self.fitting():
+            return
+        path = self.recorder.layout.native_checkpoint(int(self.current_epoch))
+        self.native_checkpoint_path = path
+        self.export_native(path, epoch=int(self.current_epoch))
+
+    def export_native(self, path: Path, epoch: int | None = None) -> None:
+        """Write the detector's weights in the family's own format."""
+        import torch
+
+        payload = {
+            "state_dict": self.net.state_dict(),
+            "epoch": int(self.current_epoch if epoch is None else epoch),
+        }
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(payload, path)
 
 
 class MaskRcnnAdapter(_CocoMaskAdapter):
@@ -1223,16 +1156,13 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
     def prepare(self, config: ExecutionConfig) -> PreparedDataset:
         return self._prepare_masks(config, convert=False)
 
-    def fit(
+    def build(
         self,
         config: ExecutionConfig,
-        run_dir: Path,
         dataset: PreparedDataset,
-        on_epoch: EpochCallback,
-        resume: ResumeState | None = None,
-    ) -> FitResult:
-        import torch
-        from lightning import LightningModule, seed_everything
+        recorder: ExecutionRecorder,
+    ) -> FamilyRun:
+        from lightning import LightningDataModule, LightningModule, seed_everything
 
         protocol = config.protocol
         device = config.backend.device
@@ -1240,7 +1170,6 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
         coco = read_coco_store(dataset.source_path)
         indices = category_indices(coco)
         augmentation = _augmentation_report(protocol, self.supported_augmentations)
-
         resolved_weights = resolve_weights(
             config.family,
             weights_dir=config.weights_dir,
@@ -1252,137 +1181,35 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
             protocol.image_size,
             resolved_weights.path,
         )
-        # The checkpoint's weights, optimizer, scheduler and epoch progress are
-        # restored by Lightning from its own checkpoint; a pre-fix snapshot has
-        # none, and the helper refuses it instead of restarting the loop.
-        resumed_checkpoint = _lightning_resume_path(resume)
 
-        checkpoint_dir = Path(run_dir) / "checkpoints"
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        resume_dir = checkpoint_dir / "lightning"
-        resume_dir.mkdir(parents=True, exist_ok=True)
-        store = Path(dataset.source_path)
+        class _Data(_MaskDataModule, LightningDataModule):  # type: ignore[misc,valid-type]
+            """The family's data module; the loop is shared."""
 
-        class _MaskRcnnLightningModule(LightningModule):  # type: ignore[misc,valid-type]
-            """One torchvision detector trained by the shared Lightning loop."""
+        datamodule = _Data(
+            store=Path(dataset.source_path),
+            coco=coco,
+            indices=indices,
+            protocol=protocol,
+            augmentation=augmentation,
+        )
+
+        class _Module(_MaskModule, LightningModule):  # type: ignore[misc,valid-type]
+            """The family's Lightning module; the loop is shared."""
 
             def __init__(self) -> None:
-                super().__init__()
-                self.net = model
-                self.coco_predictions: list[dict] = []
-                self.checkpoint_path = checkpoint_dir / "epoch_000.pt"
-                self.stop_requested = False
-                self._train_dataset: Any | None = None
-                self._val_dataset: Any | None = None
-
-            def _split_dataset(self, split: str) -> Any:
-                applied = augmentation["applied"] if split == "train" else []
-                return _CocoMaskTorchvisionDataset(store, coco, split, indices, applied, protocol)
-
-            def train_dataloader(self) -> Any:
-                from torch.utils.data import DataLoader
-
-                if self._train_dataset is None:
-                    self._train_dataset = self._split_dataset("train")
-                return DataLoader(
-                    self._train_dataset,
-                    batch_size=protocol.batch,
-                    shuffle=True,
-                    num_workers=0,
-                    collate_fn=_image_target_pairs,
+                super().__init__(
+                    net=model,
+                    protocol=protocol,
+                    evaluator=recorder.evaluator,
+                    recorder=recorder,
                 )
 
-            def val_dataloader(self) -> Any:
-                from torch.utils.data import DataLoader
-
-                if self._val_dataset is None:
-                    self._val_dataset = self._split_dataset(protocol.split)
-                return DataLoader(
-                    self._val_dataset,
-                    # One image per step. torchvision pastes each detection's
-                    # mask at the original resolution, so a batch of eight 4K
-                    # plates multiplies the peak the chunked paste bounds.
-                    batch_size=1,
-                    shuffle=False,
-                    num_workers=0,
-                    collate_fn=_image_target_pairs,
-                )
-
-            def training_step(self, batch: Any, batch_idx: int) -> Any:
-                images, targets = batch
-                self.net.train()
-                losses = self.net(images, targets)
-                return sum(losses.values())
-
-            def validation_step(self, batch: Any, batch_idx: int) -> None:
-                images, targets = batch
-                self.net.eval()
-                with torch.no_grad():
-                    outputs = self.net(images)
-                image_ids = [int(target["image_id"].reshape(-1)[0]) for target in targets]
-                self.coco_predictions.extend(
-                    coco_segmentation_predictions_from_torchvision(outputs, image_ids)
-                )
-
-            def configure_optimizers(self) -> Any:
-                from torch.optim.lr_scheduler import LambdaLR
-
-                optimizer = _build_optimizer(self.net, protocol)
-                scheduler = LambdaLR(optimizer, lr_lambda=_lr_factor(protocol))
-                return {
-                    "optimizer": optimizer,
-                    "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
-                }
-
-            def on_validation_epoch_end(self) -> None:
-                epoch = int(getattr(self, "current_epoch", 0))
-                self.checkpoint_path = checkpoint_dir / f"epoch_{epoch:03d}.pt"
-                torch.save(
-                    {"state_dict": self.net.state_dict(), "epoch": epoch},
-                    self.checkpoint_path,
-                )
-                # The family-native export above keeps its historical shape;
-                # resume uses a real Lightning checkpoint so the optimizer,
-                # scheduler and epoch loop continue instead of restarting.
-                resume_checkpoint: Path | None = None
-                current_trainer = getattr(self, "trainer", None)
-                if current_trainer is not None:
-                    resume_checkpoint = resume_dir / f"checkpoint_{epoch:03d}.ckpt"
-                    current_trainer.save_checkpoint(str(resume_checkpoint))
-                result = EpochResult(
-                    epoch=epoch,
-                    predictions=list(self.coco_predictions),
-                    adapter_figures={},
-                    checkpoint=Path(self.checkpoint_path),
-                    resume_checkpoint=resume_checkpoint,
-                    fit_metadata=dict(fit_metadata),
-                )
-                self.coco_predictions = []
-                # The engine scores this epoch and decides whether to stop.
-                if on_epoch(result):
-                    self.stop_requested = True
-                    if current_trainer is not None:
-                        current_trainer.should_stop = True
-
-        trainer, requested_precision = _build_trainer(config, run_dir)
-        fit_metadata = _fit_metadata(
-            config, trainer, device, requested_precision, resolved_weights, augmentation
-        )
-        fit_kwargs: dict[str, Any] = {}
-        if resumed_checkpoint is not None:
-            fit_kwargs["ckpt_path"] = str(resumed_checkpoint)
-        trainer.fit(_MaskRcnnLightningModule(), **fit_kwargs)
-        reported_precision = str(trainer.precision)
-        return FitResult(
-            precision=reported_precision,
-            amp_requested=requested_precision,
-            epochs_completed=int(trainer.current_epoch),
-            amp_active=_amp_active(reported_precision),
-            device=device,
-            framework=config.family.framework,
-            weights=resolved_weights.describe(),
-            weights_verified=resolved_weights.verified,
+        return FamilyRun(
+            module=_Module(),
+            datamodule=datamodule,
+            weights=resolved_weights,
             augmentation=augmentation,
+            device=device,
         )
 
 

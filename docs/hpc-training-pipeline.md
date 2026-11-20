@@ -124,6 +124,7 @@ logs/training.log      # plain-text execution log
 checkpoints/best.pt    # best live weights, selected by with-class F1
 checkpoints/epoch_NNN.pt # live-weight export per epoch (no staged EMA)
 checkpoints/lightning/checkpoint_NNN.ckpt # immutable per-epoch Lightning state
+checkpoints/lightning/last.ckpt          # the resume point Lightning writes
 completion.json        # written last, only after every required artifact exists
 ```
 
@@ -312,19 +313,29 @@ only variable:
 
 ## How one epoch is trained
 
-The Ultralytics families share one wrapper:
+`lightning_loop.py` owns the loop, the callbacks and the shared module
+behaviour. An adapter supplies two objects and nothing else:
 
-- the pretrained network is rebuilt from its own yaml with the dataset's class
-  count, and the pretrained weights are transferred into the matching layers;
-- `train_dataloader` reuses the Ultralytics dataset and batch collation over
-  the job-time labels;
-- `training_step` hands the batch to the Ultralytics network's own loss;
-- `configure_optimizers` applies the protocol's optimizer, weight decay,
-  momentum, warmup and cosine schedule;
-- at the end of the epoch, one Ultralytics prediction pass over the validation
-  split produces COCO predictions; the shared evaluator scores them, and that
-  score is the only one recorded. Ultralytics' own validator is not run a second
-  time and no discarded figures are presented as a cross-check.
+- a `LightningModule` with the model, `training_step`, `validation_step` and
+  the family's native export;
+- a `LightningDataModule` with the training and validation loaders.
+
+The shared module provides the rest, so a family cannot change it:
+`configure_optimizers` (the protocol's optimizer, weight decay, momentum,
+warmup and cosine schedule), the validation prediction buffer, and the score
+the callbacks act on.
+
+- At `on_validation_start` the YOLO families export the epoch's native snapshot;
+  `validation_step` then predicts from that file, in batches. Ultralytics'
+  predictor fuses and freezes the network it is handed, so the live training
+  network is never passed to it.
+- `on_validation_epoch_end` scores the collected COCO predictions with the
+  shared evaluator and logs `with_class_score`. That single value is what
+  `EarlyStopping` and `ModelCheckpoint` read; Ultralytics' own validator never
+  runs and no discarded figures are presented as a cross-check.
+- `on_validation_end` (after both callbacks have run) writes the progress
+  record and, for YOLO, has already written the epoch snapshot the validation
+  used.
 
 Mask R-CNN follows the same shape with torchvision's own pieces: a
 `DataLoader` over the canonical COCO instances and their rasterized masks, the
@@ -339,20 +350,34 @@ still torchvision's own; the adapter replaces only the transform's `postprocess`
 call, never the model. Validation runs one image per step for the same reason:
 a batch of eight plates would multiply that peak by eight.
 
-At the end of every epoch each adapter writes two kinds of checkpoint. The
-family-native export (`epoch_NNN.pt`, and `best.pt` restored from it) keeps its
-historical shape for compatibility. Each epoch also writes its own
-`checkpoints/lightning/checkpoint_NNN.ckpt` with `Trainer.save_checkpoint`: it
-carries the weights, optimizer, scheduler and epoch progress, and the progress
-snapshot is published atomically only after that checkpoint exists. A
-preemption therefore restores a matched pair, never new weights with older
-selection bookkeeping. The snapshot also carries the fit's own record — the
-precision Lightning actually ran, the device, the verified weights and the
-augmentation — so a publication recovered after the last epoch states the same
-facts instead of inventing them. An Ultralytics `.pt` is not a Lightning checkpoint and
-is never used for resume. If a progress snapshot has no Lightning checkpoint
-(one written before this behaviour existed), the execution refuses to resume
-instead of silently restarting the epoch loop.
+Checkpointing, selection and stopping are Lightning's own callbacks, configured
+once in `build_trainer`:
+
+- `ModelCheckpoint(monitor="with_class_score", mode="max", save_top_k=-1,
+  save_last=True)` keeps every epoch and names the strictly best one. A gain
+  of any size replaces the best; the delta plays no part here.
+- `EarlyStopping(monitor="with_class_score", mode="max",
+  patience=<protocol>, min_delta=<protocol>)` counts non-improving validation
+  epochs against the delta and stops the loop. A gain smaller than the delta
+  therefore still replaces `best.pt` while patience keeps expiring.
+- An atomic `CheckpointIO` writes each checkpoint beside its destination and
+  renames it into place, so `last.ckpt` is never a torn file when a time limit
+  arrives mid-write.
+
+The family-native export (`epoch_NNN.pt`, and `best.pt` restored from the kept
+checkpoint) keeps its historical shape for compatibility. An Ultralytics `.pt`
+is not a Lightning checkpoint and is never used for resume. If a progress
+snapshot has no Lightning checkpoint (one written before this behaviour
+existed), the execution refuses to resume instead of silently restarting the
+epoch loop.
+
+Publication re-validates the kept checkpoint once and scores that run, rather
+than carrying the last epoch's figures forward. `metrics.json` and `best.pt`
+therefore always describe the same weights, including after a resume whose
+remaining epochs never improved. The progress record also carries the fit's own
+record — the precision Lightning actually ran, the device, the verified weights
+and the augmentation — so a publication recovered after the last epoch states
+the same facts instead of inventing them.
 
 The snapshot also names the dataset it trained on, as one digest over every
 image and label it hashed. A resume compares that digest against the dataset the
@@ -369,7 +394,8 @@ and keep weights that never trained in this run. Validation loads a fresh
 inference wrapper from that live-weight snapshot. Ultralytics' predictor fuses
 and freezes the network it is handed, so scoring with the live training module
 would break the next backward pass; the two-epoch real-framework test guards
-this.
+this. `tests/test_pipeline_best_selection.py` pins the two thresholds and the
+fact that patience survives a preemption.
 
 On a machine without a GPU, Lightning substitutes `bf16-mixed` for the requested
 `16-mixed`. `training_state.json` records `amp_requested` (`16-mixed`) next to

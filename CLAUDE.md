@@ -724,9 +724,21 @@ one execution or imports a COCO mask export. A search is the Hydra multirun
 (`sweep_app.py`), never a flag on this command. The GUI Trainer and its native
 training wrapper are untouched by this path.
 
-- One PyTorch Lightning loop (`adapters.py`) trains every family. The
-  Ultralytics adapters reuse the YOLO neural module and dataloader; Mask R-CNN
-  is the sibling torchvision adapter under the same contract.
+- One PyTorch Lightning loop trains every family. `lightning_loop.py` builds
+  the one `Trainer`, its callbacks and the shared module behaviour
+  (`PolyxModule`): optimizer and schedule from the protocol, the with-class
+  score logged as `with_class_score`, the progress record and the native
+  export. The adapters (`adapters.py`) only build a `LightningModule` and a
+  `LightningDataModule`: the Ultralytics ones reuse the YOLO neural module and
+  dataloader; Mask R-CNN is the sibling torchvision adapter under the same
+  contract.
+- Selection and stopping are Lightning's own `ModelCheckpoint` and
+  `EarlyStopping`, both monitoring the one logged score. That gives the two
+  thresholds the benchmark needs without a second implementation: the kept
+  checkpoint is any strictly better score, while patience counts epochs that
+  fail to beat `min_delta`. `save_last=True` keeps `last.ckpt` and the
+  per-epoch files stay immutable; an atomic `CheckpointIO` renames each one
+  into place so a SLURM time limit cannot leave a torn resume point.
 - `protocol` in `conf/protocol/default.yaml` is framework-neutral and consumed
   unchanged: split, seed, epochs, batch, image size, confidence, optimizer, LR,
   momentum, weight decay, schedule, warmup, the benchmark augmentation subset,
@@ -751,34 +763,39 @@ training wrapper are untouched by this path.
   original-resolution tensors are never all live on the GPU at once. AP is a
   separate ranking figure and never selects a checkpoint or drives Optuna.
   `mask_iou` is class-aware.
-- `execution.py` owns audit, provenance, early stopping, best-weight
-  restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
+- `execution.py` owns audit, provenance, publication and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
   `report.md`, `logs/`, `checkpoints/`, `completion.json`). `best.pt` is the
   kept checkpoint. Saved audit findings are stable codes plus parameters, never
   translated prose. `training_state.json` is published before the metrics it
   accompanies and `completion.json` atomically last, after the final log line; a
   final epoch with missing artifacts is published rather than retrained, using
-  the fit record the progress snapshot carries. A fresh run aimed at an
-  existing execution directory is refused: `resume=true` continues it, a new
-  directory starts clean. `PipelineError` carries a stable code, invariant
+  the fit record the progress snapshot carries. Before publishing, the kept
+  checkpoint is validated once more, so `metrics.json` and `best.pt` always
+  describe the same weights — including after a resume whose remaining epochs
+  never improved. A fresh run aimed at an existing execution directory is
+  refused: `resume=true` continues it, a new directory starts clean. `PipelineError` carries a stable code, invariant
   English template and parameters; the command logs those and translates only
   at display time.
-- `resume.py` reads the per-epoch progress snapshot; the best epoch's metrics
-  and the fit's own record (precision that ran, device, verified weights,
-  augmentation) travel with it. Each epoch writes an immutable
-  `checkpoints/lightning/checkpoint_NNN.ckpt`, and the progress record is
-  published atomically only after it exists, so a preemption cannot pair new
-  weights with older bookkeeping. A different protocol or a different dataset
+- `resume.py` reads the per-epoch progress snapshot; the fit's own record
+  (precision that ran, device, verified weights, augmentation) and the best
+  checkpoint's path travel with it. Lightning writes
+  `checkpoints/lightning/checkpoint_NNN.ckpt` per completed epoch and
+  `last.ckpt`; resuming hands `last.ckpt` to `Trainer.fit`, which restores
+  weights, optimizer, scheduler, epoch progress and both callbacks' state
+  (patience and the kept best). The progress record is the human-readable
+  heartbeat and the guard, not the training authority: the checkpoint decides
+  how many epochs completed. A different protocol or a different dataset
   fingerprint is refused: relabelled images or an edited COCO export are a
   different dataset, and the kept weights belong to the bytes that trained
   them.
-- YOLO validation scores a fresh inference wrapper loaded from that epoch's
-  native checkpoint. The export is written from the live Lightning network with
-  no staged `ema` key, so validation and `best.pt` name the weights that
-  actually trained; Ultralytics fuses and freezes whatever network it predicts
-  with, so scoring the live module would break the next backward pass. The
-  two-epoch real-framework test guards this.
+- Both families validate inside Lightning's validation loop, in `validation_step`.
+  YOLO exports the epoch's native snapshot at `on_validation_start` and scores a
+  wrapper loaded from that file: Ultralytics fuses and freezes whatever network
+  it predicts with, so the live module is never handed to the predictor. The
+  export has no staged `ema` key, so the scored bytes are the trained weights;
+  the two-epoch real-framework test guards this. The checkpoint and the
+  published metrics are re-scored from the same file.
 - A campaign first proves that its box and mask sources hold the same image
   names in the same folds with byte-identical content, and both declare
   real-domain imagery, so the model is the only variable. COCO masks with more

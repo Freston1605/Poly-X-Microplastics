@@ -59,7 +59,7 @@ def test_training_fails_closed_when_a_pinned_weight_is_absent(
     weights.mkdir()
     (weights / "SHA256SUMS").write_text(f"{'0' * 64}  yolov8n.pt\n", encoding="utf-8")
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
-    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
     output = tmp_path / "executions" / "absent-weight"
 
     code = _command(
@@ -83,7 +83,7 @@ def test_training_fails_closed_when_the_digest_does_not_match(
     weights = tmp_path / "weights"
     _stage(weights, "yolov8n.pt", b"tampered", digest="1" * 64)
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
-    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
     output = tmp_path / "executions" / "bad-digest"
 
     code = _command(
@@ -105,7 +105,7 @@ def test_a_staged_verified_weight_is_the_one_the_framework_receives(
     weights = tmp_path / "weights"
     staged = _stage(weights, "yolov8n.pt", b"a trusted weight placeholder")
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
-    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
     output = tmp_path / "executions" / "verified-weight"
 
     code = _command(
@@ -136,7 +136,8 @@ def test_a_torchvision_pinned_checkpoint_is_loaded_instead_of_the_default(
     (weights / "SHA256SUMS").write_text(
         f"{sha256_file(checkpoint)}  {checkpoint.name}\n", encoding="utf-8"
     )
-    _FakeDetector.prediction_sets = list(_perfect_validation())
+    # Two validation images: one epoch plus the publication re-score.
+    _FakeDetector.prediction_sets = _perfect_validation() * 2
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.inference_calls = 0

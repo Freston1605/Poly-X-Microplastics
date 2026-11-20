@@ -13,11 +13,7 @@ private helper of the pipeline is imported.
 
 from __future__ import annotations
 
-import importlib.metadata
-import importlib.util
 import json
-import sys
-import types
 from pathlib import Path
 
 import numpy as np
@@ -127,6 +123,10 @@ class _FakeNetwork(torch.nn.Module):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.zeros(1))
 
+    def loss(self, batch: dict) -> tuple[torch.Tensor, dict]:
+        """A differentiable (loss, items) pair, the shape Ultralytics returns."""
+        return self.weight * 1.0, {}
+
 
 class _FakeYOLO:
     """Ultralytics stand-in: one per-image prediction set per validation call."""
@@ -151,78 +151,30 @@ class _FakeYOLO:
         target.write_bytes(f"checkpoint:{self.weights}:{target.name}".encode())
 
 
-class _FakeLightningModule:
-    def __init__(self) -> None:
-        self._epoch = 0
+def _with_publication(
+    prediction_sets: list[list[list[dict]]],
+) -> list[list[list[dict]]]:
+    """One scripted validation per epoch, plus the publication re-score.
 
-    @property
-    def current_epoch(self) -> int:
-        return self._epoch
-
-
-class _FakeTrainer:
-    def __init__(self, **kwargs: object) -> None:
-        self.kwargs = kwargs
-        self.max_epochs = int(kwargs.get("max_epochs", 1))
-        self.precision = str(kwargs.get("precision", "32-true"))
-        self.callbacks = list(kwargs.get("callbacks", []))
-        self.should_stop = False
-        self.current_epoch = 0
-
-    def fit(self, module: object, ckpt_path: object = None) -> None:
-        module.trainer = self
-        start_epoch = 0
-        if ckpt_path is not None:
-            start_epoch = int(Path(ckpt_path).read_text(encoding="utf-8").split(":")[-1]) + 1
-        for epoch in range(start_epoch, self.max_epochs):
-            self.current_epoch = epoch
-            module._epoch = epoch
-            module.on_train_epoch_end()
-            for callback in self.callbacks:
-                callback.on_validation_epoch_end(self, module)
-            self.current_epoch = epoch + 1
-            if self.should_stop:
-                break
-
-    def save_checkpoint(self, path: object) -> None:
-        """Stand-in for Lightning's checkpoint writer; names the epoch it holds."""
-        target = Path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(f"lightning-checkpoint:{self.current_epoch}", encoding="utf-8")
-
-
-class _FakeCallback:
-    pass
+    A run validates every epoch and validates the kept epoch once more before
+    it publishes, so the last scripted outcome is the one that produces the
+    published metrics.
+    """
+    if not prediction_sets:
+        return []
+    return [*prediction_sets, prediction_sets[0]]
 
 
 def _install_fakes(
     monkeypatch: pytest.MonkeyPatch, prediction_sets: list[list[list[dict]]]
 ) -> None:
+    """Replace only the Ultralytics wrapper; Lightning runs for real."""
+    import ultralytics
+
     _FakeYOLO.prediction_sets = list(prediction_sets)
     _FakeYOLO.instances = []
     _FakeYOLO.network = None
-    lightning = types.ModuleType("lightning")
-    lightning.LightningModule = _FakeLightningModule
-    lightning.Callback = _FakeCallback
-    lightning.Trainer = _FakeTrainer
-    lightning.seed_everything = lambda seed, **_kw: seed
-    ultralytics = types.ModuleType("ultralytics")
-    ultralytics.YOLO = _FakeYOLO
-    # Stand in for the package, not for a flat module: the loader helpers the
-    # Mask R-CNN sibling imports (`ultralytics.data`, `ultralytics.utils`) must
-    # still resolve after a YOLO-seg run has installed this double for the rest
-    # of the test session.
-    specification = importlib.util.find_spec("ultralytics")
-    if specification is not None:
-        ultralytics.__spec__ = specification
-        if specification.submodule_search_locations:
-            ultralytics.__path__ = list(specification.submodule_search_locations)
-    try:
-        ultralytics.__version__ = importlib.metadata.version("ultralytics")
-    except importlib.metadata.PackageNotFoundError:
-        ultralytics.__version__ = "0"
-    monkeypatch.setitem(sys.modules, "lightning", lightning)
-    monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
+    monkeypatch.setattr(ultralytics, "YOLO", _FakeYOLO)
 
 
 class _TinySegNet(torch.nn.Module):
@@ -434,7 +386,7 @@ def _train_segmentation(
     *,
     epochs: int = 1,
 ) -> tuple[int, Path]:
-    _install_fakes(monkeypatch, prediction_sets)
+    _install_fakes(monkeypatch, _with_publication(prediction_sets))
     output = tmp_path / "executions" / "segmentation"
     scratch = tmp_path / "scratch"
     code = _command(
@@ -512,21 +464,25 @@ def test_yolo_seg_trains_from_coco_masks_for_one_epoch(
     # The first wrapper is the training model; every later one is the
     # per-epoch validation snapshot loaded from disk.
     assert _FakeYOLO.instances[0].weights == "yolov8n-seg.pt"
+    # Every later wrapper validates an immutable snapshot written to disk: one
+    # per epoch, plus the scratch snapshot of the restored best weights that
+    # the publication re-score predicts from.
     assert all(
-        Path(instance.weights).name.startswith("epoch_") for instance in _FakeYOLO.instances[1:]
+        Path(instance.weights).name.startswith(("epoch_", ".validation"))
+        for instance in _FakeYOLO.instances[1:]
     )
 
     # Checkpoint selection uses the with-class score; localisation is printed
-    # beside it and the best weights are the kept epoch's own file.
-    from polyx.core.provenance import sha256_file
+    # beside it and the best weights are the kept epoch's own weights.
+    from tests.test_pipeline_local_tracer import _same_weights
 
     printed = capsys.readouterr().out
     assert "SELECTION: with_class_score=1.000000" in printed
     assert "CRITERION: with-class operating-point F1" in printed
     assert "LOCALISATION: 1.000000" in printed
     assert "mask IoU" in printed
-    assert sha256_file(output / "checkpoints" / "best.pt") == sha256_file(
-        output / "checkpoints" / "epoch_000.pt"
+    assert _same_weights(
+        output / "checkpoints" / "best.pt", output / "checkpoints" / "epoch_000.pt"
     )
 
 
@@ -586,7 +542,7 @@ def test_segmentation_and_detection_share_the_same_protocol(
     from tests.test_pipeline_local_tracer import build_tiny_dataset
 
     store = _imported_store(tmp_path)
-    _install_fakes(monkeypatch, [_perfect_validation()])
+    _install_fakes(monkeypatch, _with_publication([_perfect_validation()]))
     seg_output = tmp_path / "executions" / "seg-protocol"
     assert (
         _command(
@@ -603,7 +559,7 @@ def test_segmentation_and_detection_share_the_same_protocol(
     from tests.test_pipeline_local_tracer import _boxes_prediction
     from tests.test_pipeline_local_tracer import _install_fakes as install
 
-    install(monkeypatch, [_boxes_prediction()])
+    install(monkeypatch, _with_publication([_boxes_prediction()]))
     det_output = tmp_path / "executions" / "det-protocol"
     assert (
         _command(
@@ -631,7 +587,7 @@ def test_amp_records_the_precision_that_actually_ran_not_the_request(
     """
     store = _imported_store(tmp_path)
     network = _tiny_seg_net()
-    _install_real_lightning_fakes(monkeypatch, network, [_perfect_validation()])
+    _install_real_lightning_fakes(monkeypatch, network, _with_publication([_perfect_validation()]))
     output = tmp_path / "executions" / "amp-cpu"
 
     code = _command(
@@ -663,7 +619,7 @@ def test_a_second_run_reuses_the_scratch_conversion(
     first = _read(output / "provenance.json")["conversion"]
     assert first["cached"] is False
 
-    _install_fakes(monkeypatch, [_perfect_validation()])
+    _install_fakes(monkeypatch, _with_publication([_perfect_validation()]))
     second_output = tmp_path / "executions" / "segmentation-second"
     second_code = _command(
         f"coco_dataset={store}",
@@ -814,7 +770,7 @@ def test_one_epoch_completes_under_the_real_lightning_loop(
     """
     store = _imported_store(tmp_path)
     network = _tiny_seg_net()
-    _install_real_lightning_fakes(monkeypatch, network, [_perfect_validation()])
+    _install_real_lightning_fakes(monkeypatch, network, _with_publication([_perfect_validation()]))
     output = tmp_path / "executions" / "real-loop"
 
     code = _command(

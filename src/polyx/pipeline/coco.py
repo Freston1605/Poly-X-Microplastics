@@ -13,14 +13,17 @@ import numpy as np
 from polyx.pipeline.masks import PackedMask
 
 
-def coco_predictions_from_results(results: Any) -> list[dict]:
+def coco_predictions_from_results(results: Any, image_ids: list[int] | None = None) -> list[dict]:
     """Turn Ultralytics detection results into COCO instance predictions.
 
-    Result order matches the sorted validation image order used by the dataset
-    reader, so the zero-based position is the COCO ``image_id``.
+    ``image_ids`` names the split position of each result. Validation runs in
+    batches, so a batch cannot infer its offset from the result order alone;
+    the loader carries the id beside the path. Without ``image_ids`` the
+    zero-based position is used, which is what a whole-split call means.
     """
     predictions: list[dict] = []
-    for image_id, result in enumerate(results or []):
+    for position, result in enumerate(results or []):
+        image_id = image_ids[position] if image_ids is not None else position
         boxes = getattr(result, "boxes", None)
         if boxes is None:
             continue
@@ -93,7 +96,7 @@ def _numpy(value: Any) -> np.ndarray:
     return np.asarray(value, dtype=float)
 
 
-def coco_segmentation_predictions_from_results(results: Any) -> list[dict]:
+def coco_segmentation_predictions_from_results(results: Any, image_ids: list[int]) -> list[dict]:
     """Turn Ultralytics segmentation results into COCO instance predictions.
 
     Ultralytics reports masks as pixel-coordinate polygons in ``masks.xy``,
@@ -102,10 +105,12 @@ def coco_segmentation_predictions_from_results(results: Any) -> list[dict]:
     retina masks instead would upsample every candidate to the original image
     -- hundreds of full-resolution masks per plate -- so the framework's own
     boundary representation is what travels. A result without masks stays out:
-    a mask prediction is never scored as a box.
+    a mask prediction is never scored as a box. ``image_ids`` names each
+    result's place in the split, as in the detection converter.
     """
     predictions: list[dict] = []
-    for image_id, result in enumerate(results or []):
+    for position, result in enumerate(results or []):
+        image_id = image_ids[position]
         boxes = getattr(result, "boxes", None)
         masks = getattr(result, "masks", None)
         if boxes is None or masks is None:

@@ -173,6 +173,19 @@ def _build_protocol(raw: dict) -> Protocol:
     confidence = float(raw.get("confidence", 0.25))
     if not 0.0 <= confidence <= 1.0:
         raise ValueError("protocol.confidence must be within [0, 1]")
+    # Lightning's callbacks own early stopping and checkpoint selection; a
+    # value they cannot honour is refused here instead of being reinterpreted.
+    monitor = str(stopping.get("monitor", "with_class_score"))
+    if monitor != "with_class_score":
+        raise ValueError(f"unsupported early-stopping monitor: {monitor}")
+    mode = str(stopping.get("mode", "max"))
+    if mode != "max":
+        raise ValueError(f"unsupported early-stopping mode: {mode}")
+    if not bool(stopping.get("restore_best", True)):
+        raise ValueError(
+            "early_stopping.restore_best=false is not supported: the kept epoch "
+            "is always exported as best.pt"
+        )
     return Protocol(
         split=str(raw["split"]),
         seed=int(raw["seed"]),

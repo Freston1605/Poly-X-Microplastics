@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:57-0500\n"
+"POT-Creation-Date: 2026-11-19 22:03-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6051,31 +6051,31 @@ msgstr ""
 msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:143
+#: src/polyx/pipeline/artifacts.py:161
 msgid "Training execution report"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:145
+#: src/polyx/pipeline/artifacts.py:163
 msgid "Family"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:146
+#: src/polyx/pipeline/artifacts.py:164
 msgid "Backend"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:147
+#: src/polyx/pipeline/artifacts.py:165
 msgid "Selection metric"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:149
+#: src/polyx/pipeline/artifacts.py:167
 msgid "Figures"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:161
+#: src/polyx/pipeline/artifacts.py:179
 msgid "Early stopping"
 msgstr ""
 
-#: src/polyx/pipeline/artifacts.py:155
+#: src/polyx/pipeline/artifacts.py:173
 msgid "Per class"
 msgstr ""
 
@@ -6171,28 +6171,28 @@ msgid ""
 "cohort comparison"
 msgstr ""
 
-#: src/polyx/pipeline/execution.py:69
+#: src/polyx/pipeline/execution.py:79
 #, python-format
 msgid "cannot verify the dataset of %(path)s: it has no file hashes"
 msgstr ""
 
-#: src/polyx/pipeline/execution.py:75
+#: src/polyx/pipeline/execution.py:85
 #, python-format
 msgid ""
 "the dataset behind %(path)s changed since its checkpoint was written; start a new output "
 "directory instead of resuming over it"
 msgstr ""
 
-#: src/polyx/pipeline/execution.py:169
+#: src/polyx/pipeline/execution.py:179
 #, python-format
 msgid "dataset audit failed: %(codes)s"
 msgstr ""
 
-#: src/polyx/pipeline/execution.py:116
+#: src/polyx/pipeline/execution.py:126
 msgid "protocol changed since the progress snapshot was written"
 msgstr ""
 
-#: src/polyx/pipeline/execution.py:131
+#: src/polyx/pipeline/execution.py:141
 #, python-format
 msgid ""
 "%(path)s already holds an execution; pass resume=true to continue it or choose a new output "

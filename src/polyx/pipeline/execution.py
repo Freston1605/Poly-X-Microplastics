@@ -1,9 +1,10 @@
 """One config-driven training execution on the local backend.
 
-The engine owns the parts that must be identical for every family: dataset
-audit and hashing, provenance, the shared evaluator, early stopping on the
-with-class score, best-weight restoration and the artifact layout. The family
-adapter owns only the framework-specific fit.
+The engine owns the parts that surround training: the dataset audit and its
+fingerprint, provenance, the shared evaluator, the artifact layout and the
+publication record. The training loop itself is Lightning's, driven by the
+callbacks in ``polyx.pipeline.lightning_loop``: a family only supplies its
+module and its data module.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from typing import Any
 from polyx.core.i18n import N_
 from polyx.core.paths import ROOT
 from polyx.core.provenance import commit_git
-from polyx.pipeline.adapters import EpochResult, build_adapter
+from polyx.pipeline.adapters import build_adapter
 from polyx.pipeline.artifacts import (
     ArtifactLayout,
     append_log,
@@ -31,8 +32,17 @@ from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_d
 from polyx.pipeline.dataset import dataset_fingerprint
 from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.evaluation import SharedEvaluator
+from polyx.pipeline.lightning_loop import (
+    ExecutionRecorder,
+    TrainingOutcome,
+    build_trainer,
+    checkpoint_epoch,
+    evaluate_best,
+    recovered_outcome,
+    run_fit,
+    stopping_record,
+)
 from polyx.pipeline.resume import ResumeState
-from polyx.pipeline.training import EarlyStoppingState
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -156,7 +166,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         append_log(
             layout.training_log,
             f"resume from epoch={resume_state.epochs_completed} "
-            f"checkpoint={resume_state.last_checkpoint}",
+            f"checkpoint={resume_state.resume_checkpoint}",
         )
 
     adapter = build_adapter(config.family)
@@ -185,40 +195,19 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
         task=config.family.task,
         confidence_threshold=config.protocol.confidence,
     )
-    stopping = EarlyStoppingState(asdict(config.protocol.early_stopping))
-    if resume_state is not None:
-        stopping.load_state(
-            {
-                "best_score": resume_state.best_score,
-                "best_epoch": resume_state.best_epoch,
-                "best_checkpoint": (
-                    str(resume_state.best_checkpoint) if resume_state.best_checkpoint else None
-                ),
-                "patience_reference": resume_state.patience_reference,
-                "non_improving": resume_state.non_improving,
-                "stopped_early": resume_state.stopped_early,
-            }
-        )
-
-    best: dict[str, Any] = {
-        "predictions": [],
-        "adapter_figures": {},
-        "metrics": None,
-        "epoch": -1,
-    }
-    if resume_state is not None and resume_state.best_epoch >= 0:
-        # A resumed execution inherits the best epoch it never re-evaluates.
-        # Without its figures a non-improving remaining epoch would score an
-        # empty prediction list and overwrite the real metrics with zeros.
-        if resume_state.best_metrics is None:
-            raise RuntimeError(
-                "the progress snapshot names a best epoch but carries no best "
-                "metrics; it predates the resumable selection record"
-            )
-        best.update(metrics=resume_state.best_metrics, epoch=resume_state.best_epoch)
-    first_checkpoint: Path | None = (
-        resume_state.last_checkpoint if resume_state is not None else None
+    recorder = ExecutionRecorder(
+        layout=layout,
+        config=config,
+        dataset_fingerprint=fingerprint,
+        evaluator=evaluator,
+        best_checkpoint_path=(
+            str(resume_state.best_lightning_checkpoint)
+            if resume_state is not None and resume_state.best_lightning_checkpoint
+            else None
+        ),
+        best_epoch=resume_state.best_epoch if resume_state is not None else -1,
     )
+    run = adapter.build(config, prepared, recorder)
 
     git = commit_git(ROOT)
     # A container has no source checkout: the build embeds the commit as
@@ -243,47 +232,6 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
     }
     if prepared.conversion is not None:
         provenance["conversion"] = prepared.conversion
-
-    def on_epoch(result: EpochResult) -> bool:
-        nonlocal first_checkpoint
-        if first_checkpoint is None:
-            first_checkpoint = result.checkpoint
-        metrics = evaluator.evaluate(
-            result.predictions,
-            adapter_figures=result.adapter_figures,
-        )
-        score = float(metrics["selection"]["value"])
-        decision = stopping.update(score, result.epoch, result.checkpoint)
-        append_log(
-            layout.training_log,
-            f"epoch={result.epoch} with_class_score={score:.6f} improved={decision.improved}",
-        )
-        if decision.improved:
-            best.update(
-                predictions=result.predictions,
-                adapter_figures=result.adapter_figures,
-                metrics=metrics,
-                epoch=result.epoch,
-            )
-        progress = stopping.to_dict(result.epoch + 1)
-        progress.update(
-            {
-                "epoch_completed": result.epoch,
-                "last_checkpoint": str(result.checkpoint),
-                "resume_checkpoint": (
-                    str(result.resume_checkpoint) if result.resume_checkpoint else None
-                ),
-                "best_checkpoint": (
-                    str(stopping.best_checkpoint) if stopping.best_checkpoint else None
-                ),
-                "best_metrics": best["metrics"],
-                "protocol": protocol_to_dict(config),
-                "dataset_fingerprint": fingerprint,
-                "fit": result.fit_metadata,
-            }
-        )
-        write_json_atomic(progress, layout.progress)
-        return decision.stop
 
     def publish(
         final_metrics: dict[str, Any],
@@ -324,74 +272,105 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             "training_state": training_state,
         }
 
-    training_done = resume_state is not None and (
-        resume_state.epochs_completed >= config.protocol.epochs or resume_state.stopped_early
-    )
-    if training_done and not layout.completion.is_file():
-        # The final epoch is already on disk. Finish publishing what is
-        # missing instead of retraining or skipping the execution.
-        if stopping.best_checkpoint is None:
-            raise RuntimeError("the progress snapshot has no best checkpoint to publish")
-        best_artifact = stopping.restore(layout.best_checkpoint)
-        final_metrics = _try_read_json(layout.metrics)
-        if final_metrics is None:
-            if resume_state.best_metrics is None:
-                raise RuntimeError("the progress snapshot has no best metrics to publish")
-            final_metrics = dict(resume_state.best_metrics)
-        final_metrics.setdefault("selected_epoch", resume_state.best_epoch)
-        training_state = _try_read_json(layout.training_state)
-        if training_state is None:
-            training_state = {
-                "protocol": protocol_to_dict(config),
-                "family": asdict(config.family),
-                "backend": asdict(config.backend),
-                "amp": asdict(config.protocol.amp),
-                "epochs_completed": resume_state.epochs_completed,
-                "early_stopping": stopping.to_dict(resume_state.epochs_completed),
-                "best_checkpoint": str(best_artifact),
-                "recovered_publication": True,
-            }
-            # The snapshot carries what the interrupted fit resolved, so the
-            # recovered record states the precision that actually ran.
-            training_state.update(resume_state.fit or {})
-        return publish(final_metrics, training_state, best_artifact, resume_state.epochs_completed)
-
-    adapter = build_adapter(config.family)
-    fit = adapter.fit(config, layout.root, prepared, on_epoch, resume=resume_state)
-
-    if stopping.best_checkpoint is None and first_checkpoint is not None:
-        stopping.update(0.0, 0, first_checkpoint)
-    best_artifact = stopping.restore(layout.best_checkpoint)
-
-    if best["metrics"] is not None:
-        final_metrics = dict(best["metrics"])
-    else:
-        final_metrics = evaluator.evaluate(
-            best["predictions"], adapter_figures=best["adapter_figures"]
+    outfit: TrainingOutcome
+    if _finished_before_publication(config, resume_state):
+        # The epoch loop is already on disk; only the artifacts are missing.
+        # Publication re-scores the kept checkpoint instead of rerunning a fit
+        # or carrying an earlier epoch's figures forward.
+        assert resume_state is not None
+        fit_facts = resume_state.fit or {}
+        outfit = recovered_outcome(
+            layout,
+            precision=str(fit_facts.get("precision", "")),
+            amp_requested=str(fit_facts.get("amp_requested", "")),
+            device=str(fit_facts.get("device", "")),
+            weights=str(fit_facts.get("weights", "")),
+            weights_verified=bool(fit_facts.get("weights_verified", False)),
+            augmentation=fit_facts.get("augmentation") or {},
+            epochs_completed=resume_state.epochs_completed,
+            best_score=resume_state.best_score,
+            stopped_early=resume_state.stopped_early,
+            wait_count=resume_state.wait_count,
         )
-    final_metrics["selected_epoch"] = best["epoch"]
+        trainer, _checkpoint, _requested = build_trainer(config, layout)
+    else:
+        outfit, trainer = run_fit(
+            config,
+            layout,
+            recorder,
+            run,
+            resume_checkpoint=_resume_checkpoint(resume_state),
+        )
 
-    training_state: dict[str, Any] = {
-        "protocol": protocol_to_dict(config),
-        "family": asdict(config.family),
-        "backend": asdict(config.backend),
-        "amp": asdict(config.protocol.amp),
-        "precision": fit.precision,
-        "amp_requested": fit.amp_requested,
-        "amp_active": fit.amp_active,
-        "device": fit.device,
-        "framework": fit.framework,
-        "weights": fit.weights,
-        "weights_verified": fit.weights_verified,
-        "epochs_completed": fit.epochs_completed,
-        "augmentation": fit.augmentation,
-        "early_stopping": stopping.to_dict(fit.epochs_completed),
-        "best_checkpoint": str(best_artifact),
-    }
+    final_metrics, _best = evaluate_best(layout, run, trainer, best=outfit.best_checkpoint)
+    training_state = _training_state(config, outfit, layout)
     if resume_state is not None:
         training_state["resumed"] = True
         training_state["resumed_from_epoch"] = resume_state.epochs_completed
         training_state["resumed_from"] = (
-            str(resume_state.last_checkpoint) if resume_state.last_checkpoint else None
+            str(resume_state.resume_checkpoint) if resume_state.resume_checkpoint else None
         )
-    return publish(final_metrics, training_state, best_artifact, fit.epochs_completed)
+    return publish(final_metrics, training_state, layout.best_checkpoint, outfit.epochs_completed)
+
+
+def _resume_checkpoint(resume_state: ResumeState | None) -> Path | None:
+    """The Lightning checkpoint a resumed fit must restore from."""
+    if resume_state is None:
+        return None
+    checkpoint = resume_state.resume_checkpoint
+    if checkpoint is None:
+        raise RuntimeError(
+            "the progress snapshot has no Lightning checkpoint; resume cannot "
+            "continue the optimizer and epoch state"
+        )
+    path = Path(checkpoint)
+    if not path.is_file():
+        raise RuntimeError(f"the Lightning checkpoint named by the snapshot is missing: {path}")
+    return path
+
+
+def _finished_before_publication(config: ExecutionConfig, resume: ResumeState | None) -> bool:
+    """Whether the interrupted execution already ran its last epoch.
+
+    Early stopping is its own finish condition; otherwise the Lightning
+    checkpoint is the authority on how many epochs completed, so a progress
+    record written one epoch behind cannot trigger an extra epoch.
+    """
+    if resume is None:
+        return False
+    if resume.stopped_early:
+        return True
+    checkpoint = resume.resume_checkpoint
+    if checkpoint is None or not checkpoint.is_file():
+        return False
+    return checkpoint_epoch(checkpoint) + 1 >= config.protocol.epochs
+
+
+def _training_state(
+    config: ExecutionConfig, outfit: TrainingOutcome, layout: ArtifactLayout
+) -> dict[str, Any]:
+    """The fit facts that travel beside the metrics."""
+    return {
+        "protocol": protocol_to_dict(config),
+        "family": asdict(config.family),
+        "backend": asdict(config.backend),
+        "amp": asdict(config.protocol.amp),
+        "precision": outfit.precision,
+        "amp_requested": outfit.amp_requested,
+        "amp_active": outfit.amp_active,
+        "device": outfit.device,
+        "framework": config.family.framework,
+        "weights": outfit.weights,
+        "weights_verified": outfit.weights_verified,
+        "epochs_completed": outfit.epochs_completed,
+        "augmentation": outfit.augmentation,
+        "early_stopping": stopping_record(
+            config,
+            best_epoch=outfit.best_epoch,
+            best_score=outfit.best_score,
+            stopped_early=outfit.stopped_early,
+            wait_count=outfit.wait_count,
+            epochs_completed=outfit.epochs_completed,
+        ),
+        "best_checkpoint": str(layout.best_checkpoint),
+    }

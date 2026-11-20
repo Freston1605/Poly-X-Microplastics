@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:57-0500\n"
+"POT-Creation-Date: 2026-11-19 22:03-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6611,31 +6611,31 @@ msgstr "define POLYX_WEIGHTS_DIR y POLYX_WEIGHTS_MANIFEST antes de preparar los 
 msgid "pinned weights are missing or unverified; stage them with --url on a networked node"
 msgstr "faltan los pesos fijados o no se pudieron verificar; prepáralos con --url en un nodo con red"
 
-#: src/polyx/pipeline/artifacts.py:143
+#: src/polyx/pipeline/artifacts.py:161
 msgid "Training execution report"
 msgstr "Informe de ejecución del entrenamiento"
 
-#: src/polyx/pipeline/artifacts.py:145
+#: src/polyx/pipeline/artifacts.py:163
 msgid "Family"
 msgstr "Familia"
 
-#: src/polyx/pipeline/artifacts.py:146
+#: src/polyx/pipeline/artifacts.py:164
 msgid "Backend"
 msgstr "Backend"
 
-#: src/polyx/pipeline/artifacts.py:147
+#: src/polyx/pipeline/artifacts.py:165
 msgid "Selection metric"
 msgstr "Métrica de selección"
 
-#: src/polyx/pipeline/artifacts.py:149
+#: src/polyx/pipeline/artifacts.py:167
 msgid "Figures"
 msgstr "Figuras"
 
-#: src/polyx/pipeline/artifacts.py:161
+#: src/polyx/pipeline/artifacts.py:179
 msgid "Early stopping"
 msgstr "Parada anticipada"
 
-#: src/polyx/pipeline/artifacts.py:155
+#: src/polyx/pipeline/artifacts.py:173
 msgid "Per class"
 msgstr "Por clase"
 
@@ -6746,12 +6746,12 @@ msgstr ""
 "el dataset de máscaras reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
-#: src/polyx/pipeline/execution.py:69
+#: src/polyx/pipeline/execution.py:79
 #, python-format
 msgid "cannot verify the dataset of %(path)s: it has no file hashes"
 msgstr "no se puede verificar el dataset de %(path)s: no tiene hashes de archivo"
 
-#: src/polyx/pipeline/execution.py:75
+#: src/polyx/pipeline/execution.py:85
 #, python-format
 msgid ""
 "the dataset behind %(path)s changed since its checkpoint was written; start a new output "
@@ -6760,16 +6760,16 @@ msgstr ""
 "el dataset de %(path)s cambió desde que se escribió su checkpoint; inicie un directorio de "
 "salida nuevo en lugar de reanudar sobre él"
 
-#: src/polyx/pipeline/execution.py:169
+#: src/polyx/pipeline/execution.py:179
 #, python-format
 msgid "dataset audit failed: %(codes)s"
 msgstr "la auditoría del dataset falló: %(codes)s"
 
-#: src/polyx/pipeline/execution.py:116
+#: src/polyx/pipeline/execution.py:126
 msgid "protocol changed since the progress snapshot was written"
 msgstr "el protocolo cambió desde que se escribió la instantánea de progreso"
 
-#: src/polyx/pipeline/execution.py:131
+#: src/polyx/pipeline/execution.py:141
 #, python-format
 msgid ""
 "%(path)s already holds an execution; pass resume=true to continue it or choose a new output "

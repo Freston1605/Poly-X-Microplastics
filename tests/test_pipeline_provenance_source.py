@@ -18,7 +18,7 @@ def test_provenance_uses_the_stamped_commit_when_git_is_absent(
     from polyx.pipeline.command import main
 
     data_yaml = build_tiny_dataset(tmp_path / "dataset")
-    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
     monkeypatch.setenv("POLYX_SOURCE_SHA", "abc1234")
     monkeypatch.setattr(
         "polyx.pipeline.execution.commit_git", lambda _root: {"commit": "", "dirty": False}

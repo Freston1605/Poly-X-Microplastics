@@ -140,6 +140,8 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     assert yolo_double.validation_calls == 2
     assert yolo_double.instances[-1].val_calls == 1
 
+    # The second validation never finished, so epoch 0 is the last completed
+    # epoch and the resume point is the Lightning checkpoint that holds it.
     progress = _read(output / "progress.json")
     assert progress["epochs_completed"] == 1
     # Compatibility export still names the family-native file...
@@ -147,7 +149,7 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     assert Path(progress["last_checkpoint"]).is_file()
     # ...while resume names a real Lightning checkpoint.
     lightning = Path(progress["resume_checkpoint"])
-    assert lightning == output / "checkpoints" / "lightning" / "checkpoint_000.ckpt"
+    assert lightning == output / "checkpoints" / "lightning" / "last.ckpt"
     assert lightning.is_file()
     saved = torch.load(lightning, map_location="cpu", weights_only=False)
     assert "pytorch-lightning_version" in saved
@@ -156,7 +158,8 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     assert saved["epoch"] == 0
     saved_weight = float(saved["state_dict"]["net.weight"])
 
-    yolo_double.prediction_sets = [_boxes_prediction()]
+    # Epoch 1 and the publication re-score of the kept epoch.
+    yolo_double.prediction_sets = [_boxes_prediction(), _boxes_prediction()]
     yolo_double.fail_on_validation = None
     yolo_double.instances = []
     validations_before_resume = yolo_double.validation_calls
@@ -165,9 +168,12 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     # snapshots loaded from the epoch checkpoints.
     resumed = yolo_double.instances[0]
 
-    # Exactly the remaining epoch ran: a restart would validate twice. The
-    # count is class-wide because each validation loads its own snapshot.
-    assert yolo_double.validation_calls - validations_before_resume == 1
+    # Exactly the remaining epoch ran, plus the publication re-score of the
+    # kept weights; a restart would validate the whole run again. The count is
+    # class-wide because each validation loads its own snapshot, and the first
+    # snapshot names epoch 1: the checkpointed epoch is not rerun.
+    assert yolo_double.validation_calls - validations_before_resume == 2
+    assert Path(yolo_double.instances[1].requested_weights).name == "epoch_001.pt"
     state = _read(output / "training_state.json")
     assert state["epochs_completed"] == 2
     assert state["resumed"] is True
@@ -179,17 +185,16 @@ def test_a_preempted_yolo_run_resumes_with_a_real_lightning_checkpoint(
     assert resumed.first_weight == pytest.approx(saved_weight)
 
 
-def test_a_resumed_run_that_never_improves_keeps_the_snapshot_best_metrics(
+def test_a_resumed_run_that_never_improves_publishes_the_kept_epoch(
     tmp_path: Path,
     tiny_dataset: Path,
     yolo_double: type[_RealLoopYOLO],
 ) -> None:
-    """The remaining epoch does not beat the snapshot: no zero is written.
+    """The remaining epoch does not beat the kept one: no zero is written.
 
-    Before the fix a resumed execution started its ``best`` bookkeeping from
-    empty, so a non-improving remaining epoch evaluated an empty prediction
-    list and overwrote ``metrics.json`` with 0.0 and ``selected_epoch = -1``
-    even though ``best.pt`` and the early-stopping state named epoch 0.
+    Publication re-scores the kept checkpoint instead of carrying the last
+    epoch's figures forward, so the published metrics always describe the
+    weights in ``best.pt`` even when the last epoch produced nothing.
     """
     output = tmp_path / "executions" / "resume-no-improvement"
     yolo_double.prediction_sets = [_boxes_prediction(), _boxes_prediction()]
@@ -200,9 +205,9 @@ def test_a_resumed_run_that_never_improves_keeps_the_snapshot_best_metrics(
     assert progress["best_epoch"] == 0
     assert progress["best_score"] == pytest.approx(1.0)
 
-    # The resumed epoch finds nothing: the with-class score drops to zero and
-    # cannot beat the snapshot's best.
-    yolo_double.prediction_sets = [[]]
+    # The resumed epoch finds nothing; the publication pass re-scores epoch 0's
+    # kept weights, which are the correct ones.
+    yolo_double.prediction_sets = [[], _boxes_prediction()]
     yolo_double.fail_on_validation = None
     yolo_double.instances = []
     assert _fit_detection(output, tiny_dataset, resume=True) == 0
@@ -222,7 +227,12 @@ def test_recovered_publication_keeps_the_fit_metadata(
 ) -> None:
     """A publication recovered after the last epoch keeps precision and weights."""
     output = tmp_path / "executions" / "recovered-publication"
-    yolo_double.prediction_sets = [_boxes_prediction(), _boxes_prediction()]
+    # Two epochs plus the publication re-score of the kept epoch.
+    yolo_double.prediction_sets = [
+        _boxes_prediction(),
+        _boxes_prediction(),
+        _boxes_prediction(),
+    ]
     yolo_double.fail_on_validation = None
     assert _fit_detection(output, tiny_dataset) == 0
     progress = _read(output / "progress.json")
@@ -234,17 +244,18 @@ def test_recovered_publication_keeps_the_fit_metadata(
     for name in ("metrics.json", "training_state.json", "completion.json", "report.md"):
         (output / name).unlink(missing_ok=True)
 
-    yolo_double.prediction_sets = []
+    # The recovered publication re-scores the kept epoch; it retrains nothing.
+    yolo_double.prediction_sets = [_boxes_prediction()]
     yolo_double.fail_on_validation = None
     yolo_double.instances = []
     validations_before = yolo_double.validation_calls
     assert _fit_detection(output, tiny_dataset, resume=True) == 0
-    assert yolo_double.validation_calls == validations_before, "no epoch reran"
+    assert yolo_double.validation_calls == validations_before + 1, "only the re-score may run"
 
     state = _read(output / "training_state.json")
-    assert state["recovered_publication"] is True
     assert state["precision"] == progress["fit"]["precision"]
     assert state["weights_verified"] == progress["fit"]["weights_verified"]
+    assert state["epochs_completed"] == 2
     assert (output / "completion.json").is_file()
 
 
@@ -325,7 +336,8 @@ def test_a_preempted_mask_rcnn_run_continues_the_real_epoch_loop(
     assert "net.scale" in saved["state_dict"]
     saved_scale = float(saved["state_dict"]["net.scale"])
 
-    _FakeDetector.prediction_sets = list(_perfect_validation())
+    # Epoch 1 and the publication re-score, one image per inference call.
+    _FakeDetector.prediction_sets = _perfect_validation() * 2
     _FakeDetector.instances = []
     _FakeDetector.inference_calls = 0
     _FakeDetector.fail_on_inference = None
@@ -336,9 +348,9 @@ def test_a_preempted_mask_rcnn_run_continues_the_real_epoch_loop(
     assert state["epochs_completed"] == 2
     assert state["resumed"] is True
     assert state["resumed_from_epoch"] == 1
-    # Exactly one new epoch ran over the two validation images, and one new
-    # per-epoch export exists.
-    assert _FakeDetector.inference_calls == 2
+    # Exactly one new epoch ran over the two validation images, plus the two
+    # calls of the publication re-score, and one new per-epoch export exists.
+    assert _FakeDetector.inference_calls == 4
     assert (output / "checkpoints" / "epoch_001.pt").is_file()
     assert _FakeDetector.instances[-1].first_scale is not None
     assert _FakeDetector.instances[-1].first_scale == pytest.approx(saved_scale)

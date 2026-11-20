@@ -1,6 +1,6 @@
 # ADR-0007: One Lightning loop for every model family
 
-- **Status:** Accepted (amended 2026-11-20 by #202)
+- **Status:** Accepted (amended 2026-11-20 by #202: callbacks and validation)
 - **Date:** 2026-11-18
 - **Landed in:** #194
 
@@ -35,17 +35,26 @@ to the artifacts and handed to the adapter unchanged; the adapter translates
 it into framework calls instead of redefining any value.
 
 The YOLO detection adapter wraps the Ultralytics neural module in a Lightning
-module, reuses the Ultralytics data path and returns COCO-format predictions
-per validation epoch. Lightning, Ultralytics and torch are imported lazily, so
+module, reuses the Ultralytics dataset and batch collation, and returns
+COCO-format predictions per validation epoch. Lightning, Ultralytics and torch are imported lazily, so
 importing the command does not load a GPU stack. One shared evaluator scores
 those predictions against COCO ground truth built from the existing label
 codec; it always names the criterion, selects on the with-class operating-point
 F1 at one confidence and IoU threshold, and reports localisation beside it.
-COCO AP is reported separately and never selects a checkpoint. Early stopping watches that one score with the
-protocol's patience and minimum delta, and the best epoch's weights are copied
-to one stable checkpoint path. The kept checkpoint is the strictly best score
-seen, so a marginal gain smaller than the delta still replaces `best.pt`; the
-delta only decides when patience has run out.
+COCO AP is reported separately and never selects a checkpoint.
+
+The module logs that score as `with_class_score`, and two stock Lightning
+callbacks own the rest: `ModelCheckpoint` keeps the strictly best score seen,
+and `EarlyStopping` measures patience against the protocol's `min_delta`. A
+marginal gain smaller than the delta therefore still replaces the kept
+checkpoint while patience keeps expiring — the two thresholds are two
+behaviours, not one flag. Checkpoints are written through an atomic
+`CheckpointIO` (write beside, rename into place) and `save_last=True` keeps
+the resume point complete under a SLURM time limit. Callback state, including
+the wait count and the kept best, lives in the checkpoint, so a resumed run
+continues the stopping decision instead of restarting it. Before publication
+the kept checkpoint is validated once more, so the metrics and `best.pt`
+describe the same weights.
 
 Every execution emits the same artifact layout: resolved configuration,
 protocol, provenance (git commit, dataset hashes and audit), checkpoints,
@@ -89,12 +98,18 @@ backends; only the backend composition changes.
   mask only while computing a figure, so the exact raster is scored without a
   polygon round-trip and without keeping the arrays live.
 - An interrupted execution resumes from a real Lightning checkpoint
-  (`checkpoints/lightning/checkpoint_NNN.ckpt`), which restores weights, optimizer,
-  scheduler and epoch progress. A family-native `.pt` export is kept for
-  compatibility and best-weight restoration but is never passed to
-  `Trainer.fit` as a checkpoint. The export and the validation snapshot are
-  written from the live Lightning network without a staged `ema` entry, so the
-  metric and `best.pt` describe the weights that actually trained.
+  (`checkpoints/lightning/last.ckpt`, with the immutable
+  `checkpoint_NNN.ckpt` beside it), which restores weights, optimizer,
+  scheduler, epoch progress and the callbacks' state. A family-native `.pt`
+  export is never passed to `Trainer.fit` as a checkpoint. Every family
+  validates inside Lightning's validation loop; YOLO exports the epoch's
+  network first and predicts from that file, because Ultralytics fuses and
+  freezes the network it is handed. The export carries no staged `ema` entry,
+  so the metric and `best.pt` describe the weights that actually trained.
+- The training loop, its callbacks and the shared score live in
+  `lightning_loop.py`; an adapter supplies only a `LightningModule` and a
+  `LightningDataModule`. Adding a family cannot change the stopping rule,
+  the schedule, the selection metric or the artifact record.
 - Completion is a separate atomic record written after metrics, checkpoint,
   provenance and report. A final epoch left without that record is published,
   not retrained or skipped.
