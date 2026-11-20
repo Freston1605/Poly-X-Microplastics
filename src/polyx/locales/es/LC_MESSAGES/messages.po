@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 21:40-0300\n"
+"POT-Creation-Date: 2026-11-19 20:20-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6690,29 +6690,29 @@ msgstr "Primer lote estratificado"
 msgid "Audit"
 msgstr "Auditoría"
 
-#: src/polyx/pipeline/dataset.py:95
+#: src/polyx/pipeline/dataset.py:96
 #, python-format
 msgid "%(path)s must declare domain: real (or validation_domain: real) for a benchmark campaign"
 msgstr "%(path)s debe declarar domain: real (o validation_domain: real) para una campaña de benchmark"
 
-#: src/polyx/pipeline/dataset.py:104
+#: src/polyx/pipeline/dataset.py:105
 #, python-format
 msgid "%(path)s must declare info.domain: real for a benchmark campaign"
 msgstr "%(path)s debe declarar info.domain: real para una campaña de benchmark"
 
-#: src/polyx/pipeline/dataset.py:138
+#: src/polyx/pipeline/dataset.py:139
 #, python-format
 msgid "the cohorts differ between %(boxes)s and %(masks)s: only-box=%(only_box)s only-mask=%(only_mask)s"
 msgstr ""
 "las cohortes difieren entre %(boxes)s y %(masks)s: solo-cajas=%(only_box)s solo-"
 "máscaras=%(only_mask)s"
 
-#: src/polyx/pipeline/dataset.py:175
+#: src/polyx/pipeline/dataset.py:176
 #, python-format
 msgid "the benchmark split %(split)s has no images in either dataset"
 msgstr "el split de benchmark %(split)s no tiene imágenes en ninguno de los dos datasets"
 
-#: src/polyx/pipeline/dataset.py:153
+#: src/polyx/pipeline/dataset.py:154
 #, python-format
 msgid ""
 "image %(name)s is in the %(box_fold)s fold of the box dataset and the %(mask_fold)s fold of the "
@@ -6721,14 +6721,14 @@ msgstr ""
 "la imagen %(name)s está en el pliegue %(box_fold)s del dataset de cajas y en el pliegue "
 "%(mask_fold)s del dataset de máscaras"
 
-#: src/polyx/pipeline/dataset.py:164
+#: src/polyx/pipeline/dataset.py:165
 #, python-format
 msgid "image %(name)s has different content in the box and mask datasets (%(box_hash)s != %(mask_hash)s)"
 msgstr ""
 "la imagen %(name)s tiene contenido distinto en el dataset de cajas y el de máscaras "
 "(%(box_hash)s != %(mask_hash)s)"
 
-#: src/polyx/pipeline/dataset.py:114
+#: src/polyx/pipeline/dataset.py:115
 #, python-format
 msgid ""
 "the box dataset reuses the image name %(name)s across folds; basenames must be unique for a "
@@ -6737,7 +6737,7 @@ msgstr ""
 "el dataset de cajas reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
-#: src/polyx/pipeline/dataset.py:126
+#: src/polyx/pipeline/dataset.py:127
 #, python-format
 msgid ""
 "the mask dataset reuses the image name %(name)s across folds; basenames must be unique for a "
@@ -6746,16 +6746,30 @@ msgstr ""
 "el dataset de máscaras reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
-#: src/polyx/pipeline/execution.py:137
+#: src/polyx/pipeline/execution.py:69
+#, python-format
+msgid "cannot verify the dataset of %(path)s: it has no file hashes"
+msgstr "no se puede verificar el dataset de %(path)s: no tiene hashes de archivo"
+
+#: src/polyx/pipeline/execution.py:75
+#, python-format
+msgid ""
+"the dataset behind %(path)s changed since its checkpoint was written; start a new output "
+"directory instead of resuming over it"
+msgstr ""
+"el dataset de %(path)s cambió desde que se escribió su checkpoint; inicie un directorio de "
+"salida nuevo en lugar de reanudar sobre él"
+
+#: src/polyx/pipeline/execution.py:169
 #, python-format
 msgid "dataset audit failed: %(codes)s"
 msgstr "la auditoría del dataset falló: %(codes)s"
 
-#: src/polyx/pipeline/execution.py:84
+#: src/polyx/pipeline/execution.py:116
 msgid "protocol changed since the progress snapshot was written"
 msgstr "el protocolo cambió desde que se escribió la instantánea de progreso"
 
-#: src/polyx/pipeline/execution.py:99
+#: src/polyx/pipeline/execution.py:131
 #, python-format
 msgid ""
 "%(path)s already holds an execution; pass resume=true to continue it or choose a new output "

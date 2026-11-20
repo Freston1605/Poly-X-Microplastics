@@ -7,6 +7,7 @@ hashes are produced with the project's existing SHA-256 helper.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -232,6 +233,25 @@ def dataset_hashes(data_yaml: Path) -> dict[str, str]:
             continue
         result[path.relative_to(root).as_posix()] = sha256_file(path)
     return result
+
+
+def dataset_fingerprint(hashes: dict[str, str]) -> str:
+    """One digest over every per-file hash, for resume identity.
+
+    A resumed execution must be scoring the byte-identical dataset it was
+    interrupted on: weights and the best epoch's figures belong to those files.
+    The protocol comparison alone cannot see a relabelled image or an edited
+    COCO export, so the training state carries this digest and resuming against
+    a different one is refused. Paths are sorted, so two walks of the same tree
+    always produce the same fingerprint.
+    """
+    digest = hashlib.sha256()
+    for name in sorted(hashes):
+        digest.update(str(name).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(hashes[name]).encode("utf-8"))
+        digest.update(b"\n")
+    return digest.hexdigest()
 
 
 # ── The canonical COCO mask dataset (ADR-0009) ────────────────────────────

@@ -11,7 +11,10 @@ loop. The best epoch's evaluated figures travel with the snapshot, so a resumed
 execution that never improves can still report the best epoch it inherited
 instead of scoring an empty prediction list. The protocol that produced the
 snapshot is stored with it: resuming a different protocol would mix
-methodologies and is refused.
+methodologies and is refused. The dataset fingerprint travels with it for the
+same reason: relabelled images or an edited COCO export are a different
+dataset, and the checkpoint and the best figures belong to the bytes that
+trained them.
 """
 
 from __future__ import annotations
@@ -37,6 +40,9 @@ class ResumeState:
     non_improving: int
     stopped_early: bool
     protocol: dict[str, Any]
+    #: Digest of every dataset file the interrupted execution trained on.
+    dataset_fingerprint: str
+    patience_reference: float | None = None
     best_metrics: dict[str, Any] | None = None
     #: The fit resolved by the interrupted execution (precision, device,
     #: verified weights, augmentation), carried so a recovered publication
@@ -71,6 +77,8 @@ class ResumeState:
                 non_improving=int(raw.get("non_improving", 0)),
                 stopped_early=bool(raw.get("stopped_early", False)),
                 protocol=dict(raw["protocol"]),
+                dataset_fingerprint=str(raw["dataset_fingerprint"]),
+                patience_reference=raw.get("patience_reference"),
                 best_metrics=best_metrics,
                 fit=fit,
             )

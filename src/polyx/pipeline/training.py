@@ -1,9 +1,13 @@
 """Shared early-stopping bookkeeping for the single training loop.
 
 The with-class score from the shared evaluator is the only monitored value.
-Patience counts non-improving epochs beyond the minimum delta, and the best
-weights are copied back to the canonical checkpoint path so a later ticket can
-consume one stable file regardless of how many epochs ran.
+Two thresholds are applied to it on purpose: the kept checkpoint is the
+strictly best score seen, so ``best.pt`` is never a worse model than an earlier
+epoch, while patience counts non-improving epochs against the protocol's
+minimum delta, so noise smaller than the delta neither saves a checkpoint nor
+keeps a stagnant run alive. The best weights are copied back to the canonical
+checkpoint path so a later ticket can consume one stable file regardless of how
+many epochs ran.
 """
 
 from __future__ import annotations
@@ -45,16 +49,28 @@ class EarlyStoppingState:
         self.best_score: float | None = None
         self.best_epoch = -1
         self.best_checkpoint: Path | None = None
+        #: The score patience is measured against: the last epoch that beat it
+        #: by at least ``min_delta``. It lags ``best_score`` whenever an epoch
+        #: sets a new best by less than the delta.
+        self.patience_reference: float | None = None
         self.non_improving = 0
         self.stopped_early = False
 
     def update(self, score: float, epoch: int, checkpoint: Path) -> StopDecision:
-        """Record one epoch's score and decide whether to stop."""
-        improved = self.best_score is None or score > self.best_score + self.min_delta
+        """Record one epoch's score and decide whether to stop.
+
+        ``improved`` reports the checkpoint selection: any strictly better score
+        replaces the kept weights. Patience is a separate comparison against the
+        delta, so a run that gains less than ``min_delta`` per epoch still stops
+        instead of keeping every marginal improvement as its best.
+        """
+        improved = self.best_score is None or score > self.best_score
         if improved:
             self.best_score = float(score)
             self.best_epoch = epoch
             self.best_checkpoint = Path(checkpoint)
+        if self.patience_reference is None or score > self.patience_reference + self.min_delta:
+            self.patience_reference = float(score)
             self.non_improving = 0
         else:
             self.non_improving += 1
@@ -69,6 +85,10 @@ class EarlyStoppingState:
         self.best_epoch = int(state["best_epoch"])
         checkpoint = state.get("best_checkpoint")
         self.best_checkpoint = Path(checkpoint) if checkpoint else None
+        reference = state.get("patience_reference")
+        # A snapshot written before the two thresholds were separated carries no
+        # reference; the best score is the closest honest starting point.
+        self.patience_reference = float(reference) if reference is not None else self.best_score
         self.non_improving = int(state.get("non_improving", 0))
         self.stopped_early = bool(state.get("stopped_early", False))
 
@@ -91,6 +111,7 @@ class EarlyStoppingState:
             "restore_best": self.restore_best,
             "best_epoch": self.best_epoch,
             "best_score": self.best_score,
+            "patience_reference": self.patience_reference,
             "epochs_completed": epochs_completed,
             "non_improving": self.non_improving,
             "stopped_early": self.stopped_early,

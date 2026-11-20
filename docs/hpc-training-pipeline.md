@@ -348,6 +348,14 @@ is never used for resume. If a progress snapshot has no Lightning checkpoint
 (one written before this behaviour existed), the execution refuses to resume
 instead of silently restarting the epoch loop.
 
+The snapshot also names the dataset it trained on, as one digest over every
+image and label it hashed. A resume compares that digest against the dataset the
+new invocation resolved and refuses a mismatch: relabelled images or an edited
+COCO export are a different dataset, and the kept weights and best figures
+belong to the bytes that produced them. The protocol comparison alone could not
+see that, so a changed dataset used to resume silently against the old
+checkpoint.
+
 Both the native export and `best.pt` are written from the live Lightning
 network, without the staged checkpoint's `ema` entry: Ultralytics prefers an
 `ema` key over `model` when loading, so re-saving the staged file would validate

@@ -757,7 +757,10 @@ Trainer and its native training wrapper are untouched by this path.
   augmentation) travel with it. Each epoch writes an immutable
   `checkpoints/lightning/checkpoint_NNN.ckpt`, and the progress record is
   published atomically only after it exists, so a preemption cannot pair new
-  weights with older bookkeeping. A different protocol is refused.
+  weights with older bookkeeping. A different protocol or a different dataset
+  fingerprint is refused: relabelled images or an edited COCO export are a
+  different dataset, and the kept weights belong to the bytes that trained
+  them.
 - YOLO validation scores a fresh inference wrapper loaded from that epoch's
   native checkpoint. The export is written from the live Lightning network with
   no staged `ema` key, so validation and `best.pt` name the weights that

@@ -28,6 +28,7 @@ from polyx.pipeline.artifacts import (
 )
 from polyx.pipeline.coco_import import audit_as_dict
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_dict
+from polyx.pipeline.dataset import dataset_fingerprint
 from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.evaluation import SharedEvaluator
 from polyx.pipeline.resume import ResumeState
@@ -51,6 +52,35 @@ def _try_read_json(path: Path) -> dict[str, Any] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
+def _dataset_identity(hashes: dict[str, str], resume_state: ResumeState | None, root: Path) -> str:
+    """The digest a resumed execution must still match.
+
+    Weights, the best epoch's figures and the early-stopping state describe the
+    bytes that trained them. Comparing only the protocol let a relabelled image
+    or an edited COCO export keep the old checkpoint and publish provenance for
+    the new files.
+    """
+    fingerprint = dataset_fingerprint(hashes)
+    if resume_state is None:
+        return fingerprint
+    if not hashes:
+        raise PipelineError(
+            "execution.dataset_identity_missing",
+            N_("cannot verify the dataset of %(path)s: it has no file hashes"),
+            path=str(root),
+        )
+    if resume_state.dataset_fingerprint != fingerprint:
+        raise PipelineError(
+            "execution.dataset_changed",
+            N_(
+                "the dataset behind %(path)s changed since its checkpoint was written; "
+                "start a new output directory instead of resuming over it"
+            ),
+            path=str(root),
+        )
+    return fingerprint
+
+
 def _completion_record(
     config: ExecutionConfig,
     *,
@@ -58,11 +88,13 @@ def _completion_record(
     selection: dict[str, Any],
     checkpoint: Path,
     epochs_completed: int,
+    dataset_fingerprint: str,
 ) -> dict[str, Any]:
     """The last artifact written, naming the execution as finished."""
     return {
         "status": "completed",
         "protocol": protocol_to_dict(config),
+        "dataset_fingerprint": dataset_fingerprint,
         "family": asdict(config.family),
         "backend": asdict(config.backend),
         "selected_epoch": selected_epoch,
@@ -145,6 +177,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             f"cache_key={prepared.conversion['cache_key']} "
             f"cached={str(prepared.conversion['cached']).lower()}",
         )
+    fingerprint = _dataset_identity(prepared.hashes, resume_state, layout.root)
 
     evaluator = SharedEvaluator(
         prepared.ground_truth,
@@ -161,6 +194,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 "best_checkpoint": (
                     str(resume_state.best_checkpoint) if resume_state.best_checkpoint else None
                 ),
+                "patience_reference": resume_state.patience_reference,
                 "non_improving": resume_state.non_improving,
                 "stopped_early": resume_state.stopped_early,
             }
@@ -244,6 +278,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 ),
                 "best_metrics": best["metrics"],
                 "protocol": protocol_to_dict(config),
+                "dataset_fingerprint": fingerprint,
                 "fit": result.fit_metadata,
             }
         )
@@ -277,6 +312,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
                 selection=final_metrics["selection"],
                 checkpoint=best_artifact,
                 epochs_completed=epochs_completed,
+                dataset_fingerprint=fingerprint,
             ),
             layout.completion,
         )

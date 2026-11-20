@@ -565,3 +565,45 @@ def test_resume_with_a_different_protocol_is_refused(
     assert code == 1
     assert "protocol changed" in capsys.readouterr().err
     assert not (output / "training_state.json").exists()
+
+
+def test_resume_with_a_changed_dataset_is_refused(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    selected_language,
+) -> None:
+    """The weights and best figures belong to the bytes that trained them."""
+    output = tmp_path / "executions" / "dataset-drift"
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()], interrupt_after=2)
+    assert (
+        _command(
+            f"data_yaml={tiny_dataset}",
+            f"output_dir={output}",
+            "protocol.epochs=6",
+            "protocol.early_stopping.patience=99",
+        )
+        == 1
+    )
+    progress = _read(output / "progress.json")
+    assert progress["dataset_fingerprint"]
+
+    # One relabelled box is a different dataset: the protocol is unchanged.
+    label = next((tiny_dataset.parent / "labels").rglob("plate_v1.txt"))
+    label.write_text("0 0.380 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n", encoding="utf-8")
+
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+    capsys.readouterr()
+    selected_language("en")
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "protocol.epochs=6",
+        "protocol.early_stopping.patience=99",
+        "resume=true",
+    )
+
+    assert code == 1
+    assert "dataset" in capsys.readouterr().err
+    assert not (output / "training_state.json").exists()

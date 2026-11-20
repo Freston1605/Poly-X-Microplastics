@@ -140,8 +140,8 @@ decides for itself:
 - a fresh run aimed at an existing execution directory is refused: pass
   `resume=true` to continue it or choose a new directory, so a new run can never
   inherit an old completion marker or a stale progress snapshot;
-- a root that holds an execution for a different protocol is refused; start a
-  new campaign root instead.
+- a root that holds an execution for a different protocol **or a changed
+  dataset** is refused; start a new campaign root instead.
 
 The engine still refuses a resume without a snapshot, or with a snapshot that
 has no Lightning checkpoint.

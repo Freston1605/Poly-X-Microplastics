@@ -43,7 +43,9 @@ codec; it always names the criterion, selects on the with-class operating-point
 F1 at one confidence and IoU threshold, and reports localisation beside it.
 COCO AP is reported separately and never selects a checkpoint. Early stopping watches that one score with the
 protocol's patience and minimum delta, and the best epoch's weights are copied
-to one stable checkpoint path.
+to one stable checkpoint path. The kept checkpoint is the strictly best score
+seen, so a marginal gain smaller than the delta still replaces `best.pt`; the
+delta only decides when patience has run out.
 
 Every execution emits the same artifact layout: resolved configuration,
 protocol, provenance (git commit, dataset hashes and audit), checkpoints,

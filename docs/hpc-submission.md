@@ -120,9 +120,9 @@ python -m polyx.pipeline.command data_yaml=... output_dir=WORK_RUN \
 ```
 
 The engine refuses to resume without a progress snapshot, refuses to resume a
-different protocol, and refuses a snapshot with no Lightning checkpoint, so a
-changed methodology (or a restart) can never be mixed into an interrupted
-execution. `tests/test_pipeline_local_tracer.py` proves, through the command
+different protocol or a dataset whose files changed, and refuses a snapshot with
+no Lightning checkpoint, so a changed methodology or dataset (or a restart) can
+never be mixed into an interrupted execution. `tests/test_pipeline_local_tracer.py` proves, through the command
 seam, that an interrupted execution continues from its last checkpoint and
 keeps the earlier best weights. The real Lightning loop is proven by
 `tests/test_pipeline_resume_lightning.py`, which interrupts a YOLO and a Mask
