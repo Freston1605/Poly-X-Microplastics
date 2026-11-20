@@ -1,9 +1,9 @@
 """The one persisted record for a sweep trial, and the lease that guards it.
 
-Both the in-process driver and the Hydra multirun write the same artifact:
-trial id, sampled protocol parameters, execution path and study identity. One
-writer keeps the contract, atomicity and parameter meaning from drifting, and
-one reader decides whether an execution belongs to the study asking about it.
+Every Hydra multirun trial writes the same artifact: trial id, sampled protocol
+parameters, execution path and study identity. One writer keeps the contract,
+atomicity and parameter meaning from drifting, and one reader decides whether an
+execution belongs to the study asking about it.
 
 A lease stops two runners from recovering the same trial. It is created with
 its owner's identity already inside it, so a second runner can never observe a

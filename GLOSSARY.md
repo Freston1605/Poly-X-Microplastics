@@ -55,10 +55,9 @@ individual trial.
 
 The Hydra plugin (`hydra-optuna-sweeper`) that turns the declared search space
 into trials, runs them one at a time and records the returned objective value
-in the study. The in-process driver behind `polyx-pipeline --sweep` reads the
-same sweeper config as `python -m polyx.pipeline.sweep_app --multirun`, so a
-small trial-count smoke run and a real multirun
-cannot declare different objectives or spaces.
+in the study. `python -m polyx.pipeline.sweep_app --multirun` is the only sweep
+entry point; there is no second in-process loop, so a search cannot declare a
+different objective or space from the one the plugin consumes.
 
 ## Objective
 

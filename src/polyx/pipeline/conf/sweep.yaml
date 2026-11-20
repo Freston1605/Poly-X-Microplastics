@@ -1,9 +1,8 @@
 # Root configuration of an Optuna hyperparameter sweep.
 #
-# This is the config the Hydra Optuna sweeper consumes. The in-process driver
-# used for verification reads the same `hydra.sweeper` node, so the two paths
-# cannot declare different objectives, spaces or trial counts. The protocol,
-# backend and family groups are shared unchanged with a single execution.
+# This is the config the Hydra Optuna sweeper consumes. The protocol, backend
+# and family groups are shared unchanged with a single execution, so a trial
+# and a benchmark run describe their methodology the same way.
 defaults:
   - protocol: default
   - backend: local

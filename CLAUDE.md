@@ -778,23 +778,28 @@ Trainer and its native training wrapper are untouched by this path.
 - COCO instance JSON is the canonical mask format (`coco.py`,
   `coco_import.py`, `seg_conversion.py`). Machine-generated masks are never
   ground truth; the benchmark reference is human COCO annotations only.
-- `sweep.py` is the in-process driver over the same `hydra.sweeper` node;
-  `sweep_app.py` is the real Optuna multirun and `sweep_best.py` writes
-  `sweep_best.json` after it. The study is SQLite on the work filesystem,
-  named from `hydra.sweeper.study_name`; its identity is persisted once in
-  `sweep_config.yaml`. `PolyxOptunaSweeper` injects the actual trial id, and
-  before asking for new trials it recovers every `RUNNING` trial: resume its
-  checkpoint, retry its recorded parameters, or tell the score its finished
-  execution already wrote. Two leases under `trials/.locks/` keep runners
-  apart: `trial_NNN.lock` while a job trains it and `trial_NNN.recovery.lock`
-  while a runner relaunches it. A lease whose owner is gone — a same-host
-  liveness probe, or no `progress.json` activity for `POLYX_LEASE_TTL` when the
-  owner is on another node — is taken over. Both drivers write the same `record.json`
-  (`sweep_record.py`), and both compare the record's study **and database**
-  before trusting an execution: `trial_007` from another sweep root is not this
-  study's result. The export resolves the winner strictly by
-  `study.best_trial.number` and requires its record, `completion.json`,
-  readable metrics and `best.pt`; a partial directory is reported as missing.
+- `sweep_app.py` is the one Optuna sweep: the Hydra multirun whose jobs are the
+  trials, and `sweep_best.py` writes `sweep_best.json` after it. There is no
+  second driver: `polyx-pipeline` runs one execution or one import, and a
+  search is always the multirun. The study is SQLite on the work filesystem,
+  named from `hydra.sweeper.study_name`; its identity, the declared space and
+  the fixed benchmark fields are persisted once in `sweep_config.yaml`.
+  `sweep_space.py` owns the one allowlist both the config and the plugin check,
+  so split, seed, augmentation subset and the evaluator cannot be swept, and
+  the direction is always maximize. `PolyxOptunaSweeper` injects the actual
+  trial id, and before asking for new trials it recovers every `RUNNING` trial:
+  resume its checkpoint, retry its recorded parameters, or tell the score its
+  finished execution already wrote. Two leases under `trials/.locks/` keep
+  runners apart: `trial_NNN.lock` while a job trains it and
+  `trial_NNN.recovery.lock` while a runner relaunches it. A lease whose owner is
+  gone — a same-host liveness probe, or no `progress.json` activity for
+  `POLYX_LEASE_TTL` when the owner is on another node — is taken over. Every
+  trial writes `record.json` (`sweep_record.py`), and the reader compares the
+  record's study **and database** before trusting an execution: `trial_007`
+  from another sweep root is not this study's result. The export resolves the
+  winner strictly by `study.best_trial.number` and requires its record,
+  `completion.json`, readable metrics and `best.pt`; a partial directory is
+  reported as missing.
 - `weights.py` resolves `family.weights` to a staged file and verifies its
   SHA-256 against the manifest before a framework sees it; absent or unverified
   pins fail closed.

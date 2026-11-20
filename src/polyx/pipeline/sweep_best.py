@@ -3,9 +3,9 @@
 The Hydra Optuna sweeper writes ``optimization_results.yaml`` inside its sweep
 directory and leaves each trial's normal execution under
 ``<output_dir>/trials/trial_<number>``. This small post-multirun step folds the
-two into the same ``sweep_best.json`` the one-process driver writes, so a
-campaign or a reviewer finds the winning configuration and its criterion next to
-the study and the per-trial artifacts.
+two into ``sweep_best.json`` beside the study and the per-trial artifacts, so a
+campaign or a reviewer finds the winning configuration and its criterion
+without reading the SQLite file.
 
 Usage:
     python -m polyx.pipeline.sweep_best --output-dir <sweep root>

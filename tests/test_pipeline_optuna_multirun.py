@@ -90,17 +90,19 @@ def test_the_real_sweeper_writes_a_sqlite_study_and_one_directory_per_trial(
         assert protocol["split"] == "val"
         assert protocol["augmentation_subset"] == ["hsv", "flip_lr"]
 
-    # The declared space is the protocol-only one in `params` syntax.
-    from polyx.pipeline.sweep import load_sweep_config
-
-    config = load_sweep_config([f"data_yaml={tiny_dataset}", f"output_dir={output}"])
-    assert config.sampler_target == "optuna.samplers.TPESampler"
-    assert set(config.search_space) == {
+    # The resolved space and the fixed fields travel with the study.
+    declared = yaml.safe_load((output / "sweep_config.yaml").read_text(encoding="utf-8"))
+    assert declared["direction"] == "maximize"
+    assert set(declared["params"]) == {
         "protocol.learning_rate",
         "protocol.momentum",
         "protocol.weight_decay",
     }
-    assert config.storage == f"sqlite:///{study_path}"
+    assert declared["fixed"]["split"] == "val"
+    assert declared["fixed"]["seed"] == 42
+    assert declared["fixed"]["augmentation_subset"] == ["hsv", "flip_lr"]
+    assert declared["fixed"]["objective"] == "with_class_score"
+    assert declared["storage"] == f"sqlite:///{study_path}"
 
     # The post-multirun step writes the best artifact next to the sweep.
     from polyx.pipeline import sweep_best
@@ -534,3 +536,83 @@ def test_a_lease_from_another_node_is_judged_by_activity(
     assert stolen is not None
     assert json.loads(stolen.read_text(encoding="utf-8"))["host"] != "another-node"
     release_trial_lease(stolen)
+
+
+def _run_multirun_with(
+    monkeypatch: pytest.MonkeyPatch,
+    output: Path,
+    data_yaml: Path,
+    *extra: str,
+) -> None:
+    from polyx.pipeline import sweep_app
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sweep_app",
+            "--multirun",
+            f"output_dir={output}",
+            f"data_yaml={data_yaml}",
+            "protocol.epochs=1",
+            *extra,
+        ],
+    )
+    sweep_app.objective()
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        (
+            "protocol.split=choice(val,train)",
+            "search space may only declare protocol hyperparameters",
+        ),
+        (
+            "protocol.seed=choice(1,2)",
+            "search space may only declare protocol hyperparameters",
+        ),
+        (
+            "protocol.early_stopping.patience=range(1,5)",
+            "search space may only declare protocol hyperparameters",
+        ),
+        (
+            "hydra.sweeper.direction=minimize",
+            "the sweep direction must be 'maximize'",
+        ),
+    ],
+)
+def test_a_sweep_cannot_search_the_fixed_benchmark_fields(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    work_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    override: str,
+    message: str,
+) -> None:
+    """Split, seed and the evaluator stay fixed; the objective is maximized."""
+    output = work_env / "experiments" / "refused"
+    _install_fakes(monkeypatch, [_boxes_prediction()])
+
+    with pytest.raises(BaseException):  # noqa: B017 - Hydra converts the failure
+        _run_multirun_with(monkeypatch, output, tiny_dataset, override)
+
+    captured = capsys.readouterr()
+    assert message in captured.err + captured.out
+    assert not (output / "trials").exists(), "a refused sweep trained a trial"
+
+
+def test_the_glossary_and_the_adr_ship_with_the_sweep() -> None:
+    """The vocabulary and the decision are part of the behaviour, not later."""
+    root = Path(__file__).resolve().parents[1]
+    glossary = (root / "GLOSSARY.md").read_text(encoding="utf-8")
+    for term in ("Study", "Trial", "Sweeper", "Objective"):
+        assert f"## {term}\n" in glossary, f"glossary is missing {term}"
+
+    adr = root / "docs" / "adr" / "0010-optuna-objective.md"
+    assert adr.is_file()
+    text = adr.read_text(encoding="utf-8")
+    assert "# ADR-0010" in text
+    assert "with-class score" in text
+    assert "no cross-process pruning" in text.lower()

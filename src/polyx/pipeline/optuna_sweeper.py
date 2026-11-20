@@ -35,6 +35,7 @@ from polyx.pipeline.sweep_record import (
     release_trial_lease,
     trial_directory,
 )
+from polyx.pipeline.sweep_space import validate_direction, validate_search_space
 
 
 class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
@@ -46,6 +47,12 @@ class PolyxOptunaSweeper(_impl.OptunaSweeperImpl):  # type: ignore[misc]
         search_space_distributions: MutableMapping[str, Any],
         fixed_params: MutableMapping[str, Any],
     ) -> Sequence[Sequence[str]]:
+        # The plugin resolves `params:` and any `*_sweep` override into these
+        # distributions. A `protocol.split=choice(val,test)` override reaches
+        # this point without ever composing a config the sweep reader sees, so
+        # the fixed benchmark fields are refused here too.
+        validate_search_space(search_space_distributions)
+        validate_direction(self.direction)
         overrides = super()._configure_trials(trials, search_space_distributions, fixed_params)
         return [
             (*override, f"sweep_trial_id={trial.number}")

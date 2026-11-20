@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:20-0500\n"
+"POT-Creation-Date: 2026-11-19 20:25-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6199,7 +6199,7 @@ msgid ""
 "directory"
 msgstr ""
 
-#: src/polyx/pipeline/optuna_sweeper.py:146
+#: src/polyx/pipeline/optuna_sweeper.py:153
 #, python-format
 msgid "recovery of interrupted trials failed (%(count)d); the study was not extended"
 msgstr ""
@@ -6220,7 +6220,7 @@ msgid ""
 "annotation tool."
 msgstr ""
 
-#: src/polyx/pipeline/sweep.py:264 src/polyx/pipeline/sweep_app.py:60
+#: src/polyx/pipeline/sweep_app.py:62
 #, python-format
 msgid "study trial %(trial)d is already running in another process"
 msgstr ""

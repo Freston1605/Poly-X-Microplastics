@@ -2,8 +2,9 @@
 
 ``python -m polyx.pipeline.sweep_app --multirun`` hands each configuration here
 and records the returned number as the study value. It is the shared evaluator's
-with-class score from :func:`run_execution`, the same number the one-process
-driver returns through ``polyx-pipeline --sweep``.
+with-class score from :func:`run_execution`, the same number a single execution
+reports. This is the only sweep entry point: the command composes one execution
+or one import, never a second search loop.
 
 ``PolyxOptunaSweeper`` injects the real study trial number as
 ``sweep_trial_id``. That is the only accepted identity: parameters and Hydra's
@@ -34,6 +35,7 @@ from polyx.pipeline.sweep_record import (
     trial_directory,
     write_trial_record,
 )
+from polyx.pipeline.sweep_space import validate_direction, validate_search_space
 
 install_trial_id_passthrough()
 
@@ -48,7 +50,7 @@ def objective(cfg: DictConfig) -> float:
     assert isinstance(raw, dict)
     root = Path(str(raw["output_dir"]))
     trial_id = int(raw["sweep_trial_id"])
-    study = _study_record()
+    study = _study_record(raw)
     _persist_study(root, study)
     output = _trial_output_dir(root, trial_id)
     lease = acquire_trial_lease(output)
@@ -79,14 +81,34 @@ def objective(cfg: DictConfig) -> float:
     return float(summary["selection"]["value"])
 
 
-def _study_record() -> dict[str, Any]:
-    """The study identity resolved by Hydra once for this sweep root."""
+def _study_record(raw: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The study identity resolved by Hydra once for this sweep root.
+
+    Written next to the study so a reviewer reads the space that produced it
+    and ``sweep_best`` reopens the same database. The declared space and the
+    direction are validated here, before the first trial, because this is the
+    one place both are resolved from the composed multirun.
+    """
     sweeper = HydraConfig.get().sweeper
+    direction = validate_direction(sweeper.get("direction") or "maximize")
+    params = dict(sweeper.get("params") or {})
+    validate_search_space(params)
+    protocol = (raw or {}).get("protocol") or {}
     return {
         "study_name": str(sweeper.get("study_name") or "polyx-optuna"),
         "storage": str(sweeper.get("storage") or ""),
-        "direction": str(sweeper.get("direction") or "maximize"),
-        "params": dict(sweeper.get("params") or {}),
+        "direction": direction,
+        "params": params,
+        # The fields the benchmark holds fixed across every trial. They sit
+        # outside the search space, so recording them is what lets a reader
+        # verify that two sweeps ran under one methodology.
+        "fixed": {
+            "split": str(protocol.get("split", "")),
+            "seed": int(protocol.get("seed", 0)),
+            "augmentation_subset": list(protocol.get("augmentation_subset") or []),
+            "evaluator": "polyx.pipeline.evaluation.SharedEvaluator",
+            "objective": "with_class_score",
+        },
     }
 
 

@@ -430,10 +430,13 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
   `<output_dir>/sweep_best.json` with the winning parameters, value, criterion
   and trial directory.
 
-`polyx-pipeline --sweep` remains the fast in-process driver for a local check;
-it reads the same `hydra.sweeper` node and writes the same artifacts. The plugin
-path is proven by `tests/test_pipeline_optuna_multirun.py`, including study
-resume and the best-artifact step.
+`python -m polyx.pipeline.sweep_app --multirun` is the only sweep entry point,
+locally and on the cluster: the same command with `backend=slurm` is the job the
+submission script runs. `sweep_space.py` refuses any declared name outside
+`protocol.<searchable field>` and any direction other than `maximize`, so split,
+seed, augmentation subset and the evaluator cannot enter the search space. The
+plugin path is proven by `tests/test_pipeline_optuna_multirun.py`, including
+study resume, the fixed-field guard and the best-artifact step.
 
 ## Decisions and vocabulary
 

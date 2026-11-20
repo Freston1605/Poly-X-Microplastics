@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:20-0500\n"
+"POT-Creation-Date: 2026-11-19 20:25-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6778,7 +6778,7 @@ msgstr ""
 "%(path)s ya contiene una ejecución; pase resume=true para continuarla o elija un directorio de "
 "salida nuevo"
 
-#: src/polyx/pipeline/optuna_sweeper.py:146
+#: src/polyx/pipeline/optuna_sweeper.py:153
 #, python-format
 msgid "recovery of interrupted trials failed (%(count)d); the study was not extended"
 msgstr "falló la recuperación de ensayos interrumpidos (%(count)d); el estudio no se amplió"
@@ -6805,7 +6805,7 @@ msgstr ""
 "YOLO; el cargador fijado las colapsaría en un solo objetivo. Combine o elimine la duplicada en "
 "la herramienta de anotación."
 
-#: src/polyx/pipeline/sweep.py:264 src/polyx/pipeline/sweep_app.py:60
+#: src/polyx/pipeline/sweep_app.py:62
 #, python-format
 msgid "study trial %(trial)d is already running in another process"
 msgstr "el ensayo %(trial)d del estudio ya se está ejecutando en otro proceso"
