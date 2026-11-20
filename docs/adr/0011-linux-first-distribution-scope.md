@@ -132,8 +132,8 @@ needs. Its costs are concrete:
   the two remaining hardcoded references to the upstream repository. The
   remaining `CrissFerrada/...` URLs in `pyproject.toml`, `README.md`,
   `CLAUDE.md`, the manual generators and `download_models.py` move to the MICRA
-  repository; `SECURITY.md` and `docs/agents/issue-tracker.md`, which already
-  name the fork, stay as they are.
+  repository. `SECURITY.md` already names the fork; `docs/agents/issue-tracker.md`
+  and the runbook follow the rename like every other reference.
 - `micra download-models` keeps returning 404 until the first release or Zenodo
   record exists. That is a release-checklist item, not a code defect.
 - No component updates itself. A collaborator re-runs `uv sync --locked` or
