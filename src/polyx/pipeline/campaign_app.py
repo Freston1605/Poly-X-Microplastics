@@ -31,7 +31,11 @@ from polyx.pipeline.config import (
     execution_config_from_raw,
     protocol_to_dict,
 )
-from polyx.pipeline.dataset import validate_campaign_cohort
+from polyx.pipeline.dataset import (
+    ResolvedBoxDataset,
+    resolve_box_dataset,
+    validate_campaign_cohort,
+)
 from polyx.pipeline.errors import PipelineError, report_failure
 from polyx.pipeline.execution import run_execution
 
@@ -106,11 +110,16 @@ def campaign(cfg: DictConfig) -> float:
 
 def _campaign(cfg: DictConfig) -> float:
     config = execution_config_from_raw(campaign_raw(cfg))
+    boxes: ResolvedBoxDataset | None = None
     if config.data_yaml is not None and config.coco_dataset is not None:
         # Both sources travel together in a campaign. They must describe the
         # same real-domain cohort; otherwise the benchmark would vary the
-        # dataset as well as the model.
-        validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
+        # dataset as well as the model. The resolved box files are handed to
+        # every detection job so the cohort check and the fit read one dataset.
+        boxes = resolve_box_dataset(config.data_yaml, config.protocol.split)
+        validate_campaign_cohort(
+            config.data_yaml, config.coco_dataset, config.protocol.split, resolved_boxes=boxes
+        )
     run_name = config.output_dir.name
     if config.resume:
         decision, state = _resume_decision(config)
@@ -123,7 +132,10 @@ def _campaign(cfg: DictConfig) -> float:
         # A family that never started must not be asked to resume.
         config = replace(config, resume=decision == "resume")
 
-    summary = run_execution(config)
+    summary = run_execution(
+        config,
+        resolved_boxes=boxes if config.family.task == "detect" else None,
+    )
     print(f"CAMPAIGN_FAMILY: {summary['training_state']['family']['name']}")
     print(f"OUTPUT: {summary['output_dir']}")
     print(f"SELECTION: {summary['selection']['metric']}={summary['selection']['value']:.6f}")

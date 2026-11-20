@@ -24,6 +24,18 @@ a benchmark. The resolved protocol is written verbatim into each training
 execution's artifacts. _Avoid_: hyperparameters (too narrow — it also fixes
 the split and the evaluator).
 
+## Dataset fingerprint
+
+The one digest over the exact files a headless execution trains and scores on:
+the `data.yaml`, every resolved image of `train`, `val`, a declared `test`
+fold and the protocol's evaluation split, and each of their label files, keyed
+by its place in the dataset (relative to the declaration, or to its own split
+when that split lives outside it). It records what the bytes are, not where
+they sit, so relocating a dataset keeps the identity while a relabelled image
+or a replaced photo changes it. A resume compares the digest and refuses a mismatch instead of
+restoring weights that belong to other bytes. Only files in a resolved split
+count: a neighbouring folder of plates is not part of the dataset.
+
 ## Campaign
 
 One benchmark over several model families under the identical protocol: a single

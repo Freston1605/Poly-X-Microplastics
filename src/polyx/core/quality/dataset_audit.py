@@ -14,12 +14,13 @@ from __future__ import annotations
 import math
 import statistics
 from collections import defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from polyx.core.i18n import _
-from polyx.core.labels import find_label_file, read_boxes
+from polyx.core.labels import BBox, find_label_file, read_boxes
 from polyx.core.paths import IMAGE_EXTS
 
 LEVEL_OK = "ok"
@@ -124,19 +125,32 @@ def _scan_split(images: list[Path]) -> dict:
     malformed instead of misreading its first four coordinates as a box. The
     count is returned so the audit can report it instead of dropping it.
     """
+
+    def records() -> Iterable[tuple[Path, Sequence[BBox] | None, int]]:
+        for img in images:
+            label = find_label_file(img)
+            if label is None:
+                yield img, None, 0
+            else:
+                boxes, malformed = read_boxes(label)
+                yield img, boxes, malformed
+
+    return _scan_box_records(records())
+
+
+def _scan_box_records(records: Iterable[tuple[Path, Sequence[BBox] | None, int]]) -> dict:
     per_class: dict[int, int] = defaultdict(int)
     areas: dict[int, list[float]] = defaultdict(list)
     per_class_per_img: dict[int, dict[str, int]] = defaultdict(
         lambda: defaultdict(int)
     )  # class -> {img: n}
     degenerate = out_range = duplicates = empty = no_label = malformed = 0
-    n_imgs = len(images)
-    for img in images:
-        lp = find_label_file(img)
-        if lp is None:
+    n_imgs = 0
+    for img, boxes, malformed_lines in records:
+        n_imgs += 1
+        if boxes is None:
             no_label += 1
             continue
-        boxes, malformed_lines = read_boxes(lp)
         malformed += malformed_lines
         seen = set()
         for box in boxes:
@@ -271,52 +285,52 @@ class _Auditor:
         self.audit.class_names = [str(n) for n in names]
 
     def _scan_all_splits(self) -> None:
-        audit = self.audit
         data, yaml_dir, root = self.data, self.yaml_dir, self.root
-        scans = {}
         for split in ("train", "val", "test"):
             split_value = data.get(split)
             resolved = _resolve_split(yaml_dir, data, split_value)
-            if not split_value and split in ("train", "val"):
-                audit.add(
-                    LEVEL_ERROR,
-                    _("No %(split)s split declared") % {"split": split},
-                    _(
-                        "The data.yaml has no '%(split)s' key. Ultralytics needs it "
-                        "to train and measure metrics."
-                    )
-                    % {"split": split},
-                    code="split_missing",
-                    parameters={"split": split},
-                )
-            elif split_value and (resolved is None or not resolved.exists()):
-                lvl = LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN
-                audit.add(
-                    lvl,
-                    _("%(split)s path does not exist") % {"split": split},
-                    _(
-                        "The data.yaml points to “%(path)s”, which does not exist on this "
-                        "computer. This usually happens when the project is moved to another "
-                        "folder or PC: fix the paths in the data.yaml (or use relative paths)."
-                    )
-                    % {"path": resolved},
-                    code="split_path_missing",
-                    parameters={"split": split, "path": str(resolved)},
-                )
-            imgs = _iter_images(resolved, yaml_dir, root)
-            scans[split] = _scan_split(imgs)
-            scans[split]["path_exists"] = bool(resolved and resolved.exists())
-            audit.per_class[split] = {
-                self._cls_name(c): n for c, n in scans[split]["per_class"].items()
-            }
+            scan = _scan_split(_iter_images(resolved, yaml_dir, root))
+            self._record_box_split(split, bool(split_value), resolved, scan)
+        self._finish_box_scans()
 
-        self.scans = scans
-        self.tr = scans["train"]
-        self.vl = scans["val"]
+    def _record_box_split(self, split: str, declared: bool, path: Path | None, scan: dict) -> None:
+        audit = self.audit
+        exists = path is not None and path.exists()
+        if not declared and split in ("train", "val"):
+            audit.add(
+                LEVEL_ERROR,
+                _("No %(split)s split declared") % {"split": split},
+                _(
+                    "The data.yaml has no '%(split)s' key. Ultralytics needs it "
+                    "to train and measure metrics."
+                )
+                % {"split": split},
+                code="split_missing",
+                parameters={"split": split},
+            )
+        elif declared and not exists:
+            audit.add(
+                LEVEL_ERROR if split in ("train", "val") else LEVEL_WARN,
+                _("%(split)s path does not exist") % {"split": split},
+                _(
+                    "The data.yaml points to “%(path)s”, which does not exist on this "
+                    "computer. This usually happens when the project is moved to another "
+                    "folder or PC: fix the paths in the data.yaml (or use relative paths)."
+                )
+                % {"path": path},
+                code="split_path_missing",
+                parameters={"split": split, "path": str(path)},
+            )
+        scan["path_exists"] = exists
+        self.scans[split] = scan
+        audit.per_class[split] = {self._cls_name(c): n for c, n in scan["per_class"].items()}
 
+    def _finish_box_scans(self) -> None:
+        self.tr = self.scans["train"]
+        self.vl = self.scans["val"]
         for c, ar in self.tr["areas"].items():
             if ar:
-                audit.box_area_median[self._cls_name(c)] = statistics.median(ar)
+                self.audit.box_area_median[self._cls_name(c)] = statistics.median(ar)
 
     def _check_structure(self) -> None:
         audit, tr, vl = self.audit, self.tr, self.vl
@@ -605,6 +619,21 @@ class _Auditor:
 # ──────────────────────────────────────────────────────────────────
 def audit_dataset(yaml_path: str | Path) -> DatasetAudit:
     return _Auditor(Path(yaml_path)).run()
+
+
+def audit_resolved_boxes(
+    class_names: Sequence[str],
+    split_paths: Mapping[str, Path | None],
+    records: Mapping[str, Iterable[tuple[Path, Sequence[BBox] | None]]],
+) -> DatasetAudit:
+    """Run the same box audit on resolved images and labels without rediscovering files."""
+    auditor = _Auditor()
+    auditor.audit.class_names = list(class_names)
+    for split, path in split_paths.items():
+        scan = _scan_box_records((image, boxes, 0) for image, boxes in records[split])
+        auditor._record_box_split(split, path is not None, path, scan)
+    auditor._finish_box_scans()
+    return auditor.run_checks()
 
 
 # ── COCO mask polygons ─────────────────────────────────────────────────────
