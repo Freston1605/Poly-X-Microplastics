@@ -1504,6 +1504,12 @@ funcionando si algo falla. No se copia ningún dato: tus modelos
 <a href="#estructura">Estructura de carpetas</a>), y las dos copias leen los
 mismos.</p>
 
+<p>Esta versión actualiza <b>Pillow a 13.0.0</b> en todas las plataformas
+soportadas, y el instalador no termina si el Pillow fijado no es el que quedó en
+disco. <b>No</b> actualiza PyTorch: el par sigue en 2.7.1 / 0.22.1, así que los
+avisos de PyTorch continúan abiertos tras instalarla; el par parchado saldrá
+como una versión aparte con su propia lista de plataformas validadas.</p>
+
 <div class="aviso">
   <span class="et">Ya no hay actualización automática</span>
   <p>Un commit de una rama no puede demostrar que tus dependencias quedaron

@@ -87,6 +87,17 @@ Doble clic en:
   un commit de rama no puede demostrar que tus dependencias quedaron
   parchadas.
 
+QUE ARREGLA CADA VERSION
+------------------------
+Cada version indica en sus notas que dependencias reemplaza, y el instalador
+no termina si la dependencia de seguridad fijada no es la que quedo en disco.
+
+  - Esta primera version actualiza Pillow a 13.0.0 en Windows, Linux, Mac con
+    Apple Silicon y Mac Intel.
+  - NO actualiza PyTorch: se queda en 2.7.1 / 0.22.1, asi que los avisos de
+    PyTorch siguen abiertos despues de instalarla. El par parchado saldra como
+    una version aparte, con su propia lista de plataformas validadas.
+
 USO DIARIO
 ----------
 Doble clic en el acceso directo "Poly-X" del Escritorio

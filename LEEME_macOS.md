@@ -106,6 +106,15 @@ shasum -a 256 polyx-desktop-<tag>.zip
 A checksum catches a damaged download; it does not prove who published the file
 (signing is tracked in #153).
 
+## What this release fixes
+
+It updates **Pillow to 13.0.0**, on Intel and Apple Silicon Macs alike, and the
+installer refuses to finish if the pinned Pillow is not the one on disk.
+
+It does **not** update PyTorch: the pair stays at 2.7.1 / 0.22.1, so the PyTorch
+advisories remain open after installing it. The patched pair ships as its own
+release with its own validated platform matrix.
+
 ---
 
 ## Bundling with PyInstaller (optional, and almost never needed)

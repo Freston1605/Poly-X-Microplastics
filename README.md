@@ -538,6 +538,18 @@ running copy.
   in the per-user data directory, so the new copy reads them without copying
   anything. Pre-canonical runs are left untouched for an older Poly-X version.
 
+### What a release fixes
+
+A release states in its notes which dependencies it actually replaces, and the
+installer refuses to finish if the pinned security dependency is not the one on
+disk. This first release moves **Pillow to 13.0.0** for Windows, Linux, Apple
+Silicon and Intel Macs.
+
+It does **not** update PyTorch: the pair stays at 2.7.1 / 0.22.1, so the
+PyTorch advisories are still open after installing it. The patched pair ships as
+its own release, with its own matrix of validated CPU, CUDA and MPS targets;
+acceleration is advertised only where it has been tested on real hardware.
+
 ### Checking the download
 
 ```bash

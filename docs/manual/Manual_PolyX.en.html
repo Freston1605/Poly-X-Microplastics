@@ -1730,6 +1730,12 @@ keep working if something fails. No data is copied: your
 Windows, <code>%LOCALAPPDATA%\polyx</code>; elsewhere see
 <a href="#estructura">Folder structure</a>), and both copies read the same.</p>
 
+<p>This release updates <b>Pillow to 13.0.0</b> on every supported platform,
+and the installer refuses to finish if the pinned Pillow is not the one on
+disk. It does <b>not</b> update PyTorch: the pair stays at 2.7.1 / 0.22.1, so
+the PyTorch advisories remain open after installing it; the patched pair ships
+as its own release with its own validated platform matrix.</p>
+
 <div class="aviso">
   <span class="et">There is no automatic update any more</span>
   <p>A branch commit cannot prove that your dependencies were patched. The
