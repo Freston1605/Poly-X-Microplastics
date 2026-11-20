@@ -51,6 +51,7 @@ from polyx.pipeline.evaluation import (
     prediction_budget,
     rasterize_segmentation,
 )
+from polyx.pipeline.masks import PackedMask
 from polyx.pipeline.resume import ResumeState
 from polyx.pipeline.seg_conversion import convert_coco_dataset, image_hashes
 from polyx.pipeline.weights import resolve_weights
@@ -533,7 +534,77 @@ def _torchvision_detector(
     # the budget is 100 per class: the evaluator then applies COCO's cap per
     # image and category without a busy polymer hiding another's candidates.
     model.roi_heads.detections_per_img = prediction_budget(class_count)
+    _install_chunked_mask_postprocess(model)
     return model
+
+
+#: How many full-resolution masks the torchvision postprocess may build at
+#: once. torchvision pastes every detection's mask at the original image size in
+#: one call; on a 4K plate with the per-class candidate budget that is hundreds
+#: of 4K masks at tens of gigabytes, before the model's own memory is counted.
+MASK_PASTE_CHUNK = 8
+
+
+def _tensor_to_numpy(value: Any) -> np.ndarray:
+    """A tensor or array as a float numpy array on the CPU."""
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value, dtype=float)
+
+
+def _install_chunked_mask_postprocess(model: Any) -> None:
+    """Paste predicted masks a few at a time and pack each chunk immediately.
+
+    ``GeneralizedRCNNTransform.postprocess`` resizes every box and pastes every
+    mask at the original image resolution in one call. The adapter keeps the
+    ranked tail the shared evaluator needs for AP, so that single call can ask
+    for hundreds of full-resolution masks on a 4K plate and exhaust the V100
+    before validation scores anything.
+
+    Replacing the instance's method keeps torchvision's own paste -- no
+    reimplementation of the model or its transforms -- while bounding the peak
+    to ``MASK_PASTE_CHUNK`` masks: each chunk is turned into a packed mask at
+    one bit per pixel before the next one is built. A stand-in without a
+    transform is left alone, and its outputs already arrive as prediction dicts.
+    """
+    transform = getattr(model, "transform", None)
+    original = getattr(transform, "postprocess", None)
+    if original is None:
+        return
+
+    def postprocess(
+        detections: list[dict],
+        image_sizes: list[tuple[int, int]],
+        original_sizes: list[tuple[int, int]],
+    ) -> list[dict]:
+        pasted_images: list[dict] = []
+        for detection, image_size, original_size in zip(
+            detections, image_sizes, original_sizes, strict=True
+        ):
+            total = len(detection["boxes"])
+            masks: list[PackedMask] = []
+            for start in range(0, total, MASK_PASTE_CHUNK):
+                chunk = {
+                    key: value[start : start + MASK_PASTE_CHUNK] for key, value in detection.items()
+                }
+                pasted = original([chunk], [image_size], [original_size])[0]
+                masks.extend(
+                    PackedMask.pack(_tensor_to_numpy(mask) >= 0.5) for mask in pasted["masks"]
+                )
+                # Release this chunk's full-resolution tensors before the next
+                # one is built; they are the memory this wrapper exists to bound.
+                del chunk, pasted
+            pasted_images.append(
+                {
+                    "boxes": detection["boxes"],
+                    "labels": detection["labels"],
+                    "scores": detection["scores"],
+                    "masks": masks,
+                }
+            )
+        return pasted_images
+
+    transform.postprocess = postprocess
 
 
 class _CocoMaskTorchvisionDataset:
@@ -1207,7 +1278,10 @@ class MaskRcnnAdapter(_CocoMaskAdapter):
                     self._val_dataset = self._split_dataset(protocol.split)
                 return DataLoader(
                     self._val_dataset,
-                    batch_size=protocol.batch,
+                    # One image per step. torchvision pastes each detection's
+                    # mask at the original resolution, so a batch of eight 4K
+                    # plates multiplies the peak the chunked paste bounds.
+                    batch_size=1,
                     shuffle=False,
                     num_workers=0,
                     collate_fn=_image_target_pairs,

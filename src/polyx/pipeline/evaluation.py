@@ -24,6 +24,7 @@ import numpy as np
 from polyx.core.detect.protocol import Instance
 from polyx.core.detection_run.operating_point import Criterion, Score
 from polyx.core.quality.metrics import match_image
+from polyx.pipeline.masks import PackedMask, as_mask
 
 #: Ten IoU points, the threshold range used by COCO's mAP@[0.50:0.95].
 _IOU_THRESHOLDS = [0.50 + 0.05 * index for index in range(10)]
@@ -229,8 +230,10 @@ def _polygon_to_mask(points: np.ndarray, height: int, width: int) -> np.ndarray 
     return flat.reshape(width, height).T
 
 
-def _mask_iou(first: np.ndarray, second: np.ndarray) -> float:
-    if first.shape != second.shape:
+def _mask_iou(first: PackedMask | np.ndarray, second: PackedMask | np.ndarray) -> float:
+    first = as_mask(first)
+    second = as_mask(second)
+    if first is None or second is None or first.shape != second.shape:
         return 0.0
     union = int(np.logical_or(first, second).sum())
     if union == 0:
@@ -241,11 +244,14 @@ def _mask_iou(first: np.ndarray, second: np.ndarray) -> float:
 def _prepare(items: list[dict], sizes: dict[int, tuple[int, int]], task: str) -> list[dict]:
     """Copy the items and attach the mask a segmenter compares.
 
-    A prediction may carry its own mask (``"mask"``), taken straight from the
-    framework at the original resolution. That path is exact: converting a
-    predicted mask into a polygon and back loses up to half a pixel per edge,
-    enough to turn a perfect detection into a miss at IoU 0.50. A prediction
-    that only carries COCO polygons is rasterized with the reference port.
+    A prediction may carry its own mask (``packed_mask`` at one bit per pixel,
+    or ``mask`` as an array), taken straight from the framework at the original
+    resolution. That path is exact: converting a predicted mask into a polygon
+    and back loses up to half a pixel per edge, enough to turn a perfect
+    detection into a miss at IoU 0.50. Keeping the packed form is what lets a
+    whole validation split of 4K plates stay in memory. A prediction that only
+    carries COCO polygons is rasterized with the reference port and packed the
+    same way.
     """
     prepared: list[dict] = []
     for item in items:
@@ -256,9 +262,14 @@ def _prepare(items: list[dict], sizes: dict[int, tuple[int, int]], task: str) ->
     return prepared
 
 
-def _segment_mask(item: dict, sizes: dict[int, tuple[int, int]]) -> np.ndarray | None:
+def _segment_mask(item: dict, sizes: dict[int, tuple[int, int]]) -> PackedMask | np.ndarray | None:
     """The boolean mask of one item, from its own mask or its polygons."""
     size = sizes.get(int(item.get("image_id", -1)))
+    packed = item.get("packed_mask")
+    if isinstance(packed, PackedMask) and (size is None or packed.shape == (size[1], size[0])):
+        return packed
+    # A mask the caller did not produce at the image's resolution lives on
+    # another grid; fall back to the polygons it also carried, if any.
     explicit = item.get("mask")
     if explicit is not None:
         array = np.asarray(explicit)
@@ -266,12 +277,12 @@ def _segment_mask(item: dict, sizes: dict[int, tuple[int, int]]) -> np.ndarray |
             array = array >= 0.5
         array = array.reshape(array.shape[-2:])
         if size is None or array.shape == (size[1], size[0]):
-            return array
-        # A mask the caller did not produce at the image's resolution lives
-        # on another grid; fall back to the polygons it also carried, if any.
+            return PackedMask.pack(array)
+        # Same fallback as above: an off-grid array is not this image's mask.
     if size is None:
         return None
-    return rasterize_segmentation(item.get("segmentation"), *size)
+    rasterized = rasterize_segmentation(item.get("segmentation"), *size)
+    return PackedMask.pack(rasterized) if rasterized is not None else None
 
 
 def _overlap(prediction: dict, truth: dict, task: str) -> float:
@@ -390,7 +401,9 @@ def _instance(item: dict) -> Instance:
         y1=y,
         x2=x + width,
         y2=y + height,
-        mask=item.get("_mask"),
+        # The core matcher scores one managed operating point, so only the
+        # handful of masks above the confidence threshold are unpacked here.
+        mask=as_mask(item.get("_mask")),
     )
 
 

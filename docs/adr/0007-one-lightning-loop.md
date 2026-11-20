@@ -80,7 +80,14 @@ backends; only the backend composition changes.
   the real FP16 pass.
 - The first adapter was detection-only. The COCO mask dataset and the YOLO-seg
   and Mask R-CNN adapters arrived in later tickets without changing this
-  decision; they use the same loop, evaluator and artifact layout.
+  decision; they use the same loop, evaluator and artifact layout. Mask R-CNN
+  keeps torchvision's own mask paste and only bounds it: the transform's
+  `postprocess` is called in chunks of `MASK_PASTE_CHUNK` masks, each turned
+  into a bit-packed mask before the next chunk is built, and validation runs one
+  image per step. A 4K plate otherwise asks for hundreds of original-resolution
+  masks at once, which the V100 cannot hold. The evaluator unpacks a packed
+  mask only while computing a figure, so the exact raster is scored without a
+  polygon round-trip and without keeping the arrays live.
 - An interrupted execution resumes from a real Lightning checkpoint
   (`checkpoints/lightning/checkpoint_NNN.ckpt`), which restores weights, optimizer,
   scheduler and epoch progress. A family-native `.pt` export is kept for

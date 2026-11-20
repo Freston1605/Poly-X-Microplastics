@@ -54,9 +54,13 @@ def _mask_for(polygon: list[float], width: int = 64, height: int = 48) -> np.nda
 class _FakeDetector:
     """torchvision Mask R-CNN stand-in with a real ``nn.Module`` base."""
 
-    prediction_sets: list[list[list[dict]]] = []
+    #: One entry per validation image, in dataset order; a batch of one image
+    #: consumes one entry.
+    prediction_sets: list[list[dict]] = []
     instances: list[object] = []
     seen_targets: list[list[dict]] = []
+    #: How many images each validation pass handed the model at once.
+    inference_batch_sizes: list[int] = []
     inference_calls = 0
     fail_on_inference: int | None = None
 
@@ -106,15 +110,11 @@ class _FakeDetector:
                         "loss_rpn_box_reg": total,
                     }
                 _FakeDetector.inference_calls += 1
+                _FakeDetector.inference_batch_sizes.append(len(images))
                 if _FakeDetector.fail_on_inference == _FakeDetector.inference_calls:
                     # A preemption after the previous epoch's checkpoint.
                     raise RuntimeError("simulated preemption during inference")
-                return [
-                    _outputs(detections, image)
-                    for detections, image in zip(
-                        _FakeDetector.prediction_sets.pop(0), images, strict=False
-                    )
-                ]
+                return [_outputs(_FakeDetector.prediction_sets.pop(0), image) for image in images]
 
         return _Detector()
 
@@ -200,6 +200,7 @@ def _install_fakes(
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.factory_calls = []
+    _FakeDetector.inference_batch_sizes = []
     _FakeDetector.inference_calls = 0
     _FakeDetector.fail_on_inference = None
     _FakeTrainer.interrupt_after = interrupt_after
@@ -238,7 +239,7 @@ def _train_mask_rcnn(
     tmp_path: Path,
     store: Path,
     monkeypatch: pytest.MonkeyPatch,
-    prediction_sets: list[list[list[dict]]],
+    prediction_sets: list[list[dict]],
     *,
     label: str = "mask-rcnn",
     epochs: int = 1,
@@ -289,7 +290,7 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
     """The whole path is visible from the command: artifacts and metrics."""
     store = _imported_store(tmp_path)
 
-    code, output = _train_mask_rcnn(tmp_path, store, monkeypatch, [_perfect_validation()])
+    code, output = _train_mask_rcnn(tmp_path, store, monkeypatch, _perfect_validation())
 
     assert code == 0, capsys.readouterr().err
     for relative in (
@@ -304,6 +305,10 @@ def test_mask_rcnn_trains_from_coco_masks_for_one_epoch(
     ):
         assert (output / relative).is_file(), f"missing artifact: {relative}"
     assert (output / "checkpoints" / "epoch_000.pt").is_file()
+
+    # Validation pastes masks at the original resolution, so one image per
+    # step is what keeps a batch of 4K plates from multiplying the peak.
+    assert set(_FakeDetector.inference_batch_sizes) == {1}
 
     state = _read(output / "training_state.json")
     assert state["family"]["name"] == "mask_rcnn"
@@ -366,7 +371,7 @@ def test_the_shared_evaluator_scores_both_segmentation_families_identically(
         tmp_path, store, monkeypatch, [geometry], label="parity-yolo"
     )
     mask_code, mask_output = _train_mask_rcnn(
-        tmp_path, store, monkeypatch, [geometry], label="parity-mask"
+        tmp_path, store, monkeypatch, geometry, label="parity-mask"
     )
 
     assert seg_code == 0 and mask_code == 0
@@ -405,7 +410,7 @@ def test_both_segmentation_families_resolve_the_same_protocol(
         tmp_path, store, monkeypatch, [_perfect_validation()], label="protocol-yolo"
     )
     mask_code, mask_output = _train_mask_rcnn(
-        tmp_path, store, monkeypatch, [_perfect_validation()], label="protocol-mask"
+        tmp_path, store, monkeypatch, _perfect_validation(), label="protocol-mask"
     )
     assert seg_code == 0 and mask_code == 0
 
@@ -435,7 +440,7 @@ def test_benchmark_augmentation_is_the_true_common_subset(
     """
     store = _imported_store(tmp_path)
     mask_code, mask_output = _train_mask_rcnn(
-        tmp_path, store, monkeypatch, [_perfect_validation()], label="aug-mask"
+        tmp_path, store, monkeypatch, _perfect_validation(), label="aug-mask"
     )
     seg_code, seg_output = _train_yolo_seg(
         tmp_path, store, monkeypatch, [_perfect_validation()], label="aug-yolo"
@@ -621,7 +626,7 @@ def test_one_epoch_completes_under_the_real_lightning_loop(
 ) -> None:
     """The adapter must be a Lightning module that trains on COCO masks."""
     store = _imported_store(tmp_path)
-    _FakeDetector.prediction_sets = [_perfect_validation()]
+    _FakeDetector.prediction_sets = list(_perfect_validation())
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _install_torchvision_factory(monkeypatch)
@@ -671,7 +676,7 @@ def test_a_preempted_mask_rcnn_run_resumes_from_the_last_checkpoint(
 
     _install_fakes(
         monkeypatch,
-        [_perfect_validation(), _perfect_validation()],
+        _perfect_validation() + _perfect_validation(),
         interrupt_after=1,
     )
     assert _command(*overrides) == 1
@@ -684,7 +689,7 @@ def test_a_preempted_mask_rcnn_run_resumes_from_the_last_checkpoint(
     first_best = (output / "checkpoints" / "epoch_000.pt").read_bytes()
     assert not (output / "training_state.json").exists()
 
-    _install_fakes(monkeypatch, [_perfect_validation(), _perfect_validation()])
+    _install_fakes(monkeypatch, _perfect_validation() + _perfect_validation())
     assert _command(*overrides, "resume=true") == 0
 
     state = _read(output / "training_state.json")

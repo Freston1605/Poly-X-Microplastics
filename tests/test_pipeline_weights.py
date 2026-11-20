@@ -136,7 +136,7 @@ def test_a_torchvision_pinned_checkpoint_is_loaded_instead_of_the_default(
     (weights / "SHA256SUMS").write_text(
         f"{sha256_file(checkpoint)}  {checkpoint.name}\n", encoding="utf-8"
     )
-    _FakeDetector.prediction_sets = [_perfect_validation()]
+    _FakeDetector.prediction_sets = list(_perfect_validation())
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.inference_calls = 0

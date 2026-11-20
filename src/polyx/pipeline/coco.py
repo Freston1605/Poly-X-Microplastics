@@ -10,6 +10,8 @@ from typing import Any
 
 import numpy as np
 
+from polyx.pipeline.masks import PackedMask
+
 
 def coco_predictions_from_results(results: Any) -> list[dict]:
     """Turn Ultralytics detection results into COCO instance predictions.
@@ -46,12 +48,14 @@ def coco_segmentation_predictions_from_torchvision(
     """Turn torchvision Mask R-CNN outputs into COCO instance predictions.
 
     torchvision returns soft masks at the input image's resolution; they are
-    thresholded and carried as ``mask``, the exact instance geometry. The
-    shared evaluator compares that mask directly, so a perfect prediction
+    thresholded and carried as a packed mask, the exact instance geometry at
+    one bit per pixel. The shared evaluator unpacks it, so a perfect prediction
     scores IoU 1.0 instead of losing half a pixel per edge to a polygon
-    round-trip. Label 0 is torchvision's background and is never emitted; the
-    remaining labels are shifted back to the dense, zero-based class indices
-    the evaluator's ground truth uses.
+    round-trip, and a whole validation split stays inside memory. Outputs that
+    already arrive packed (the chunked postprocess in the adapter) are carried
+    through unchanged. Label 0 is torchvision's background and is never
+    emitted; the remaining labels are shifted back to the dense, zero-based
+    class indices the evaluator's ground truth uses.
     """
     predictions: list[dict] = []
     for output, image_id in zip(outputs or [], image_ids, strict=False):
@@ -65,8 +69,9 @@ def coco_segmentation_predictions_from_torchvision(
                 continue
             if masks is None or index >= len(masks):
                 continue
-            mask = _numpy(masks[index]) >= 0.5
-            if not mask.any():
+            raw = masks[index]
+            packed = raw if isinstance(raw, PackedMask) else PackedMask.pack(_numpy(raw) >= 0.5)
+            if not packed.any():
                 continue
             x1, y1, x2, y2 = (float(value) for value in boxes[index])
             predictions.append(
@@ -74,7 +79,7 @@ def coco_segmentation_predictions_from_torchvision(
                     "image_id": int(image_id),
                     "category_id": label - 1,
                     "bbox": [x1, y1, x2 - x1, y2 - y1],
-                    "mask": mask,
+                    "packed_mask": packed,
                     "score": float(scores[index]) if index < scores.shape[0] else 1.0,
                 }
             )

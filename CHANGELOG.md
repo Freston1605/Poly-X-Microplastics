@@ -27,6 +27,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Fixed
+- **Fourth review of the HPC pipeline (#202).** Both container definitions now
+  build: the project wheel is produced in the wheelhouse where `NOTICE` and the
+  build backend exist, and the runtime installs it with `--no-index --no-deps`
+  instead of building from source, with Apptainer selecting `/opt/venv` before
+  its first install. `polyx-pipeline` no longer carries a second sweep loop:
+  `python -m polyx.pipeline.sweep_app --multirun` is the only sweep entry point,
+  and one allowlist refuses sweep fields outside `protocol.<searchable field>`
+  and any direction other than maximize in both the written study record and
+  the plugin's resolved distributions. A resume now compares a dataset
+  fingerprint as well as the protocol, so relabelled images or an edited COCO
+  export cannot keep the old checkpoint. The kept checkpoint is the strictly
+  best score, so a gain smaller than `min_delta` still replaces `best.pt`.
+  Mask R-CNN validation pastes masks in bounded chunks and stores them
+  bit-packed, and runs one image per step, so a 4K split no longer asks the
+  V100 for tens of gigabytes at once.
 - **Third follow-up HPC review fixes.** A killed Optuna trial is recovered by
   its own id (resume its checkpoint, retry its parameters, or reconcile a score
   its finished execution already wrote), one trial at a time through a lease

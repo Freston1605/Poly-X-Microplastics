@@ -737,8 +737,14 @@ Trainer and its native training wrapper are untouched by this path.
   rasterizer, checked against pycocotools, so a hit COCO counts is not emptied
   by rounding; a framework that exposes an instance mask at the original
   resolution (Mask R-CNN) has it scored directly, while YOLO-seg's own boundary
-  polygons are scored as polygons. AP is a separate ranking figure and never
-  selects a checkpoint or drives Optuna. `mask_iou` is class-aware.
+  polygons are scored as polygons. Those raster masks travel bit-packed
+  (`masks.py`, one bit per pixel) and are unpacked only while a figure is
+  computed: a validation split of 4K plates holds hundreds of candidates per
+  image, and a boolean array each would be tens of gigabytes. Mask R-CNN also
+  pastes its predicted masks in bounded chunks during validation, so the
+  original-resolution tensors are never all live on the GPU at once. AP is a
+  separate ranking figure and never selects a checkpoint or drives Optuna.
+  `mask_iou` is class-aware.
 - `execution.py` owns audit, provenance, early stopping, best-weight
   restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,

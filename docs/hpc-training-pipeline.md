@@ -329,9 +329,15 @@ The Ultralytics families share one wrapper:
 Mask R-CNN follows the same shape with torchvision's own pieces: a
 `DataLoader` over the canonical COCO instances and their rasterized masks, the
 detector's own loss dictionary summed into one Lightning loss, and the same
-optimizer and schedule. Its per-epoch checkpoints hold the model state dict and
-the validation hook polygonizes the predicted masks into the COCO currency the
-shared evaluator already consumes.
+optimizer and schedule. Its per-epoch checkpoints hold the model state dict, and
+validation carries the detector's own masks into the shared evaluator rather
+than through polygons: torchvision's paste runs in bounded chunks
+(`MASK_PASTE_CHUNK` masks at a time) because pasting every candidate at the
+original resolution would ask for tens of gigabytes on a 4K plate, and each
+chunk becomes a bit-packed mask so a whole split stays in memory. The paste is
+still torchvision's own; the adapter replaces only the transform's `postprocess`
+call, never the model. Validation runs one image per step for the same reason:
+a batch of eight plates would multiply that peak by eight.
 
 At the end of every epoch each adapter writes two kinds of checkpoint. The
 family-native export (`epoch_NNN.pt`, and `best.pt` restored from it) keeps its

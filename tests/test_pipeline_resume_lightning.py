@@ -303,12 +303,13 @@ def test_a_preempted_mask_rcnn_run_continues_the_real_epoch_loop(
     output = tmp_path / "executions" / "resume-mask"
     scratch = tmp_path / "scratch"
 
-    _FakeDetector.prediction_sets = [_perfect_validation(), _perfect_validation()]
+    _FakeDetector.prediction_sets = _perfect_validation() + _perfect_validation()
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.inference_calls = 0
-    # Fail on the second inference epoch, after epoch 0 completed.
-    _FakeDetector.fail_on_inference = 2
+    # Two validation images are two inference calls per epoch; failing the
+    # third one preempts after epoch 0 completed.
+    _FakeDetector.fail_on_inference = 3
     _install_torchvision_factory(monkeypatch)
     assert _fit_mask_rcnn(output, store, scratch) == 1
 
@@ -324,7 +325,7 @@ def test_a_preempted_mask_rcnn_run_continues_the_real_epoch_loop(
     assert "net.scale" in saved["state_dict"]
     saved_scale = float(saved["state_dict"]["net.scale"])
 
-    _FakeDetector.prediction_sets = [_perfect_validation()]
+    _FakeDetector.prediction_sets = list(_perfect_validation())
     _FakeDetector.instances = []
     _FakeDetector.inference_calls = 0
     _FakeDetector.fail_on_inference = None
@@ -335,8 +336,9 @@ def test_a_preempted_mask_rcnn_run_continues_the_real_epoch_loop(
     assert state["epochs_completed"] == 2
     assert state["resumed"] is True
     assert state["resumed_from_epoch"] == 1
-    # Exactly one new epoch ran, and one new per-epoch export exists.
-    assert _FakeDetector.inference_calls == 1
+    # Exactly one new epoch ran over the two validation images, and one new
+    # per-epoch export exists.
+    assert _FakeDetector.inference_calls == 2
     assert (output / "checkpoints" / "epoch_001.pt").is_file()
     assert _FakeDetector.instances[-1].first_scale is not None
     assert _FakeDetector.instances[-1].first_scale == pytest.approx(saved_scale)

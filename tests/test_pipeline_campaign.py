@@ -60,7 +60,7 @@ def _install_framework_doubles(monkeypatch: pytest.MonkeyPatch) -> None:
     _FakeYOLO.instances = []
     monkeypatch.setattr(ultralytics, "YOLO", _FakeYOLO)
 
-    _FakeDetector.prediction_sets = [_perfect_validation()]
+    _FakeDetector.prediction_sets = list(_perfect_validation())
     _FakeDetector.instances = []
     _FakeDetector.seen_targets = []
     _FakeDetector.inference_calls = 0
