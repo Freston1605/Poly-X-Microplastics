@@ -39,9 +39,12 @@ path) may be committed.
    public wheel is not used.
 3. `tools/hpc/build_wheelhouse.py` exports the lockfile, downloads every other
    wheel as pinned there, downloads the CUDA wheels with their runtime
-   dependencies, writes an offline `requirements.txt` and a `SHA256SUMS`
-   manifest. Installation on a compute node is `uv pip install --no-index
-   --find-links <wheelhouse> -r <wheelhouse>/requirements.txt`.
+   dependencies, builds the project's own wheel, writes an offline
+   `requirements.txt` and a `SHA256SUMS` manifest. Installation on a compute
+   node is `uv pip install --no-index --find-links <wheelhouse> -r
+   <wheelhouse>/requirements.txt` plus `uv pip install --no-index --no-deps
+   <wheelhouse>/polyx_microplastics-*.whl`: nothing is built from source on the
+   node, and `NOTICE` travels inside the wheel.
 4. Weights are downloaded only when a `sha256sum`-style manifest pins their
    digest. `polyx.hpc.weights.fetch_weights` re-verifies cached files, deletes
    rejected files and refuses an empty manifest. Digests come from the release,

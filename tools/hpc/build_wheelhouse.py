@@ -19,6 +19,12 @@ Usage::
 
 ``--dry-run`` prints the plan without downloading anything; it is safe to run
 offline and is what the test suite exercises.
+
+The builder never installs into the environment that invoked it: it downloads,
+builds and verifies, and the image (or the node) does the offline install. A
+self-check that ran `uv pip install` here would need a virtual environment
+inside the image's build stage and, when it found none, could write into an
+unrelated one.
 """
 
 from __future__ import annotations
@@ -111,18 +117,14 @@ def make_plan(requirements_text: str, wheelhouse: Path) -> Plan:
         ("write", str(exported), "locked pins without default torch/torchvision"),
         (*pip, "--no-deps", "--dest", str(wheelhouse), "-r", str(exported)),
         (*pip, "--no-deps", *index_args, "--dest", str(wheelhouse), *cuda),
+        # The project's own wheel is built here, where the build backend and the
+        # network are available, and ships in the wheelhouse. A compute node
+        # then installs it with --no-index and never needs hatchling, Babel or
+        # the source tree; building it there also required NOTICE, which the
+        # force-include in pyproject.toml makes mandatory.
+        ("uv", "build", "--wheel", "--out-dir", str(wheelhouse)),
         ("write", str(wheelhouse / "requirements.txt"), "locked pins + cu126 wheels"),
         ("write", str(wheelhouse / "SHA256SUMS"), "digest of every downloaded wheel"),
-        (
-            "uv",
-            "pip",
-            "install",
-            "--no-index",
-            "--find-links",
-            str(wheelhouse),
-            "-r",
-            str(wheelhouse / "requirements.txt"),
-        ),
     )
     return Plan(
         wheelhouse=wheelhouse,
@@ -154,6 +156,8 @@ def _write_index(plan: Plan) -> None:
     header = [
         "# Generated from uv.lock by tools/hpc/build_wheelhouse.py; do not edit.",
         "# The CUDA 12.6 wheels are the only packages not taken from the lockfile index.",
+        "# The project's own wheel sits beside this file and is installed separately:",
+        "#   uv pip install --no-index --no-deps polyx_microplastics-*.whl",
         "# Install offline with: uv pip install --no-index --find-links <dir> -r <dir>/requirements.txt",
     ]
     pins = [*plan.default_requirements, *plan.cuda_requirements]
@@ -209,6 +213,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cuda wheels: {', '.join(plan.cuda_requirements)}")
         print(
             f"offline install: uv pip install --no-index --find-links {plan.wheelhouse} -r {plan.requirements_file}"
+        )
+        print(
+            "project wheel: uv pip install --no-index --no-deps "
+            f"{plan.wheelhouse}/polyx_microplastics-*.whl"
         )
         return 0
 

@@ -58,8 +58,9 @@ is a separate cluster-side check; it consumes `source_sha.txt` through
 `%files` and is not claimed as verified locally.
 
 `container/hpc.def` is the Apptainer definition for the cluster. It starts from
-the same pinned digest and installs from the same wheelhouse. Build it on a
-login node, where the build context contains a generated `wheelhouse/`:
+the same pinned digest and installs from the same wheelhouse, which carries the
+project's wheel as well as the dependencies. Build it on a login node, where the
+build context contains a generated `wheelhouse/`:
 
 ```sh
 python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
@@ -76,8 +77,14 @@ for ticket #199, not a claim made here.
 ## Offline wheelhouse
 
 `tools/hpc/build_wheelhouse.py` exports the pinned requirements from `uv.lock`,
-downloads every wheel once on a networked machine and writes a `SHA256SUMS`
-manifest plus a ready-to-use `requirements.txt`.
+downloads every wheel once on a networked machine, builds the project's own
+wheel here, and writes a `SHA256SUMS` manifest plus a ready-to-use
+`requirements.txt`. Building the project wheel on this side is what keeps the
+node offline: the runtime image has no source tree, no build backend and no
+index, and installs the package from the wheel like any other dependency. The
+wheel build also needs `NOTICE`, which `pyproject.toml` force-includes for the
+pycocotools licence; omitting it fails the build with
+`Forced include not found`.
 
 ```sh
 python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
@@ -91,6 +98,8 @@ wheels substituted. On a compute node with no internet:
 uv venv /work/polyx/.venv
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links wheelhouse -r wheelhouse/requirements.txt
+VIRTUAL_ENV=/work/polyx/.venv uv pip install \
+  --no-index --no-deps wheelhouse/polyx_microplastics-*.whl
 ```
 
 Verify a copied wheelhouse before using it:
@@ -190,7 +199,8 @@ uv venv /work/polyx/.venv
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links /work/polyx/wheelhouse \
   -r /work/polyx/wheelhouse/requirements.txt
-cd /work/polyx && VIRTUAL_ENV=/work/polyx/.venv uv pip install --no-deps .
+VIRTUAL_ENV=/work/polyx/.venv uv pip install \
+  --no-index --no-deps /work/polyx/wheelhouse/polyx_microplastics-*.whl
 /work/polyx/.venv/bin/python -m polyx.hpc.check_env
 ```
 

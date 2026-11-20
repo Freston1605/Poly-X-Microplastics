@@ -9,8 +9,11 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
   compiles sm_70 for V100 with driver 560) are installed from an offline
   wheelhouse: compute nodes need no internet access.
 
-  Build on a login node, after creating the wheelhouse:
+  Build on a login node, after creating the wheelhouse. The wheelhouse carries
+  the project's own wheel too, so this definition installs the package rather
+  than building it, and nothing outside the wheelhouse is read at install time:
     python tools/hpc/build_wheelhouse.py --wheelhouse wheelhouse
+    git rev-parse HEAD > source_sha.txt
     apptainer build polyx-v100.sif container/hpc.def
   Run with GPU access:
     apptainer exec --nv polyx-v100.sif python -m polyx.hpc.check_env
@@ -21,21 +24,20 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
   # Build context: git rev-parse HEAD > source_sha.txt
   source_sha.txt /opt/polyx/SOURCE_SHA
   wheelhouse /opt/polyx/wheelhouse
-  pyproject.toml /opt/polyx/pyproject.toml
-  uv.lock /opt/polyx/uv.lock
-  README.md /opt/polyx/README.md
-  LICENSE /opt/polyx/LICENSE
-  src /opt/polyx/src
-  tools /opt/polyx/tools
 
 %post
   set -e
+  # Select the environment before the first install: `uv pip` without VIRTUAL_ENV
+  # and without a .venv in the working tree has no target and refuses to run.
+  export VIRTUAL_ENV=/opt/venv
+  export PATH=/opt/venv/bin:$PATH
   python -m pip install --no-cache-dir uv==0.13.7
   uv venv /opt/venv
   uv pip install --no-index --find-links /opt/polyx/wheelhouse \
       -r /opt/polyx/wheelhouse/requirements.txt
-  cd /opt/polyx
-  uv pip install --no-deps .
+  # The project wheel is installed with --no-deps from the wheelhouse: the
+  # runtime image carries no source tree and never runs a build backend.
+  uv pip install --no-index --no-deps /opt/polyx/wheelhouse/polyx_microplastics-*.whl
   rm -rf /root/.cache/uv /root/.cache/pip
 
 %environment

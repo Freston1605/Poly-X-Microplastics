@@ -299,8 +299,9 @@ def test_wheelhouse_plan_uses_cuda_index_and_no_index_install() -> None:
     assert plan.default_requirements == ("numpy==1.26.4", "ultralytics==8.3.40")
     assert plan.cuda_requirements == ("torch==2.7.1+cu126", "torchvision==0.22.1+cu126")
     assert build_wheelhouse.CUDA_INDEX in plan.cuda_index_args
-    assert any("--no-index" in " ".join(step) for step in plan.steps)
-    assert any("--find-links" in " ".join(step) for step in plan.steps)
+    # The builder downloads and builds; installing belongs to the image, so the
+    # plan never writes into whichever environment happened to invoke it.
+    assert not any(step[:3] == ("uv", "pip", "install") for step in plan.steps)
 
 
 def test_wheelhouse_plan_filters_torch_before_the_default_index_download(
@@ -352,3 +353,40 @@ def test_container_definitions_pin_the_base_and_the_cuda_build() -> None:
         assert "SOURCE_SHA" in text
         assert "POLYX_SOURCE_SHA" in text
     assert "Bootstrap: docker" in definition
+
+
+def test_wheelhouse_plan_builds_the_project_wheel_before_the_checksums() -> None:
+    """The node installs the package from a wheel; it never builds it."""
+    from tools.hpc import build_wheelhouse
+
+    plan = build_wheelhouse.make_plan("numpy==1.26.4\n", Path("/wheelhouse"))
+
+    build_at = next(index for index, step in enumerate(plan.steps) if step[:2] == ("uv", "build"))
+    checksum_at = next(
+        index
+        for index, step in enumerate(plan.steps)
+        if step[0] == "write" and step[1].endswith("SHA256SUMS")
+    )
+    assert build_at < checksum_at, "the project wheel must be digested with the rest"
+    assert "--wheel" in plan.steps[build_at]
+    assert "--out-dir" in plan.steps[build_at]
+
+
+def test_container_definitions_install_the_project_wheel_offline() -> None:
+    """A source install needs the network and a build backend; neither is there."""
+    containerfile = (ROOT / "container" / "Containerfile").read_text(encoding="utf-8")
+    definition = (ROOT / "container" / "hpc.def").read_text(encoding="utf-8")
+
+    # NOTICE is force-included into the wheel, so the build stage must ship it.
+    assert "NOTICE ./" in containerfile
+    for text in (containerfile, definition):
+        assert "polyx_microplastics-*.whl" in text, "the project wheel is not installed"
+        assert "--no-index --no-deps /opt/wheelhouse" in text or (
+            "--no-index --no-deps /opt/polyx/wheelhouse" in text
+        )
+        assert "--no-deps ." not in text, "the image still builds the project from source"
+
+    # Apptainer: `uv pip` has no target until the venv is selected.
+    post = definition.split("%post", 1)[1].split("%environment", 1)[0]
+    assert post.index("export VIRTUAL_ENV=/opt/venv") < post.index("uv pip install")
+    assert post.index("uv venv /opt/venv") < post.index("uv pip install")
