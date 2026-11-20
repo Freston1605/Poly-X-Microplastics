@@ -27,6 +27,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- **Desktop releases replace the in-place updater, and Pillow moves to
+  13.0.0 (#203).** Every desktop release now attaches
+  `polyx-desktop-<tag>.zip` and its SHA-256 checksum beside the wheel and sdist,
+  built from the tagged tree by `tools/packaging/desktop_release.py`. Desktop
+  publication does not depend on PyPI. The Launcher's button and the
+  `actualizar.*` scripts open the fork's Releases page and install nothing:
+  an upgrade is a verified side-by-side install that leaves the old copy and
+  its `.venv` usable. `polyx.gui.updates` is gone, because a branch-head SHA
+  cannot say whether an installed dependency set is patched. Pillow is pinned
+  to 13.0.0 in `pyproject.toml`, `requirements.txt` and `uv.lock`; the torch
+  pair is unchanged in this release and the automatic verification protocol
+  remains #153/#161.
 - **The HPC pipeline's training lifecycle is Lightning's, not a second one.**
   `ModelCheckpoint` keeps the strictly best `with_class_score` and
   `EarlyStopping` measures patience against `min_delta`, so the two thresholds

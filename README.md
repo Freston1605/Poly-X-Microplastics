@@ -518,29 +518,55 @@ REM Windows
 
 ## Updating
 
-To pull the latest version published on GitHub **without reinstalling anything**,
-double-click:
+Desktop releases are published on the fork's Releases page:
+[`Freston1605/Poly-X-Microplastics/releases`](https://github.com/Freston1605/Poly-X-Microplastics/releases).
+Each tagged release attaches `polyx-desktop-<tag>.zip` and its `.sha256`
+checksum beside the wheel and sdist.
 
-| System | File |
-|---|---|
-| 🪟 Windows | `actualizar.bat` |
-| 🍎 macOS | `actualizar_macOS.command` |
+The launcher's **Releases** button and the `actualizar.*` scripts open that page.
+They install nothing: a release is a fresh download, not a patch applied to the
+running copy.
 
-It checks whether there is a new commit on `main`; if there is, it downloads and
-replaces only the program files. It **keeps** your `.venv` environment, your
-`models/*.pt`, your `runs/` and any local data. Git does not need to be installed
-(it downloads over HTTPS).
+### Which file to download
 
-Each updater protects itself while running, but **does update the other platform's
-files**: whichever one you run, the project stays complete for both.
+- **Upgrading an existing installation** — download the ZIP, check the checksum
+  (below), extract it and run it **alongside** the old copy: `install/SETUP.bat`
+  on Windows, `install/Lanzar_macOS.command` on macOS. The old installation and
+  its `.venv` stay where they are and keep working, so a failed upgrade does not
+  interrupt your work.
+- **Your data is not inside the ZIP.** Models, runs, datasets and preferences live
+  in the per-user data directory, so the new copy reads them without copying
+  anything. Pre-canonical runs are left untouched for an older Poly-X version.
+
+### What a release fixes
+
+A release states in its notes which dependencies it actually replaces, and the
+installer refuses to finish if the pinned security dependency is not the one on
+disk. This first release moves **Pillow to 13.0.0** for Windows, Linux, Apple
+Silicon and Intel Macs.
+
+It does **not** update PyTorch: the pair stays at 2.7.1 / 0.22.1, so the
+PyTorch advisories are still open after installing it. The patched pair ships as
+its own release, with its own matrix of validated CPU, CUDA and MPS targets;
+acceleration is advertised only where it has been tested on real hardware.
+
+### Checking the download
+
+```bash
+# Linux / macOS
+shasum -a 256 polyx-desktop-<tag>.zip    # compare with the .sha256 file
+# Windows
+certutil -hashfile polyx-desktop-<tag>.zip SHA256
+```
+
+A checksum detects a damaged or mismatched download. It does not prove *who*
+published the file; signing and attestation are tracked in #153.
 
 ### Automatic update notice
 
-There is no need to remember to run it: when the launcher opens, it checks in the
-background whether GitHub is ahead and, if so, shows a button with the new
-version's identifier. The check does not slow the startup down and stays silent
-on any failure — without internet or with GitHub down, the notice simply does not
-appear.
+There is no in-place updater. The launcher no longer polls a branch head: a
+commit SHA cannot say whether the dependency set a user installed is patched,
+so the old notice was replaced by the Releases button.
 
 ### If the machine already had Poly-X
 
@@ -578,20 +604,21 @@ runs/                    # Results of each run
 data/                    # YOLO dataset (images/ + labels/) — not in git
 tests/                   # Test suite for measurement, calibration and portability
 
-install/                # 🪟/🍎 end-user scripts (SETUP, launchers, updaters, uninstaller)
+install/                # 🪟/🍎/🐧 end-user scripts (installer, launchers, releases link)
 ├── SETUP.bat           # 🪟 Installer
 ├── iniciar_polyx.bat   # 🪟 Launcher (with console)
 ├── Poly-X.vbs          # 🪟 Launcher (no console)
-├── actualizar.bat      # 🪟 Updater
+├── actualizar.bat      # 🪟 Opens the Releases page
 ├── actualizar.ps1
 ├── Lanzar_macOS.command    # 🍎 Installer + launcher
-├── actualizar_macOS.command # 🍎 Updater
+├── actualizar_macOS.command # 🍎 Opens the Releases page
 ├── crear_icono_macOS.command # 🍎 Icon without a Terminal window
 ├── construir_app_macOS.command # 🍎 Build Poly-X.app (optional)
 ├── desinstalar.ps1     # 🪟 Uninstaller (searches the whole disk)
 ├── migrar_instalacion.ps1
 ├── empaquetar_para_llevar.bat
 └── empaquetar_dataset_para_drive.bat
+tools/packaging/desktop_release.py  # builds the release ZIP + SHA-256
 ```
 
 Everything that differs between systems — opening folders, launching the updater,

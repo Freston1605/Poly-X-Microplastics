@@ -253,19 +253,6 @@ def pytest_unconfigure(config):
 
 
 @pytest.fixture
-def no_update_check(monkeypatch):
-    """Keep the launcher's background GitHub check out of a test.
-
-    ``LauncherWindow`` schedules a check about 1.2 s after it is built; it
-    reaches the network and starts a thread that can outlive a window the case
-    destroyed. A test that builds a launcher requests this fixture. A module
-    that builds one in most of its cases may wrap it in an autouse fixture of
-    its own, which requests this one instead of re-implementing it.
-    """
-    monkeypatch.setattr("polyx.gui.launcher.SearchUpdates.lookfor", lambda self: None)
-
-
-@pytest.fixture
 def selected_language():
     """Select the active language through the public API and restore it.
 

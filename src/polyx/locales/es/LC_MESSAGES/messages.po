@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 23:54-0500\n"
+"POT-Creation-Date: 2026-11-20 01:00-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -972,36 +972,39 @@ msgstr "Abrir  →"
 msgid "Opening…"
 msgstr "Abriendo…"
 
-#: src/polyx/gui/launcher.py:366 src/polyx/gui/preferencias.py:144 src/polyx/gui/preferencias.py:168
+#: src/polyx/gui/launcher.py:357 src/polyx/gui/preferencias.py:144 src/polyx/gui/preferencias.py:168
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: src/polyx/gui/launcher.py:368
+#: src/polyx/gui/launcher.py:359
 msgid "Theme, language and motion"
 msgstr "Tema, idioma y movimiento"
 
-#: src/polyx/gui/launcher.py:378 src/polyx/gui/launcher.py:575 src/polyx/gui/launcher.py:585
-#: src/polyx/gui/launcher.py:595 src/polyx/gui/launcher.py:608
-msgid "Update"
-msgstr "Actualizar"
+#: src/polyx/gui/launcher.py:369 src/polyx/gui/launcher.py:564
+msgid "Releases"
+msgstr "Releases"
 
-#: src/polyx/gui/launcher.py:413
+#: src/polyx/gui/launcher.py:378
+msgid "Open the releases page for a new version"
+msgstr "Abrir la página de versiones para buscar una nueva"
+
+#: src/polyx/gui/launcher.py:400
 msgid "● ANALYSIS PLATFORM"
 msgstr "● PLATAFORMA DE ANÁLISIS"
 
-#: src/polyx/gui/launcher.py:422 src/polyx/gui/launcher.py:657
+#: src/polyx/gui/launcher.py:409 src/polyx/gui/launcher.py:610
 msgid "Poly-X"
 msgstr "Poly-X"
 
-#: src/polyx/gui/launcher.py:424
+#: src/polyx/gui/launcher.py:411
 msgid "analytics"
 msgstr "analytics"
 
-#: src/polyx/gui/launcher.py:431
+#: src/polyx/gui/launcher.py:418
 msgid "Detection and classification platform for microplastics"
 msgstr "Plataforma de detección y clasificación de microplásticos"
 
-#: src/polyx/gui/launcher.py:436
+#: src/polyx/gui/launcher.py:423
 msgid ""
 "Automated detection of PET, PP and LDPE by Nile Red fluorescence (254 nm) and machine learning. "
 "Training, labeling, detection and reporting in a single workflow."
@@ -1009,58 +1012,54 @@ msgstr ""
 "Detección automatizada de PET, PP y LDPE por fluorescencia Nile Red (254 nm) e inteligencia "
 "artificial. Entrenamiento, etiquetado, detección y reporte en un mismo flujo."
 
-#: src/polyx/gui/launcher.py:446
+#: src/polyx/gui/launcher.py:433
 msgid "Designed and developed by <b>Cristofher Ferrada</b> · PhD (c) in Chemistry, 2026"
 msgstr "Diseñado y desarrollado por <b>Cristofher Ferrada</b> · Dr (c) en Química, 2026"
 
-#: src/polyx/gui/launcher.py:470
+#: src/polyx/gui/launcher.py:457
 msgid "MODULES"
 msgstr "MÓDULOS"
 
 #: src/polyx/gui/detector/window.py:162 src/polyx/gui/labeler/window.py:332
 #: src/polyx/gui/labeler/window.py:359 src/polyx/gui/labeler/window.py:671
-#: src/polyx/gui/launcher.py:545 src/polyx/gui/trainer/window.py:172
+#: src/polyx/gui/launcher.py:532 src/polyx/gui/trainer/window.py:172
 #: src/polyx/gui/viewer/window.py:620
 msgid "● Ready"
 msgstr "● Listo"
 
-#: src/polyx/gui/launcher.py:553
+#: src/polyx/gui/launcher.py:540
 msgid "README"
 msgstr "LÉAME"
 
-#: src/polyx/gui/launcher.py:558
+#: src/polyx/gui/launcher.py:545
 msgid "User manual"
 msgstr "Manual de usuario"
 
-#: src/polyx/gui/launcher.py:577
-msgid "A new version is available on GitHub. Click to download and install it."
-msgstr "Hay una versión nueva disponible en GitHub. Pulsa para descargarla e instalarla."
-
-#: src/polyx/gui/launcher.py:356
+#: src/polyx/gui/launcher.py:347
 msgid "Microplastics analytics suite"
 msgstr "Suite de análisis de microplásticos"
 
-#: src/polyx/gui/launcher.py:459
+#: src/polyx/gui/launcher.py:446
 msgid "Polymers"
 msgstr "Polímeros"
 
-#: src/polyx/gui/launcher.py:460
+#: src/polyx/gui/launcher.py:447
 msgid "Nile Red fluorescence"
 msgstr "fluorescencia Nile Red"
 
-#: src/polyx/gui/launcher.py:462
+#: src/polyx/gui/launcher.py:449
 msgid "measurement"
 msgstr "medición"
 
-#: src/polyx/gui/launcher.py:462
+#: src/polyx/gui/launcher.py:449
 msgid "per-pixel calibration"
 msgstr "calibración por píxel"
 
-#: src/polyx/gui/launcher.py:483
+#: src/polyx/gui/launcher.py:470
 msgid "Detector"
 msgstr "Detector"
 
-#: src/polyx/gui/launcher.py:484
+#: src/polyx/gui/launcher.py:471
 msgid ""
 "Analyzes images with a trained .pt model. Produces annotated output, a CSV of centroids and "
 "diameters, global metrics and an HTML detection report."
@@ -1068,11 +1067,11 @@ msgstr ""
 "Analiza imágenes con un modelo .pt entrenado. Genera salidas anotadas, CSV con centroides y "
 "diámetros, métricas globales e informe HTML de detección."
 
-#: src/polyx/gui/launcher.py:498
+#: src/polyx/gui/launcher.py:485
 msgid "Trainer"
 msgstr "Entrenador"
 
-#: src/polyx/gui/launcher.py:499
+#: src/polyx/gui/launcher.py:486
 msgid ""
 "Trains YOLO v8 / v11 models. Live curves, automatic quality recommendations and comparison "
 "against earlier runs."
@@ -1080,11 +1079,11 @@ msgstr ""
 "Entrena modelos YOLO v8 / v11. Curvas en vivo, recomendaciones automáticas de calidad y "
 "comparación con runs anteriores."
 
-#: src/polyx/gui/labeler/window.py:133 src/polyx/gui/launcher.py:513
+#: src/polyx/gui/labeler/window.py:133 src/polyx/gui/launcher.py:500
 msgid "Labeler"
 msgstr "Etiquetador"
 
-#: src/polyx/gui/launcher.py:514
+#: src/polyx/gui/launcher.py:501
 #, python-format
 msgid ""
 "Annotates images in YOLO format. Supports pre-annotation with an existing model plus keyboard "
@@ -1093,11 +1092,11 @@ msgstr ""
 "Anota imágenes en formato YOLO. Soporta pre-anotación con un modelo existente y atajos de "
 "teclado, ahorra ~80 % del tiempo manual."
 
-#: src/polyx/gui/launcher.py:528 src/polyx/gui/viewer/window.py:264
+#: src/polyx/gui/launcher.py:515 src/polyx/gui/viewer/window.py:264
 msgid "Viewer"
 msgstr "Visor"
 
-#: src/polyx/gui/launcher.py:529
+#: src/polyx/gui/launcher.py:516
 msgid ""
 "Inspects one image at a time with interactive μm/pixel calibration (line or circle) and precise "
 "per-particle measurement."
@@ -1105,26 +1104,16 @@ msgstr ""
 "Inspección de una imagen a la vez con calibración interactiva μm/píxel (línea o círculo) y "
 "medición precisa por partícula."
 
-#: src/polyx/gui/launcher.py:549
+#: src/polyx/gui/launcher.py:536
 #, python-format
 msgid "© Cristofher Ferrada · Poly-X v%(version)s"
 msgstr "© Cristofher Ferrada · Poly-X v%(version)s"
 
-#: src/polyx/gui/launcher.py:596
-msgid ""
-"The new version will be downloaded and Poly-X will close.\n"
-"\n"
-"Your models, results and data are left untouched. Continue?"
-msgstr ""
-"Se descargará la versión nueva y se cerrará Poly-X.\n"
-"\n"
-"Tus modelos, resultados y datos no se tocan. ¿Continuar?"
-
-#: src/polyx/gui/launcher.py:645
+#: src/polyx/gui/launcher.py:598
 msgid "Manual_PolyX.html not found"
 msgstr "Manual_PolyX.html no encontrado"
 
-#: src/polyx/gui/launcher.py:652
+#: src/polyx/gui/launcher.py:605
 msgid "LEEME.txt not found"
 msgstr "LEEME.txt no encontrado"
 
@@ -1132,21 +1121,12 @@ msgstr "LEEME.txt no encontrado"
 msgid "MODULE"
 msgstr "MÓDULO"
 
-#: src/polyx/gui/launcher.py:586
+#: src/polyx/gui/launcher.py:565
 #, python-format
-msgid ""
-"Could not find %(name)s in the installation folder. Download the new version manually from "
-"GitHub."
-msgstr ""
-"No se encontró %(name)s en la carpeta de instalación. Descarga la versión nueva manualmente "
-"desde GitHub."
+msgid "Could not open the releases page: %(url)s"
+msgstr "No se pudo abrir la página de versiones: %(url)s"
 
-#: src/polyx/gui/launcher.py:609
-#, python-format
-msgid "Could not launch %(name)s. Run it by hand from the installation folder."
-msgstr "No se pudo lanzar %(name)s. Ejecútalo a mano desde la carpeta de instalación."
-
-#: src/polyx/gui/launcher.py:636
+#: src/polyx/gui/launcher.py:589
 #, python-format
 msgid "Could not open the module %(module)s"
 msgstr "No se pudo abrir el módulo %(module)s"
@@ -6795,8 +6775,8 @@ msgid ""
 "%(path)s is declared in both the %(first)s and the %(second)s splits; an image can belong to one"
 " fold only"
 msgstr ""
-"%(path)s está declarado tanto en el split %(first)s como en el %(second)s; una imagen solo "
-"puede pertenecer a un pliegue"
+"%(path)s está declarado tanto en el split %(first)s como en el %(second)s; una imagen solo puede"
+" pertenecer a un pliegue"
 
 #: src/polyx/pipeline/execution.py:79
 #, python-format
@@ -6993,4 +6973,30 @@ msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en
 
 #~ msgid "explicit index CSV mapping image names to µm/px"
 #~ msgstr "CSV de índice explícito que asigna nombres de imagen a µm/px"
+
+#~ msgid "Update"
+#~ msgstr "Actualizar"
+
+#~ msgid "A new version is available on GitHub. Click to download and install it."
+#~ msgstr "Hay una versión nueva disponible en GitHub. Pulsa para descargarla e instalarla."
+
+#~ msgid ""
+#~ "The new version will be downloaded and Poly-X will close.\n"
+#~ "\n"
+#~ "Your models, results and data are left untouched. Continue?"
+#~ msgstr ""
+#~ "Se descargará la versión nueva y se cerrará Poly-X.\n"
+#~ "\n"
+#~ "Tus modelos, resultados y datos no se tocan. ¿Continuar?"
+
+#~ msgid ""
+#~ "Could not find %(name)s in the installation folder."
+#~ " Download the new version manually from GitHub."
+#~ msgstr ""
+#~ "No se encontró %(name)s en la carpeta de "
+#~ "instalación. Descarga la versión nueva manualmente desde"
+#~ " GitHub."
+
+#~ msgid "Could not launch %(name)s. Run it by hand from the installation folder."
+#~ msgstr "No se pudo lanzar %(name)s. Ejecútalo a mano desde la carpeta de instalación."
 

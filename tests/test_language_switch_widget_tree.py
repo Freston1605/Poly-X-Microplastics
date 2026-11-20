@@ -133,7 +133,7 @@ def _restore_language(qapp):
     i18n.set_language(previous)
 
 
-def test_no_visible_text_survives_a_language_switch(qapp, no_update_check):
+def test_no_visible_text_survives_a_language_switch(qapp):
     from polyx.core import i18n
     from polyx.gui import i18n_qt
 

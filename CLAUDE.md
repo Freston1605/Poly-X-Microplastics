@@ -30,8 +30,8 @@ The root deliberately mixes two surfaces with different audiences:
   `actualizar_macOS.command`, `actualizar_linux.sh`), the uninstaller and the
   packagers (`empaquetar_*.bat`, `migrar_instalacion.ps1`), plus `setup.sh`,
   `run.sh` and `polyx.desktop` for Linux. The assumption "they live in
-  install/" is wired in: `polyx.core.platform.name_updater()` plus
-  `polyx.gui.updates` build `ROOT/install/name_updater()`, `Poly-X.vbs`
+  install/" is wired in: `polyx.core.paths.ROOT` plus
+  `polyx.core.platform.name_updater()` locate `ROOT/install/name_updater()`, `Poly-X.vbs`
   self-locates two levels up (project root), `SETUP.bat` resolves `SRC` as
   its parent, and `empaquetar_para_llevar.bat` builds the offline package
   from `src\`, `docs\` and `tools\manual\` and copies the install scripts
@@ -91,7 +91,6 @@ src/                      # Source code (installable package)
         ├── widgets.py    # LogoBadge, HLine, custom widgets
         ├── preferencias.py  # Preferences dialog (theme, motion, language)
         ├── pdf_export.py # HTML → PDF
-        ├── updates.py    # Update checker
         ├── report_html.py  # Compat shim re-exporting gui/report/
         ├── report/      # HTML report: render → sections → figures → batch/machine/markup/samples/particle/registry
         │   ├── __init__.py   # public surface: generate_report + section catalog
@@ -483,7 +482,7 @@ application, and it is not part of the gate.
 ```batch
 SETUP.bat            :: first time — creates .venv, detects GPU, installs everything
 iniciar_polyx.bat    :: daily use
-actualizar.bat       :: pull the latest from GitHub
+actualizar.bat       :: open the fork's Releases page; it installs nothing
 ```
 
 ### 🍎 macOS
@@ -491,9 +490,18 @@ actualizar.bat       :: pull the latest from GitHub
 ```bash
 Lanzar_macOS.command       # installs the 1st time, launches afterwards
 crear_icono_macOS.command  # creates Poly-X.app: opens without a Terminal window
-actualizar_macOS.command   # pull the latest from GitHub
+actualizar_macOS.command   # open the fork's Releases page; it installs nothing
 construir_app_macOS.command  # package Poly-X.app (optional)
 ```
+
+**Desktop releases come from `Freston1605/Poly-X-Microplastics`.** A published
+tag produces `polyx-desktop-<tag>.zip` plus its `.sha256` beside the wheel and
+sdist, and that is what a desktop user downloads. There is no in-place
+automatic updater: the old branch-head sync is gone, so the launcher's button
+and every `actualizar.*` script only open the Releases page. Patching an
+existing install means a side-by-side install from a verified download, which
+keeps the old copy usable. The release protocol (what gets signed, how an
+automatic update would verify and roll back) is #153/#161, not this path.
 
 **Right** click → Open the first time (Gatekeeper blocks scripts
 downloaded without Apple's signature).
@@ -511,7 +519,7 @@ Open the **Launcher** → pick a module.
 
 ### 🏠 Launcher (Module 1)
 Main menu: four cards (Detector, Trainer, Labeller, Viewer), theme picker,
-update checker (`polyx.gui.updates`), manual/report openers, preferences.
+releases page (`polyx.release`), manual/report openers, preferences.
 
 ---
 

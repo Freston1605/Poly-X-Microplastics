@@ -21,7 +21,11 @@ import urllib.request
 from pathlib import Path
 
 from gpu import detect_gpu as _detect_gpu
-from versions import REQUIREMENTS, TORCH_VERSION, TORCHVISION_VERSION
+from versions import REQUIREMENTS, TORCH_VERSION, TORCHVISION_VERSION, pinned_version
+
+#: The dependency a release fixes and therefore has to prove afterwards. A
+#: silent warning is how a patched install gets mistaken for an unpatched one.
+SECURITY_PACKAGE = "Pillow"
 
 
 def _expected_torch() -> tuple[str, str]:
@@ -193,22 +197,67 @@ def _torch_already_ok(venv_py: Path, gpu: dict) -> bool:
     return True
 
 
-def _write_manifest(install_dir: Path, gpu: dict) -> None:
+def _write_manifest(install_dir: Path, gpu: dict, pillow_version: str) -> None:
     import contextlib
     import json
+
+    manifest = build_manifest(gpu, pillow_version)
+    with contextlib.suppress(OSError):
+        (install_dir / ".polyx_install.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+
+
+def build_manifest(gpu: dict, pillow_version: str) -> dict:
+    """What the installation actually holds, written beside the program.
+
+    A user reads this after an upgrade to confirm the patched dependency is the
+    one on disk; it records what was verified, not what was requested.
+    """
     from datetime import UTC, datetime
 
-    manifest = {
+    return {
+        "pillow_version": pillow_version,
         "torch_version": TORCH_VERSION,
         "torchvision_version": TORCHVISION_VERSION,
         "backend": gpu["backend"],
         "compute_capability": gpu.get("cc"),
         "installed_at": datetime.now(UTC).isoformat(),
     }
-    with contextlib.suppress(OSError):
-        (install_dir / ".polyx_install.json").write_text(
-            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-        )
+
+
+def _installed_pillow(venv_py: Path) -> str:
+    """The Pillow the environment actually imports, or '' when it has none."""
+    r = _run(
+        [str(venv_py), "-c", "import PIL; print(PIL.__version__)"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def enforce_pillow(venv_py: Path, requirements: Path) -> bool:
+    """Leave the environment on the pinned Pillow, or report that it is not.
+
+    A stale Pillow is exactly what a security release exists to replace, so a
+    mismatch is repaired through the same ``-r requirements.txt`` path the
+    first install used — same index context, same wheel policy — and then
+    verified. ``False`` means the install must not be described as patched.
+    """
+    expected = pinned_version(SECURITY_PACKAGE, requirements)
+    if expected is None:
+        return False
+    installed = _installed_pillow(venv_py)
+    if installed == expected:
+        _say(f"[OK] {SECURITY_PACKAGE} {expected} verificado.")
+        return True
+    _say(f"[INFO] {SECURITY_PACKAGE} {installed or 'ausente'} -> {expected}; reinstalando...")
+    _run([str(venv_py), "-m", "pip", "install", "-r", str(requirements)])
+    if _installed_pillow(venv_py) == expected:
+        _say(f"[OK] {SECURITY_PACKAGE} {expected} instalado.")
+        return True
+    return False
 
 
 def _verify_imports(venv_py: Path) -> bool:
@@ -342,6 +391,14 @@ def main() -> int:
         _say("[ERROR] Hubo problemas instalando dependencias.")
         return 1
 
+    _say("[INFO] Verificando el pin de seguridad...")
+    if not enforce_pillow(venv_py, install_dir / REQUIREMENTS):
+        _say(
+            "[ERROR] Pillow no quedo en la version fijada. Esta instalacion NO "
+            "debe considerarse parchada; revisa la salida de pip."
+        )
+        return 1
+
     _say("[INFO] Verificando la instalacion...")
     if _verify_imports(venv_py):
         _say(
@@ -383,7 +440,7 @@ def main() -> int:
         else:
             _say("[OK] PyTorch tiene kernels para esta GPU.")
 
-    _write_manifest(install_dir, gpu)
+    _write_manifest(install_dir, gpu, _installed_pillow(venv_py))
 
     if not (install_dir / ".polyx_version").exists():
         _say("[INFO] Registrando la version instalada...")

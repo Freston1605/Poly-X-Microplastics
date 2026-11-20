@@ -158,18 +158,6 @@ def _restore_language(qapp):
     i18n.carry()
 
 
-@pytest.fixture(autouse=True)
-def _no_update_check(no_update_check):
-    """Keep the launcher's background GitHub check out of this module.
-
-    It fires 1.2 s after a launcher is built — inside a wait — and its thread
-    can outlive a window the case destroyed. It has nothing to do with live
-    retranslation, and its timer is another race this module does not test.
-    Every case here may build a launcher, so the shared fixture is applied to
-    all of them instead of listed in each signature.
-    """
-
-
 # ── The switch itself ────────────────────────────────────────────────
 def test_switching_language_loads_qt_catalogs(qapp):
     """Native dialogs follow the interface instead of staying English."""

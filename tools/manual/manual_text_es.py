@@ -1476,7 +1476,8 @@ fotografías que muestra.</p>
         "sub": "Traer lo nuevo sin reinstalar, y retirar el programa sin dejar restos.",
         "html": r"""
 <h3>Actualizar</h3>
-<p>Doble clic en el actualizador que corresponda:</p>
+<p>Las versiones se publican en la página de Releases del proyecto:</p>
+<p><code>https://github.com/Freston1605/Poly-X-Microplastics/releases</code></p>
 <div class="tabla-env">
 <table>
   <thead><tr><th>Sistema</th><th>Archivo</th></tr></thead>
@@ -1487,24 +1488,34 @@ fotografías que muestra.</p>
 </table>
 </div>
 
-<p>Comprueba si hay un commit nuevo en <code>main</code> y, si lo hay, descarga y
-reemplaza <b>solo los archivos del programa</b>. <b>Conserva</b> tu entorno
-<code>.venv</code> y tus modelos <code>models/*.pt</code>; tus corridas ya no
-viven en esta carpeta, sino en la carpeta de datos de tu usuario (en Windows,
-<code>%LOCALAPPDATA%\polyx</code>; en los demás sistemas, ver
-<a href="#estructura">Estructura de carpetas</a>), donde el actualizador no
-llega. No necesita
-tener Git instalado —descarga por HTTPS—, solo conexión a internet.</p>
+<p>Doble clic en esa tabla, o el botón <b>Releases</b> del
+<a href="#launcher">Launcher</a>: ambos <b>abren la página</b> y no instalan
+nada. Descarga el ZIP de escritorio y su archivo <code>.sha256</code>,
+comprueba el resumen (<code>certutil -hashfile</code> en Windows,
+<code>shasum -a 256</code> en macOS), descomprime el ZIP y ejecuta la
+instalación desde dentro (<code>install\SETUP.bat</code> en Windows,
+<code>install/Lanzar_macOS.command</code> en macOS) para dejar la versión nueva
+<b>al lado</b> de la que tienes.</p>
+
+<p>La copia anterior y su entorno <code>.venv</code> quedan intactos y siguen
+funcionando si algo falla. No se copia ningún dato: tus modelos
+<code>models/*.pt</code> y tus corridas viven fuera de la carpeta del programa
+(en Windows, <code>%LOCALAPPDATA%\polyx</code>; en los demás sistemas, ver
+<a href="#estructura">Estructura de carpetas</a>), y las dos copias leen los
+mismos.</p>
+
+<p>Esta versión actualiza <b>Pillow a 13.0.0</b> en todas las plataformas
+soportadas, y el instalador no termina si el Pillow fijado no es el que quedó en
+disco. <b>No</b> actualiza PyTorch: el par sigue en 2.7.1 / 0.22.1, así que los
+avisos de PyTorch continúan abiertos tras instalarla; el par parchado saldrá
+como una versión aparte con su propia lista de plataformas validadas.</p>
 
 <div class="aviso">
-  <span class="et">Da igual desde qué sistema actualices</span>
-  <p>Cada actualizador se protege a si mismo mientras corre, pero <b>si actualiza
-  los archivos de la otra plataforma</b>. El proyecto queda completo para ambas
-  vengas de donde vengas.</p>
+  <span class="et">Ya no hay actualización automática</span>
+  <p>Un commit de una rama no puede demostrar que tus dependencias quedaron
+  parchadas. El aviso automático del Launcher se reemplazó por el botón de
+  Releases, y cada versión se instala desde una descarga verificada.</p>
 </div>
-
-<p>No hace falta acordarse de ejecutarlo: el <a href="#launcher">Launcher</a> avisa
-solo cuando GitHub va por delante.</p>
 
 <h3>Desinstalar</h3>
 <p>En Windows, <code>DESINSTALAR.bat</code>. Retira el entorno y los archivos del
@@ -1613,9 +1624,9 @@ desinstalación no llega.</p>
 ├── SETUP.bat                 <span class="c">[Win] instalador</span>
 ├── iniciar_polyx.bat         <span class="c">[Win] lanzador con consola</span>
 ├── Poly-X.vbs                <span class="c">[Win] lanzador sin consola</span>
-├── actualizar.bat            <span class="c">[Win] actualizador</span>
+├── actualizar.bat            <span class="c">[Win] abre Releases</span>
 ├── Lanzar_macOS.command      <span class="c">[Mac] instalador + lanzador</span>
-├── actualizar_macOS.command  <span class="c">[Mac] actualizador</span>
+├── actualizar_macOS.command  <span class="c">[Mac] abre Releases</span>
 └── LEEME.txt                 <span class="c">versión corta de la instalación</span></code></pre>
 
 <h3>Dónde viven tus corridas y modelos, según sistema</h3>
@@ -1711,7 +1722,7 @@ canónica.</p>
 
 <div class="aviso">
   <span class="et">Las diferencias entre sistemas están en un solo archivo</span>
-  <p>Abrir carpetas, lanzar el actualizador, elegir el dispositivo de cómputo:
+  <p>Abrir carpetas, abrir la página de Releases, elegir el dispositivo de cómputo:
   todo lo que difiere entre Windows y macOS vive en
   <code>polyx/core/platform.py</code>, y no repartido por el código. Es la razón
   de que el programa funcione igual en ambos sin dos versiones que mantener.</p>
