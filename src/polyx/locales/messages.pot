@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-20 09:28-0500\n"
+"POT-Creation-Date: 2026-11-20 09:29-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5255,8 +5255,8 @@ msgstr ""
 #, python-format
 msgid ""
 "⚠ <b>%(name)s</b> is present (%(vram)s, driver %(driver)s) <b>but PyTorch cannot use "
-"it.</b><br><span style='font-size:9pt'>%(detail)s Reinstall PyTorch with CUDA (SETUP.bat) — "
-"until then it trains on CPU.</span>"
+"it.</b><br><span style='font-size:9pt'>%(detail)s Reinstall PyTorch with the CUDA wheel (see "
+"README.md) — until then it trains on CPU.</span>"
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/parameters.py:432
@@ -5489,7 +5489,7 @@ msgstr ""
 #, python-format
 msgid ""
 "PyTorch %(version)s was installed <b>WITHOUT CUDA/ROCm</b> — it will train on CPU (very slow). "
-"Reinstall with SETUP.bat detecting the GPU."
+"Reinstall the CUDA wheel (see README.md)."
 msgstr ""
 
 #: src/polyx/gui/trainer/pages/train.py:336

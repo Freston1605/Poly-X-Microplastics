@@ -76,6 +76,7 @@ RETIRED = {
     "polyx.gui.updates": re.compile(r"\b(?:polyx\.)?gui\.updates\b|\bupdates\.py\b"),
     "tools/packaging": re.compile(r"\btools/packaging\b|\bpolyx\.spec\b"),
     "PyInstaller": re.compile(r"\bPyInstaller\b|\bpyinstaller\b|frozen application"),
+    "SETUP.bat": re.compile(r"\bSETUP\.bat\b"),
     "test_install": re.compile(r"\btest_install\b"),
     "test_updater_observability": re.compile(r"\btest_updater_observability\b"),
 }
@@ -175,6 +176,7 @@ def test_the_scanner_catches_each_retired_name() -> None:
         "polyx.gui.updates": "from polyx.gui.updates import can_update",
         "tools/packaging": "The spec is tools/packaging/polyx.spec.",
         "PyInstaller": "The PyInstaller bundle was never signed.",
+        "SETUP.bat": "Reinstall with SETUP.bat detecting the GPU.",
         "test_install": "uv run pytest tests/test_install.py",
         "test_updater_observability": "tests/test_updater_observability.py",
     }
