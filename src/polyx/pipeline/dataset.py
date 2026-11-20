@@ -1,4 +1,11 @@
-"""Dataset reads shared by the audit pre-flight, the evaluator and the adapter.
+"""Dataset resolution shared by the audit preflight, the evaluator and the adapters.
+
+A headless box execution resolves its inputs once, here: the declared splits,
+their images, the boxes each label file holds and one digest over exactly those
+bytes. The audit, the evaluator's COCO ground truth, the native training loader
+and the resume fingerprint then read that one file list instead of walking the
+folder again. Segmentation datasets keep their own path: the canonical COCO
+store and its job-time conversion.
 
 The label codec stays the sole owner of YOLO label I/O; this module only turns
 its boxes into the COCO instance view the shared evaluator consumes. Dataset
@@ -9,18 +16,81 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from polyx.core.detect.protocol import size_image
 from polyx.core.i18n import N_
-from polyx.core.labels import find_label_file, read_boxes
-from polyx.core.paths import find_images
+from polyx.core.labels import BBox, find_label_file, read_training_boxes
+from polyx.core.paths import IMAGE_EXTS, find_images
 from polyx.core.provenance import sha256_file
-from polyx.core.quality.dataset_audit import coco_image_split
+from polyx.core.quality.dataset_audit import DatasetAudit, audit_resolved_boxes, coco_image_split
 from polyx.pipeline.errors import PipelineError
+
+
+@dataclass(frozen=True)
+class BoxImage:
+    """One resolved image and the boxes read from its matching label file."""
+
+    path: Path
+    size: tuple[int, int]
+    label: Path | None
+    boxes: tuple[BBox, ...]
+    sha256: str
+
+
+@dataclass(frozen=True)
+class ResolvedBoxDataset:
+    """One file list for a headless box execution, in stable split order."""
+
+    data_yaml: Path
+    real_domain: bool
+    class_names: dict[int, str]
+    splits: dict[str, tuple[BoxImage, ...]]
+    split_paths: dict[str, Path | None]
+    hashes: dict[str, str]
+
+    def audit(self) -> DatasetAudit:
+        """Apply the shared audit to the resolved labels, retaining missing-label warnings."""
+        records = {
+            split: tuple((image.path, image.boxes if image.label else None) for image in images)
+            for split, images in self.splits.items()
+        }
+        return audit_resolved_boxes(list(self.class_names.values()), self.split_paths, records)
+
+    def ground_truth(self, split: str) -> dict[str, Any]:
+        """The evaluator's COCO instance view, numbered in the loader's split order."""
+        images = []
+        annotations = []
+        for image_id, image in enumerate(self.splits[split]):
+            width, height = image.size
+            images.append(
+                {"id": image_id, "file_name": image.path.name, "width": width, "height": height}
+            )
+            for box in image.boxes:
+                box_width, box_height = box.w * width, box.h * height
+                annotations.append(
+                    {
+                        "id": len(annotations),
+                        "image_id": image_id,
+                        "category_id": box.class_id,
+                        "bbox": [
+                            (box.cx - box.w / 2) * width,
+                            (box.cy - box.h / 2) * height,
+                            box_width,
+                            box_height,
+                        ],
+                        "area": box_width * box_height,
+                        "iscrowd": 0,
+                    }
+                )
+        return {
+            "images": images,
+            "annotations": annotations,
+            "categories": [{"id": cid, "name": name} for cid, name in self.class_names.items()],
+        }
 
 
 def read_data_yaml(data_yaml: Path) -> dict[str, Any]:
@@ -78,7 +148,152 @@ def _is_real_domain(declaration: Any) -> bool:
     return _is_real_domain(info) if isinstance(info, dict) else False
 
 
-def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) -> dict[str, Any]:
+def _resolve_box_image(image: Path, native_label: Path, names: dict[int, str]) -> BoxImage:
+    import cv2
+    import numpy as np
+    from PIL import Image
+
+    label = find_label_file(image)
+    if label != (native_label if native_label.is_file() else None):
+        raise PipelineError(
+            "dataset.box_label_location",
+            N_(
+                "image %(image)s has a label at a location the two readers do not agree on; "
+                "place its box labels at %(expected)s using the conventional layout"
+            ),
+            image=str(image),
+            expected=str(native_label),
+        )
+    try:
+        boxes = read_training_boxes(label, names) if label is not None else ()
+    except (OSError, ValueError, OverflowError) as exc:
+        raise PipelineError(
+            "dataset.invalid_box_label",
+            N_(
+                "%(path)s must contain readable five-column boxes with a known class and normalized coordinates"
+            ),
+            path=str(label),
+        ) from exc
+    try:
+        with Image.open(image) as source:
+            source.verify()
+            jpeg = source.format == "JPEG"
+        contents = np.fromfile(image, dtype=np.uint8)
+        # The native verifier would rewrite a JPEG without an end marker.
+        if jpeg and contents[-2:].tobytes() != b"\xff\xd9":
+            raise ValueError("incomplete JPEG")
+        pixels = cv2.imdecode(contents, cv2.IMREAD_COLOR)
+        if pixels is None or min(pixels.shape[:2]) < 10:
+            raise ValueError("undecodable image or side smaller than 10 pixels")
+    except (OSError, ValueError, SyntaxError, Image.DecompressionBombError, cv2.error) as exc:
+        raise PipelineError(
+            "dataset.unreadable_box_image",
+            N_(
+                "cannot use %(path)s as a training image: it must be readable and at least 10 pixels on each side"
+            ),
+            path=str(image),
+        ) from exc
+    height, width = pixels.shape[:2]
+    return BoxImage(image, (width, height), label, boxes, hashlib.sha256(contents).hexdigest())
+
+
+def resolve_box_dataset(data_yaml: Path, split: str) -> ResolvedBoxDataset:
+    """Resolve, validate and fingerprint the actual inputs of a headless box execution."""
+    from ultralytics.data.utils import IMG_FORMATS, img2label_paths
+
+    data_yaml = data_yaml.resolve()
+    declaration = read_data_yaml(data_yaml)
+    names = dict(sorted(class_names(declaration).items()))
+    if not names or list(names) != list(range(len(names))):
+        raise PipelineError(
+            "dataset.invalid_box_classes",
+            N_("%(path)s must declare consecutive box class IDs starting at zero"),
+            path=str(data_yaml),
+        )
+    root = data_yaml.parent
+    hashes = {"data.yaml": sha256_file(data_yaml)}
+    split_paths: dict[str, Path | None] = {}
+    splits: dict[str, tuple[BoxImage, ...]] = {}
+    resolved: dict[Path, BoxImage] = {}
+    #: The split that claims each image. A second claim is a fold leak, not a cache hit.
+    owner: dict[Path, str] = {}
+
+    def hash_key(path: Path, split: str, directory: Path) -> str:
+        """A stable, machine-independent key: the dataset-relative path, or the split's own."""
+        if path.is_relative_to(root):
+            return path.relative_to(root).as_posix()
+        if path.is_relative_to(directory):
+            return f"{split}/{path.relative_to(directory).as_posix()}"
+        return f"{split}/{path.name}"
+
+    for name in dict.fromkeys(("train", "val", "test", split)):
+        directory = split_directory(data_yaml, declaration, name)
+        split_paths[name] = directory
+        images = []
+        if directory is not None:
+            if directory.is_file() or (
+                not directory.is_dir() and directory.suffix.lower() == ".txt"
+            ):
+                raise PipelineError(
+                    "dataset.box_split_not_directory",
+                    N_("box split %(split)s must name an image directory, not a file: %(path)s"),
+                    split=name,
+                    path=str(directory),
+                )
+            if directory.is_dir():
+                for path in sorted(directory.rglob("*")):
+                    suffix = path.suffix.lower()
+                    if not path.is_file() or suffix[1:] not in IMG_FORMATS:
+                        continue
+                    if suffix not in IMAGE_EXTS:
+                        raise PipelineError(
+                            "dataset.unsupported_box_image_format",
+                            N_("unsupported headless box image format: %(path)s"),
+                            path=str(path),
+                        )
+                    if path not in resolved:
+                        native_label = Path(img2label_paths([str(path)])[0])
+                        sample = _resolve_box_image(path, native_label, names)
+                        resolved[path] = sample
+                        owner[path] = name
+                        hashes[hash_key(path, name, directory)] = sample.sha256
+                        if sample.label is not None:
+                            key = hash_key(sample.label, name, directory)
+                            hashes[key] = sha256_file(sample.label)
+                    elif owner[path] != name:
+                        # Training and scoring the same bytes leaks the validation
+                        # ground truth into the fit; the folds must stay disjoint.
+                        raise PipelineError(
+                            "dataset.image_in_two_splits",
+                            N_(
+                                "%(path)s is declared in both the %(first)s and the "
+                                "%(second)s splits; an image can belong to one fold only"
+                            ),
+                            path=str(path),
+                            first=owner[path],
+                            second=name,
+                        )
+                    images.append(resolved[path])
+        if name == split and not images:
+            raise PipelineError(
+                "dataset.box_split_empty",
+                N_("evaluation split %(split)s in %(path)s needs a directory with images"),
+                split=name,
+                path=str(data_yaml),
+            )
+        splits[name] = tuple(images)
+    return ResolvedBoxDataset(
+        data_yaml, _is_real_domain(declaration), names, splits, split_paths, hashes
+    )
+
+
+def validate_campaign_cohort(
+    data_yaml: Path,
+    coco_dataset: Path,
+    split: str,
+    *,
+    resolved_boxes: ResolvedBoxDataset | None = None,
+) -> dict[str, Any]:
     """Prove the two campaign sources describe the same real-domain cohort.
 
     A benchmark may carry a YOLO box dataset and a COCO mask dataset so the
@@ -88,9 +303,11 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
     must declare real-domain imagery as well; a synthetic validation fold
     cannot support a paper-quality comparison.
     """
-    declaration = read_data_yaml(data_yaml)
+    box_dataset = (
+        resolved_boxes if resolved_boxes is not None else resolve_box_dataset(data_yaml, split)
+    )
     coco = read_coco_store(coco_dataset)
-    if not _is_real_domain(declaration):
+    if not box_dataset.real_domain:
         raise PipelineError(
             "campaign.domain_not_real",
             N_(
@@ -107,8 +324,9 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
         )
     boxes: dict[str, tuple[str, str]] = {}
     masks: dict[str, tuple[str, str]] = {}
-    for name in ("train", "val", "test"):
-        for path in split_images(data_yaml, name):
+    for name in box_dataset.splits:
+        for sample in box_dataset.splits[name]:
+            path = sample.path
             if path.name in boxes:
                 raise PipelineError(
                     "campaign.duplicate_box_image",
@@ -118,7 +336,7 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
                     ),
                     name=path.name,
                 )
-            boxes[path.name] = (name, sha256_file(path))
+            boxes[path.name] = (name, sample.sha256)
         for image in split_coco_images(coco, name):
             path = coco_dataset / str(image["file_name"])
             if path.name in masks:
@@ -180,59 +398,6 @@ def validate_campaign_cohort(data_yaml: Path, coco_dataset: Path, split: str) ->
         name: {"split": fold, "sha256": digest} for name, (fold, digest) in sorted(boxes.items())
     }
     return {"split": split, "images": signature, "domain": "real"}
-
-
-def coco_ground_truth(data_yaml: Path, split: str) -> dict[str, Any]:
-    """COCO instance view of the split's YOLO box labels."""
-    data = read_data_yaml(data_yaml)
-    names = class_names(data)
-    images: list[dict[str, Any]] = []
-    annotations: list[dict[str, Any]] = []
-    annotation_id = 0
-    for image_id, image in enumerate(split_images(data_yaml, split)):
-        size = size_image(image)
-        if size is None:
-            continue
-        width, height = size
-        images.append({"id": image_id, "file_name": image.name, "width": width, "height": height})
-        label_path = find_label_file(image)
-        if label_path is None:
-            continue
-        boxes, _ = read_boxes(label_path)
-        for box in boxes:
-            x = (box.cx - box.w / 2) * width
-            y = (box.cy - box.h / 2) * height
-            box_width = box.w * width
-            box_height = box.h * height
-            annotations.append(
-                {
-                    "id": annotation_id,
-                    "image_id": image_id,
-                    "category_id": int(box.class_id),
-                    "bbox": [x, y, box_width, box_height],
-                    "area": box_width * box_height,
-                    "iscrowd": 0,
-                }
-            )
-            annotation_id += 1
-    return {
-        "images": images,
-        "annotations": annotations,
-        "categories": [{"id": cid, "name": name} for cid, name in sorted(names.items())],
-    }
-
-
-def dataset_hashes(data_yaml: Path) -> dict[str, str]:
-    """SHA-256 of the declaration and every image and label it uses."""
-    data_yaml = Path(data_yaml)
-    root = data_yaml.parent
-    result = {"data.yaml": sha256_file(data_yaml)}
-    candidates = sorted({*find_images(root), *root.rglob("*.txt")})
-    for path in candidates:
-        if path == data_yaml or not path.is_file():
-            continue
-        result[path.relative_to(root).as_posix()] = sha256_file(path)
-    return result
 
 
 def dataset_fingerprint(hashes: dict[str, str]) -> str:

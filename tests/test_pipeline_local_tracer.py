@@ -559,21 +559,32 @@ def test_resume_with_a_different_protocol_is_refused(
     assert not (output / "training_state.json").exists()
 
 
-def test_resume_with_a_changed_dataset_is_refused(
+@pytest.mark.parametrize("changed", ["label", "image", "test", "unrelated"])
+def test_resume_fingerprints_the_resolved_dataset_outside_the_yaml_directory(
     tmp_path: Path,
     tiny_dataset: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     selected_language,
+    changed: str,
 ) -> None:
     """The weights and best figures belong to the bytes that trained them."""
+    declaration = tmp_path / "declaration"
+    declaration.mkdir()
+    data_yaml = declaration / "data.yaml"
+    test_images = tiny_dataset.parent / "images" / "test"
+    test_images.mkdir()
+    test_image = test_images / "plate_test.png"
+    test_image.write_bytes((tiny_dataset.parent / "images" / "val" / "plate_v1.png").read_bytes())
+    source = tiny_dataset.read_text(encoding="utf-8").replace("path: .", "path: ../dataset")
+    data_yaml.write_text(source + "test: images/test\n", encoding="utf-8")
     output = tmp_path / "executions" / "dataset-drift"
     _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()], interrupt_after=2)
     assert (
         _command(
-            f"data_yaml={tiny_dataset}",
+            f"data_yaml={data_yaml}",
             f"output_dir={output}",
-            "protocol.epochs=6",
+            "protocol.epochs=2",
             "protocol.early_stopping.patience=99",
         )
         == 1
@@ -581,21 +592,123 @@ def test_resume_with_a_changed_dataset_is_refused(
     progress = _read(output / "progress.json")
     assert progress["dataset_fingerprint"]
 
-    # One relabelled box is a different dataset: the protocol is unchanged.
-    label = next((tiny_dataset.parent / "labels").rglob("plate_v1.txt"))
-    label.write_text("0 0.380 0.375 0.25 0.25\n1 0.75 0.375 0.25 0.25\n", encoding="utf-8")
+    if changed == "label":
+        label = tiny_dataset.parent / "labels" / "val" / "plate_v1.txt"
+        original = label.read_text(encoding="utf-8")
+        label.write_text(original.replace("0.375", "0.380", 1), encoding="utf-8")
+    elif changed == "image":
+        image = tiny_dataset.parent / "images" / "val" / "plate_v1.png"
+        image.write_bytes(image.read_bytes() + b"\0")
+    elif changed == "test":
+        test_image.write_bytes(test_image.read_bytes() + b"\0")
+    else:
+        (declaration / "notes.txt").write_text("Not a dataset input.\n", encoding="utf-8")
 
-    _install_fakes(monkeypatch, [_boxes_prediction()])
+    _install_fakes(monkeypatch, [_boxes_prediction(), _boxes_prediction()])
     capsys.readouterr()
     selected_language("en")
     code = _command(
-        f"data_yaml={tiny_dataset}",
+        f"data_yaml={data_yaml}",
         f"output_dir={output}",
-        "protocol.epochs=6",
+        "protocol.epochs=2",
         "protocol.early_stopping.patience=99",
         "resume=true",
     )
 
+    if changed == "unrelated":
+        assert code == 0, capsys.readouterr().err
+        assert (output / "completion.json").is_file()
+    else:
+        assert code == 1
+        assert "dataset behind" in capsys.readouterr().err
+        assert not (output / "training_state.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("problem", "message"),
+    [
+        ("split-list", "must name an image directory"),
+        ("missing-split", "needs a directory with images"),
+        ("legacy-label", "the two readers do not agree"),
+        ("prediction-label", "five-column boxes"),
+        ("corrupt-image", "cannot use"),
+        ("unsupported-image", "unsupported headless box image format"),
+    ],
+)
+def test_headless_box_preflight_names_incompatible_dataset_inputs(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    capsys: pytest.CaptureFixture[str],
+    selected_language,
+    problem: str,
+    message: str,
+) -> None:
+    selected_language("en")
+    root = tiny_dataset.parent
+    image = root / "images" / "val" / "plate_v1.png"
+    label = root / "labels" / "val" / "plate_v1.txt"
+    overrides = []
+    if problem == "split-list":
+        offending = root / "val.txt"
+        offending.write_text(f"{image}\n", encoding="utf-8")
+        source = tiny_dataset.read_text(encoding="utf-8")
+        tiny_dataset.write_text(source.replace("val: images/val", "val: val.txt"), encoding="utf-8")
+    elif problem == "missing-split":
+        overrides = ["protocol.split=holdout"]
+        offending = tiny_dataset
+    elif problem == "legacy-label":
+        offending = image
+        label.rename(image.with_suffix(".txt"))
+    elif problem == "prediction-label":
+        offending = label
+        label.write_text("0 0.375 0.375 0.25 0.25 0.99\n", encoding="utf-8")
+    elif problem == "unsupported-image":
+        offending = image.with_suffix(".heic")
+        image.rename(offending)
+    else:
+        offending = image
+        image.write_bytes(b"not an image")
+
+    output = tmp_path / "rejected"
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "family.weights=yolov8n.yaml",
+        "protocol.epochs=1",
+        *overrides,
+    )
+
+    error = capsys.readouterr().err
     assert code == 1
-    assert "dataset" in capsys.readouterr().err
-    assert not (output / "training_state.json").exists()
+    assert message in error
+    assert str(offending) in error
+    assert not (output / "progress.json").exists()
+
+
+def test_preflight_refuses_an_image_declared_in_two_folds(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    capsys: pytest.CaptureFixture[str],
+    selected_language,
+) -> None:
+    """A file in both folds would be trained on and then scored."""
+    selected_language("en")
+    # Pointing val at the train folder is the common way this happens.
+    source = tiny_dataset.read_text(encoding="utf-8")
+    tiny_dataset.write_text(
+        source.replace("val: images/val", "val: images/train"), encoding="utf-8"
+    )
+    output = tmp_path / "fold-leak"
+
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "family.weights=yolov8n.yaml",
+        "protocol.epochs=1",
+    )
+
+    error = capsys.readouterr().err
+    assert code == 1
+    assert "declared in both the train and the val splits" in error
+    assert str(tiny_dataset.parent / "images" / "train") in error
+    assert not (output / "progress.json").exists()

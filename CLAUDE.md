@@ -832,6 +832,16 @@ training wrapper are untouched by this path.
 - `weights.py` resolves `family.weights` to a staged file and verifies its
   SHA-256 against the manifest before a framework sees it; absent or unverified
   pins fail closed.
+- `dataset.py` resolves a detection execution's box inputs once, before the
+  audit: one file list for `train`, `val`, a declared `test` fold and the
+  protocol's evaluation split, with the audit, the COCO ground truth, the native
+  loader and the resume fingerprint all reading it. Splits must be image
+  directories (a `.txt` list is refused), image formats are matched
+  case-insensitively, an image resolved into two splits is refused as a fold
+  leak, and an unreadable image or a label the five-column box reader cannot use
+  fails before any epoch. The codec and the pinned loader must agree on where
+  each label lives; the native label cache and `.npy` sidecars are neither read
+  nor written, so a same-size label edit is always seen.
 - `campaign_app.py` is the multi-family multirun; `family.run_name` names the
   per-execution directory, so two detection variants can share one root.
 

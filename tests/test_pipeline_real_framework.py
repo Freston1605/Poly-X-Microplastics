@@ -83,3 +83,68 @@ def test_a_real_ultralytics_network_trains_two_epochs_after_validation(
     metrics = _read(output / "metrics.json")
     assert metrics["selection"]["metric"] == "with_class_score"
     assert 0.0 <= metrics["selection"]["value"] <= 1.0
+
+
+def test_real_box_training_reads_same_size_edits_without_touching_stale_sidecars(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from ultralytics.data.dataset import YOLODataset
+    from ultralytics.nn.tasks import DetectionModel
+
+    from polyx.pipeline.command import main
+
+    data_yaml = build_tiny_dataset(tmp_path / "dataset")
+    train = data_yaml.parent / "images" / "train"
+    # Reproduce a user who trained with the native loader before using Poly-X.
+    YOLODataset(img_path=str(train), imgsz=64, data={"names": {0: "PET", 1: "PP", 2: "LDPE"}})
+    label_cache = data_yaml.parent / "labels" / "train.cache"
+    before = label_cache.read_bytes()
+    label = data_yaml.parent / "labels" / "train" / "plate_t1.txt"
+    original = label.read_text(encoding="utf-8")
+    edited = original.replace("0.375", "0.625", 1)
+    assert len(edited) == len(original)
+    label.write_text(edited, encoding="utf-8")
+    image_cache = train / "plate_t1.npy"
+    # Unreadable on purpose: the native loader would warn, delete it and fall
+    # back to the photo, so its survival is direct proof it was never touched.
+    garbage = b"not an npy sidecar"
+    image_cache.write_bytes(garbage)
+    validation = data_yaml.parent / "images" / "val" / "plate_v1.png"
+    validation.rename(validation.with_suffix(".PNG"))
+
+    native_loss = DetectionModel.loss
+    pet_centers = []
+    source_peaks = []
+
+    def observe_targets(self, batch, *args, **kwargs):
+        pet = (batch["cls"].flatten() == 0).nonzero().flatten()
+        pet_centers.extend(batch["bboxes"][pet, 0].tolist())
+        samples = batch["batch_idx"][pet].long()
+        source_peaks.extend(batch["img"][samples].amax(dim=(1, 2, 3)).tolist())
+        return native_loss(self, batch, *args, **kwargs)
+
+    monkeypatch.setattr(DetectionModel, "loss", observe_targets)
+    output = tmp_path / "execution"
+    code = main(
+        [
+            f"data_yaml={data_yaml}",
+            f"output_dir={output}",
+            "family.weights=yolov8n.yaml",
+            "protocol.epochs=1",
+            "protocol.batch=2",
+            "protocol.image_size=64",
+            "protocol.amp.enabled=false",
+            "protocol.augmentation_subset=[]",
+        ]
+    )
+
+    assert code == 0, capsys.readouterr().err
+    assert pet_centers == pytest.approx([0.625])
+    assert len(source_peaks) == 1 and source_peaks[0] < 1.0
+    assert label_cache.read_bytes() == before
+    # Still there, byte for byte: the loader never opened it. Reading it would
+    # have deleted the unparseable file before falling back to the photo.
+    assert image_cache.read_bytes() == garbage
+    provenance = _read(output / "provenance.json")
+    assert "images/val/plate_v1.PNG" in provenance["dataset_hashes"]
+    assert provenance["dataset_audit"]["per_class"]["val"]["PET"] == 1

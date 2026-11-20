@@ -60,7 +60,7 @@ photo — that would destroy the manual GT; the run folder decides).
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -204,6 +204,27 @@ def read_boxes(txt_path: str | Path) -> tuple[list[BBox], int]:
     except Exception as exc:  # noqa: BLE001
         logger_for("labels").warning("read_boxes failed: %s", exc)
     return boxes, malformed
+
+
+def read_training_boxes(path: Path, class_ids: Collection[int]) -> tuple[BBox, ...]:
+    """Read normalized, five-column ground-truth boxes without skipping bad rows."""
+    boxes = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.split()
+        if not fields:
+            continue
+        if len(fields) != 5:
+            raise ValueError("expected five ground-truth box columns")
+        box = parse_box_line(line)
+        if (
+            box is None
+            or box.class_id not in class_ids
+            or float(fields[0]) != box.class_id
+            or not all(0 <= coordinate <= 1 for coordinate in (box.cx, box.cy, box.w, box.h))
+        ):
+            raise ValueError("invalid ground-truth box")
+        boxes.append(box)
+    return tuple(boxes)
 
 
 def write_lines(txt_path: Path, boxes: list[BBox], include_conf: bool = False) -> Path:

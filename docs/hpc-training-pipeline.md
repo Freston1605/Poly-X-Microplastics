@@ -143,6 +143,41 @@ holds the intermediate. Mask R-CNN reads the canonical JSON directly and
 records no conversion. The intermediate is never an artifact; the canonical
 dataset stays COCO.
 
+## The box dataset is resolved once
+
+A detection execution resolves its box dataset before the audit, so one file
+list drives the audit, the evaluator's ground truth, the native loader and the
+resume fingerprint. The resolution covers `train`, `val`, a declared `test`
+fold and the split the protocol scores on, and it follows the declaration's
+paths, so a dataset beside its `data.yaml` and one whose splits live elsewhere
+behave the same. A file that belongs to no resolved split is not part of the
+run and cannot change its fingerprint.
+
+A split must name an image directory. A `.txt` image list is refused rather
+than accepted by the audit and ignored by the loader. Poly-X's image formats
+are matched case-insensitively; a split holding a format the headless path does
+not support (`heic`, `dng`, `mpo`, `pfm`) is refused by name instead of
+being dropped from the run. An image that cannot be read or is smaller than ten
+pixels on a side is refused, and so is a label that is not five-column boxes
+with a known class and normalised coordinates.
+
+The folds must stay disjoint: the same image resolved into two splits is
+refused, because training on it and scoring it would leak the validation ground
+truth into the fit. A `val:` that points at the train folder is the common way
+this happens.
+
+The YOLO-label codec and the pinned training loader must resolve an image's
+label to the same file. The conventional `images/` ↔ `labels/` mirror and a
+plain same-directory label both qualify. A nested `labels/` folder that only
+the codec would find is refused with the path the loader expects, because the
+audit would otherwise count an annotation that training treats as background.
+An image with no label stays a background image, as before.
+
+The native label cache and the per-image `.npy` sidecars beside the dataset are
+neither read nor written: their cache key hashes paths and sizes rather than
+contents, so a same-size label edit could otherwise train on stale labels while
+the audit read the new text. Source files are never rewritten or moved.
+
 ## Scoring
 
 The shared evaluator consumes COCO-format predictions and COCO ground truth.
@@ -380,12 +415,12 @@ and the augmentation — so a publication recovered after the last epoch states
 the same facts instead of inventing them.
 
 The snapshot also names the dataset it trained on, as one digest over every
-image and label it hashed. A resume compares that digest against the dataset the
-new invocation resolved and refuses a mismatch: relabelled images or an edited
-COCO export are a different dataset, and the kept weights and best figures
-belong to the bytes that produced them. The protocol comparison alone could not
-see that, so a changed dataset used to resume silently against the old
-checkpoint.
+image and label it resolved. A resume compares that digest against the dataset
+the new invocation resolved and refuses a mismatch: relabelled images or an
+edited COCO export are a different dataset, and the kept weights and best
+figures belong to the bytes that produced them. The protocol comparison alone
+could not see that, so a changed dataset used to resume silently against the
+old checkpoint.
 
 Both the native export and `best.pt` are written from the live Lightning
 network, without the staged checkpoint's `ema` entry: Ultralytics prefers an

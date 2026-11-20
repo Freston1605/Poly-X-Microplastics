@@ -16,7 +16,7 @@ the headless command never loads a GPU stack.
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +25,7 @@ from typing import Any
 import numpy as np
 
 from polyx.core.labels import format_polygon_line
-from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
+from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
     coco_segmentation_predictions_from_results,
@@ -33,15 +33,15 @@ from polyx.pipeline.coco import (
 )
 from polyx.pipeline.config import ExecutionConfig, Family, Protocol
 from polyx.pipeline.dataset import (
+    ResolvedBoxDataset,
     category_indices,
     class_names,
-    coco_ground_truth,
     coco_store_ground_truth,
     coco_store_hashes,
-    dataset_hashes,
     ordered_categories,
     read_coco_store,
     read_data_yaml,
+    resolve_box_dataset,
     split_coco_images,
     split_directory,
     split_images,
@@ -76,6 +76,7 @@ class PreparedDataset:
     source_kind: str
     source_path: Path
     conversion: dict[str, Any] | None = None
+    resolved_boxes: ResolvedBoxDataset | None = None
 
 
 def _rebuild_network(module: Any, task: str, class_count: int) -> Any:
@@ -207,6 +208,64 @@ def _ultralytics_dataset(data_yaml: Path, cfg: Any, *, mode: str) -> Any:
         rect=False,
         stride=32,
     )
+
+
+def _resolved_ultralytics_dataset(dataset: ResolvedBoxDataset, cfg: Any) -> Any:
+    """Use native transforms and collation without a second scan or a sidecar cache."""
+    from ultralytics.data.dataset import YOLODataset
+
+    training = dataset.splits["train"]
+
+    class _ResolvedDataset(YOLODataset):
+        def get_img_files(self, img_path: Any) -> list[str]:
+            return [str(image.path) for image in training]
+
+        def get_labels(self) -> list[dict[str, Any]]:
+            labels = []
+            for image in training:
+                rows = np.asarray(
+                    [(box.class_id, box.cx, box.cy, box.w, box.h) for box in image.boxes],
+                    dtype=np.float32,
+                ).reshape(-1, 5)
+                # Preserve the native loader's exact-row deduplication. The
+                # shared audit and evaluator still see the original boxes.
+                _, positions = np.unique(rows, axis=0, return_index=True)
+                if len(positions) != len(rows):
+                    rows = rows[positions]
+                width, height = image.size
+                labels.append(
+                    {
+                        "im_file": str(image.path),
+                        "shape": (height, width),
+                        "cls": rows[:, :1],
+                        "bboxes": rows[:, 1:],
+                        "segments": [],
+                        "keypoints": None,
+                        "normalized": True,
+                        "bbox_format": "xywh",
+                    }
+                )
+            return labels
+
+    native = _ResolvedDataset(
+        img_path=str(dataset.data_yaml.parent),
+        imgsz=cfg.imgsz,
+        batch_size=cfg.batch,
+        augment=True,
+        hyp=cfg,
+        rect=False,
+        cache=False,
+        single_cls=False,
+        stride=32,
+        pad=0.0,
+        task="detect",
+        classes=cfg.classes,
+        data={"names": dataset.class_names, "nc": len(dataset.class_names), "channels": 3},
+    )
+    # Even with cache=False the pinned loader probes disk sidecars. A path
+    # under the image file cannot exist, so it always decodes the source.
+    native.npy_files = [image.path / ".npy" for image in training]
+    return native
 
 
 class FamilyAdapter:
@@ -771,11 +830,8 @@ class _YoloValidationPaths:
     the split.
     """
 
-    def __init__(self, data_yaml: Path, split: str) -> None:
-        self.items = [
-            {"image_id": index, "path": str(path)}
-            for index, path in enumerate(split_images(data_yaml, split))
-        ]
+    def __init__(self, paths: Iterable[Path]) -> None:
+        self.items = [{"image_id": index, "path": str(path)} for index, path in enumerate(paths)]
 
     def __len__(self) -> int:
         return len(self.items)
@@ -802,8 +858,11 @@ class _YoloDataModule:
 
     def setup(self, stage: str | None = None) -> None:
         if stage in (None, "fit") and self._train_dataset is None:
-            self._train_dataset = _ultralytics_dataset(
-                self.dataset.data_yaml, self.cfg, mode="train"
+            boxes = self.dataset.resolved_boxes
+            self._train_dataset = (
+                _resolved_ultralytics_dataset(boxes, self.cfg)
+                if boxes is not None
+                else _ultralytics_dataset(self.dataset.data_yaml, self.cfg, mode="train")
             )
 
     def train_dataloader(self) -> Any:
@@ -822,7 +881,14 @@ class _YoloDataModule:
         from torch.utils.data import DataLoader
 
         if self._val_dataset is None:
-            self._val_dataset = _YoloValidationPaths(self.dataset.data_yaml, self.protocol.split)
+            boxes = self.dataset.resolved_boxes
+            split = self.protocol.split
+            paths = (
+                (image.path for image in boxes.splits[split])
+                if boxes is not None
+                else split_images(self.dataset.data_yaml, split)
+            )
+            self._val_dataset = _YoloValidationPaths(paths)
         return DataLoader(
             self._val_dataset,
             batch_size=self.protocol.batch,
@@ -931,21 +997,6 @@ class _UltralyticsAdapter(_CocoMaskAdapter):
     task = ""
     supported_augmentations = frozenset({"hsv", "flip_lr", "mosaic"})
 
-    def _prepare_boxes(self, config: ExecutionConfig) -> PreparedDataset:
-        if config.data_yaml is None:
-            raise ValueError("a detection family needs a YOLO box dataset (data_yaml)")
-        audit = audit_dataset(config.data_yaml)
-        data = read_data_yaml(config.data_yaml)
-        return PreparedDataset(
-            data_yaml=config.data_yaml,
-            ground_truth=coco_ground_truth(config.data_yaml, config.protocol.split),
-            audit=audit,
-            hashes=dataset_hashes(config.data_yaml),
-            class_names=class_names(data),
-            source_kind="yolo_boxes",
-            source_path=config.data_yaml,
-        )
-
     def _predictions(self, results: list[Any], image_ids: list[int]) -> list[dict]:
         raise NotImplementedError
 
@@ -1014,8 +1065,24 @@ class YoloDetectionAdapter(_UltralyticsAdapter):
     name = "yolo_detection"
     task = "detect"
 
+    def __init__(self, resolved_boxes: ResolvedBoxDataset | None = None) -> None:
+        self._resolved_boxes = resolved_boxes
+
     def prepare(self, config: ExecutionConfig) -> PreparedDataset:
-        return self._prepare_boxes(config)
+        if config.data_yaml is None:
+            raise ValueError("a detection family needs a YOLO box dataset (data_yaml)")
+        split = config.protocol.split
+        boxes = self._resolved_boxes or resolve_box_dataset(config.data_yaml, split)
+        return PreparedDataset(
+            data_yaml=boxes.data_yaml,
+            ground_truth=boxes.ground_truth(split),
+            audit=boxes.audit(),
+            hashes=boxes.hashes,
+            class_names=boxes.class_names,
+            source_kind="yolo_boxes",
+            source_path=boxes.data_yaml,
+            resolved_boxes=boxes,
+        )
 
     def _predictions(self, results: list[Any], image_ids: list[int]) -> list[dict]:
         return coco_predictions_from_results(results, image_ids=image_ids)
@@ -1220,10 +1287,14 @@ _ADAPTERS: dict[str, type[FamilyAdapter]] = {
 }
 
 
-def build_adapter(family: Family) -> FamilyAdapter:
+def build_adapter(
+    family: Family, *, resolved_boxes: ResolvedBoxDataset | None = None
+) -> FamilyAdapter:
     """Select the adapter named by configuration, never by a code edit."""
     try:
         adapter_class = _ADAPTERS[family.name]
     except KeyError as exc:
         raise ValueError(f"unknown model family: {family.name}") from exc
+    if adapter_class is YoloDetectionAdapter:
+        return YoloDetectionAdapter(resolved_boxes)
     return adapter_class()

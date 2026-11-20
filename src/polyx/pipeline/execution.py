@@ -29,7 +29,7 @@ from polyx.pipeline.artifacts import (
 )
 from polyx.pipeline.coco_import import audit_as_dict
 from polyx.pipeline.config import ExecutionConfig, config_to_dict, protocol_to_dict
-from polyx.pipeline.dataset import dataset_fingerprint
+from polyx.pipeline.dataset import ResolvedBoxDataset, dataset_fingerprint
 from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.evaluation import SharedEvaluator
 from polyx.pipeline.lightning_loop import (
@@ -114,8 +114,15 @@ def _completion_record(
     }
 
 
-def run_execution(config: ExecutionConfig) -> dict[str, Any]:
-    """Run one execution and return a small summary of its artifacts."""
+def run_execution(
+    config: ExecutionConfig, *, resolved_boxes: ResolvedBoxDataset | None = None
+) -> dict[str, Any]:
+    """Run one execution and return a small summary of its artifacts.
+
+    A caller that already resolved a box dataset — the campaign, so its cohort
+    check and this fit share one file list — hands it in; otherwise the adapter
+    resolves it during preparation.
+    """
     layout = ArtifactLayout(config.output_dir)
     resume_state: ResumeState | None = None
     if config.resume:
@@ -169,7 +176,7 @@ def run_execution(config: ExecutionConfig) -> dict[str, Any]:
             f"checkpoint={resume_state.resume_checkpoint}",
         )
 
-    adapter = build_adapter(config.family)
+    adapter = build_adapter(config.family, resolved_boxes=resolved_boxes)
     prepared = adapter.prepare(config)
     audit = prepared.audit
     if not audit.ok:
