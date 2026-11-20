@@ -9,7 +9,7 @@ tags:
 
 # English-only run artifact vocabulary
 
-Source decisions: [Inventory the English machine vocabulary emitted by run artifacts](https://github.com/Freston1605/Poly-X-Microplastics/issues/175), [Locate legacy Spanish reads and Spanish tokens written into artifacts](https://github.com/Freston1605/Poly-X-Microplastics/issues/176), [Decide which artifact families the spec covers](https://github.com/Freston1605/Poly-X-Microplastics/issues/177), [Decide canonical English replacements for Spanish artifact tokens](https://github.com/Freston1605/Poly-X-Microplastics/issues/178), [Decide the compatibility policy for legacy Spanish read boundaries](https://github.com/Freston1605/Poly-X-Microplastics/issues/179), [How does the spec present the current-vs-target token mapping?](https://github.com/Freston1605/Poly-X-Microplastics/issues/180), [What schema_version and hard-cut release note does the spec recommend?](https://github.com/Freston1605/Poly-X-Microplastics/issues/181). The full source inventory is on the throwaway research branch `research/run-artifact-vocabulary`; that branch is never merged.
+Source decisions: [Inventory the English machine vocabulary emitted by run artifacts](https://github.com/Freston1605/micra/issues/175), [Locate legacy Spanish reads and Spanish tokens written into artifacts](https://github.com/Freston1605/micra/issues/176), [Decide which artifact families the spec covers](https://github.com/Freston1605/micra/issues/177), [Decide canonical English replacements for Spanish artifact tokens](https://github.com/Freston1605/micra/issues/178), [Decide the compatibility policy for legacy Spanish read boundaries](https://github.com/Freston1605/micra/issues/179), [How does the spec present the current-vs-target token mapping?](https://github.com/Freston1605/micra/issues/180), [What schema_version and hard-cut release note does the spec recommend?](https://github.com/Freston1605/micra/issues/181). The full source inventory is on the throwaway research branch `research/run-artifact-vocabulary`; that branch is never merged.
 
 ## Problem Statement
 
@@ -319,8 +319,8 @@ No new seam is introduced for a private module. Warning-code rendering is tested
 
 ## Further Notes
 
-- The wayfinder map is [Map: run-artifact machine vocabulary and legacy Spanish read points](https://github.com/Freston1605/Poly-X-Microplastics/issues/174); all seven child tickets are closed.
+- The wayfinder map is [Map: run-artifact machine vocabulary and legacy Spanish read points](https://github.com/Freston1605/micra/issues/174); all seven child tickets are closed.
 - `GLOSSARY.md` already carries **machine-readable artifact**, the four artifact classes, **warning code**, and the revised **Canonical run folder** and **Legacy input** definitions.
 - The implementation must supersede ADR-0001, ADR-0002 and ADR-0005 in the same change that makes the hard cut true; documentation may not lag the behaviour.
 - The project gate is `uv run --locked --extra gui python tools/check.py`, or the project `.venv` interpreter when the pinned uv is unavailable.
-- Branch from `origin/main`; every `gh` command carries `-R Freston1605/Poly-X-Microplastics`.
+- Branch from `origin/main`; every `gh` command carries `-R Freston1605/micra`.
