@@ -34,7 +34,7 @@ dependencies = [
   "ultralytics==8.3.40",
   "opencv-python-headless==4.10.0.84",
   "numpy==1.26.4",
-  "Pillow==12.3.0",
+  "Pillow==13.0.0",
   "matplotlib==3.9.2",
   "PyYAML==6.0.2",
   "psutil==6.0.0",

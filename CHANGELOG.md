@@ -31,6 +31,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `gh attestation verify` — with the pre-release rule stated once.
 
 ### Changed
+- **Pillow moves to 13.0.0 (#203).** The security pin is raised in
+  `pyproject.toml` and `uv.lock`; the torch pair is unchanged. The desktop ZIP
+  channel that #203 introduced is retired by ADR-0011, so the fix reaches a
+  checkout through `uv sync` and a cluster through the rebuilt image.
 - **Weight downloads require the published digest.** `download()` takes
   `expected_sha256` as a required keyword argument, and `micra
   download-models` refuses without `--sha256` and `--url` before touching the
