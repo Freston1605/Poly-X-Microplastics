@@ -982,7 +982,7 @@ msgstr "Tema, idioma y movimiento"
 
 #: src/polyx/gui/launcher.py:369 src/polyx/gui/launcher.py:564
 msgid "Releases"
-msgstr "Versiones"
+msgstr "Releases"
 
 #: src/polyx/gui/launcher.py:378
 msgid "Open the releases page for a new version"
