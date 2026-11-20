@@ -101,6 +101,9 @@ polyx-report = "polyx.cli.report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/polyx"]
+# The pycocotools BSD notice must travel with the code it covers; a wheel is a
+# redistributed work, so the notice ships inside the package.
+force-include = { "NOTICE" = "polyx/NOTICE" }
 # ``*.mo`` is a build artifact and gitignored. Hatchling filters VCS-ignored
 # paths out of a target unless they are declared here, so the hook compiling
 # them next to each ``.po`` is not enough on its own.
@@ -115,7 +118,7 @@ exclude = [
 path = "tools/i18n/hatch_hook.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "SECURITY.md"]
+include = ["src", "tools/i18n", "README.md", "CHANGELOG.md", "CLAUDE.md", "requirements.txt", "LICENSE", "NOTICE", "SECURITY.md"]
 # Same reason as the wheel: the compiled catalogs are gitignored artifacts.
 artifacts = ["src/polyx/locales/**/*.mo"]
 # Never package a generated development pseudo-locale, even from a dirty tree.

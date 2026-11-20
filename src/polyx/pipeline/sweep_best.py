@@ -26,7 +26,12 @@ import yaml
 
 from polyx.core.i18n import _
 from polyx.pipeline.artifacts import write_json
-from polyx.pipeline.sweep_record import completed_score, read_trial_record, trial_directory
+from polyx.pipeline.sweep_record import (
+    belongs_to,
+    completed_score,
+    read_trial_record,
+    trial_directory,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -61,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
 
     record = _read_study_record(root)
     study_name = args.study_name or record.get("study_name") or "polyx-optuna"
-    storage = args.storage or record.get("storage") or _storage("", study_name, root)
+    # One spelling of the study's location: a bare path and its ``sqlite:///``
+    # URL name the same database, and the winner check matches on it.
+    storage = _storage(args.storage or record.get("storage") or "", study_name, root)
     study = _load_study(study_name, storage)
     if study is None:
         print(
@@ -72,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     best_number = int(study.best_trial.number)
-    best_directory = _find_best_directory(root / "trials", best_number, study_name)
+    best_directory = _find_best_directory(root / "trials", best_number, study_name, storage)
     if best_directory is None:
         print(
             "ERROR: "
@@ -137,24 +144,27 @@ def _load_study(study_name: str, storage: str) -> Any:
         return None
 
 
-def _find_best_directory(trials: Path, best_number: int, study_name: str) -> Path | None:
+def _find_best_directory(
+    trials: Path, best_number: int, study_name: str, storage: str
+) -> Path | None:
     """The winner's complete execution directory, strictly by study trial number.
 
-    A directory is the winner only when it is the one the winning study trial
-    wrote and it carries every artifact the sweep promises: a record naming
-    that trial and study, the completion marker, readable metrics and the kept
-    checkpoint. A half-written directory is reported as missing instead of
-    being exported as a best result.
+    A directory is the winner only when its record names the winning study
+    trial *in the same database*, and it carries every artifact the sweep
+    promises: the completion marker, readable metrics and the kept checkpoint.
+    A half-written directory, or one left by a different study that happens to
+    use the same trial number, is reported as missing instead of being
+    exported as a best result.
     """
     if not trials.is_dir():
         return None
     candidate = trial_directory(trials.parent, best_number)
-    record = read_trial_record(candidate)
-    if record is None:
-        return None
-    if int(record.get("trial_id", -1)) != best_number:
-        return None
-    if record.get("study_name") != study_name:
+    if not belongs_to(
+        read_trial_record(candidate),
+        trial_id=best_number,
+        study_name=study_name,
+        storage=storage,
+    ):
         return None
     if not (candidate / "completion.json").is_file():
         return None

@@ -131,9 +131,9 @@ completion.json        # written last, only after every required artifact exists
 when it exists under the same protocol; a family with a progress snapshot but
 no completion resumes, and a final epoch already on disk is published rather
 than retrained. The log line is written before completion, and every JSON
-artifact is published atomically. A fresh run in a reused directory removes a
-stale completion marker first, so an interrupted new run cannot be mistaken
-for a finished one.
+artifact is published atomically. A fresh execution refuses an output directory
+that already holds an execution — pass `resume=true` to continue it or choose a
+new directory — so a new run can never inherit a stale completion marker.
 
 `provenance.json` always names the dataset source (`yolo_boxes` or
 `coco_instances`). A YOLO-seg execution also records its job-time conversion:
@@ -164,13 +164,18 @@ The figures are the same shape for both families:
   with the reference per-image/per-category 100-detection cap. The cap is
   applied per image **and category**, so a plate crowded with one polymer
   cannot push another class's confident detections out of the ranking.
-  Predictions are collected at a low floor; each family may emit 100 per
-  class per image, which is the smallest candidate budget that keeps that
-  guarantee. Only the operating point applies `protocol.confidence`. Masks use
+  Predictions are collected at a low floor; each family may emit up to 1000 per
+  image, far above the reference per-category cap, so a busy polymer cannot
+  consume another class's share before the evaluator caps each category.
+  Only the operating point applies `protocol.confidence`. Masks use
   a port of pycocotools' boundary-crossing rasterizer, so a polygon COCO counts
   as a hit is not emptied by integer rounding; the port is checked against
-  pycocotools on the accepted input formats. AP is reported separately and
-  never selects a checkpoint or drives Optuna.
+  pycocotools on the accepted input formats. A family that returns an instance
+  mask at the original resolution (Mask R-CNN) has that mask scored directly,
+  because recovering a polygon from it loses half a pixel per edge; YOLO-seg's
+  own boundary polygons are scored as polygons, and asking it for full-resolution
+  retina masks instead would upsample every candidate on every plate. AP is
+  reported separately and never selects a checkpoint or drives Optuna.
 - `mask_iou`, `mask_mAP50` and `mask_mAP50-95` — segmentation only: the mean
   best mask IoU per ground-truth instance and the mask mAP figures.
 
@@ -227,18 +232,23 @@ same JSON but different pixels cannot share a cache. Each COCO annotation must
 have exactly one polygon ring: YOLO-seg would otherwise turn a multi-part
 particle into several training instances while Mask R-CNN keeps it as one. Such
 an export is refused before training, with an actionable error asking for one
-annotation per part or a single exterior polygon. Two annotations collapse in
-the loader only when the label rows they serialize to are identical, so the
-converter refuses duplicates by comparing the exact line the shared label codec
-is about to write — not the declared COCO box or its extrema — with the image
-and annotation ids. Label destinations come from the project's label codec, not
+annotation per part or a single exterior polygon. Two annotations collapse when
+the pinned loader's own parsing gives them the same class and derived box:
+`verify_image_label` reads each line, converts the normalized polygon with
+`segments2boxes` and removes duplicate rows **after** that conversion, so a
+triangle and a square with the same extrema are one target even though their
+label lines differ. The converter builds its key from the line the shared label
+codec is about to write and from that same box, and reports the image and
+annotation ids. Label destinations come from the project's label codec, not
 from a re-derived path.
 
 The Mask R-CNN sibling walks the pinned loader's own path: the `ceil` resize of
 the long side, the 1000-point segment resampling, the `LetterBox` pad, the
 segment-derived boxes and `box_candidates`. Segmentation uses the loader's 0.01
-area threshold and box-only detection uses 0.10; a target that survives YOLO's
-rounding is kept, and one that does not is dropped.
+area threshold and box-only detection uses 0.10. Boxes and segments are derived
+from the serialized six-decimal polygon, which is what the loader reads back,
+so a target that survives YOLO's rounding is kept and one that does not is
+dropped.
 
 ```bash
 polyx-pipeline \
@@ -382,9 +392,16 @@ python -m polyx.pipeline.sweep_best --output-dir "$POLYX_HPC_WORK/results/sweep-
   relaunches every trial left `RUNNING`: one with a progress snapshot continues
   its checkpoint, one without a snapshot retries the same parameters in a clean
   directory, and one whose execution finished but never reached Optuna is told
-  from its own metrics. A recovered trial keeps its study number; the lease file
-  under `trials/.locks/` stops two runners from recovering it twice, and a
-  lease whose owner is dead is stolen so a killed job cannot block resumption. Both sweep
+  from its own metrics. A recovered trial keeps its study number; two leases
+  under `trials/.locks/` keep runners apart — a job holds `trial_NNN.lock`
+  while it trains and a runner holds `trial_NNN.recovery.lock` while it
+  relaunches one, so the recovery and the job it starts never block each
+  other. The lease carries its owner's host and pid, so a lease whose local
+  owner is gone is taken over at once; an owner that cannot be probed (another
+  node) is taken over once it has shown no activity — no `progress.json` write
+  — for `POLYX_LEASE_TTL` (an hour by default), so a killed job cannot block
+  resumption. A directory belongs to a study only when its record names that
+  study **and** that database; both sweep
   drivers publish the same `record.json` through one writer, and a trial whose
   number Optuna never sampled has no parameters to retry and is left untouched.
 - The resolved study name and storage are written once to

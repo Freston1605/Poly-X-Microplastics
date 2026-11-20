@@ -62,6 +62,44 @@ def architecture_mac() -> str:
     return "Intel"
 
 
+def hostname() -> str:
+    """This machine's name, or ``''`` when the system cannot say.
+
+    Used to tell "the process that left this lease was on this node" from "it
+    was somewhere else", which decides whether a local liveness probe can
+    answer at all.
+    """
+    import socket
+
+    try:
+        return socket.gethostname()
+    except OSError:
+        return ""
+
+
+def process_alive(pid: int) -> bool | None:
+    """Whether a local process with that id exists; ``None`` when unknowable.
+
+    **Never called on Windows.** ``os.kill`` there does not probe: any signal
+    other than ``CTRL_C_EVENT``/``CTRL_BREAK_EVENT`` reaches
+    ``TerminateProcess``, so a "is it alive?" check would kill the process it
+    asked about. Platforms this function cannot safely probe return ``None``
+    and the caller must fall back to an age-based decision.
+    """
+    if IS_WINDOWS or pid <= 0:
+        return None
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # It exists and belongs to someone else.
+        return True
+    except OSError:
+        return None
+    return True
+
+
 def open_in_system(path_2: str | Path) -> bool:
     """Opens a file or folder with its corresponding application.
 

@@ -730,13 +730,15 @@ Trainer and its native training wrapper are untouched by this path.
   criterion on every figure and reuses the project's `Criterion`/`Score`:
   selection is with-class operating-point F1 at `protocol.confidence` and 0.50
   IoU; localisation is reported beside it. Predictions are collected at a low
-  floor and both families may emit 100 per class per image, so the reference
-  cap — applied per image **and category** — cannot let a crowded polymer hide
-  another class's confident detections; only F1 applies the confidence
-  threshold. Polygons use a port of pycocotools' boundary-crossing rasterizer,
-  checked against pycocotools, so a hit COCO counts is not emptied by rounding.
-  AP is a separate ranking figure and never selects a checkpoint or drives
-  Optuna. `mask_iou` is class-aware.
+  floor and both families may emit up to 1000 per image, far above the
+  reference cap — applied per image **and category** — so a crowded polymer
+  cannot hide another class's confident detections; only F1 applies the
+  confidence threshold. Polygons use a port of pycocotools' boundary-crossing
+  rasterizer, checked against pycocotools, so a hit COCO counts is not emptied
+  by rounding; a framework that exposes an instance mask at the original
+  resolution (Mask R-CNN) has it scored directly, while YOLO-seg's own boundary
+  polygons are scored as polygons. AP is a separate ranking figure and never
+  selects a checkpoint or drives Optuna. `mask_iou` is class-aware.
 - `execution.py` owns audit, provenance, early stopping, best-weight
   restoration and the artifact layout (`config.yaml`, `resolved_protocol.yaml`,
   `provenance.json`, `training_state.json`, `progress.json`, `metrics.json`,
@@ -780,9 +782,14 @@ Trainer and its native training wrapper are untouched by this path.
   `sweep_config.yaml`. `PolyxOptunaSweeper` injects the actual trial id, and
   before asking for new trials it recovers every `RUNNING` trial: resume its
   checkpoint, retry its recorded parameters, or tell the score its finished
-  execution already wrote; a lease under `trials/.locks/` keeps two runners off
-  the same trial, and a dead owner's lease is stolen. Both drivers write the same `record.json`
-  (`sweep_record.py`). The export resolves the winner strictly by
+  execution already wrote. Two leases under `trials/.locks/` keep runners
+  apart: `trial_NNN.lock` while a job trains it and `trial_NNN.recovery.lock`
+  while a runner relaunches it. A lease whose owner is gone — a same-host
+  liveness probe, or no `progress.json` activity for `POLYX_LEASE_TTL` when the
+  owner is on another node — is taken over. Both drivers write the same `record.json`
+  (`sweep_record.py`), and both compare the record's study **and database**
+  before trusting an execution: `trial_007` from another sweep root is not this
+  study's result. The export resolves the winner strictly by
   `study.best_trial.number` and requires its record, `completion.json`,
   readable metrics and `best.pt`; a partial directory is reported as missing.
 - `weights.py` resolves `family.weights` to a staged file and verifies its

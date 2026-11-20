@@ -166,3 +166,49 @@ def test_mask_iou_uses_cocos_polygon_rasterization() -> None:
     prediction["segmentation"] = [[0.4, 10.4, 20.4, 10.4, 20.4, 30.4, 0.4, 30.4]]
     result = evaluator.evaluate([prediction])
     assert result["selection"]["value"] == pytest.approx(1.0)
+
+
+def test_a_closed_or_coincident_polygon_does_not_crash_the_rasterizer() -> None:
+    """A repeated vertex contributes no crossing; it must not divide by zero.
+
+    ``rleFrPoly`` skips a zero-length segment. Without that guard a ring that
+    repeats its first vertex -- which is what a closed COCO polygon looks like
+    -- or two vertices that land on the same 5x grid point raised
+    ``ZeroDivisionError`` inside the evaluation of a perfectly valid dataset.
+    """
+    closed = [[0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 0.0, 2.0, 0.0, 0.0]]
+    coincident = [[0.0, 0.0, 0.01, 0.0, 2.0, 0.0, 2.0, 2.0, 0.0, 2.0]]
+    for ring in closed, coincident:
+        mask = rasterize_segmentation(ring, 8, 8)
+        assert mask is not None
+        assert mask[0, 0]
+
+
+def test_a_predicted_mask_is_scored_without_a_polygon_round_trip() -> None:
+    """An exact mask scores 1.0; recovering a polygon from it would not.
+
+    A 2x2 mask written out as the contour of its pixel centres rasterizes back
+    as one pixel, so a perfect Mask R-CNN prediction used to score IoU 0.25 and
+    fail the 0.50 operating point.
+    """
+    import numpy as np
+
+    ground_truth = _ground_truth(1)
+    ground_truth["images"] = [{"id": 0, "width": 16, "height": 16}]
+    ground_truth["annotations"][0]["bbox"] = [2, 2, 2, 2]
+    ground_truth["annotations"][0]["segmentation"] = [[2.0, 2.0, 4.0, 2.0, 4.0, 4.0, 2.0, 4.0]]
+    mask = np.zeros((16, 16), dtype=bool)
+    mask[2:4, 2:4] = True
+    prediction = _prediction([2, 2, 2, 2], 0.9)
+    prediction["mask"] = mask
+    result = SharedEvaluator(ground_truth, split="val", task="segment").evaluate([prediction])
+    assert result["figures"]["mask_iou"]["value"] == pytest.approx(1.0)
+    assert result["selection"]["value"] == pytest.approx(1.0)
+
+
+def test_the_candidate_budget_cannot_under_fill_a_category() -> None:
+    """The family's own cap must never bind below COCO's per-category cap."""
+    from polyx.pipeline.evaluation import prediction_budget
+
+    for classes in (1, 3, 8):
+        assert prediction_budget(classes) >= 100 * classes

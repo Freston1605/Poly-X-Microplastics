@@ -45,11 +45,13 @@ def coco_segmentation_predictions_from_torchvision(
 ) -> list[dict]:
     """Turn torchvision Mask R-CNN outputs into COCO instance predictions.
 
-    torchvision returns soft masks at the input image's resolution. They are
-    thresholded at 0.5 and polygonized so the shared evaluator measures mask
-    IoU exactly as it does for YOLO-seg. Label 0 is torchvision's background
-    and is never emitted; the remaining labels are shifted back to the dense,
-    zero-based class indices the evaluator's ground truth uses.
+    torchvision returns soft masks at the input image's resolution; they are
+    thresholded and carried as ``mask``, the exact instance geometry. The
+    shared evaluator compares that mask directly, so a perfect prediction
+    scores IoU 1.0 instead of losing half a pixel per edge to a polygon
+    round-trip. Label 0 is torchvision's background and is never emitted; the
+    remaining labels are shifted back to the dense, zero-based class indices
+    the evaluator's ground truth uses.
     """
     predictions: list[dict] = []
     for output, image_id in zip(outputs or [], image_ids, strict=False):
@@ -63,8 +65,8 @@ def coco_segmentation_predictions_from_torchvision(
                 continue
             if masks is None or index >= len(masks):
                 continue
-            segmentation = _polygons_from_mask(masks[index])
-            if not segmentation:
+            mask = _numpy(masks[index]) >= 0.5
+            if not mask.any():
                 continue
             x1, y1, x2, y2 = (float(value) for value in boxes[index])
             predictions.append(
@@ -72,7 +74,7 @@ def coco_segmentation_predictions_from_torchvision(
                     "image_id": int(image_id),
                     "category_id": label - 1,
                     "bbox": [x1, y1, x2 - x1, y2 - y1],
-                    "segmentation": segmentation,
+                    "mask": mask,
                     "score": float(scores[index]) if index < scores.shape[0] else 1.0,
                 }
             )
@@ -86,28 +88,16 @@ def _numpy(value: Any) -> np.ndarray:
     return np.asarray(value, dtype=float)
 
 
-def _polygons_from_mask(mask: Any) -> list[list[float]]:
-    """Exterior contours of one thresholded instance mask, as COCO polygons."""
-    import cv2
-
-    array = _numpy(mask)
-    binary = (np.squeeze(array) >= 0.5).astype(np.uint8)
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    polygons: list[list[float]] = []
-    for contour in contours:
-        if contour.shape[0] < 3:
-            continue
-        polygons.append(contour.reshape(-1).astype(float).tolist())
-    return polygons
-
-
 def coco_segmentation_predictions_from_results(results: Any) -> list[dict]:
     """Turn Ultralytics segmentation results into COCO instance predictions.
 
     Ultralytics reports masks as pixel-coordinate polygons in ``masks.xy``,
     aligned one-to-one with ``boxes``; the polygon is emitted as a COCO
-    ``segmentation`` so the shared evaluator measures mask IoU. A result
-    without masks stays out: a mask prediction is never scored as a box.
+    ``segmentation`` so the shared evaluator measures mask IoU. Asking for
+    retina masks instead would upsample every candidate to the original image
+    -- hundreds of full-resolution masks per plate -- so the framework's own
+    boundary representation is what travels. A result without masks stays out:
+    a mask prediction is never scored as a box.
     """
     predictions: list[dict] = []
     for image_id, result in enumerate(results or []):

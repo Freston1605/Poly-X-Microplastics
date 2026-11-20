@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 20:16-0300\n"
+"POT-Creation-Date: 2026-11-19 21:40-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -330,44 +330,44 @@ msgstr "época %(epoch)s: %(metrics)s"
 msgid "⚠ Box of %(side).1f px discarded (minimum %(minimum).0f px) — zoom in"
 msgstr "⚠ Caja de %(side).1f px descartada (mínimo %(minimum).0f px) — acerca el zoom"
 
-#: src/polyx/core/platform.py:234
+#: src/polyx/core/platform.py:272
 msgid "Device (0/cpu):"
 msgstr "Device (0/cpu):"
 
-#: src/polyx/core/platform.py:233
+#: src/polyx/core/platform.py:271
 msgid "Device (0/rocm/cpu):"
 msgstr "Dispositivo (0/rocm/cpu):"
 
-#: src/polyx/core/platform.py:247
+#: src/polyx/core/platform.py:285
 msgid "Mac integrated GPU (Metal Performance Shaders)"
 msgstr "GPU integrada del Mac (Metal Performance Shaders)"
 
-#: src/polyx/core/platform.py:249
+#: src/polyx/core/platform.py:287
 msgid "processor (CPU)"
 msgstr "procesador (CPU)"
 
-#: src/polyx/core/platform.py:255
+#: src/polyx/core/platform.py:293
 msgid "AMD GPU (ROCm)"
 msgstr "GPU AMD (ROCm)"
 
-#: src/polyx/core/platform.py:257
+#: src/polyx/core/platform.py:295
 msgid "NVIDIA GPU (CUDA)"
 msgstr "GPU NVIDIA (CUDA)"
 
-#: src/polyx/core/platform.py:230
+#: src/polyx/core/platform.py:268
 msgid "Device (mps/cpu):"
 msgstr "Dispositivo (mps/cpu):"
 
-#: src/polyx/core/platform.py:230
+#: src/polyx/core/platform.py:268
 msgid "Device (cpu):"
 msgstr "Dispositivo (cpu):"
 
-#: src/polyx/core/platform.py:253
+#: src/polyx/core/platform.py:291
 #, python-format
 msgid "NVIDIA GPU #%(index)s (CUDA)"
 msgstr "GPU NVIDIA #%(index)s (CUDA)"
 
-#: src/polyx/core/platform.py:252
+#: src/polyx/core/platform.py:290
 #, python-format
 msgid "AMD GPU #%(index)s (ROCm)"
 msgstr "GPU AMD #%(index)s (ROCm)"
@@ -6639,7 +6639,7 @@ msgstr "Parada anticipada"
 msgid "Per class"
 msgstr "Por clase"
 
-#: src/polyx/pipeline/campaign_app.py:81
+#: src/polyx/pipeline/campaign_app.py:80
 #, python-format
 msgid ""
 "%(path)s already holds an execution for a different protocol; use a new campaign root instead of"
@@ -6764,7 +6764,12 @@ msgstr ""
 "%(path)s ya contiene una ejecución; pase resume=true para continuarla o elija un directorio de "
 "salida nuevo"
 
-#: src/polyx/pipeline/seg_conversion.py:161
+#: src/polyx/pipeline/optuna_sweeper.py:146
+#, python-format
+msgid "recovery of interrupted trials failed (%(count)d); the study was not extended"
+msgstr "falló la recuperación de ensayos interrumpidos (%(count)d); el estudio no se amplió"
+
+#: src/polyx/pipeline/seg_conversion.py:184
 #, python-format
 msgid ""
 "a COCO mask annotation must have exactly one polygon ring to stay one training instance; "
@@ -6775,45 +6780,50 @@ msgstr ""
 "una instancia de entrenamiento; la anotación %(id)s tiene %(count)d. Separa la partícula en "
 "anotaciones distintas en la herramienta de anotación, o exporta un único polígono exterior."
 
-#: src/polyx/pipeline/seg_conversion.py:174
+#: src/polyx/pipeline/seg_conversion.py:197
 #, python-format
 msgid ""
-"image %(image)s has annotations %(first)s and %(second)s that serialize to the same YOLO label; "
-"the pinned loader would collapse them into one target. Merge or remove the duplicate in the "
+"image %(image)s has annotations %(first)s and %(second)s that derive the same YOLO box; the "
+"pinned loader would collapse them into one target. Merge or remove the duplicate in the "
 "annotation tool."
 msgstr ""
-"la imagen %(image)s tiene las anotaciones %(first)s y %(second)s que se serializan en la misma "
-"etiqueta YOLO; el cargador fijado las colapsaría en un solo objetivo. Combine o elimine la "
-"duplicada en la herramienta de anotación."
+"la imagen %(image)s tiene las anotaciones %(first)s y %(second)s que derivan en la misma caja "
+"YOLO; el cargador fijado las colapsaría en un solo objetivo. Combine o elimine la duplicada en "
+"la herramienta de anotación."
 
-#: src/polyx/pipeline/sweep_best.py:35
+#: src/polyx/pipeline/sweep.py:264 src/polyx/pipeline/sweep_app.py:60
+#, python-format
+msgid "study trial %(trial)d is already running in another process"
+msgstr "el ensayo %(trial)d del estudio ya se está ejecutando en otro proceso"
+
+#: src/polyx/pipeline/sweep_best.py:40
 msgid "Write sweep_best.json from a finished Optuna multirun"
 msgstr "Escribir sweep_best.json a partir de un multirun terminado de Optuna"
 
-#: src/polyx/pipeline/sweep_best.py:37
+#: src/polyx/pipeline/sweep_best.py:42
 msgid "the sweep root"
 msgstr "la raíz de la búsqueda"
 
-#: src/polyx/pipeline/sweep_best.py:41
+#: src/polyx/pipeline/sweep_best.py:46
 msgid "study storage URL or SQLite path (default: the work layout path)"
 msgstr "URL de almacenamiento del estudio o ruta SQLite (predeterminada: la ruta de work)"
 
-#: src/polyx/pipeline/sweep_best.py:50
+#: src/polyx/pipeline/sweep_best.py:55
 #, python-format
 msgid "no Optuna results at %(path)s"
 msgstr "no hay resultados de Optuna en %(path)s"
 
-#: src/polyx/pipeline/sweep_best.py:57
+#: src/polyx/pipeline/sweep_best.py:62
 #, python-format
 msgid "%(path)s has no best_value"
 msgstr "%(path)s no tiene best_value"
 
-#: src/polyx/pipeline/sweep_best.py:69
+#: src/polyx/pipeline/sweep_best.py:76
 #, python-format
 msgid "cannot load study %(study)s at %(storage)s"
 msgstr "no se puede cargar el estudio %(study)s en %(storage)s"
 
-#: src/polyx/pipeline/sweep_best.py:79
+#: src/polyx/pipeline/sweep_best.py:86
 #, python-format
 msgid "the winner is study trial %(trial)d but its artifact is missing under %(root)s"
 msgstr "el ganador es el trial %(trial)d del estudio, pero falta su artefacto en %(root)s"

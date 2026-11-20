@@ -24,6 +24,7 @@ from typing import Any
 
 import numpy as np
 
+from polyx.core.labels import format_polygon_line
 from polyx.core.quality.dataset_audit import DatasetAudit, audit_coco_masks, audit_dataset
 from polyx.pipeline.coco import (
     coco_predictions_from_results,
@@ -51,7 +52,7 @@ from polyx.pipeline.evaluation import (
     rasterize_segmentation,
 )
 from polyx.pipeline.resume import ResumeState
-from polyx.pipeline.seg_conversion import convert_coco_dataset
+from polyx.pipeline.seg_conversion import convert_coco_dataset, image_hashes
 from polyx.pipeline.weights import resolve_weights
 
 EpochCallback = Callable[["EpochResult"], bool]
@@ -422,11 +423,20 @@ class _CocoMaskAdapter(FamilyAdapter):
                 source_path=store,
             )
         conversion = convert_coco_dataset(store, config.scratch_dir) if convert else None
+        # Provenance states the bytes training used, not the hashes the import
+        # manifest recorded: a store modified under the same version would
+        # otherwise be described by a set of images it no longer holds.
+        measured = (
+            conversion.content_hashes if conversion is not None else image_hashes(store, coco)
+        )
+        hashes = coco_store_hashes(store, coco)
+        if measured:
+            hashes = {**hashes, **measured}
         return PreparedDataset(
             data_yaml=conversion.data_yaml if conversion is not None else store / "dataset.json",
             ground_truth=coco_store_ground_truth(coco, config.protocol.split),
             audit=audit,
-            hashes=coco_store_hashes(store, coco),
+            hashes=hashes,
             class_names={index: name for index, (_id, name) in enumerate(ordered_categories(coco))},
             source_kind="coco_instances",
             source_path=store,
@@ -581,19 +591,39 @@ class _CocoMaskTorchvisionDataset:
             category = self.class_indices.get(int(annotation["category_id"]))
             if category is None:
                 continue
-            mask = rasterize_segmentation(annotation.get("segmentation"), width, height)
-            bbox = [float(value) for value in annotation.get("bbox", [])]
-            if mask is None or len(bbox) != 4:
-                continue
+            # Train on the polygon YOLO actually reads: the label line is
+            # normalized to six decimals, so deriving the box and the mask from
+            # the original coordinates leaves this family keeping instances the
+            # pinned loader quantizes below its retention threshold.
+            ring = _serialized_ring(annotation, width, height)
+            if ring is not None:
+                mask = rasterize_segmentation([ring.reshape(-1).tolist()], width, height)
+                if mask is None:
+                    continue
+                box = [
+                    float(ring[:, 0].min()),
+                    float(ring[:, 1].min()),
+                    float(ring[:, 0].max()),
+                    float(ring[:, 1].max()),
+                ]
+            else:
+                # A mask made of several rings cannot be written as one YOLO
+                # target; a YOLO-seg execution refuses that export, and this
+                # family alone still trains on it as one COCO instance.
+                mask = rasterize_segmentation(annotation.get("segmentation"), width, height)
+                bbox = annotation.get("bbox")
+                if mask is None or not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+                    continue
+                box = [
+                    float(bbox[0]),
+                    float(bbox[1]),
+                    float(bbox[0]) + float(bbox[2]),
+                    float(bbox[1]) + float(bbox[3]),
+                ]
             masks.append(mask)
-            boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
+            boxes.append(box)
             labels.append(category + 1)
-            rings = annotation.get("segmentation")
-            segments.append(
-                np.asarray(rings[0], dtype=np.float32).reshape(-1, 2)
-                if isinstance(rings, (list, tuple)) and len(rings) == 1
-                else None
-            )
+            segments.append(ring)
 
         # The loader filters geometry before colour/flip transforms. Run the
         # same letterbox/segment path here so both families keep one set.
@@ -764,6 +794,31 @@ def _loader_keep_mask(
     return np.asarray(
         perspective.box_candidates(box1=letterboxed.T, box2=clipped.T, area_thr=area_thr),
         dtype=bool,
+    )
+
+
+def _serialized_ring(annotation: dict[str, Any], width: int, height: int) -> np.ndarray | None:
+    """The polygon the pinned loader reads back from the YOLO label file.
+
+    The converter writes normalized coordinates with six decimals, so a value
+    such as 2.00001 px can come back as exactly 2 px. The torchvision sibling
+    must train on the same numbers or the two families keep different
+    instances near the loader's two-pixel retention threshold.
+    """
+    segmentation = annotation.get("segmentation")
+    if not isinstance(segmentation, (list, tuple)) or len(segmentation) != 1:
+        return None
+    ring = segmentation[0]
+    if not isinstance(ring, (list, tuple)) or len(ring) < 6 or len(ring) % 2 != 0:
+        return None
+    points = [(float(ring[index]), float(ring[index + 1])) for index in range(0, len(ring), 2)]
+    line = format_polygon_line(0, points, width, height)
+    values = [float(value) for value in line.split()[1:]]
+    if len(values) < 6 or len(values) % 2 != 0:
+        return None
+    return np.asarray(
+        [[values[index] * width, values[index + 1] * height] for index in range(0, len(values), 2)],
+        dtype=np.float32,
     )
 
 

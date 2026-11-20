@@ -18,10 +18,11 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import yaml
 
 from polyx.core.i18n import N_
@@ -53,6 +54,8 @@ class ConvertedDataset:
     images: int
     labels: int
     polygons: int
+    #: SHA-256 of each image whose pixels this conversion actually used.
+    content_hashes: dict[str, str] = field(default_factory=dict)
 
     def describe(self, store: Path) -> dict[str, Any]:
         """Provenance view: where the intermediate is, never a canonical path."""
@@ -73,17 +76,21 @@ class ConvertedDataset:
         }
 
 
-def _cache_key(store: Path, coco: dict[str, Any]) -> str:
+def image_hashes(store: Path, coco: dict[str, Any]) -> dict[str, str]:
+    """SHA-256 of every image as it exists on disk right now."""
+    return {
+        str(image["file_name"]): sha256_file(store / str(image["file_name"]))
+        for image in coco.get("images", [])
+    }
+
+
+def _cache_key(store: Path, coco: dict[str, Any], images: dict[str, str]) -> str:
     """Key the cache by the JSON and every image's actual bytes.
 
     Two stores can share a dataset.json and still hold different pixels. A
     JSON-only key would let the second execution silently train on the first
     store's cached images.
     """
-    images = {
-        str(image["file_name"]): sha256_file(store / str(image["file_name"]))
-        for image in coco.get("images", [])
-    }
     payload = json.dumps(
         {"dataset": sha256_file(store / "dataset.json"), "images": images},
         sort_keys=True,
@@ -105,21 +112,37 @@ def _rings(annotation: dict[str, Any]) -> list[list[tuple[float, float]]]:
     return rings
 
 
-def _serialized_target(
+def _collision_key(
     class_id: int,
     ring: list[tuple[float, float]],
     width: int,
     height: int,
-) -> str:
-    """The label line this converter is about to write for one annotation.
+) -> tuple[int, float, float, float, float]:
+    """The key the pinned loader deduplicates label rows by.
 
-    The pinned loader deduplicates label rows as it reads them, so two
-    annotations collapse only when their *whole* serialized line is equal — not
-    when their declared COCO boxes or their coordinate extrema match. Deriving
-    the key from the codec's own serializer keeps this check and the written
-    file from drifting.
+    ``verify_image_label`` parses each line as ``float32``, converts the
+    normalized polygon to a box with ``segments2boxes`` and removes rows that
+    are equal **after that conversion**. Two rings with different vertices but
+    the same extrema therefore collapse into one training target even though
+    their label lines differ. The key is built from the line this converter is
+    about to write, so the check cannot drift from the file.
     """
-    return format_polygon_line(class_id, ring, width, height)
+    line = format_polygon_line(class_id, ring, width, height)
+    values = np.asarray([float(value) for value in line.split()[1:]], dtype=np.float64)
+    normalized = values.reshape(-1, 2)
+    x_min = float(normalized[:, 0].min())
+    y_min = float(normalized[:, 1].min())
+    x_max = float(normalized[:, 0].max())
+    y_max = float(normalized[:, 1].max())
+    box = np.asarray([x_min, y_min, x_max - x_min, y_max - y_min])
+    derived = np.asarray([class_id, *box], dtype=np.float32)
+    return (
+        int(derived[0]),
+        float(derived[1]),
+        float(derived[2]),
+        float(derived[3]),
+        float(derived[4]),
+    )
 
 
 def _write_split(
@@ -151,7 +174,7 @@ def _write_split(
         # Positions, not canonical annotation ids, are the label file's order.
         ordered = sorted(annotations.get(int(image["id"]), []), key=lambda item: item["id"])
         polygons: list[tuple[int, list[tuple[float, float]]]] = []
-        seen: dict[str, int] = {}
+        seen: dict[tuple[int, float, float, float, float], int] = {}
         for annotation in ordered:
             class_id = indices[int(annotation["category_id"])]
             rings = _rings(annotation)
@@ -167,14 +190,14 @@ def _write_split(
                     id=annotation.get("id", "?"),
                     count=len(rings),
                 )
-            key = _serialized_target(class_id, rings[0], int(image["width"]), int(image["height"]))
+            key = _collision_key(class_id, rings[0], int(image["width"]), int(image["height"]))
             if key in seen:
                 raise PipelineError(
                     "seg_conversion.colliding_target",
                     N_(
                         "image %(image)s has annotations %(first)s and %(second)s "
-                        "that serialize to the same YOLO label; the pinned loader "
-                        "would collapse them into one target. Merge or remove the "
+                        "that derive the same YOLO box; the pinned loader would "
+                        "collapse them into one target. Merge or remove the "
                         "duplicate in the annotation tool."
                     ),
                     image=image["file_name"],
@@ -205,7 +228,8 @@ def convert_coco_dataset(store: Path, scratch_root: Path) -> ConvertedDataset:
     store = Path(store).expanduser().resolve()
     scratch_root = Path(scratch_root).expanduser().resolve()
     coco = read_coco_store(store)
-    cache_key = _cache_key(store, coco)
+    hashes = image_hashes(store, coco)
+    cache_key = _cache_key(store, coco, hashes)
     target = scratch_root / "seg_datasets" / cache_key
     data_yaml = target / "data.yaml"
     if data_yaml.is_file():
@@ -218,6 +242,7 @@ def convert_coco_dataset(store: Path, scratch_root: Path) -> ConvertedDataset:
             images=counts.get("images", 0),
             labels=counts.get("labels", 0),
             polygons=counts.get("polygons", 0),
+            content_hashes=hashes,
         )
 
     splits = [split for split in _SPLITS if split_coco_images(coco, split)]
@@ -263,6 +288,7 @@ def convert_coco_dataset(store: Path, scratch_root: Path) -> ConvertedDataset:
                 "source": str(store),
                 "cache_key": cache_key,
                 "counts": {"images": images, "labels": labels, "polygons": polygons},
+                "image_hashes": hashes,
             },
             indent=2,
             sort_keys=True,
@@ -284,6 +310,7 @@ def convert_coco_dataset(store: Path, scratch_root: Path) -> ConvertedDataset:
         images=images,
         labels=labels,
         polygons=polygons,
+        content_hashes=hashes,
     )
 
 

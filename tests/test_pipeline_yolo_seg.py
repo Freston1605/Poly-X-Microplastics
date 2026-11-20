@@ -13,6 +13,8 @@ private helper of the pipeline is imported.
 
 from __future__ import annotations
 
+import importlib.metadata
+import importlib.util
 import json
 import sys
 import types
@@ -206,6 +208,19 @@ def _install_fakes(
     lightning.seed_everything = lambda seed, **_kw: seed
     ultralytics = types.ModuleType("ultralytics")
     ultralytics.YOLO = _FakeYOLO
+    # Stand in for the package, not for a flat module: the loader helpers the
+    # Mask R-CNN sibling imports (`ultralytics.data`, `ultralytics.utils`) must
+    # still resolve after a YOLO-seg run has installed this double for the rest
+    # of the test session.
+    specification = importlib.util.find_spec("ultralytics")
+    if specification is not None:
+        ultralytics.__spec__ = specification
+        if specification.submodule_search_locations:
+            ultralytics.__path__ = list(specification.submodule_search_locations)
+    try:
+        ultralytics.__version__ = importlib.metadata.version("ultralytics")
+    except importlib.metadata.PackageNotFoundError:
+        ultralytics.__version__ = "0"
     monkeypatch.setitem(sys.modules, "lightning", lightning)
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
 
@@ -318,11 +333,76 @@ def test_duplicate_class_and_box_are_rejected_before_conversion(
     second["segmentation"] = [list(first["segmentation"][0])]
     (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match=r"(same YOLO label|misma etiqueta YOLO)") as caught:
+    with pytest.raises(ValueError, match=r"(same YOLO box|misma caja YOLO)") as caught:
         convert_coco_dataset(store, tmp_path / "scratch-duplicate")
     message = str(caught.value)
     assert str(first["id"]) in message and str(second["id"]) in message
     assert dataset["images"][0]["file_name"] in message
+
+
+def test_polygons_with_the_same_extrema_but_different_vertices_are_rejected(
+    tmp_path: Path,
+) -> None:
+    """The loader deduplicates the class/box row, not the polygon line.
+
+    A triangle and a square of the same class and extent produce two different
+    label lines and still become one training target, because
+    ``segments2boxes`` collapses both to the same ``xywh`` before ``np.unique``.
+    """
+    from polyx.pipeline.seg_conversion import convert_coco_dataset
+
+    store = _imported_store(tmp_path)
+    dataset = _read(store / "dataset.json")
+    first, second = dataset["annotations"][:2]
+    second["image_id"] = first["image_id"]
+    second["category_id"] = first["category_id"]
+    first["segmentation"] = [[10.0, 8.0, 30.0, 8.0, 30.0, 28.0, 10.0, 28.0]]
+    second["segmentation"] = [[10.0, 8.0, 30.0, 28.0, 10.0, 28.0]]
+    (store / "dataset.json").write_text(json.dumps(dataset, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"(same YOLO box|misma caja YOLO)"):
+        convert_coco_dataset(store, tmp_path / "scratch-extrema")
+
+
+def test_a_square_image_annotation_is_quantized_like_the_label_file(tmp_path: Path) -> None:
+    """Both families train on the six-decimal polygon the loader reads back.
+
+    ``2.00001`` px survives a raw comparison against the loader's two-pixel
+    retention threshold, but serializes to ``0.031250`` on a 64-pixel image and
+    comes back as exactly ``2`` px, which the loader drops. Mask R-CNN must see
+    the serialized number, or the two families keep different instances.
+    """
+    from polyx.pipeline.adapters import _filter_tiny_instances, _serialized_ring
+
+    ring = [10.0, 8.0, 30.0, 8.0, 30.0, 10.00001, 10.0, 10.00001]
+    quantized = _serialized_ring({"segmentation": [ring]}, 64, 64)
+    assert quantized is not None
+    height = float(quantized[:, 1].max()) - float(quantized[:, 1].min())
+    assert height == 2.0
+    raw = np.asarray(ring, dtype=float).reshape(-1, 2)
+    assert float(raw[:, 1].max()) - float(raw[:, 1].min()) > 2.0
+
+    def kept(points: np.ndarray) -> bool:
+        box = [
+            float(points[:, 0].min()),
+            float(points[:, 1].min()),
+            float(points[:, 0].max()),
+            float(points[:, 1].max()),
+        ]
+        mask = np.zeros((64, 64), dtype=bool)
+        _, _, labels = _filter_tiny_instances(
+            [box],
+            [mask],
+            [1],
+            image_width=64,
+            image_height=64,
+            image_size=64,
+            segments=[points],
+        )
+        return bool(labels)
+
+    assert kept(raw) is True
+    assert kept(quantized) is False
 
 
 def test_multipart_masks_are_rejected_instead_of_becoming_two_targets(
@@ -611,6 +691,23 @@ def test_changed_image_bytes_do_not_reuse_the_conversion_cache(tmp_path: Path) -
     second = convert_coco_dataset(store, tmp_path / "scratch-bytes")
     assert first.cache_key != second.cache_key
     assert first.root != second.root
+
+
+def test_provenance_records_the_pixels_the_conversion_used(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A store modified under the same version must not report the old hashes."""
+    import hashlib
+
+    store = _imported_store(tmp_path)
+    image = store / "images" / "val" / "plate_v1.png"
+    image.write_bytes(image.read_bytes() + b"\0")
+    expected = hashlib.sha256(image.read_bytes()).hexdigest()
+
+    code, output = _train_segmentation(tmp_path, store, monkeypatch, [_perfect_validation()])
+    assert code == 0
+    hashes = _read(output / "provenance.json")["dataset_hashes"]
+    assert expected in hashes.values()
 
 
 def test_masks_are_matched_within_the_same_image(

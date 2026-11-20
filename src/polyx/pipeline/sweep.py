@@ -25,12 +25,15 @@ from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
+from polyx.core.i18n import N_
 from polyx.pipeline.artifacts import ArtifactLayout, write_json, write_yaml
 from polyx.pipeline.config import CONF_DIR, ExecutionConfig, execution_config_from_raw
+from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.execution import run_execution
 from polyx.pipeline.sweep_record import (
     acquire_trial_lease,
-    completed_score,
+    belongs_to,
+    finished_score,
     read_trial_record,
     release_trial_lease,
     trial_directory,
@@ -253,6 +256,14 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
         }
         trial_dir = trial_directory(layout.root, trial.number)
         trial_dir.mkdir(parents=True, exist_ok=True)
+        lease = acquire_trial_lease(trial_dir)
+        if lease is None:
+            study.tell(trial.number, state=optuna.trial.TrialState.FAIL)
+            raise PipelineError(
+                "sweep.trial_busy",
+                N_("study trial %(trial)d is already running in another process"),
+                trial=trial.number,
+            )
         record = {
             "trial_id": trial.number,
             "parameters": suggestions,
@@ -260,20 +271,23 @@ def run_sweep(config: SweepConfig) -> dict[str, Any]:
             "study_name": config.study_name,
             "storage": config.storage,
         }
-        write_trial_record(**record)
-        resume = (trial_dir / "progress.json").is_file()
         try:
-            score = float(
-                run_execution(
-                    _trial_config(config.execution, suggestions, trial_dir, resume=resume)
-                )["selection"]["value"]
-            )
-        except Exception:
-            write_trial_record(**record, status="failed")
-            study.tell(trial.number, state=optuna.trial.TrialState.FAIL)
-            raise
-        write_trial_record(**record, status="completed")
-        study.tell(trial.number, score)
+            write_trial_record(**record)
+            resume = (trial_dir / "progress.json").is_file()
+            try:
+                score = float(
+                    run_execution(
+                        _trial_config(config.execution, suggestions, trial_dir, resume=resume)
+                    )["selection"]["value"]
+                )
+            except Exception:
+                write_trial_record(**record, status="failed")
+                study.tell(trial.number, state=optuna.trial.TrialState.FAIL)
+                raise
+            write_trial_record(**record, status="completed")
+            study.tell(trial.number, score)
+        finally:
+            release_trial_lease(lease)
 
     completed = [trial for trial in study.trials if trial.state == optuna.trial.TrialState.COMPLETE]
     if not completed:
@@ -336,9 +350,16 @@ def _recover_pending(config: SweepConfig, study: Any, root: Path) -> int:
             if record is None or record.get("status") != "running":
                 continue
             try:
-                pending.append(int(record["trial_id"]))
+                trial_id = int(record["trial_id"])
             except (KeyError, TypeError, ValueError):
                 continue
+            if belongs_to(
+                record,
+                trial_id=trial_id,
+                study_name=config.study_name,
+                storage=config.storage,
+            ):
+                pending.append(trial_id)
     running = [
         int(trial.number)
         for trial in study.get_trials(deepcopy=False)
@@ -350,13 +371,16 @@ def _recover_pending(config: SweepConfig, study: Any, root: Path) -> int:
         if trial is None or trial.state != optuna.trial.TrialState.RUNNING:
             continue
         directory = trial_directory(root, trial_id)
-        lease = acquire_trial_lease(directory)
+        lease = acquire_trial_lease(directory, kind=".recovery")
         if lease is None:
             # Another runner already recovered this trial.
             continue
         try:
-            score = (
-                completed_score(directory) if (directory / "completion.json").is_file() else None
+            score = finished_score(
+                directory,
+                trial_id=trial_id,
+                study_name=config.study_name,
+                storage=config.storage,
             )
             if score is not None:
                 study.tell(trial_id, score)

@@ -18,7 +18,6 @@ each job decide is what makes resubmission safe.
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -33,7 +32,7 @@ from polyx.pipeline.config import (
     protocol_to_dict,
 )
 from polyx.pipeline.dataset import validate_campaign_cohort
-from polyx.pipeline.errors import PipelineError
+from polyx.pipeline.errors import PipelineError, report_failure
 from polyx.pipeline.execution import run_execution
 
 
@@ -95,19 +94,23 @@ def _resume_decision(config: ExecutionConfig) -> tuple[str, dict]:
 @main(config_path="conf", config_name="campaign", version_base="1.3")
 def campaign(cfg: DictConfig) -> float:
     """Run one family's training execution and return its with-class score."""
+    try:
+        return _campaign(cfg)
+    except Exception as exc:
+        # Hydra prints the exception itself; the journal needs the invariant
+        # code and traceback, and a person needs the active language. One
+        # boundary serves both, for every failure this job can raise.
+        report_failure(exc, stage="campaign")
+        raise
+
+
+def _campaign(cfg: DictConfig) -> float:
     config = execution_config_from_raw(campaign_raw(cfg))
     if config.data_yaml is not None and config.coco_dataset is not None:
         # Both sources travel together in a campaign. They must describe the
         # same real-domain cohort; otherwise the benchmark would vary the
         # dataset as well as the model.
-        try:
-            validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
-        except PipelineError as error:
-            # Hydra prints the exception itself; give it the operator-facing
-            # sentence in the active language. The logged traceback keeps the
-            # invariant English template and the machine code.
-            print(error.display(), file=sys.stderr)
-            raise
+        validate_campaign_cohort(config.data_yaml, config.coco_dataset, config.protocol.split)
     run_name = config.output_dir.name
     if config.resume:
         decision, state = _resume_decision(config)

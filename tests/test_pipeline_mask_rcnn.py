@@ -37,13 +37,18 @@ from tests.test_pipeline_yolo_seg import (
 
 
 def _mask_for(polygon: list[float], width: int = 64, height: int = 48) -> np.ndarray:
-    """Rasterize a fixture polygon the same way the canonical audit does."""
-    import cv2
+    """The mask a perfect segmenter returns for this fixture polygon.
 
-    mask = np.zeros((height, width), dtype=np.uint8)
-    points = np.asarray(polygon, dtype=float).reshape(-1, 2).astype(np.int32)
-    cv2.fillPoly(mask, [points], 1)
-    return mask
+    It is the reference rasterization -- the same one the evaluator applies to
+    ground-truth polygons -- so identical geometry scores IoU 1.0 instead of
+    losing the frame's half-pixel convention to a ``fillPoly`` approximation.
+    """
+    from polyx.pipeline.evaluation import rasterize_segmentation
+
+    mask = rasterize_segmentation([polygon], width, height)
+    if mask is None:
+        return np.zeros((height, width), dtype=np.uint8)
+    return mask.astype(np.uint8)
 
 
 class _FakeDetector:

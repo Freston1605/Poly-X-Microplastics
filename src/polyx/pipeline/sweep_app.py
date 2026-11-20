@@ -24,9 +24,16 @@ from hydra import main
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
+from polyx.core.i18n import N_
 from polyx.pipeline.artifacts import write_yaml
+from polyx.pipeline.errors import PipelineError
 from polyx.pipeline.optuna_sweeper import install_trial_id_passthrough
-from polyx.pipeline.sweep_record import trial_directory, write_trial_record
+from polyx.pipeline.sweep_record import (
+    acquire_trial_lease,
+    release_trial_lease,
+    trial_directory,
+    write_trial_record,
+)
 
 install_trial_id_passthrough()
 
@@ -44,19 +51,31 @@ def objective(cfg: DictConfig) -> float:
     study = _study_record()
     _persist_study(root, study)
     output = _trial_output_dir(root, trial_id)
-    record = {
-        "trial_id": trial_id,
-        "parameters": _sampled_parameters(raw),
-        "execution": output,
-        "study_name": study["study_name"],
-        "storage": study["storage"],
-    }
-    write_trial_record(**record)
-    raw["output_dir"] = str(output)
-    if (output / "progress.json").is_file():
-        raw["resume"] = True
-    summary = run_execution(execution_config_from_raw(raw))
-    write_trial_record(**record, status="completed")
+    lease = acquire_trial_lease(output)
+    if lease is None:
+        # This trial is already being trained elsewhere; returning a value
+        # here would score one runner's work twice.
+        raise PipelineError(
+            "sweep.trial_busy",
+            N_("study trial %(trial)d is already running in another process"),
+            trial=trial_id,
+        )
+    try:
+        record = {
+            "trial_id": trial_id,
+            "parameters": _sampled_parameters(raw),
+            "execution": output,
+            "study_name": study["study_name"],
+            "storage": study["storage"],
+        }
+        write_trial_record(**record)
+        raw["output_dir"] = str(output)
+        if (output / "progress.json").is_file():
+            raw["resume"] = True
+        summary = run_execution(execution_config_from_raw(raw))
+        write_trial_record(**record, status="completed")
+    finally:
+        release_trial_lease(lease)
     return float(summary["selection"]["value"])
 
 
@@ -113,10 +132,11 @@ def _trial_output_dir(root: Path, trial_id: int) -> Path:
     directory = trial_directory(root, trial_id)
     if (directory / "progress.json").is_file():
         return directory
-    if directory.exists():
+    if directory.exists() and not (directory / "completion.json").is_file():
         # A record without a progress snapshot cannot be resumed; retrying the
         # same parameters in a clean directory is explicit, not an overwrite of
-        # usable work.
+        # usable work. A *completed* execution is never deleted: the engine
+        # refuses to reuse it, which is loud instead of destructive.
         shutil.rmtree(directory)
     directory.mkdir(parents=True, exist_ok=True)
     return directory

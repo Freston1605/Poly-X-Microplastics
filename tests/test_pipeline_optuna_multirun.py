@@ -193,13 +193,32 @@ def test_a_running_record_with_progress_is_pending_for_recovery(tmp_path: Path) 
     trial = tmp_path / "trials" / "trial_002"
     trial.mkdir(parents=True)
     (trial / "record.json").write_text(
-        json.dumps({"trial_id": 2, "status": "running"}), encoding="utf-8"
+        json.dumps(
+            {
+                "trial_id": 2,
+                "status": "running",
+                "study_name": "polyx-optuna",
+                "storage": "sqlite:///study.db",
+            }
+        ),
+        encoding="utf-8",
     )
     (trial / "progress.json").write_text("{}", encoding="utf-8")
-    assert PolyxOptunaSweeper._pending_records(tmp_path) == [2]
+    assert PolyxOptunaSweeper._pending_records(tmp_path, "polyx-optuna", "sqlite:///study.db") == [
+        2
+    ]
+    # The same number in another database is a different trial's artifact.
+    assert PolyxOptunaSweeper._pending_records(tmp_path, "polyx-optuna", "sqlite:///other.db") == []
 
 
-def _complete_execution(directory: Path, *, trial_id: int, study: str, value: float) -> None:
+def _complete_execution(
+    directory: Path,
+    *,
+    trial_id: int,
+    study: str,
+    value: float,
+    storage: str = "sqlite:///unused.db",
+) -> None:
     """Write the artifacts the exporter requires of a finished trial."""
     from polyx.pipeline.sweep_record import write_trial_record
 
@@ -209,7 +228,7 @@ def _complete_execution(directory: Path, *, trial_id: int, study: str, value: fl
         parameters={},
         execution=directory,
         study_name=study,
-        storage="sqlite:///unused.db",
+        storage=storage,
         status="completed",
     )
     (directory / "completion.json").write_text('{"status": "completed"}\n', encoding="utf-8")
@@ -232,7 +251,7 @@ def test_export_resolves_the_winner_by_trial_number_not_parameters(
     other = trials / "trial_099"
     _complete_execution(winner, trial_id=1, study="polyx-optuna", value=1.0)
     _complete_execution(other, trial_id=99, study="polyx-optuna", value=1.0)
-    assert _find_best_directory(trials, 1, "polyx-optuna") == winner
+    assert _find_best_directory(trials, 1, "polyx-optuna", "sqlite:///unused.db") == winner
 
 
 def test_export_refuses_an_incomplete_or_foreign_winner(tmp_path: Path) -> None:
@@ -241,17 +260,28 @@ def test_export_refuses_an_incomplete_or_foreign_winner(tmp_path: Path) -> None:
 
     trials = tmp_path / "trials"
     directory = trials / "trial_001"
+    storage = "sqlite:///unused.db"
     _complete_execution(directory, trial_id=1, study="polyx-optuna", value=1.0)
-    assert _find_best_directory(trials, 1, "polyx-optuna") == directory
+    assert _find_best_directory(trials, 1, "polyx-optuna", storage) == directory
 
     (directory / "completion.json").unlink()
-    assert _find_best_directory(trials, 1, "polyx-optuna") is None
+    assert _find_best_directory(trials, 1, "polyx-optuna", storage) is None
 
     _complete_execution(directory, trial_id=1, study="another-study", value=1.0)
-    assert _find_best_directory(trials, 1, "polyx-optuna") is None
+    assert _find_best_directory(trials, 1, "polyx-optuna", storage) is None
 
     _complete_execution(directory, trial_id=2, study="polyx-optuna", value=1.0)
-    assert _find_best_directory(trials, 1, "polyx-optuna") is None
+    assert _find_best_directory(trials, 1, "polyx-optuna", storage) is None
+
+    # Same study name and trial number, different database: a different trial.
+    _complete_execution(
+        directory,
+        trial_id=1,
+        study="polyx-optuna",
+        value=1.0,
+        storage="sqlite:///other.db",
+    )
+    assert _find_best_directory(trials, 1, "polyx-optuna", storage) is None
 
 
 def test_export_reports_a_missing_winner_instead_of_guessing(
@@ -289,7 +319,7 @@ def _running_trial(study_path: Path) -> int:
     return int(trial.number)
 
 
-def _write_running_record(directory: Path, trial_id: int) -> None:
+def _write_running_record(directory: Path, trial_id: int, storage: str) -> None:
     from polyx.pipeline.sweep_record import write_trial_record
 
     directory.mkdir(parents=True, exist_ok=True)
@@ -298,7 +328,7 @@ def _write_running_record(directory: Path, trial_id: int) -> None:
         parameters={},
         execution=directory,
         study_name="polyx-optuna",
-        storage="sqlite:///unused.db",
+        storage=storage,
     )
 
 
@@ -317,7 +347,7 @@ def test_resubmission_recovers_the_interrupted_trial_itself(
 
     interrupted = _running_trial(study_path)
     directory = output / "trials" / f"trial_{interrupted:03d}"
-    _write_running_record(directory, interrupted)
+    _write_running_record(directory, interrupted, f"sqlite:///{study_path}")
 
     _install_fakes(monkeypatch, [_boxes_prediction()])
     _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
@@ -350,7 +380,7 @@ def test_a_finished_execution_whose_score_was_never_told_is_reconciled(
     for name in ("metrics.json", "completion.json", "provenance.json", "training_state.json"):
         (directory).mkdir(parents=True, exist_ok=True)
         (directory / name).write_bytes((completed / name).read_bytes())
-    _write_running_record(directory, interrupted)
+    _write_running_record(directory, interrupted, f"sqlite:///{study_path}")
 
     _install_fakes(monkeypatch, [_boxes_prediction()])
     _run_multirun(monkeypatch, output, tiny_dataset, n_trials=1)
@@ -399,19 +429,108 @@ def test_a_resumed_multirun_reuses_the_study_and_never_overwrites_a_trial(
 
 def test_a_dead_runners_lease_is_stolen_and_a_live_one_is_honoured(tmp_path: Path) -> None:
     """A killed job must not block recovery; a live runner must."""
+    import json
     import os
 
+    from polyx.core.platform import hostname
     from polyx.pipeline.sweep_record import acquire_trial_lease, release_trial_lease
 
     execution = tmp_path / "trials" / "trial_001"
     execution.mkdir(parents=True)
     lease = acquire_trial_lease(execution)
     assert lease is not None
+    # The owner is written with the lease, so no runner can ever observe an
+    # empty lock and conclude that its owner died.
+    holder = json.loads(lease.read_text(encoding="utf-8"))
+    assert holder["pid"] == os.getpid()
+    assert holder["host"] == hostname()
     assert acquire_trial_lease(execution) is None, "a live owner keeps its lease"
     release_trial_lease(lease)
 
     lease = tmp_path / "trials" / ".locks" / "trial_001.lock"
-    lease.write_text("999999999", encoding="utf-8")
+    lease.write_text(json.dumps({"host": hostname(), "pid": 999999999}), encoding="utf-8")
     stolen = acquire_trial_lease(execution)
     assert stolen is not None, "a dead owner's lease is stolen"
-    assert stolen.read_text(encoding="utf-8").strip() == str(os.getpid())
+    assert json.loads(stolen.read_text(encoding="utf-8"))["pid"] == os.getpid()
+
+
+def test_a_failed_recovery_fails_the_sweep_instead_of_consuming_the_budget(
+    tmp_path: Path,
+) -> None:
+    """A recovery that cannot finish must not report a successful sweep.
+
+    Before this, a launcher failure told the trial ``FAIL``, counted it as
+    recovered and left the multirun with no completed trial while exiting
+    normally: the caller saw success and no result.
+    """
+    from types import SimpleNamespace
+
+    from polyx.pipeline.optuna_sweeper import PolyxOptunaSweeper
+
+    trial = SimpleNamespace(
+        number=1, params={"protocol.momentum": 0.9}, state=optuna.trial.TrialState.RUNNING
+    )
+    told: list[object] = []
+
+    def _tell(number: int, **kwargs: object) -> None:
+        told.append((number, kwargs))
+        trial.state = optuna.trial.TrialState.FAIL
+
+    study = SimpleNamespace(get_trials=lambda **_kw: [trial], tell=_tell)
+
+    class _Failed:
+        @property
+        def return_value(self) -> float:
+            raise RuntimeError("resume failed")
+
+    sweeper = PolyxOptunaSweeper.__new__(PolyxOptunaSweeper)
+    sweeper.config = SimpleNamespace(output_dir=str(tmp_path))
+    sweeper.study_name = "polyx-optuna"
+    sweeper.storage = "sqlite:///study.db"
+    sweeper.search_space_distributions = None
+    sweeper.launcher = SimpleNamespace(launch=lambda *_a, **_kw: [_Failed()])
+    sweeper.job_idx = 0
+    sweeper.n_trials = 1
+    sweeper._load_study = lambda: study
+    sweeper._process_searchspace_config = lambda: None
+    sweeper._parse_sweeper_params_config = list
+    sweeper._trial_by_number = lambda _study, number: trial if number == 1 else None
+    sweeper._configure_trials = lambda trials, distributions, fixed: [[] for _ in trials]
+    (tmp_path / "trials" / "trial_001").mkdir(parents=True)
+
+    from polyx.pipeline.errors import PipelineError
+
+    with pytest.raises(PipelineError, match=r"interrupted trial"):
+        sweeper.sweep([])
+    assert told and told[0][0] == 1
+
+
+def test_a_lease_from_another_node_is_judged_by_activity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A runner on another node cannot be probed, so progress is the heartbeat."""
+    import json
+    import os
+    import time
+
+    from polyx.pipeline.sweep_record import acquire_trial_lease, release_trial_lease
+
+    execution = tmp_path / "trials" / "trial_002"
+    execution.mkdir(parents=True)
+    lease = tmp_path / "trials" / ".locks" / "trial_002.lock"
+    lease.parent.mkdir(parents=True, exist_ok=True)
+    lease.write_text(
+        json.dumps({"host": "another-node", "pid": 1, "created": time.time()}),
+        encoding="utf-8",
+    )
+    # Fresh: an epoch completed here a moment ago, so the owner is working.
+    assert acquire_trial_lease(execution) is None
+
+    # Silent for longer than the time limit: the owner is gone.
+    monkeypatch.setenv("POLYX_LEASE_TTL", "0.001")
+    old = time.time() - 60
+    os.utime(lease, (old, old))
+    stolen = acquire_trial_lease(execution)
+    assert stolen is not None
+    assert json.loads(stolen.read_text(encoding="utf-8"))["host"] != "another-node"
+    release_trial_lease(stolen)

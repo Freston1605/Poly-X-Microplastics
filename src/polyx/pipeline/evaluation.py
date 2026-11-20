@@ -37,18 +37,25 @@ PREDICTION_FLOOR = 0.001
 #: category separately, so a plate crowded with one polymer cannot hide the
 #: highest-scoring detection of another.
 _MAX_DETECTIONS = 100
+#: Candidates one family may emit per image before shared scoring. Both
+#: frameworks cap their output with one global top-k, which cannot express a
+#: per-category cap; the budget is therefore 100 slots per class and never
+#: below this ceiling, so a busy polymer cannot consume another one's share
+#: before the evaluator applies the reference cap per category.
+_CANDIDATE_CEILING = 1000
 
 
 def prediction_budget(class_count: int) -> int:
     """How many detections a family may emit per image before shared scoring.
 
-    A detector returns one ranked list where every class competes for the same
-    slots. Giving the list ``100`` slots **per class** is the smallest budget
-    that lets the evaluator apply COCO's per-category cap without one busy
-    class crowding another out of the candidates. Both families use this same
-    number, so neither sees a different tail.
+    The reference protocol keeps the top 100 predictions **per category** per
+    image. A detector returns one ranked list where every class competes for
+    the same slots, so the family's own limit must not bind: a plate with more
+    than 100 detections of one polymer would otherwise drop every detection of
+    another class before the evaluator ever sees it. Both families use this
+    one number, so neither scores a different tail.
     """
-    return _MAX_DETECTIONS * max(1, int(class_count))
+    return max(_CANDIDATE_CEILING, _MAX_DETECTIONS * max(1, int(class_count)))
 
 
 def _box_iou(first: list[float], second: list[float]) -> float:
@@ -63,6 +70,40 @@ def _box_iou(first: list[float], second: list[float]) -> float:
     union = area_first + area_second - overlap
     return overlap / union if union > 0 else 0.0
 
+
+# ──────────────────────────────────────────────────────────────────
+# Polygon rasterization.
+#
+# ``_polygon_to_mask`` below is a Python port of ``rleFrPoly``/``rleDecode``
+# from pycocotools' ``maskApi.c``, the rasterizer COCO's own evaluation uses.
+# The upstream implementation is redistributed under the Simplified BSD
+# licence, reproduced here because this file is a derivative work. The same
+# notice ships in the repository's NOTICE file.
+#
+#   Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin
+#   All rights reserved.
+#
+#   Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are met:
+#
+#   1. Redistributions of source code must retain the above copyright notice,
+#      this list of conditions and the following disclaimer.
+#   2. Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+#   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE.
+# ──────────────────────────────────────────────────────────────────
 
 #: pycocotools traces polygon boundaries on a grid this many times finer.
 _POLYGON_SCALE = 5
@@ -120,6 +161,11 @@ def _polygon_to_mask(points: np.ndarray, height: int, width: int) -> np.ndarray 
         y_end = int(scaled_y[(index + 1) % count])
         dx = abs(x_end - x_start)
         dy = abs(y_end - y_start)
+        if dx == 0 and dy == 0:
+            # A repeated vertex (a closed ring, or two vertices that land on the
+            # same 5x grid point) contributes no crossing. ``rleFrPoly`` skips
+            # it; without this guard the slope below divides by zero.
+            continue
         flip = (dx >= dy and x_start > x_end) or (dx < dy and y_start > y_end)
         if flip:
             x_start, x_end = x_end, x_start
@@ -193,17 +239,39 @@ def _mask_iou(first: np.ndarray, second: np.ndarray) -> float:
 
 
 def _prepare(items: list[dict], sizes: dict[int, tuple[int, int]], task: str) -> list[dict]:
-    """Copy the items and attach the rasterized mask a segmenter compares."""
+    """Copy the items and attach the mask a segmenter compares.
+
+    A prediction may carry its own mask (``"mask"``), taken straight from the
+    framework at the original resolution. That path is exact: converting a
+    predicted mask into a polygon and back loses up to half a pixel per edge,
+    enough to turn a perfect detection into a miss at IoU 0.50. A prediction
+    that only carries COCO polygons is rasterized with the reference port.
+    """
     prepared: list[dict] = []
     for item in items:
         copied = dict(item)
         if task == "segment":
-            size = sizes.get(int(copied.get("image_id", -1)))
-            copied["_mask"] = (
-                rasterize_segmentation(copied.get("segmentation"), *size) if size else None
-            )
+            copied["_mask"] = _segment_mask(copied, sizes)
         prepared.append(copied)
     return prepared
+
+
+def _segment_mask(item: dict, sizes: dict[int, tuple[int, int]]) -> np.ndarray | None:
+    """The boolean mask of one item, from its own mask or its polygons."""
+    size = sizes.get(int(item.get("image_id", -1)))
+    explicit = item.get("mask")
+    if explicit is not None:
+        array = np.asarray(explicit)
+        if array.dtype != np.bool_:
+            array = array >= 0.5
+        array = array.reshape(array.shape[-2:])
+        if size is None or array.shape == (size[1], size[0]):
+            return array
+        # A mask the caller did not produce at the image's resolution lives
+        # on another grid; fall back to the polygons it also carried, if any.
+    if size is None:
+        return None
+    return rasterize_segmentation(item.get("segmentation"), *size)
 
 
 def _overlap(prediction: dict, truth: dict, task: str) -> float:
