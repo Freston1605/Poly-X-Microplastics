@@ -52,7 +52,6 @@ MODULOS_MOVIDOS = (
     "widgets",
     "preferencias",
     "pdf_export",
-    "updates",
     "report_html",
 )
 
