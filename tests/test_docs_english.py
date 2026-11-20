@@ -35,7 +35,6 @@ DOC_PATHS = [
     "AGENTS.md",
     "CLAUDE.md",
     "CONTRIBUTING.md",
-    "LEEME_macOS.md",
     "docs/diagnostico_sigterm.md",
     "docs/recetas_jq.md",
     "tests/fixtures/baseline_informe/README.md",
@@ -163,11 +162,11 @@ def test_scanner_ignores_spanish_inside_identifier_tokens() -> None:
     """Negative test: underscore-bearing filenames must not be flagged.
 
     ``\\b`` word boundaries do not fire inside a single word-character run,
-    so ``empaquetar_para_llevar.bat`` contains no ``para`` hit and
-    ``Lanzar_macOS.command`` contains no ``macOS`` hit.
+    so ``empaquetar_dataset_para_drive.bat`` contains no ``para`` hit and
+    ``diagnostico_sigterm.md`` contains no ``diagnostico`` hit.
     """
     identifiers = (
-        "Run LEEME.txt with iniciar_polyx.bat, empaquetar_para_llevar.bat, "
-        "Lanzar_macOS.command, actualizar.bat and crear_icono_macOS.command."
+        "Run empaquetar_dataset_para_drive.bat with tools/data/make_splits.py, "
+        "and read docs/diagnostico_sigterm.md and docs/recetas_jq.md."
     )
     assert _spanish_findings(identifiers) == []

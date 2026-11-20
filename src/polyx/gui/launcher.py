@@ -34,12 +34,11 @@ from PySide6.QtWidgets import (
 from polyx import __version__
 from polyx.core.i18n import _
 from polyx.core.paths import ROOT
-from polyx.core.platform import launch_updater, open_in_system
+from polyx.core.platform import open_in_system
 from polyx.gui import i18n_qt, iconos, marca
 from polyx.gui import theme as T
 from polyx.gui.microscope_panel import MicroscopePanel
 from polyx.gui.preferencias import PreferencesDialog
-from polyx.gui.updates import UPDATER, SearchUpdates, can_update
 from polyx.gui.widgets import HLine, LogoBadge, reset_central_widget
 
 # ──────────────────────────────────────────────────────────────────────
@@ -299,15 +298,6 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         marca.titular(self, "launcher")
         self.resize(1180, 820)
 
-        # It is stored separately because the window is rebuilt when the theme changes
-        # and the version notice cannot be lost in that rebuild.
-        self._sha_version_new: str = ""
-
-        self._search = SearchUpdates(self)
-        self._search.there_is_a_new_version.connect(self._notify_version_new)
-        # It is triggered with the window already drawn: startup takes priority.
-        QTimer.singleShot(1200, self._search.lookfor)
-
         self._build_ui()
         self._install_shortcuts()
 
@@ -372,24 +362,6 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         version_lbl = QLabel(f"v{__version__}")
         version_lbl.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
         tb.addWidget(version_lbl)
-
-        # New version notice. It starts hidden and only appears if the background
-        # check confirms that GitHub is ahead of what is installed.
-        self.btn_update = QPushButton(_("Update"))
-        self.btn_update.setCursor(Qt.PointingHandCursor)
-        self.btn_update.setStyleSheet(
-            f"QPushButton {{ background: {T.WARN}; color: white; border: none; "
-            f"border-radius: 4px; padding: 4px 10px; font-size: 9pt; "
-            f"font-weight: 600; }}"
-            f"QPushButton:hover {{ background: {T.ERR}; }}"
-        )
-        self.btn_update.setVisible(False)
-        self.btn_update.clicked.connect(self._launch_updater)
-        tb.addWidget(self.btn_update)
-        # If the check has already answered before this rebuild, the
-        # notice is put back instead of being lost.
-        if self._sha_version_new:
-            self._notify_version_new(self._sha_version_new)
         root.addWidget(topbar)
 
         # ── Central scroll ──
@@ -568,50 +540,6 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         dlg.theme_changed.connect(lambda _unused: self._build_ui())
         dlg.exec()
 
-    # ── Updates ────────────────────────────────────────────────
-    def _notify_version_new(self, sha_short: str):
-        """Shows the update button when GitHub is ahead."""
-        self._sha_version_new = sha_short
-        self.btn_update.setText(_("Update") + f" · {sha_short}")
-        self.btn_update.setToolTip(
-            _("A new version is available on GitHub. Click to download and install it.")
-        )
-        self.btn_update.setVisible(True)
-
-    def _launch_updater(self):
-        if not can_update():
-            QMessageBox.information(
-                self,
-                _("Update"),
-                _(
-                    "Could not find %(name)s in the installation folder. Download the new version manually from GitHub."
-                )
-                % {"name": UPDATER.name},
-            )
-            return
-        if (
-            QMessageBox.question(
-                self,
-                _("Update"),
-                _(
-                    "The new version will be downloaded and Poly-X will close.\n\nYour models, results and data are left untouched. Continue?"
-                ),
-            )
-            != QMessageBox.Yes
-        ):
-            return
-        # The updater overwrites program files; Poly-X has to be released
-        # first so it does not clash with the .py files that are in use.
-        if not launch_updater(UPDATER):
-            QMessageBox.warning(
-                self,
-                _("Update"),
-                _("Could not launch %(name)s. Run it by hand from the installation folder.")
-                % {"name": UPDATER.name},
-            )
-            return
-        self.close()
-
     # ── Launchers ──────────────────────────────────────────────
     def open_detector(self):
         self._launch_module("polyx.gui.detector")
@@ -645,15 +573,13 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             self._toast(_("Manual_PolyX.html not found"))
 
     def open_readme(self):
-        readme = ROOT / "LEEME.txt"
+        readme = ROOT / "README.md"
         if readme.exists():
             open_in_system(str(readme))
         else:
-            self._toast(_("LEEME.txt not found"))
+            self._toast(_("README.md not found"))
 
     def _toast(self, msg: str):
-        from PySide6.QtWidgets import QMessageBox
-
         QMessageBox.information(self, _("Poly-X"), msg)
 
 

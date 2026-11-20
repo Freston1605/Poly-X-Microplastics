@@ -901,7 +901,7 @@ def test_the_pseudo_catalog_mangles_text_and_keeps_placeholders(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Packaging: compiled catalogs reach the wheel and the frozen application.
+# Packaging: compiled catalogs reach the wheel.
 # ---------------------------------------------------------------------------
 
 
@@ -933,24 +933,6 @@ def test_hatch_declares_the_compiled_catalogs_as_build_artifacts():
         assert any("*.mo" in pattern for pattern in artifacts), (
             f"{target} target must declare compiled catalogs as artifacts: {artifacts}"
         )
-
-
-def test_the_frozen_application_bundles_compiled_catalogs_without_the_pseudo_locale(tmp_path):
-    from tools.i18n import packaging
-
-    _write_tree(
-        tmp_path,
-        {
-            CATALOG_REL: _catalog(_entry("Open", "Abrir")),
-            "src/polyx/locales/qps_ploc/LC_MESSAGES/messages.po": _catalog(_entry("Open", "")),
-        },
-    )
-
-    datas = packaging.frozen_locale_datas(tmp_path)
-    flattened = " ".join(source for source, _destination in datas)
-
-    assert "messages.mo" in flattened
-    assert "qps_ploc" not in flattened
 
 
 def test_the_build_hook_is_wired_into_pyproject():

@@ -41,12 +41,6 @@ IDENTITY_DOCUMENTS = (
 #: record of decisions already taken.
 UPSTREAM_ALLOWED = {"README.md", "GLOSSARY.md", "CHANGELOG.md"}
 
-#: Python surfaces the identity ticket owns. ``gui/updates.py`` is retired with
-#: the consumer-distribution track by a separate ticket; it keeps the upstream
-#: owner until that ticket deletes it rather than this one rewriting code with
-#: an expiry date.
-RETIRED_BY_DISTRIBUTION_TICKET = {Path("src/polyx/gui/updates.py")}
-
 
 def _pyproject() -> dict:
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -57,13 +51,9 @@ def _read(relative: str) -> str:
 
 
 def _python_surfaces() -> list[Path]:
-    """The package and the manual generators, minus the retired updater."""
+    """The package and the manual generators."""
     surfaces = [*(ROOT / "src" / "polyx").rglob("*.py"), *(ROOT / "tools" / "manual").glob("*.py")]
-    return [
-        path
-        for path in sorted(surfaces)
-        if path.relative_to(ROOT) not in RETIRED_BY_DISTRIBUTION_TICKET
-    ]
+    return sorted(surfaces)
 
 
 def _mentions_upstream(path: Path) -> bool:

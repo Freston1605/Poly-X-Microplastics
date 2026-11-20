@@ -38,7 +38,6 @@ def _recargar_como(plataforma: str, maquina: str = "x86_64"):
             "es_linux": P.IS_LINUX,
             "arquitectura": P.architecture_mac(),
             "sistema": P.name_system(),
-            "actualizador": P.name_updater(),
             "rotulo": P.label_devices(),
         }
 
@@ -72,15 +71,6 @@ def test_el_nombre_del_sistema_en_mac_no_usa_la_version_de_darwin():
     sistema = _recargar_como("darwin", "arm64")["sistema"]
     assert "macOS 14.5" in sistema
     assert "Apple Silicon" in sistema
-
-
-# ── Actualizador ──
-def test_cada_sistema_pide_su_actualizador():
-    """Un .bat no se ejecuta en un Mac. Si esto se rompe, el boton
-    'Actualizar' apunta a un archivo que no existe y no hace nada."""
-    assert _recargar_como("win32")["actualizador"] == "actualizar.bat"
-    assert _recargar_como("darwin", "arm64")["actualizador"].endswith(".command")
-    assert _recargar_como("linux")["actualizador"].endswith(".sh")
 
 
 # ── Dispositivo de computo ──

@@ -7,8 +7,7 @@ tags are left intact, because mangling them would break the layout rather than
 reveal it.
 
 The catalog is generated under ``src/polyx/locales/qps_ploc``, which is
-gitignored and excluded from the wheel and the frozen application. It is not
-part of any gate.
+gitignored and excluded from the wheel. It is not part of any gate.
 """
 
 from __future__ import annotations

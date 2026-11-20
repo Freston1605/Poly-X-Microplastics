@@ -159,9 +159,9 @@ a pull request that raises the pin toward the first fixed release, and for the
 Python ecosystem that only happens when the pin is satisfiable by the uv
 version Dependabot bundles — otherwise the job fails before it proposes
 anything (see "Security updates are only on when the uv pin is satisfiable").
-Because the pins live in two places — `pyproject.toml` and the frozen
-`requirements.txt` — treat any such pull request as a starting point, not a
-merge-ready change: both manifests and `uv lock` have to move together.
+Because the pins live in two places — `pyproject.toml` and the resolved
+`uv.lock` — treat any such pull request as a starting point, not a
+merge-ready change: both have to move together.
 
 The routine bump of the scientific stack stays manual, with the full gate: it
 is a different path from a security update, and nothing here automates it.

@@ -49,6 +49,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `checkpoints/lightning/last.ckpt` is the resume point; the progress record is
   the heartbeat and the protocol/dataset guard.
 
+### Removed
+- **The consumer-distribution track (#212, ADR-0011).** `install/` (the
+  installers, the auto-updater, the uninstaller, the migrator and the
+  portable/macOS bundles), `requirements.txt`, the PyInstaller spec under
+  `tools/packaging/`, `LEEME.txt` and `LEEME_macOS.md` are gone, along with the
+  GUI update notice (`polyx.gui.updates`), `platform.name_updater()` and
+  `platform.launch_updater()`. `empaquetar_dataset_para_drive.bat` moved to
+  `tools/data/` because it packages a dataset, not the software. CI no longer
+  smoke-tests the installers, and ruff no longer scans `install/`. The frozen
+  manual stays on disk, out of scope and not regenerated, and every console
+  script — the `polyx-*` aliases included — remains.
+
 ### Fixed
 - **Fourth review of the HPC pipeline (#202).** Both container definitions now
   build: the project wheel is produced in the wheelhouse where `NOTICE` and the

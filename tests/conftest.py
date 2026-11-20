@@ -195,8 +195,7 @@ def _isolate_theme_saves(tmp_path, monkeypatch):
     ``polyx.core.preferences``. Point that file at the test's ``tmp_path``
     and restore the active palette afterwards, so the suite is hermetic. The
     theme part is lazy: a test module that never imported the theme does not
-    acquire a PySide6 dependency, so headless suites such as the install
-    smoke tests stay headless.
+    acquire a PySide6 dependency, so a headless suite stays headless.
     """
     from polyx.core import preferences
 
@@ -241,7 +240,7 @@ def pytest_unconfigure(config):
     interpreter shutdown (``QWidget::~QWidget`` -> shiboken ``dict_dealloc``).
     pytest has printed its summary by the time ``unconfigure`` runs, so flush
     and leave with the status recorded at session finish. A run that never
-    imported Qt (the headless install smoke tests) keeps the normal shutdown.
+    imported Qt keeps the normal shutdown.
     """
     if "PySide6.QtWidgets" not in sys.modules:
         return
