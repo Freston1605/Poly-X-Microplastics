@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 23:54-0500\n"
+"POT-Creation-Date: 2026-11-20 01:12-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -249,52 +249,62 @@ msgstr "ESCRITO: %(path)s"
 msgid "mAP50: %(value)s"
 msgstr "mAP50: %(value)s"
 
-#: src/polyx/cli/main.py:27
-msgid "Poly-X command line."
-msgstr "Línea de comandos de Poly-X."
+#: src/polyx/cli/main.py:35
+msgid "MICRA command line."
+msgstr "Línea de comandos de MICRA."
 
-#: src/polyx/cli/main.py:29
+#: src/polyx/cli/main.py:37
 msgid "Usage:"
 msgstr "Uso:"
 
-#: src/polyx/cli/main.py:58
+#: src/polyx/cli/main.py:69
 msgid "Commands:"
 msgstr "Comandos:"
 
-#: src/polyx/cli/main.py:62
-msgid "Run 'polyx <command> --help' for command-specific options."
-msgstr "Ejecuta 'polyx <comando> --help' para ver las opciones de cada comando."
+#: src/polyx/cli/main.py:74
+#, python-format
+msgid "Run '%(program)s <command> --help' for command-specific options."
+msgstr "Ejecuta '%(program)s <comando> --help' para ver las opciones de cada comando."
 
-#: src/polyx/cli/main.py:80
-msgid "Run 'polyx --help' for the list of commands."
-msgstr "Ejecuta 'polyx --help' para ver la lista de comandos."
-
-#: src/polyx/cli/main.py:79
+#: src/polyx/cli/main.py:93
 #, python-format
 msgid "Unknown command: %(command)s"
 msgstr "Comando desconocido: %(command)s"
 
-#: src/polyx/cli/main.py:30 src/polyx/cli/main.py:31
+#: src/polyx/cli/main.py:95
+#, python-format
+msgid "Run '%(program)s --help' for the list of commands."
+msgstr "Ejecuta '%(program)s --help' para ver la lista de comandos."
+
+#: src/polyx/cli/main.py:38
+msgid "show this help"
+msgstr "mostrar esta ayuda"
+
+#: src/polyx/cli/main.py:39
 msgid "launch the GUI"
 msgstr "abrir la interfaz gráfica"
 
-#: src/polyx/cli/main.py:32
+#: src/polyx/cli/main.py:40
 msgid "headless training"
 msgstr "entrenamiento sin interfaz"
 
-#: src/polyx/cli/main.py:33
+#: src/polyx/cli/main.py:41
 msgid "headless detection"
 msgstr "detección sin interfaz"
 
-#: src/polyx/cli/main.py:34
+#: src/polyx/cli/main.py:42
 msgid "headless evaluation"
 msgstr "evaluación sin interfaz"
 
-#: src/polyx/cli/main.py:35
+#: src/polyx/cli/main.py:43
 msgid "compact HTML report"
 msgstr "informe HTML compacto"
 
-#: src/polyx/cli/main.py:36
+#: src/polyx/cli/main.py:44
+msgid "headless pipeline, sweep or campaign"
+msgstr "pipeline sin interfaz, barrido o campaña"
+
+#: src/polyx/cli/main.py:45
 msgid "download weights"
 msgstr "descargar los pesos"
 
@@ -6795,8 +6805,8 @@ msgid ""
 "%(path)s is declared in both the %(first)s and the %(second)s splits; an image can belong to one"
 " fold only"
 msgstr ""
-"%(path)s está declarado tanto en el split %(first)s como en el %(second)s; una imagen solo "
-"puede pertenecer a un pliegue"
+"%(path)s está declarado tanto en el split %(first)s como en el %(second)s; una imagen solo puede"
+" pertenecer a un pliegue"
 
 #: src/polyx/pipeline/execution.py:79
 #, python-format

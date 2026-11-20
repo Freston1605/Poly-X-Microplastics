@@ -1,9 +1,9 @@
 """Headless pipeline command with the local backend.
 
 Usage:
-    polyx-pipeline data_yaml=... output_dir=... protocol.epochs=2
-    polyx-pipeline coco_dataset=... output_dir=... family=yolo_segmentation
-    polyx-pipeline coco_import=... output_dir=... dataset_name=first_batch
+    micra pipeline data_yaml=... output_dir=... protocol.epochs=2
+    micra pipeline coco_dataset=... output_dir=... family=yolo_segmentation
+    micra pipeline coco_import=... output_dir=... dataset_name=first_batch
 
 Overrides are Hydra-style ``key=value`` strings. ``data_yaml`` trains a
 detection family from YOLO box labels; ``coco_dataset`` trains a segmentation
@@ -53,6 +53,9 @@ def _import_dataset(config: ExecutionConfig) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Compose one execution or import, run it and report where it landed."""
     overrides = list(sys.argv[1:] if argv is None else argv)
+    if overrides and overrides[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
     try:
         config = load_config(overrides)
         if config.coco_import is not None:

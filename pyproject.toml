@@ -91,6 +91,7 @@ legacy = ["pyqtgraph==0.13.7"]   # only the legacy/ viewers use it
 
 [project.scripts]
 polyx = "polyx.cli.main:main"
+micra = "polyx.cli.main:main"
 polyx-pipeline = "polyx.pipeline.command:main"
 polyx-gui = "polyx.gui.__main__:main"
 polyx-download-models = "polyx.cli.download_models:main"

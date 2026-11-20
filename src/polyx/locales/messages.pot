@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 23:54-0500\n"
+"POT-Creation-Date: 2026-11-20 01:12-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -242,52 +242,62 @@ msgstr ""
 msgid "mAP50: %(value)s"
 msgstr ""
 
-#: src/polyx/cli/main.py:27
-msgid "Poly-X command line."
+#: src/polyx/cli/main.py:35
+msgid "MICRA command line."
 msgstr ""
 
-#: src/polyx/cli/main.py:29
+#: src/polyx/cli/main.py:37
 msgid "Usage:"
 msgstr ""
 
-#: src/polyx/cli/main.py:58
+#: src/polyx/cli/main.py:69
 msgid "Commands:"
 msgstr ""
 
-#: src/polyx/cli/main.py:62
-msgid "Run 'polyx <command> --help' for command-specific options."
+#: src/polyx/cli/main.py:74
+#, python-format
+msgid "Run '%(program)s <command> --help' for command-specific options."
 msgstr ""
 
-#: src/polyx/cli/main.py:80
-msgid "Run 'polyx --help' for the list of commands."
-msgstr ""
-
-#: src/polyx/cli/main.py:79
+#: src/polyx/cli/main.py:93
 #, python-format
 msgid "Unknown command: %(command)s"
 msgstr ""
 
-#: src/polyx/cli/main.py:30 src/polyx/cli/main.py:31
+#: src/polyx/cli/main.py:95
+#, python-format
+msgid "Run '%(program)s --help' for the list of commands."
+msgstr ""
+
+#: src/polyx/cli/main.py:38
+msgid "show this help"
+msgstr ""
+
+#: src/polyx/cli/main.py:39
 msgid "launch the GUI"
 msgstr ""
 
-#: src/polyx/cli/main.py:32
+#: src/polyx/cli/main.py:40
 msgid "headless training"
 msgstr ""
 
-#: src/polyx/cli/main.py:33
+#: src/polyx/cli/main.py:41
 msgid "headless detection"
 msgstr ""
 
-#: src/polyx/cli/main.py:34
+#: src/polyx/cli/main.py:42
 msgid "headless evaluation"
 msgstr ""
 
-#: src/polyx/cli/main.py:35
+#: src/polyx/cli/main.py:43
 msgid "compact HTML report"
 msgstr ""
 
-#: src/polyx/cli/main.py:36
+#: src/polyx/cli/main.py:44
+msgid "headless pipeline, sweep or campaign"
+msgstr ""
+
+#: src/polyx/cli/main.py:45
 msgid "download weights"
 msgstr ""
 
