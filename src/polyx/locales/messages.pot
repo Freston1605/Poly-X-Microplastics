@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 23:26-0500\n"
+"POT-Creation-Date: 2026-11-19 23:54-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6137,22 +6137,22 @@ msgstr ""
 msgid "%(path)s must declare consecutive box class IDs starting at zero"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:297
+#: src/polyx/pipeline/dataset.py:313
 #, python-format
 msgid "%(path)s must declare domain: real (or validation_domain: real) for a benchmark campaign"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:306
+#: src/polyx/pipeline/dataset.py:322
 #, python-format
 msgid "%(path)s must declare info.domain: real for a benchmark campaign"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:341
+#: src/polyx/pipeline/dataset.py:357
 #, python-format
 msgid "the cohorts differ between %(boxes)s and %(masks)s: only-box=%(only_box)s only-mask=%(only_mask)s"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:378
+#: src/polyx/pipeline/dataset.py:394
 #, python-format
 msgid "the benchmark split %(split)s has no images in either dataset"
 msgstr ""
@@ -6167,45 +6167,52 @@ msgstr ""
 msgid "cannot use %(path)s as a training image: it must be readable and at least 10 pixels on each side"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:264
+#: src/polyx/pipeline/dataset.py:280
 #, python-format
 msgid "evaluation split %(split)s in %(path)s needs a directory with images"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:356
+#: src/polyx/pipeline/dataset.py:372
 #, python-format
 msgid ""
 "image %(name)s is in the %(box_fold)s fold of the box dataset and the %(mask_fold)s fold of the "
 "mask dataset"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:367
+#: src/polyx/pipeline/dataset.py:383
 #, python-format
 msgid "image %(name)s has different content in the box and mask datasets (%(box_hash)s != %(mask_hash)s)"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:237
+#: src/polyx/pipeline/dataset.py:239
 #, python-format
 msgid "box split %(split)s must name an image directory, not a file: %(path)s"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:317
+#: src/polyx/pipeline/dataset.py:333
 #, python-format
 msgid ""
 "the box dataset reuses the image name %(name)s across folds; basenames must be unique for a "
 "cohort comparison"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:329
+#: src/polyx/pipeline/dataset.py:345
 #, python-format
 msgid ""
 "the mask dataset reuses the image name %(name)s across folds; basenames must be unique for a "
 "cohort comparison"
 msgstr ""
 
-#: src/polyx/pipeline/dataset.py:249
+#: src/polyx/pipeline/dataset.py:251
 #, python-format
 msgid "unsupported headless box image format: %(path)s"
+msgstr ""
+
+#: src/polyx/pipeline/dataset.py:268
+#, python-format
+msgid ""
+"%(path)s is declared in both the %(first)s and the %(second)s splits; an image can belong to one"
+" fold only"
 msgstr ""
 
 #: src/polyx/pipeline/execution.py:79

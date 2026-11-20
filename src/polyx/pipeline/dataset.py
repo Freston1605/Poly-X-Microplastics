@@ -215,6 +215,8 @@ def resolve_box_dataset(data_yaml: Path, split: str) -> ResolvedBoxDataset:
     split_paths: dict[str, Path | None] = {}
     splits: dict[str, tuple[BoxImage, ...]] = {}
     resolved: dict[Path, BoxImage] = {}
+    #: The split that claims each image. A second claim is a fold leak, not a cache hit.
+    owner: dict[Path, str] = {}
 
     def hash_key(path: Path, split: str, directory: Path) -> str:
         """A stable, machine-independent key: the dataset-relative path, or the split's own."""
@@ -253,10 +255,24 @@ def resolve_box_dataset(data_yaml: Path, split: str) -> ResolvedBoxDataset:
                         native_label = Path(img2label_paths([str(path)])[0])
                         sample = _resolve_box_image(path, native_label, names)
                         resolved[path] = sample
+                        owner[path] = name
                         hashes[hash_key(path, name, directory)] = sample.sha256
                         if sample.label is not None:
                             key = hash_key(sample.label, name, directory)
                             hashes[key] = sha256_file(sample.label)
+                    elif owner[path] != name:
+                        # Training and scoring the same bytes leaks the validation
+                        # ground truth into the fit; the folds must stay disjoint.
+                        raise PipelineError(
+                            "dataset.image_in_two_splits",
+                            N_(
+                                "%(path)s is declared in both the %(first)s and the "
+                                "%(second)s splits; an image can belong to one fold only"
+                            ),
+                            path=str(path),
+                            first=owner[path],
+                            second=name,
+                        )
                     images.append(resolved[path])
         if name == split and not images:
             raise PipelineError(

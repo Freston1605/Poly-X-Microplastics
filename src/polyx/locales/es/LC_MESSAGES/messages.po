@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-19 23:26-0500\n"
+"POT-Creation-Date: 2026-11-19 23:54-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -6704,24 +6704,24 @@ msgstr ""
 msgid "%(path)s must declare consecutive box class IDs starting at zero"
 msgstr "%(path)s debe declarar IDs de clase de caja consecutivos empezando en cero"
 
-#: src/polyx/pipeline/dataset.py:297
+#: src/polyx/pipeline/dataset.py:313
 #, python-format
 msgid "%(path)s must declare domain: real (or validation_domain: real) for a benchmark campaign"
 msgstr "%(path)s debe declarar domain: real (o validation_domain: real) para una campaña de benchmark"
 
-#: src/polyx/pipeline/dataset.py:306
+#: src/polyx/pipeline/dataset.py:322
 #, python-format
 msgid "%(path)s must declare info.domain: real for a benchmark campaign"
 msgstr "%(path)s debe declarar info.domain: real para una campaña de benchmark"
 
-#: src/polyx/pipeline/dataset.py:341
+#: src/polyx/pipeline/dataset.py:357
 #, python-format
 msgid "the cohorts differ between %(boxes)s and %(masks)s: only-box=%(only_box)s only-mask=%(only_mask)s"
 msgstr ""
 "las cohortes difieren entre %(boxes)s y %(masks)s: solo-cajas=%(only_box)s solo-"
 "máscaras=%(only_mask)s"
 
-#: src/polyx/pipeline/dataset.py:378
+#: src/polyx/pipeline/dataset.py:394
 #, python-format
 msgid "the benchmark split %(split)s has no images in either dataset"
 msgstr "el split de benchmark %(split)s no tiene imágenes en ninguno de los dos datasets"
@@ -6740,12 +6740,12 @@ msgstr ""
 "no se puede usar %(path)s como imagen de entrenamiento: debe ser legible y tener al menos 10 "
 "píxeles por lado"
 
-#: src/polyx/pipeline/dataset.py:264
+#: src/polyx/pipeline/dataset.py:280
 #, python-format
 msgid "evaluation split %(split)s in %(path)s needs a directory with images"
 msgstr "el split de evaluación %(split)s en %(path)s necesita un directorio con imágenes"
 
-#: src/polyx/pipeline/dataset.py:356
+#: src/polyx/pipeline/dataset.py:372
 #, python-format
 msgid ""
 "image %(name)s is in the %(box_fold)s fold of the box dataset and the %(mask_fold)s fold of the "
@@ -6754,19 +6754,19 @@ msgstr ""
 "la imagen %(name)s está en el pliegue %(box_fold)s del dataset de cajas y en el pliegue "
 "%(mask_fold)s del dataset de máscaras"
 
-#: src/polyx/pipeline/dataset.py:367
+#: src/polyx/pipeline/dataset.py:383
 #, python-format
 msgid "image %(name)s has different content in the box and mask datasets (%(box_hash)s != %(mask_hash)s)"
 msgstr ""
 "la imagen %(name)s tiene contenido distinto en el dataset de cajas y el de máscaras "
 "(%(box_hash)s != %(mask_hash)s)"
 
-#: src/polyx/pipeline/dataset.py:237
+#: src/polyx/pipeline/dataset.py:239
 #, python-format
 msgid "box split %(split)s must name an image directory, not a file: %(path)s"
 msgstr "el split de cajas %(split)s debe nombrar un directorio de imágenes, no un archivo: %(path)s"
 
-#: src/polyx/pipeline/dataset.py:317
+#: src/polyx/pipeline/dataset.py:333
 #, python-format
 msgid ""
 "the box dataset reuses the image name %(name)s across folds; basenames must be unique for a "
@@ -6775,7 +6775,7 @@ msgstr ""
 "el dataset de cajas reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
-#: src/polyx/pipeline/dataset.py:329
+#: src/polyx/pipeline/dataset.py:345
 #, python-format
 msgid ""
 "the mask dataset reuses the image name %(name)s across folds; basenames must be unique for a "
@@ -6784,10 +6784,19 @@ msgstr ""
 "el dataset de máscaras reutiliza el nombre de imagen %(name)s entre pliegues; los nombres base "
 "deben ser únicos para comparar cohortes"
 
-#: src/polyx/pipeline/dataset.py:249
+#: src/polyx/pipeline/dataset.py:251
 #, python-format
 msgid "unsupported headless box image format: %(path)s"
 msgstr "formato de imagen de caja sin interfaz no compatible: %(path)s"
+
+#: src/polyx/pipeline/dataset.py:268
+#, python-format
+msgid ""
+"%(path)s is declared in both the %(first)s and the %(second)s splits; an image can belong to one"
+" fold only"
+msgstr ""
+"%(path)s está declarado tanto en el split %(first)s como en el %(second)s; una imagen solo "
+"puede pertenecer a un pliegue"
 
 #: src/polyx/pipeline/execution.py:79
 #, python-format

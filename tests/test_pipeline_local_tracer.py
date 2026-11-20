@@ -683,3 +683,32 @@ def test_headless_box_preflight_names_incompatible_dataset_inputs(
     assert message in error
     assert str(offending) in error
     assert not (output / "progress.json").exists()
+
+
+def test_preflight_refuses_an_image_declared_in_two_folds(
+    tmp_path: Path,
+    tiny_dataset: Path,
+    capsys: pytest.CaptureFixture[str],
+    selected_language,
+) -> None:
+    """A file in both folds would be trained on and then scored."""
+    selected_language("en")
+    # Pointing val at the train folder is the common way this happens.
+    source = tiny_dataset.read_text(encoding="utf-8")
+    tiny_dataset.write_text(
+        source.replace("val: images/val", "val: images/train"), encoding="utf-8"
+    )
+    output = tmp_path / "fold-leak"
+
+    code = _command(
+        f"data_yaml={tiny_dataset}",
+        f"output_dir={output}",
+        "family.weights=yolov8n.yaml",
+        "protocol.epochs=1",
+    )
+
+    error = capsys.readouterr().err
+    assert code == 1
+    assert "declared in both the train and the val splits" in error
+    assert str(tiny_dataset.parent / "images" / "train") in error
+    assert not (output / "progress.json").exists()

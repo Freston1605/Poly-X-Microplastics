@@ -161,6 +161,11 @@ being dropped from the run. An image that cannot be read or is smaller than ten
 pixels on a side is refused, and so is a label that is not five-column boxes
 with a known class and normalised coordinates.
 
+The folds must stay disjoint: the same image resolved into two splits is
+refused, because training on it and scoring it would leak the validation ground
+truth into the fit. A `val:` that points at the train folder is the common way
+this happens.
+
 The YOLO-label codec and the pinned training loader must resolve an image's
 label to the same file. The conventional `images/` ↔ `labels/` mirror and a
 plain same-directory label both qualify. A nested `labels/` folder that only

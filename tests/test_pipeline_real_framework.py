@@ -88,7 +88,6 @@ def test_a_real_ultralytics_network_trains_two_epochs_after_validation(
 def test_real_box_training_reads_same_size_edits_without_touching_stale_sidecars(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import numpy as np
     from ultralytics.data.dataset import YOLODataset
     from ultralytics.nn.tasks import DetectionModel
 
@@ -106,8 +105,10 @@ def test_real_box_training_reads_same_size_edits_without_touching_stale_sidecars
     assert len(edited) == len(original)
     label.write_text(edited, encoding="utf-8")
     image_cache = train / "plate_t1.npy"
-    np.save(image_cache, np.full((48, 64, 3), 255, dtype=np.uint8))
-    cached_image = image_cache.read_bytes()
+    # Unreadable on purpose: the native loader would warn, delete it and fall
+    # back to the photo, so its survival is direct proof it was never touched.
+    garbage = b"not an npy sidecar"
+    image_cache.write_bytes(garbage)
     validation = data_yaml.parent / "images" / "val" / "plate_v1.png"
     validation.rename(validation.with_suffix(".PNG"))
 
@@ -141,7 +142,9 @@ def test_real_box_training_reads_same_size_edits_without_touching_stale_sidecars
     assert pet_centers == pytest.approx([0.625])
     assert len(source_peaks) == 1 and source_peaks[0] < 1.0
     assert label_cache.read_bytes() == before
-    assert image_cache.read_bytes() == cached_image
+    # Still there, byte for byte: the loader never opened it. Reading it would
+    # have deleted the unparseable file before falling back to the photo.
+    assert image_cache.read_bytes() == garbage
     provenance = _read(output / "provenance.json")
     assert "images/val/plate_v1.PNG" in provenance["dataset_hashes"]
     assert provenance["dataset_audit"]["per_class"]["val"]["PET"] == 1
