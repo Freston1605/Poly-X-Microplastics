@@ -491,7 +491,7 @@ re-runs `uv sync --locked` or pulls a new image digest.
 
 ### 🏠 Launcher (Module 1)
 Main menu: four cards (Detector, Trainer, Labeller, Viewer), theme picker,
-manual/README openers, preferences.
+README opener, preferences.
 
 ---
 

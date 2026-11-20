@@ -104,6 +104,9 @@ jobs:
           print-hash: true
 
   release:
+    # The GitHub release waits for PyPI on purpose: ADR-0006 makes PyPI the
+    # channel and the release only its record. The desktop ZIP that used to be
+    # released independently (#203) left with that channel (ADR-0011).
     needs: [build, publish]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04

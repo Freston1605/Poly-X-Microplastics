@@ -58,7 +58,7 @@ MODULES: dict[str, dict] = {
     "launcher": {
         "icono": None,  # uses assets/polyx.ico, the usual brand
         "color": "#0969da",
-        "titulo": N_("Poly-X · Microplastics suite"),
+        "titulo": N_("MICRA · Microplastics suite"),
         "id": _APP_ID,
     },
     "detector": {

@@ -100,8 +100,12 @@ actionlint .github/workflows/*.yml   # with shellcheck on PATH
 uvx zizmor==1.32.0 .github/workflows/
 ```
 
-`publish.yml` is separate and does not run per PR: it publishes to PyPI on `v*`
-tags via Trusted Publishing. A tag run starts with a job named `ci` that calls
+`publish.yml` is separate and does not run per PR: it is wired to publish to
+PyPI on `v*` tags via Trusted Publishing, but ADR-0011 defers publication until
+the paper's artifact is archived, so the channel is prepared and rehearsed
+rather than open; the ordered steps live in
+[`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). A tag run starts with
+a job named `ci` that calls
 `ci.yml` through `workflow_call` as `$/.github/workflows/ci.yml`, GitHub's
 self-repository form, so the call resolves to this repository at the running
 commit. That is the same pipeline every PR runs — which is why "gate" names the

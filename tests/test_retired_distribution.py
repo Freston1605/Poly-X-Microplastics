@@ -25,7 +25,6 @@ RETIRED_PATHS = (
     "requirements.txt",
     "tools/packaging",
     "LEEME.txt",
-    "LEEME_MacOS.md",
     "LEEME_macOS.md",
     "src/polyx/gui/updates.py",
     "tests/test_install.py",

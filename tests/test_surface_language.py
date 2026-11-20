@@ -67,9 +67,9 @@ def test_compact_report_renders_the_selected_language(tmp_path, selected_languag
     english = generate(run).read_text(encoding="utf-8")
 
     assert "<html lang='es'>" in spanish
-    assert "Informe de ejecución de Poly-X" in spanish
+    assert "Informe de ejecución de MICRA" in spanish
     assert "<html lang='en'>" in english
-    assert "Poly-X run report" in english
+    assert "MICRA run report" in english
 
 
 def test_compact_report_translates_a_generated_alias(tmp_path, selected_language):

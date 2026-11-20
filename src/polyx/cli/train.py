@@ -15,7 +15,7 @@ from polyx.core.training import train as run_training
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description=_("Train a Poly-X YOLO model (headless)"))
+    p = argparse.ArgumentParser(description=_("Train a MICRA YOLO model (headless)"))
     p.add_argument("--weights", required=True)
     p.add_argument("--data", required=True, dest="data_yaml")
     p.add_argument("--epochs", type=int, default=100)

@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from polyx.cli import download_models
+from polyx.repository import REPO_URL
 
 PAYLOAD = b"abc"
 #: FIPS 180-2 / NIST example for the ASCII message ``abc``.
@@ -76,5 +77,9 @@ def test_the_cli_refuses_to_download_without_a_digest(capsys) -> None:
 def test_the_cli_names_the_missing_url_instead_of_guessing_one(capsys) -> None:
     exit_status = download_models.main(["--sha256", PAYLOAD_SHA256])
 
-    assert exit_status != 0
-    assert "url" in capsys.readouterr().err.lower()
+    assert exit_status == 2
+    error = capsys.readouterr().err
+    assert "url" in error.lower()
+    # The refusal sends the user where the weights will appear, and the URL is
+    # derived from the one repository constant rather than spelled again.
+    assert f"{REPO_URL}/releases" in error

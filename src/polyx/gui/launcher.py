@@ -391,7 +391,7 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(10)
-        t1 = QLabel(_("Poly-X"))
+        t1 = QLabel(_("MICRA"))
         t1.setStyleSheet(f"color: {T.INK}; font-size: 38pt; font-weight: 700; border: none;")
         t2 = QLabel(_("analytics"))
         t2.setStyleSheet(f"color: {T.ACCENT_TX}; font-size: 38pt; font-weight: 300; border: none;")
@@ -518,7 +518,7 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         st.setStyleSheet(f"color: {T.OK_TX}; font-size: 9.5pt; font-weight: 600;")
         foot.addWidget(st)
         foot.addSpacing(20)
-        copyr = QLabel(_("© Cristofher Ferrada · Poly-X v%(version)s") % {"version": __version__})
+        copyr = QLabel(_("© Cristofher Ferrada · MICRA v%(version)s") % {"version": __version__})
         copyr.setStyleSheet(f"color: {T.INK3}; font-size: 9pt;")
         foot.addWidget(copyr)
         foot.addStretch(1)
@@ -527,11 +527,6 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         readme_btn.setCursor(Qt.PointingHandCursor)
         readme_btn.clicked.connect(self.open_readme)
         foot.addWidget(readme_btn)
-        manual_btn = QPushButton(_("User manual"))
-        manual_btn.setIcon(iconos.icon("manual", 15, T.INK2, 2.0))
-        manual_btn.setCursor(Qt.PointingHandCursor)
-        manual_btn.clicked.connect(self.open_manual)
-        foot.addWidget(manual_btn)
         body.addLayout(foot)
 
     # ── Preferences ────────────────────────────────────────────
@@ -563,15 +558,6 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
         if not _spawn_module(dotted):
             self._toast(fallback or _("Could not open the module %(module)s") % {"module": dotted})
 
-    def open_manual(self):
-        manual = ROOT / "docs" / "manual" / "Manual_PolyX.html"
-        if manual.exists():
-            import webbrowser
-
-            webbrowser.open(manual.as_uri())
-        else:
-            self._toast(_("Manual_PolyX.html not found"))
-
     def open_readme(self):
         readme = ROOT / "README.md"
         if readme.exists():
@@ -580,7 +566,7 @@ class LauncherWindow(i18n_qt.RetranslateOnLanguageChange, QMainWindow):
             self._toast(_("README.md not found"))
 
     def _toast(self, msg: str):
-        QMessageBox.information(self, _("Poly-X"), msg)
+        QMessageBox.information(self, _("MICRA"), msg)
 
 
 def main():

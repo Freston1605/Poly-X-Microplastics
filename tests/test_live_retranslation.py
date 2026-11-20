@@ -209,7 +209,7 @@ def test_launcher_retranslates_without_restart(qapp):
     qapp.processEvents()
 
     assert window.btn_prefs.text() == "Preferences"
-    assert window.windowTitle() == "Poly-X · Microplastics suite"
+    assert window.windowTitle() == "MICRA · Microplastics suite"
     window.deleteLater()
 
 

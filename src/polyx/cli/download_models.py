@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 
 from polyx.core.i18n import _
 from polyx.core.paths import MODELS_DIR
+from polyx.repository import REPO_URL
 
 DEFAULT_NAME = "bestdetectormedium.pt"
 CHUNK = 1024 * 64
@@ -47,7 +48,6 @@ def download(url: str, dest: Path, *, expected_sha256: str) -> Path:
     would agree with any file a server handed over. A mismatch leaves no
     partial file behind.
     """
-    dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     try:
@@ -93,25 +93,29 @@ def main(argv: list[str] | None = None) -> int:
 
     # Both checks precede any filesystem or network work, so the refusal is
     # the whole outcome and the user learns what is missing before a 404 can.
-    if not args.sha256:
-        print(
+    refusals = (
+        (
+            args.sha256,
             _(
                 "ERROR: --sha256 is required: model weights execute code when loaded, "
                 "so only a download that matches the digest published with the "
                 "release is accepted."
             ),
-            file=sys.stderr,
-        )
-        return 2
-    if not args.url:
-        print(
+        ),
+        (
+            args.url,
             _(
                 "ERROR: --url is required: no weights are published yet, so pass the "
-                "release or Zenodo URL that carries the file."
-            ),
-            file=sys.stderr,
-        )
-        return 2
+                "release or Zenodo URL that carries the file. Releases will appear at "
+                "%(releases)s."
+            )
+            % {"releases": f"{REPO_URL}/releases"},
+        ),
+    )
+    for value, message in refusals:
+        if not value:
+            print(message, file=sys.stderr)
+            return 2
 
     dest = MODELS_DIR / args.model
     if dest.exists() and not args.force:
