@@ -57,7 +57,7 @@ or run `uv pip install torch==2.7.1 --index-url https://download.pytorch.org/whl
 | 3 | 🎯 **Trainer** | ✅ Working | YOLO v8/v11 training with live curves |
 | 4 | 🏷 **Labeller** | ✅ Working | Interactive YOLO annotation with automatic pre-labelling |
 | 5 | 📐 **Viewer** | ✅ Working | Single-image inspection, calibration and particle-by-particle review |
-| 6 | 🧪 **Pipeline** | ✅ Working | Headless family-agnostic training: `polyx-pipeline` (execution, COCO import, Optuna sweep) |
+| 6 | 🧪 **Pipeline** | ✅ Working | Headless family-agnostic training: `polyx-pipeline` (one execution, COCO import) and the Hydra multiruns `sweep_app`, `sweep_best`, `campaign_app` |
 
 ---
 
