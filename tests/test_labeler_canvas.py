@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QApplication
 from polyx.core.editing import MIN_SIDE_PX, rejection_message
 from polyx.core.labels import label_path_for
 from tests.canvas_rigs import LabellerRig
-from tests.conftest import write_image
+from tests.conftest import destroy_windows, write_image
 
 # The bytes the pre-migration canvas wrote for ``test_the_written_yolo_lines...``
 # (captured from 80b19a7 with this same event script). A migration that
@@ -106,7 +106,7 @@ def test_a_box_under_two_px_is_refused_visibly_and_nothing_is_written(labeller):
     assert not label_path_for(rig.state.current_image).exists()
 
 
-def test_the_rejection_message_is_shown_by_the_window(tmp_path, qapp):
+def test_the_rejection_message_is_shown_by_the_window(tmp_path, qapp, capfd):
     from polyx.gui.labeler.window import LabelerWindow
 
     image_dir = tmp_path / "imgs"
@@ -124,13 +124,18 @@ def test_the_rejection_message_is_shown_by_the_window(tmp_path, qapp):
         # rebuild the window (and its labels) on the next event flush.
         rig.drag((5, 5), (6, 30), flush=False)
         status = window.lbl_status.text()
+        assert window.state.current_boxes == []
     finally:
-        window.deleteLater()
+        destroy_windows([window], qapp)
 
-    assert window.state.current_boxes == []
     assert len(rejected) == 1
     assert status == rejection_message(rejected[0])
     assert not label_path_for(image).exists()
+    # Pump beyond the rejection message's 3.5 s reset, with the window gone.
+    # An unowned timer would still try to update the deleted status label.
+    capfd.readouterr()
+    QTest.qWait(3800)
+    assert "Traceback" not in capfd.readouterr().err
 
 
 def test_a_move_through_a_real_drag_translates_the_box(labeller):

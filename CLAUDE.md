@@ -443,6 +443,10 @@ runner, which holds `TrainerState` and therefore keeps it alive after the window
 closes; a lambda that captured that window would otherwise run against a
 destroyed widget.
 
+The Labeller binds its delayed status resets to the window as their Qt timer
+context. A pending reset from a rejected box or an autosave is dropped when the
+window is destroyed, rather than updating a deleted status label.
+
 Three rules keep that channel from feeding itself:
 
 - `i18n.set_language(tag, persist=False)` applies a value that came from
