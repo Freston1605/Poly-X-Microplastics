@@ -29,6 +29,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from polyx.repository import REPO_SLUG, REPO_URL
+
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -147,6 +149,11 @@ def expandir_esquemas(
         )
 
     return TOKEN_ESQ.sub(repl, html)
+
+
+def _repositorio(html: str) -> str:
+    """Resuelve los tokens del repositorio con la constante del paquete."""
+    return html.replace("@REPO_URL@", REPO_URL).replace("@REPO_SLUG@", REPO_SLUG)
 
 
 def expandir(html: str, idioma: str, num: Numerador, txt) -> str:
@@ -493,7 +500,7 @@ def construir(idioma: str) -> tuple[str, list[str]]:
     toc: list[str] = []
 
     for i, sec in enumerate(txt.SECCIONES, start=1):
-        cuerpo = expandir(sec["html"], idioma, num, txt)
+        cuerpo = expandir(_repositorio(sec["html"]), idioma, num, txt)
         sub = sec.get("sub", "")
         partes.append(
             f'<section id="{sec["id"]}">\n'

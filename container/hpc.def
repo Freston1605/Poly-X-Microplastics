@@ -37,7 +37,7 @@ From: python:3.11.15-slim-bookworm@sha256:77923445c077d8eb971b14b2b114a1d9cd4a87
       -r /opt/polyx/wheelhouse/requirements.txt
   # The project wheel is installed with --no-deps from the wheelhouse: the
   # runtime image carries no source tree and never runs a build backend.
-  uv pip install --no-index --no-deps /opt/polyx/wheelhouse/polyx_microplastics-*.whl
+  uv pip install --no-index --no-deps /opt/polyx/wheelhouse/micra-*.whl
   rm -rf /root/.cache/uv /root/.cache/pip
 
 %environment

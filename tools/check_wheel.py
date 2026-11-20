@@ -1,7 +1,7 @@
 """Assert a built wheel ships a working Spanish catalog and no pseudo-locale.
 
 Usage:
-    python tools/check_wheel.py dist/polyx_microplastics-*.whl
+    python tools/check_wheel.py dist/micra-*.whl
 
 The local gate imports the source tree, so it cannot see packaging. Hatchling
 also excludes VCS-ignored files by default, which is how a compiled `.mo`

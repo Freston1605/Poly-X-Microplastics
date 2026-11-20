@@ -23,10 +23,11 @@ from urllib.request import Request, urlopen
 
 from polyx.core.i18n import _
 from polyx.core.paths import MODELS_DIR
+from polyx.repository import REPO_URL
 
 DEFAULT_URL = os.environ.get(
     "POLYX_MODEL_URL",
-    "https://github.com/CrissFerrada/Poly-X-Microplastics/releases/latest/download/bestdetectormedium.pt",
+    f"{REPO_URL}/releases/latest/download/bestdetectormedium.pt",
 )
 DEFAULT_NAME = "bestdetectormedium.pt"
 CHUNK = 1024 * 64

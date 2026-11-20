@@ -99,7 +99,7 @@ uv venv /work/polyx/.venv
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links wheelhouse -r wheelhouse/requirements.txt
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
-  --no-index --no-deps wheelhouse/polyx_microplastics-*.whl
+  --no-index --no-deps wheelhouse/micra-*.whl
 ```
 
 Verify a copied wheelhouse before using it:
@@ -200,7 +200,7 @@ VIRTUAL_ENV=/work/polyx/.venv uv pip install \
   --no-index --find-links /work/polyx/wheelhouse \
   -r /work/polyx/wheelhouse/requirements.txt
 VIRTUAL_ENV=/work/polyx/.venv uv pip install \
-  --no-index --no-deps /work/polyx/wheelhouse/polyx_microplastics-*.whl
+  --no-index --no-deps /work/polyx/wheelhouse/micra-*.whl
 /work/polyx/.venv/bin/python -m polyx.hpc.check_env
 ```
 

@@ -89,7 +89,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: pypi
-      url: https://pypi.org/p/polyx-microplastics
+      url: https://pypi.org/p/micra
     permissions:
       id-token: write   # Trusted Publishing, plus the Sigstore attestations
     steps:

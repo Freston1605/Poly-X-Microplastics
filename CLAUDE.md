@@ -1,9 +1,30 @@
-# Poly-X — Microplastics Detection Suite
+# MICRA — Microplastic Identification, Counting and Recognition Application
 
-**Status:** Ongoing rebuild (May 2026)
-**Author:** Cristofher Ferrada · PhD (c) in Chemistry · PUCV
+**Status:** pre-alpha (ADR-0011)
+**Display name:** MICRA · **Distribution:** `micra` · **Repository:** `Freston1605/micra`
+**Author (original work):** Cristofher Ferrada · PhD (c) in Chemistry · PUCV
+**Maintainer:** Franco Ignacio Valdés Navarro · Laboratorio de Química Ambiental, PUCV
 **Version:** 2.0.0
-**GitHub:** https://github.com/CrissFerrada/Poly-X-Microplastics
+**GitHub:** https://github.com/Freston1605/micra
+
+## Identity and scope
+
+The project is **MICRA**; the distribution and the repository are `micra`. The
+import package stays `polyx` and the `POLYX_*` environment variables and user
+data directory keep their names until the post-paper identifier rename, so a
+`polyx` in code is a legacy identifier, not the product name
+([ADR-0011](docs/adr/0011-linux-first-distribution-scope.md),
+[`GLOSSARY.md`](GLOSSARY.md)).
+
+The supported platform is Linux x86_64 (Tier 1, exercised by CI); Windows is
+documented as best effort and macOS is unsupported. The channels are a source
+checkout (`uv sync --locked --extra gui`) and the Apptainer image; PyPI
+publication is deferred until the cluster smoke passes.
+
+**A new distribution channel — PyPI beyond the deferred pre-release rehearsal,
+conda, Homebrew, a bundled installer or an auto-updater — requires a new ADR.**
+See [`CODING_STANDARDS.md`](CODING_STANDARDS.md) for the checks every change
+runs.
 
 ## 🎯 Purpose
 
@@ -1266,7 +1287,7 @@ set POLYX_LOCALE=en && .venv\Scripts\python.exe tools\manual\capture_manual.py -
 
 ### Issue tracker
 
-GitHub issues on the fork `Freston1605/Poly-X-Microplastics` — always pass `-R Freston1605/Poly-X-Microplastics` to `gh` (bare `gh` resolves to upstream). See `docs/agents/issue-tracker.md`.
+GitHub issues on `Freston1605/micra` — always pass `-R Freston1605/micra` to `gh` (bare `gh` resolves to upstream). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -1286,8 +1307,9 @@ See `docs/agents/repository-settings.md`.
 
 ## 📞 Contact
 
-**Cristofher Ferrada**  
-PhD (c) in Chemistry — Pontificia Universidad Católica de Valparaíso  
-2026
+**Maintainer:** Franco Ignacio Valdés Navarro  
+Laboratorio de Química Ambiental — Pontificia Universidad Católica de Valparaíso  
+Security reports go through GitHub's private vulnerability reporting
+([`SECURITY.md`](SECURITY.md)); there is no contact address.
 
-**Repo:** https://github.com/CrissFerrada/Poly-X-Microplastics
+**Repo:** https://github.com/Freston1605/micra
