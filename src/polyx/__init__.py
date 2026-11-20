@@ -1,4 +1,4 @@
-"""Poly-X — Microplastics detection suite."""
+"""MICRA — Microplastic Identification, Counting and Recognition Application."""
 
 import os as _os
 import sys as _sys

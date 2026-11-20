@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Poly-X\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-20 09:01-0500\n"
+"POT-Creation-Date: 2026-11-20 09:10-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -173,8 +173,8 @@ msgid "Full report unavailable (%(error)s); writing compact report."
 msgstr "Informe completo no disponible (%(error)s); se escribe el informe compacto."
 
 #: src/polyx/cli/download_models.py:83
-msgid "Download Poly-X model weights"
-msgstr "Descarga los pesos de los modelos de Poly-X"
+msgid "Download MICRA model weights"
+msgstr "Descarga los pesos de los modelos de MICRA"
 
 #: src/polyx/cli/download_models.py:84
 msgid "output filename"

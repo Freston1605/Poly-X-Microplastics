@@ -1,4 +1,4 @@
-"""Download Poly-X model weights into the user data directory.
+"""Download MICRA model weights into the user data directory.
 
 Usage:
     polyx-download-models
@@ -51,7 +51,7 @@ def download(url: str, dest: Path, expected_sha256: str | None = None) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     try:
-        req = Request(url, headers={"User-Agent": "Poly-X"})  # noqa: S310
+        req = Request(url, headers={"User-Agent": "MICRA"})  # noqa: S310
         with urlopen(req) as resp:  # noqa: S310
             total = int(resp.headers.get("Content-Length", 0) or 0)
             done = 0
@@ -80,7 +80,7 @@ def download(url: str, dest: Path, expected_sha256: str | None = None) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=_("Download Poly-X model weights"))
+    parser = argparse.ArgumentParser(description=_("Download MICRA model weights"))
     parser.add_argument("--model", default=DEFAULT_NAME, help=_("output filename"))
     parser.add_argument("--url", default=DEFAULT_URL, help=_("download URL"))
     parser.add_argument("--sha256", default=None, help=_("expected SHA-256 (optional)"))
