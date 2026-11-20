@@ -25,8 +25,20 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lint failure reports in seconds instead of after the gate's suite.
 - `pre-commit` CI workflow running every hook in `.pre-commit-config.yaml`, so
   a hook that was never installed locally still fails the PR.
+- **Release checklist (`docs/RELEASE_CHECKLIST.md`).** The irreversible steps in
+  order — version bump, changelog, tag on `main`, PyPI pre-release `2.1.0a1`,
+  weight upload with `SHA256SUMS`, Zenodo archival, `CITATION.cff` with the DOI
+  and `gh attestation verify` — with the pre-release rule stated once.
 
 ### Changed
+- **Weight downloads require the published digest.** `download()` takes
+  `expected_sha256` as a required keyword argument, and `micra
+  download-models` refuses without `--sha256` and `--url` before touching the
+  filesystem or the network, naming the missing flag and saying why. No default
+  URL ships until a Zenodo record or GitHub release exists, so the absence of
+  weights is an explicit error instead of a 404. The HPC fetcher binds each
+  manifest digest into the downloader, so the manifest stays the source of the
+  hash.
 - **The distribution is `micra` and the identity is truthful.** The wheel is
   named `micra`, `requires-python` is `>=3.11,<3.13` because the locked PySide6
   and numpy do not install on newer interpreters, the package URLs point at

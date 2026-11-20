@@ -117,7 +117,9 @@ the wheel, the pseudo-locale is not); **a tag proves the distribution**: the
 wheel installs into a clean environment with uv, every CLI console script
 starts, and the GUI imports. A manual run of `publish.yml` from the Actions UI
 is a rehearsal: it runs the whole pipeline, including the installed-wheel
-smoke, then builds the distributions and uploads nothing to PyPI.
+smoke, then builds the distributions and uploads nothing to PyPI. The ordered
+steps that cannot be undone — the tag, the PyPI version, the weight digest, the
+DOI — live in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 Every `uses:` is pinned to a commit SHA with its release in a comment, and
 `.github/dependabot.yml` opens one grouped PR a week for patch and minor action

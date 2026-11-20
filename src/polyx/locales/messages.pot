@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Poly-X VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-20 09:10-0500\n"
+"POT-Creation-Date: 2026-11-20 09:21-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -138,7 +138,7 @@ msgid "COMPACT REPORT: %(path)s"
 msgstr ""
 
 #: src/polyx/cli/detect.py:282 src/polyx/cli/detect.py:302 src/polyx/cli/detect.py:306
-#: src/polyx/cli/download_models.py:99 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
+#: src/polyx/cli/download_models.py:125 src/polyx/cli/eval.py:49 src/polyx/cli/report.py:68
 #: src/polyx/cli/report.py:78 src/polyx/cli/train.py:61
 #, python-format
 msgid "ERROR: %(error)s"
@@ -178,42 +178,54 @@ msgid "output filename"
 msgstr ""
 
 #: src/polyx/cli/download_models.py:85
-msgid "download URL"
+msgid "download URL from the release or Zenodo"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:86
-msgid "expected SHA-256 (optional)"
+#: src/polyx/cli/download_models.py:89
+msgid "expected SHA-256, as published with the release"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:87
+#: src/polyx/cli/download_models.py:91
 msgid "overwrite existing"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:95
+#: src/polyx/cli/download_models.py:98
+msgid ""
+"ERROR: --sha256 is required: model weights execute code when loaded, so only a download that "
+"matches the digest published with the release is accepted."
+msgstr ""
+
+#: src/polyx/cli/download_models.py:108
+msgid ""
+"ERROR: --url is required: no weights are published yet, so pass the release or Zenodo URL that "
+"carries the file."
+msgstr ""
+
+#: src/polyx/cli/download_models.py:121
 #, python-format
 msgid "Downloading %(url)s -> %(path)s"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:101
+#: src/polyx/cli/download_models.py:127
 #, python-format
 msgid "Saved: %(path)s"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:41
+#: src/polyx/cli/download_models.py:34
 #, python-format
 msgid ""
 "\r"
 "[%(bar)s] %(pct)3d%%  %(done)6.1f/%(total)6.1f MB"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:45
+#: src/polyx/cli/download_models.py:38
 #, python-format
 msgid ""
 "\r"
 "Downloaded %(done)6.1f MB"
 msgstr ""
 
-#: src/polyx/cli/download_models.py:92
+#: src/polyx/cli/download_models.py:118
 #, python-format
 msgid "Already present: %(path)s"
 msgstr ""

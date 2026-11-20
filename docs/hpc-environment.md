@@ -133,8 +133,9 @@ python -c 'from pathlib import Path; from polyx.hpc.weights import fetch_weights
 fetch_weights(Path("weights.sha256"), Path("weights"), base_url=__import__("os").environ["POLYX_WEIGHTS_URL"])'
 ```
 
-`polyx-download-models --sha256 <digest>` remains available for interactive
-use.
+`micra download-models --url <release-url> --sha256 <digest>` remains available
+for interactive use; both flags are required, so a missing source is an explicit
+error rather than a 404.
 
 ### How the training path uses the manifest
 
