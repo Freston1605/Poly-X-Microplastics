@@ -1455,7 +1455,8 @@ photographs it shows.</p>
         "sub": "Getting what is new without reinstalling, and removing the program cleanly.",
         "html": r"""
 <h3>Updating</h3>
-<p>Double-click the matching updater:</p>
+<p>Releases are published on the project's Releases page:</p>
+<p><code>https://github.com/Freston1605/Poly-X-Microplastics/releases</code></p>
 <div class="tabla-env">
 <table>
   <thead><tr><th>System</th><th>File</th></tr></thead>
@@ -1466,24 +1467,24 @@ photographs it shows.</p>
 </table>
 </div>
 
-<p>It checks whether there is a new commit on <code>main</code> and, if so,
-downloads and replaces <b>only the program's files</b>. It <b>keeps</b> your
-<code>.venv</code> environment and your <code>models/*.pt</code>; your runs no
-longer live in this folder but in your user's data folder (on Windows,
-<code>%LOCALAPPDATA%\polyx</code>; elsewhere see <a href="#estructura">Folder
-structure</a>), where the updater never reaches. It does
-not need Git installed — it downloads over HTTPS — only an internet
-connection.</p>
+<p>Double-click one of those, or use the <b>Releases</b> button in the
+<a href="#launcher">Launcher</a>: both <b>open the page</b> and install nothing.
+Download the desktop ZIP and its <code>.sha256</code> file, check the digest
+(<code>certutil -hashfile</code> on Windows, <code>shasum -a 256</code> on
+macOS), and install the new version <b>alongside</b> the one you have.</p>
+
+<p>The previous copy and its <code>.venv</code> environment stay untouched and
+keep working if something fails. No data is copied: your
+<code>models/*.pt</code> and your runs live outside the program's folder (on
+Windows, <code>%LOCALAPPDATA%\polyx</code>; elsewhere see
+<a href="#estructura">Folder structure</a>), and both copies read the same.</p>
 
 <div class="aviso">
-  <span class="et">It does not matter which system you update from</span>
-  <p>Each updater protects itself while it runs, but <b>it does update the other
-  platform's files</b>. The project ends up complete for both, whichever you came
-  from.</p>
+  <span class="et">There is no automatic update any more</span>
+  <p>A branch commit cannot prove that your dependencies were patched. The
+  Launcher's automatic notice was replaced by the Releases button, and every
+  version is installed from a verified download.</p>
 </div>
-
-<p>There is no need to remember to run it: the <a href="#launcher">Launcher</a>
-gives notice on its own when GitHub is ahead.</p>
 
 <h3>Uninstalling</h3>
 <p>On Windows, <code>DESINSTALAR.bat</code>. It removes the environment and the
@@ -1593,9 +1594,9 @@ uninstaller does not reach.</p>
 ├── SETUP.bat                 <span class="c">[Win] installer</span>
 ├── iniciar_polyx.bat         <span class="c">[Win] launcher with console</span>
 ├── Poly-X.vbs                <span class="c">[Win] launcher without console</span>
-├── actualizar.bat            <span class="c">[Win] updater</span>
+├── actualizar.bat            <span class="c">[Win] opens Releases</span>
 ├── Lanzar_macOS.command      <span class="c">[Mac] installer + launcher</span>
-├── actualizar_macOS.command  <span class="c">[Mac] updater</span>
+├── actualizar_macOS.command  <span class="c">[Mac] opens Releases</span>
 └── LEEME.txt                 <span class="c">short version of the installation</span></code></pre>
 
 <h3>Where your runs and models live, per OS</h3>
@@ -1691,7 +1692,7 @@ folder.</p>
 
 <div class="aviso">
   <span class="et">The differences between systems live in a single file</span>
-  <p>Opening folders, launching the updater, choosing the compute device:
+  <p>Opening folders, opening the Releases page, choosing the compute device:
   everything that differs between Windows and macOS lives in
   <code>polyx/core/platform.py</code>, not scattered through the code. That is why
   the program behaves the same on both without two versions to maintain.</p>

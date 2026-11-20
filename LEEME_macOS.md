@@ -86,11 +86,24 @@ a batch of 500 photos on an Intel Mac.
 
 ## Updating
 
-Double-click `actualizar_macOS.command`. It downloads the new release from
-GitHub and overwrites only the program files: **your models, results and
-data are left untouched**.
+Releases are published on
+[`Freston1605/Poly-X-Microplastics/releases`](https://github.com/Freston1605/Poly-X-Microplastics/releases).
+Each one attaches the desktop ZIP and its SHA-256 checksum.
 
-Poly-X also shows an `Actualizar` button inside it when a new release exists.
+Double-click `actualizar_macOS.command`, or use the **Releases** button in the
+launcher. Both only open that page: there is no in-place updater any more.
+
+Download the ZIP, verify it with `shasum -a 256 polyx-desktop-<tag>.zip`, and
+install it **alongside** the copy you have. The old installation and its `.venv`
+stay untouched, so a failed upgrade does not interrupt your work, and your
+models, results and data live outside both copies.
+
+```
+shasum -a 256 polyx-desktop-<tag>.zip
+```
+
+A checksum catches a damaged download; it does not prove who published the file
+(signing is tracked in #153).
 
 ---
 
@@ -137,7 +150,7 @@ Being honest about the state of this release:
 - **Verified on Windows:** all the shared logic — the app, the report, the
   particle measurement, the automated test suite.
 - **Written for macOS but still untested on a Mac:** the launchers, the
-  updater, MPS detection and the `.app` bundling.
+  release ZIP route, MPS detection and the `.app` bundling.
 
 If you find a bug, write down the exact message from the Terminal window:
 that is what makes it fixable.

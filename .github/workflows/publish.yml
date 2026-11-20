@@ -25,6 +25,66 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The desktop ZIP is built and checksummed before PyPI is touched. Desktop
+  # delivery must not depend on PyPI credentials or availability (#203), so a
+  # failed upload cannot cost the user the Pillow fix while a valid desktop
+  # artifact already exists.
+  desktop:
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+
+      # The archive is built from the tagged tree, and the checksum names the
+      # exact bytes the release attaches. It is not GitHub's generated
+      # source snapshot, which the release job does not produce.
+      - name: Build the desktop ZIP and its SHA-256
+        run: >-
+          python tools/packaging/desktop_release.py
+          --out dist/desktop
+          --source .
+          --name "polyx-desktop-${GITHUB_REF_NAME}"
+
+      # Prove the artifact opens and carries the surfaces a desktop install
+      # starts, before it is offered to a user.
+      - name: The desktop ZIP opens and carries the program
+        run: |
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          archive = next(Path("dist/desktop").glob("polyx-desktop-*.zip"))
+          with zipfile.ZipFile(archive) as zipped:
+              assert zipped.testzip() is None
+              names = set(zipped.namelist())
+          for required in (
+              "install/bootstrap.py",
+              "install/update.py",
+              "src/polyx/launcher.py",
+              "src/polyx/locales/es/LC_MESSAGES/messages.po",
+              "requirements.txt",
+          ):
+              assert required in names, f"{required} missing from {archive.name}"
+          PY
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: desktop
+          path: |
+            dist/desktop/*.zip
+            dist/desktop/*.sha256
+          retention-days: 7
+          if-no-files-found: error
+
   # The same workflow every PR runs, so a tag on a red commit cannot reach
   # PyPI, where a version number is spent forever. Named `ci`, not `gate`:
   # "gate" is the local check runner inside that workflow (the `quality` job),
@@ -104,7 +164,10 @@ jobs:
           print-hash: true
 
   release:
-    needs: [build, publish]
+    # Deliberately not `needs: publish`: desktop delivery must not depend on
+    # PyPI credentials or availability (#203). A failed upload must not cost a
+    # ready desktop security release.
+    needs: [desktop, build]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -116,8 +179,14 @@ jobs:
           name: dist
           path: dist
 
-      # PyPI is the distribution channel; the release is the human-readable
-      # record of what shipped, with the same files attached.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: desktop
+          path: dist/desktop
+
+      # The release is the human-readable record of what shipped, with the
+      # same files attached: the wheel and sdist for PyPI, and the desktop ZIP
+      # with the checksum beside it so a user can detect a damaged download.
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -126,4 +195,7 @@ jobs:
           --verify-tag
           --title "$GITHUB_REF_NAME"
           --generate-notes
-          dist/*
+          dist/*.whl
+          dist/*.tar.gz
+          dist/desktop/*.zip
+          dist/desktop/*.sha256

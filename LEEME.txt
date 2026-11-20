@@ -63,19 +63,26 @@ INSTALACIÓN EN macOS (PRIMERA VEZ)
 
    Detalle completo en  LEEME_macOS.md
 
-ACTUALIZAR (TRAER LO NUEVO DE GITHUB)
--------------------------------------
+ACTUALIZAR (VERSIONES NUEVAS)
+-----------------------------
+Las versiones se publican en la pagina de Releases del proyecto:
+     https://github.com/Freston1605/Poly-X-Microplastics/releases
+
 Doble clic en:
      Windows ...  actualizar.bat
      macOS .....  actualizar_macOS.command
 
-  - Mira si hay una version nueva en GitHub y la descarga.
-  - Reemplaza solo el codigo del programa.
-  - CONSERVA tu .venv, tus modelos models/*.pt, tus runs/ y datos.
-  - No necesita Git, solo internet.
+  - Abre la pagina de Releases; NO modifica esta instalacion.
+  - Descarga ahi el ZIP de escritorio y su archivo .sha256.
+  - Comprueba el SHA-256 (Windows: certutil -hashfile; macOS: shasum -a 256).
+  - Instala la version nueva AL LADO de la actual: la copia vieja y su .venv
+    quedan intactas y siguen funcionando si algo falla.
+  - Tus modelos, runs/, datasets y preferencias no se copian: viven en la
+    carpeta de datos del usuario y las dos copias leen los mismos.
 
-  Da igual desde que sistema actualices: cada actualizador tambien deja
-  al dia los archivos del otro.
+  Ya no existe un actualizador automatico que reemplace archivos en caliente:
+  un commit de rama no puede demostrar que tus dependencias quedaron
+  parchadas.
 
 USO DIARIO
 ----------
@@ -113,10 +120,10 @@ ESTRUCTURA DE CARPETAS
   install\SETUP.bat         [Win] Instalación
   install\iniciar_polyx.bat [Win] Lanzador
   install\Poly-X.vbs        [Win] Lanzador sin consola
-  install\actualizar.bat     [Win] Actualizador
+  install\actualizar.bat     [Win] Abre la pagina de Releases
   install\Lanzar_macOS.command      [Mac] Instalación + lanzador
   install\crear_icono_macOS.command  [Mac] Icono sin ventana de Terminal
-  install\actualizar_macOS.command   [Mac] Actualizador
+  install\actualizar_macOS.command   [Mac] Abre la pagina de Releases
 
 REGENERAR EL MANUAL CON LA UI ACTUAL
 ------------------------------------
