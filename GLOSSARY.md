@@ -383,8 +383,105 @@ bracketed and accented so every translated string is visibly mangled. It is
 there to make an unextracted string obvious by eye — an English sentence on
 screen is a string that bypassed the translation call — and to expose layout
 truncation. Generated with `python tools/i18n/cli.py pseudo`, selected with
-`POLYX_LOCALE=qps_ploc`, gitignored and excluded from the wheel and the
-frozen application. It is not a shipped locale and not part of any gate.
+`POLYX_LOCALE=qps_ploc`, gitignored and excluded from the wheel. It is not a
+shipped locale and not part of any gate.
+
+## MICRA
+
+The project's display name: *Microplastic Identification, Counting and
+Recognition Application*. The distribution and the repository are `micra`.
+`polyx` stays as the import package, the console-script prefix and the
+`POLYX_*` environment prefix until the post-paper identifier rename, so a
+`polyx` in code is a legacy identifier, not the product name. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: Poly-X (that is the upstream project), Micra (lowercase) for the
+display name.
+
+## Upstream project
+
+`CrissFerrada/Poly-X-Microplastics`, where the code originated and whose author
+keeps the name Poly-X. It is neither "the old version" nor "the unmaintained
+one": this repository is a derivative, and the documentation makes no claim
+about the upstream's status.
+_Avoid_: original repo, parent (as a name for the project).
+
+## Derived work
+
+The whole of MICRA, as a modification of the upstream project under the same
+MIT licence: the original copyright notice is preserved and one line is added
+for the current maintainer. Credit is by role, not by ownership — the upstream
+author wrote the original work, the maintainer continues it.
+
+## Author
+
+The person who created the original work: Cristofher Ferrada, recorded in
+`LICENSE`, `[project].authors` and, once it exists, `CITATION.cff`. Not the same
+as the maintainer, and not the same as the GitHub owner.
+_Avoid_: owner, maintainer (for this role).
+
+## Maintainer
+
+The person who answers for the current codebase, receives security reports and
+signs releases: Franco Ignacio Valdés Navarro, recorded in
+`[project].maintainers` and `SECURITY.md`. The role moves with the work, not
+with the repository's GitHub account.
+
+## Pre-alpha
+
+The project's status until the paper's artifact is archived: usable by the
+maintainer and named collaborators, with no general-public support promise.
+Every install instruction assumes a person who has been told how to run it.
+Decided in [ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: beta, release candidate, "ready" (none of them is true yet).
+
+## Release
+
+One immutable tagged artifact set: a tag on `main`, a GitHub release carrying
+the tagged files and — once archived — a DOI. A branch is never a release, and a
+release is never re-cut; a mistake is fixed by the next version. Publication is
+an event inside a release, not a synonym for it. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: version (that is the number), deploy.
+
+## Channel
+
+How the software reaches a machine: a source checkout (`uv sync`), a container
+image (Apptainer or OCI), or an index (PyPI). A project can have several, and
+the README names the supported ones. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: distribution (it names all three at once, or the act of publishing).
+
+## Publication
+
+Uploading built artifacts to an index, today only PyPI. It is deferred until
+the cluster smoke passes, and the first one is the pre-release `2.1.0a1`
+rehearsal. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: release, upload (as a synonym for the whole release).
+
+## Supported platform
+
+An (operating system, Python version, surface) triple that CI exercises.
+Support is a claim about testing, not about intent: Linux x86_64 is Tier 1,
+Windows is best effort without CI, macOS is unsupported. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: "works on" (untested), a tier without its triple.
+
+## Installer
+
+The retired script that built a run environment from a source copy
+(`install/bootstrap.py` and its wrappers). A lab machine is set up with `uv
+sync`; a cluster runs the container image. `pip` and `uv` install packages, not
+this project. Decided in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
+_Avoid_: setup, bootstrap (as the name of the current path).
+
+## Retired: frozen application
+
+The PyInstaller bundle (`tools/packaging/polyx.spec`). It was never signed,
+notarised, built in CI or shipped, and the fix for its dead `assets/` path is
+deletion rather than repair. Retired in
+[ADR-0011](docs/adr/0011-linux-first-distribution-scope.md).
 
 ## Retired: `tr()`
 

@@ -68,6 +68,8 @@ _ACCENT_ALLOWLIST = {
     "sepúlveda",
     "católica",
     "valparaíso",
+    "valdés",
+    "química",
 }
 
 
