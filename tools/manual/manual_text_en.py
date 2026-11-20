@@ -1471,7 +1471,9 @@ photographs it shows.</p>
 <a href="#launcher">Launcher</a>: both <b>open the page</b> and install nothing.
 Download the desktop ZIP and its <code>.sha256</code> file, check the digest
 (<code>certutil -hashfile</code> on Windows, <code>shasum -a 256</code> on
-macOS), and install the new version <b>alongside</b> the one you have.</p>
+macOS), extract the ZIP and run the installation from inside it
+(<code>install\SETUP.bat</code> on Windows, <code>install/Lanzar_macOS.command</code>
+on macOS) to install the new version <b>alongside</b> the one you have.</p>
 
 <p>The previous copy and its <code>.venv</code> environment stay untouched and
 keep working if something fails. No data is copied: your

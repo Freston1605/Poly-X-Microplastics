@@ -94,9 +94,10 @@ Double-click `actualizar_macOS.command`, or use the **Releases** button in the
 launcher. Both only open that page: there is no in-place updater any more.
 
 Download the ZIP, verify it with `shasum -a 256 polyx-desktop-<tag>.zip`, and
-install it **alongside** the copy you have. The old installation and its `.venv`
-stay untouched, so a failed upgrade does not interrupt your work, and your
-models, results and data live outside both copies.
+install it **alongside** the copy you have: extract it and run
+`install/Lanzar_macOS.command` from inside the new folder. The old installation
+and its `.venv` stay untouched, so a failed upgrade does not interrupt your
+work, and your models, results and data live outside both copies.
 
 ```
 shasum -a 256 polyx-desktop-<tag>.zip

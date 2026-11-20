@@ -1731,8 +1731,10 @@ fotografías que muestra.</p>
 <a href="#launcher">Launcher</a>: ambos <b>abren la página</b> y no instalan
 nada. Descarga el ZIP de escritorio y su archivo <code>.sha256</code>,
 comprueba el resumen (<code>certutil -hashfile</code> en Windows,
-<code>shasum -a 256</code> en macOS) e instala la versión nueva <b>al lado</b>
-de la que tienes.</p>
+<code>shasum -a 256</code> en macOS), descomprime el ZIP y ejecuta la
+instalación desde dentro (<code>install\SETUP.bat</code> en Windows,
+<code>install/Lanzar_macOS.command</code> en macOS) para dejar la versión nueva
+<b>al lado</b> de la que tienes.</p>
 
 <p>La copia anterior y su entorno <code>.venv</code> quedan intactos y siguen
 funcionando si algo falla. No se copia ningún dato: tus modelos

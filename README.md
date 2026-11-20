@@ -530,8 +530,9 @@ running copy.
 ### Which file to download
 
 - **Upgrading an existing installation** — download the ZIP, check the checksum
-  (below) and install it **alongside** the old copy. The old installation and its
-  `.venv` stay where they are and keep working, so a failed upgrade does not
+  (below), extract it and run it **alongside** the old copy: `install/SETUP.bat`
+  on Windows, `install/Lanzar_macOS.command` on macOS. The old installation and
+  its `.venv` stay where they are and keep working, so a failed upgrade does not
   interrupt your work.
 - **Your data is not inside the ZIP.** Models, runs, datasets and preferences live
   in the per-user data directory, so the new copy reads them without copying

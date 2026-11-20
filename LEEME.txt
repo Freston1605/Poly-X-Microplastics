@@ -74,6 +74,9 @@ Doble clic en:
 
   - Abre la pagina de Releases; NO modifica esta instalacion.
   - Descarga ahi el ZIP de escritorio y su archivo .sha256.
+  - Descomprimelo y ejecuta la instalacion desde dentro:
+        Windows ...  install\SETUP.bat
+        macOS .....  install/Lanzar_macOS.command
   - Comprueba el SHA-256 (Windows: certutil -hashfile; macOS: shasum -a 256).
   - Instala la version nueva AL LADO de la actual: la copia vieja y su .venv
     quedan intactas y siguen funcionando si algo falla.
