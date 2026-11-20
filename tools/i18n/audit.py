@@ -229,8 +229,8 @@ _ARGUMENT_KEYWORDS = {
 _CLI_ERROR_SINKS = {"RuntimeError", "ValueError"}
 
 #: Words that read the same in every language: metric abbreviations, the
-#: run-metadata key the compact report prints, and the Poly-X brand.
-_MACHINE_WORDS = {"TP", "FP", "FN", "MISCLS", "miscls", "mAP", "Poly"}
+#: run-metadata key the compact report prints, and the product brands.
+_MACHINE_WORDS = {"TP", "FP", "FN", "MISCLS", "miscls", "mAP", "Poly", "MICRA"}
 
 #: Units and symbols sit next to numbers; they are not words to translate.
 _UNITS = re.compile(r"\b(?:mm|cm|nm|µm|μm|px|GB|MB|kB)\b")

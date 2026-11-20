@@ -11,12 +11,11 @@
 
 Please **do not** open a public GitHub issue for security problems.
 
-Report it privately, either way:
-
-- GitHub's
-  [private vulnerability report](https://github.com/Freston1605/Poly-X-Microplastics/security/advisories/new)
-  (repository **Security** tab → *Report a vulnerability*), or
-- email the maintainer at **cristofher.ferrada@pucv.cl**.
+Report it privately through GitHub's
+[private vulnerability report](https://github.com/Freston1605/micra/security/advisories/new)
+(repository **Security** tab → *Report a vulnerability*). That is the only
+reporting route: it keeps the report private until disclosure and is how GitHub
+can issue a CVE for it. There is no contact address to write to.
 
 Include:
 
@@ -31,14 +30,14 @@ to remain anonymous).
 
 ## Scope
 
-Poly-X is a desktop application that runs locally on the user's machine
-and processes images the user provides. It does not expose a network
-service, accept remote input, or store credentials. The main security
-surface is the parsing of untrusted files (images, YOLO `.txt` labels,
-dataset YAML, model `.pt` weights) and the HTML/PDF report generation.
+MICRA is a research instrument that runs locally on the user's machine and
+processes images the user provides. It does not expose a network service, accept
+remote input, or store credentials. The main security surface is the parsing of
+untrusted files (images, YOLO `.txt` labels, dataset YAML, model `.pt` weights)
+and the HTML/PDF report generation.
 
 Reports of denial-of-service via malformed inputs, path traversal in
 report generation, or unsafe deserialization of model weights are in
 scope. Vulnerabilities in third-party dependencies (PyTorch, Ultralytics,
 PySide6, OpenCV) should be reported upstream; please mention the
-affected Poly-X version so we can pin a fixed release.
+affected MICRA version so we can pin a fixed release.

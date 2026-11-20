@@ -7,7 +7,13 @@ Tokens disponibles dentro de cada sección:
     [[fig:web/w01_github_repo|Pie]]           captura de una página web
     [[fig:win/p01_zip_descargado|Pie]]        captura de Windows
     [[esquema:python_installer|Pie]]          dibujo, no fotografía
+
+La dirección del repositorio viaja como ``@REPO_URL@`` / ``@REPO_SLUG@`` y el
+motor sustituye la constante del paquete (ADR-0011), de modo que el manual no
+puede nombrar un segundo propietario.
 """
+
+from polyx.repository import REPO_SLUG, REPO_URL
 
 TITULO_DOC = "Manual de Poly-X — Suite de detección de microplásticos"
 DESCRIPCION = (
@@ -33,8 +39,8 @@ PALABRA_ESQUEMA = "Esquema"
 
 PIE = (
     "<b>Poly-X v2.0.0</b> — Cristofher Ferrada, 2026. "
-    "Repositorio: <a href='https://github.com/CrissFerrada/Poly-X-Microplastics'>"
-    "github.com/CrissFerrada/Poly-X-Microplastics</a> · "
+    f"Repositorio: <a href='{REPO_URL}'>"
+    f"{REPO_SLUG}</a> · "
     "Contacto: <a href='mailto:cristofher.ferrada@pucv.cl'>cristofher.ferrada@pucv.cl</a><br>"
     "Las capturas de la interfaz se regeneran contra el programa instalado, de modo "
     "que este manual muestra la versión que tienes delante y no una anterior."
@@ -373,7 +379,7 @@ componentes: algunos diálogos del programa lo usan.</p>
 </li>
 
 <li id="w-descargar"><span class="t">Descargar Poly-X desde GitHub</span>
-<p>Abre <a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a>.
+<p>Abre <a href="@REPO_URL@">@REPO_SLUG@</a>.
 No hace falta tener cuenta ni iniciar sesión: el repositorio es público.</p>
 
 [[fig:web/w01_github_repo|Página del repositorio. El botón verde <b>Code</b> está arriba a la
@@ -389,7 +395,7 @@ opción: <b>Download ZIP</b>.</p>
   <span class="et">Si prefieres usar Git</span>
   <p>Si ya tienes Git instalado, esto es equivalente y además facilita
   actualizar:</p>
-  <pre><code><span class="p">git clone https://github.com/CrissFerrada/Poly-X-Microplastics.git</span></code></pre>
+  <pre><code><span class="p">git clone @REPO_URL@.git</span></code></pre>
 </div>
 </li>
 
@@ -561,7 +567,7 @@ aparece en la <a href="#instalar-windows">sección 3</a>.</p>
 
 <li><span class="t">Descargar Poly-X desde GitHub</span>
 <p>Identico a Windows: abre
-<a href="https://github.com/CrissFerrada/Poly-X-Microplastics">el repositorio</a>,
+<a href="@REPO_URL@">el repositorio</a>,
 botón verde <b>Code</b> → <b>Download ZIP</b>. Safari descomprime el ZIP solo al
 terminar la descarga; si no lo hace, doble clic sobre el archivo.</p>
 </li>
@@ -1761,7 +1767,7 @@ en <code>requirements.txt</code>: una instalación de uso no lo necesita.</p>
 <p><b>Cristofher Ferrada</b><br>
 Laboratorio de Química Ambiental · Pontificia Universidad Católica de Valparaíso<br>
 <a href="mailto:cristofher.ferrada@pucv.cl">cristofher.ferrada@pucv.cl</a><br>
-<a href="https://github.com/CrissFerrada/Poly-X-Microplastics">github.com/CrissFerrada/Poly-X-Microplastics</a></p>
+<a href="@REPO_URL@">@REPO_SLUG@</a></p>
 """,
     },
 ]

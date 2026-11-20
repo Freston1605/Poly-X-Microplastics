@@ -1,7 +1,7 @@
 # Changelog
 
-All notable changes to Poly-X are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
+All notable changes to MICRA (formerly Poly-X) are documented here. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
@@ -27,6 +27,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a hook that was never installed locally still fails the PR.
 
 ### Changed
+- **The distribution is `micra` and the identity is truthful.** The wheel is
+  named `micra`, `requires-python` is `>=3.11,<3.13` because the locked PySide6
+  and numpy do not install on newer interpreters, the package URLs point at
+  `Freston1605/micra`, and one `polyx.repository` constant feeds
+  `download_models`. `[project].maintainers` records the maintainer without an
+  address, the `LICENSE` keeps the original copyright and adds the
+  modifications line, and `SECURITY.md` reports only through GitHub's private
+  advisory form. The Detector credit and the HTML report footer name the
+  original design, the maintainer and the laboratory. See ADR-0011.
 - **The HPC pipeline's training lifecycle is Lightning's, not a second one.**
   `ModelCheckpoint` keeps the strictly best `with_class_score` and
   `EarlyStopping` measures patience against `min_delta`, so the two thresholds

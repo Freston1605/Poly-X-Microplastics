@@ -1,4 +1,20 @@
-# Contributing to Poly-X
+# Contributing to MICRA
+
+MICRA (*Microplastic Identification, Counting and Recognition Application*) is
+the laboratory's continuation of Poly-X; the distribution is `micra` and the
+repository is `Freston1605/micra`, while the import package stays `polyx` until
+the post-paper rename.
+See [ADR-0011](docs/adr/0011-linux-first-distribution-scope.md) and
+[`GLOSSARY.md`](GLOSSARY.md).
+
+## Scope and distribution channels
+
+The supported platform is Linux x86_64, exercised by CI; Windows is best effort
+and macOS is unsupported. **A new distribution channel — PyPI beyond the
+deferred pre-release rehearsal, conda, Homebrew, a bundled installer or an
+auto-updater — requires a new ADR.** Scope does not grow one channel at a time
+by convenience: the decision and its retirements are recorded, so a later
+contributor can see why the surface is what it is.
 
 ## What the CI does
 

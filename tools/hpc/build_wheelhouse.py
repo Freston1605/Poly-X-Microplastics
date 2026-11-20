@@ -158,7 +158,7 @@ def _write_index(plan: Plan) -> None:
         "# Every pin comes from the lockfile except the two CUDA 12.6 wheels, which",
         "# replace its default-index torch/torchvision pins.",
         "# The project's own wheel sits beside this file and is installed separately:",
-        "#   uv pip install --no-index --no-deps polyx_microplastics-*.whl",
+        "#   uv pip install --no-index --no-deps micra-*.whl",
         "# Install offline with: uv pip install --no-index --find-links <dir> -r <dir>/requirements.txt",
     ]
     pins = [*plan.default_requirements, *plan.cuda_requirements]
@@ -215,10 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"offline install: uv pip install --no-index --find-links {plan.wheelhouse} -r {plan.requirements_file}"
         )
-        print(
-            "project wheel: uv pip install --no-index --no-deps "
-            f"{plan.wheelhouse}/polyx_microplastics-*.whl"
-        )
+        print(f"project wheel: uv pip install --no-index --no-deps {plan.wheelhouse}/micra-*.whl")
         return 0
 
     for step in plan.steps:

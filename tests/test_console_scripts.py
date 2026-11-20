@@ -17,7 +17,7 @@ from importlib.metadata import EntryPoint, distribution
 
 from tests.test_pre_commit_config import pyproject
 
-DISTRIBUTION = "polyx-microplastics"
+DISTRIBUTION = "micra"
 GROUP = "console_scripts"
 
 
@@ -88,7 +88,7 @@ def test_every_console_script_is_installed_and_resolves():
 def test_an_empty_side_fails_instead_of_passing_vacuously():
     assert parity_problems({}, {}) == [
         "pyproject.toml declares no console scripts",
-        "polyx-microplastics installs no console scripts",
+        "micra installs no console scripts",
     ]
 
 
