@@ -35,6 +35,9 @@ said nothing about what broke.
   (spec #182). The `<h2 id=...>` / `href='#...'` anchors now use the English
   section ids; the legacy alias spellings (`abstract`, `calib`, `compare`,
   `refs`) are gone.
+- **Ticket #210:** recaptured after the identity pass (ADR-0011): the document
+  shell names MICRA and the footer credits the original design, the maintainer
+  and the laboratory. Section bodies did not change.
 
 ## Language contract
 
